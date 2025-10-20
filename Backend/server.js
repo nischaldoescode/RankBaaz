@@ -5,7 +5,7 @@ import dotenv from "dotenv";
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
 import compression from "compression";
-import connectDB from "./config/mongodb.js";
+import connectDB from "./Config/mongodb.js";
 import { v2 as cloudinary } from "cloudinary";
 import redisClient from "./Config/redis.js";
 import fileUpload from "express-fileupload";
