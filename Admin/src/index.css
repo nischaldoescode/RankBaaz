@@ -1,0 +1,19 @@
+@import "tailwindcss";
+
+input[type=number] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+input[type=number]::-webkit-outer-spin-button,
+input[type=number]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.Toastify__close-button--light {
+  color: rgb(239, 248, 235) !important;
+}
+
+.Toastify__close-button--light:hover {
+  color: #ffffff !important;
+}
