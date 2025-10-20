@@ -4,17 +4,17 @@ FROM node:18-alpine
 # Set working directory
 WORKDIR /app
 
-# Copy package files
+# Copy package files first for caching
 COPY package*.json ./
 
-# Install dependencies
+# Install dependencies (only production if needed)
 RUN npm install --production
 
-# Copy rest of the application
+# Copy the rest of the backend source
 COPY . .
 
-# Expose the app port
+# Expose your backend port
 EXPOSE 5000
 
-# Run the app
+# Default command
 CMD ["npm", "start"]
