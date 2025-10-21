@@ -11,6 +11,8 @@ import {
   ExclamationTriangleIcon,
 } from "@heroicons/react/24/outline";
 
+import { useContent } from "../context/ContentContext";
+import { useSEO } from "../hooks/useSEO";
 const NotFound = () => {
   const { theme, animations, reducedMotion, getPrimaryColorClasses } =
     useTheme();
@@ -18,9 +20,30 @@ const NotFound = () => {
   const navigate = useNavigate();
   const [countdown, setCountdown] = useState(10);
   const [autoRedirect, setAutoRedirect] = useState(true);
-
+  const { contentSettings } = useContent();
+  
   const primaryColors = getPrimaryColorClasses();
   const isDark = theme === "dark";
+
+    useSEO({
+    title: '404 - Page Not Found',
+    description: `The page you're looking for doesn't exist on ${contentSettings?.siteName || 'TestMaster Pro'}. Navigate back to our homepage or explore our courses.`,
+    keywords: '404, page not found, error page, not found',
+    type: 'website',
+    noindex: true, // 404 pages should not be indexed
+    structuredData: {
+      '@context': 'https://schema.org',
+      '@type': 'WebPage',
+      name: '404 Not Found',
+      description: 'Page not found',
+      url: window.location.href,
+      isPartOf: {
+        '@type': 'WebSite',
+        name: contentSettings?.siteName || 'TestMaster Pro',
+        url: contentSettings?.siteUrl || window.location.origin
+      }
+    }
+  });
 
   // Auto redirect countdown
   useEffect(() => {

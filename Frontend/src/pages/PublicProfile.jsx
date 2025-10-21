@@ -30,6 +30,70 @@ const PublicProfile = () => {
   const [profileData, setProfileData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const { contentSettings } = useContent();
+
+  useSEO({
+    title: profileData
+      ? `${profileData.name || `@${profileData.username}`}`
+      : "User Profile",
+    description: profileData
+      ? `View ${profileData.name || `@${profileData.username}`}'s profile on ${
+          contentSettings?.siteName || "TestMaster Pro"
+        }. See their test scores, badges, and recent activity.`
+      : `View user profile on ${contentSettings?.siteName || "TestMaster Pro"}`,
+    keywords: `${username}, user profile, test scores, leaderboard, achievements, ${
+      contentSettings?.siteName || "TestMaster Pro"
+    }`,
+    type: "profile",
+    image: profileData?.avatar || contentSettings?.logo?.url,
+    canonicalUrl: `${
+      contentSettings?.siteUrl || window.location.origin
+    }/@${username}`,
+    structuredData: profileData
+      ? {
+          "@context": "https://schema.org",
+          "@type": "ProfilePage",
+          name: profileData.name || `@${profileData.username}`,
+          description: `${
+            profileData.name || `@${profileData.username}`
+          }'s profile`,
+          url: `${
+            contentSettings?.siteUrl || window.location.origin
+          }/@${username}`,
+          mainEntity: {
+            "@type": "Person",
+            name:
+              profileData.nameVisibility === "public"
+                ? profileData.name
+                : undefined,
+            identifier: profileData.username,
+            description: `Member since ${new Date(
+              profileData.stats?.memberSince
+            ).toLocaleDateString()}`,
+            ...(profileData.rank && {
+              award: `Global Rank #${profileData.rank}`,
+            }),
+            interactionStatistic: [
+              {
+                "@type": "InteractionCounter",
+                interactionType: "https://schema.org/CommentAction",
+                userInteractionCount: profileData.stats?.testsCompleted || 0,
+              },
+              {
+                "@type": "InteractionCounter",
+                interactionType: "https://schema.org/LikeAction",
+                userInteractionCount: profileData.points || 0,
+              },
+            ],
+          },
+          isPartOf: {
+            "@type": "WebSite",
+            name: contentSettings?.siteName || "TestMaster Pro",
+            url: contentSettings?.siteUrl || window.location.origin,
+          },
+        }
+      : null,
+  });
 
   useEffect(() => {
     fetchProfile();

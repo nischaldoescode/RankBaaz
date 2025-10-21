@@ -26,7 +26,7 @@ import { useAuth } from "../context/AuthContext";
 import { useTests } from "../context/TestContext";
 import { useTheme } from "../context/ThemeContext";
 import { Button } from "@/components/ui/Button";
-import { Input } from "@/components/ui/input";
+import { Input } from "@/components/ui/Input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Select,
@@ -41,6 +41,8 @@ import Loading from "../components/common/Loading";
 import toast from "react-hot-toast";
 import { LeaderboardInfoModal } from "@/components/Leaderboard/LeaderboardInfoModal";
 import { apiMethods } from "../services/api";
+import { useSEO } from "../hooks/useSEO";
+import { useContent } from "../context/ContentContext";
 
 const GlobalLeaderboard = ({ userId }) => {
   const [leaderboard, setLeaderboard] = useState([]);
@@ -267,6 +269,7 @@ const Profile = () => {
     getUserStats,
     getLeaderboard,
   } = useTests();
+  const { contentSettings } = useContent();
   const { animations, reducedMotion } = useTheme();
   const location = useLocation();
   const [activeTab, setActiveTab] = useState("overview");
@@ -287,6 +290,26 @@ const Profile = () => {
 
   const [leaderboardData, setLeaderboardData] = useState(null);
   const [leaderboardLoading, setLeaderboardLoading] = useState(false);
+
+    useSEO({
+    title: 'My Profile',
+    description: `Manage your ${contentSettings?.siteName || 'TestMaster Pro'} profile, view test history, track progress, and check leaderboard rankings.`,
+    keywords: 'profile, dashboard, test history, progress tracking, leaderboard, user profile',
+    type: 'website',
+    noindex: true, // Private profile pages should not be indexed
+    structuredData: {
+      '@context': 'https://schema.org',
+      '@type': 'ProfilePage',
+      name: user?.name || 'User Profile',
+      description: 'User profile dashboard',
+      url: window.location.href,
+      mainEntity: {
+        '@type': 'Person',
+        name: user?.name,
+        identifier: user?.username
+      }
+    }
+  });
 
   useEffect(() => {
     if (user && !userStats) {

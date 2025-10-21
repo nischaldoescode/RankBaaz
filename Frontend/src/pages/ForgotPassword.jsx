@@ -11,7 +11,7 @@ import {
   CheckCircle2,
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
-import { Input } from "@/components/ui/input";
+import { Input } from "@/components";
 import { Card, CardContent } from "@/components/ui/card";
 import Loading from "../components/common/Loading";
 import toast from "react-hot-toast";

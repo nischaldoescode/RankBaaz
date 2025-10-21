@@ -3,7 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/Button";
-import { Input } from "@/components/ui/input";
+import { Input } from "@/components";
 import { Badge } from "@/components/ui/badge";
 import {
   Select,
@@ -12,12 +12,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-
+import { useContent } from "../context/ContentContext";
 import { Search, BookOpen, Grid3X3, List, Filter } from "lucide-react";
 import CourseDetailsExpander from "@/components/testandcourse/CourseDetailsExpander";
 import { useCourses } from "../context/CourseContext";
 import Loading from "../components/common/Loading";
 import { useTheme } from "../context/ThemeContext";
+import { useSEO } from "../hooks/useSEO";
 
 const CourseCard = React.memo(
   ({ course, index, isExpanded, onExpandChange }) => {
@@ -206,6 +207,14 @@ const Courses = () => {
     hasFiltersApplied,
   } = useCourses();
 
+    const { contentSettings } = useContent();
+  
+  useSEO({
+    title: 'Courses',
+    description: `Explore ${pagination.totalCourses || 'our'} courses designed to test and improve your skills. Find courses from beginner to advanced levels.`,
+    keywords: 'courses, online courses, learning, test preparation, skills development, education',
+    type: 'website',
+  });
   // const navigate = useNavigate();
   const { animations, reducedMotion } = useTheme();
 

@@ -13,13 +13,15 @@ import {
 import { useAuth } from "../context/AuthContext";
 import { useTheme } from "../context/ThemeContext";
 import { Button } from "@/components/ui/Button";
-import { Input } from "@/components/ui/input";
+import { Input } from "@/components/ui/Input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import Loading from "../components/common/Loading";
 import toast from "react-hot-toast";
 import ForgotPassword from "./ForgotPassword";
 import { apiMethods, handleApiError } from "../services/api";
+import { useSEO } from "../hooks/useSEO";
+import { useContent } from "../context/ContentContext";
 
 const Login = () => {
   const { login, isAuthenticated, loading: authLoading } = useAuth();
@@ -45,6 +47,33 @@ const Login = () => {
   const location = useLocation();
 
   const from = location.state?.from?.pathname || "/";
+
+  const { contentSettings } = useContent();
+
+  useSEO({
+    title: "Login",
+    description: `Sign in to your ${
+      contentSettings?.siteName || "TestMaster Pro"
+    } account to continue your learning journey. Access your courses, track progress, and take tests.`,
+    keywords:
+      "login, sign in, user login, account access, student login, online learning login",
+    type: "website",
+    noindex: true, // Login pages should not be indexed
+    structuredData: {
+      "@context": "https://schema.org",
+      "@type": "WebPage",
+      name: "Login",
+      description: `Sign in to your ${
+        contentSettings?.siteName || "TestMaster Pro"
+      } account`,
+      url: window.location.href,
+      isPartOf: {
+        "@type": "WebSite",
+        name: contentSettings?.siteName || "TestMaster Pro",
+        url: contentSettings?.siteUrl || window.location.origin,
+      },
+    },
+  });
 
   useEffect(() => {
     setMounted(true);

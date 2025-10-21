@@ -5,15 +5,14 @@ import { useContent } from "../context/ContentContext";
 import { useTheme } from "../context/ThemeContext";
 import ReactMarkdown from "react-markdown";
 import Loading from "../components/common/Loading";
+import { useContent } from "../context/ContentContext";
 
 const TermsOfService = () => {
-  const { legalPages, fetchLegalPage, loading } = useContent();
+  const { legalPages, fetchLegalPage, loading, contentSettings } = useContent();
   const { animations, reducedMotion } = useTheme();
   const [page, setPage] = useState(null);
 
   useEffect(() => {
-    document.title = "Terms of Service - TestMaster Pro";
-
     const loadPage = async () => {
       if (legalPages.terms) {
         setPage(legalPages.terms);
@@ -25,6 +24,40 @@ const TermsOfService = () => {
 
     loadPage();
   }, [legalPages.terms]);
+
+  // SEO Configuration - only runs when page is loaded
+  useSEO({
+    title: page?.title || 'Terms of Service',
+    description: `Read ${contentSettings?.siteName || 'TestMaster Pro'}'s Terms of Service to understand the rules and regulations for using our platform.`,
+    keywords: 'terms of service, terms and conditions, user agreement, terms of use, legal agreement, service rules',
+    type: 'article',
+    author: contentSettings?.siteName || 'TestMaster Pro',
+    publishedTime: page?.metadata?.effectiveDate,
+    modifiedTime: page?.lastUpdated,
+    structuredData: {
+      '@context': 'https://schema.org',
+      '@type': 'WebPage',
+      name: page?.title || 'Terms of Service',
+      description: `Terms of Service for ${contentSettings?.siteName || 'TestMaster Pro'}`,
+      url: window.location.href,
+      datePublished: page?.metadata?.effectiveDate,
+      dateModified: page?.lastUpdated,
+      inLanguage: 'en-US',
+      isPartOf: {
+        '@type': 'WebSite',
+        name: contentSettings?.siteName || 'TestMaster Pro',
+        url: contentSettings?.siteUrl || window.location.origin
+      },
+      publisher: {
+        '@type': 'Organization',
+        name: contentSettings?.siteName || 'TestMaster Pro',
+        logo: {
+          '@type': 'ImageObject',
+          url: contentSettings?.logo?.url || `${contentSettings?.siteUrl || window.location.origin}/logo.png`
+        }
+      }
+    }
+  });
 
   const containerVariants = {
     hidden: { opacity: 0 },

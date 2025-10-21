@@ -9,10 +9,15 @@ import Loading from "../components/common/Loading";
 const Contact = () => {
   const { contactInfo, loading } = useContent();
   const { animations, reducedMotion } = useTheme();
-
-  useEffect(() => {
-    document.title = "Contact Us - TestMaster Pro";
-  }, []);
+  
+  useSEO({
+    title: "Contact Us",
+    description: `Get in touch with ${
+      contentSettings?.siteName || "TestMaster Pro"
+    }. We're here to help with your questions and support needs.`,
+    keywords: "contact, support, help, email, telegram, customer service",
+    type: "website",
+  });
 
   const handleEmailClick = () => {
     window.location.href = "hello@testmasterpro.com";
