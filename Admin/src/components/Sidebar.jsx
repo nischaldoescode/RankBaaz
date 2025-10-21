@@ -46,15 +46,20 @@ const Sidebar = ({ isOpen, onClose }) => {
       icon: BarChart3,
       color: "from-red-500 to-red-600",
     },
-    
+
     {
       name: "User Management",
       href: "/users",
       icon: Users,
       color: "from-indigo-500 to-indigo-600",
     },
-    { name: "Content", href: "/content" , icon: FileText, color: "from-indigo-500 to-indigo-600",},
-        {
+    {
+      name: "Content",
+      href: "/content",
+      icon: FileText,
+      color: "from-indigo-500 to-indigo-600",
+    },
+    {
       name: "Coupons",
       href: "/coupons",
       icon: TicketPercent,
@@ -107,15 +112,23 @@ const Sidebar = ({ isOpen, onClose }) => {
           <div className="flex flex-col flex-grow h-screen pt-4 sm:pt-5 pb-4 bg-white/95 backdrop-blur-md border-r border-gray-200/80 shadow-2xl md:shadow-lg">
             {/* Header with enhanced styling */}
             <div className="flex items-center justify-between flex-shrink-0 px-4 sm:px-6 mb-2">
-              <div className="flex items-center">
-                <div className="w-10 h-10 sm:w-11 sm:h-11 bg-gradient-to-br from-blue-600 via-blue-700 to-blue-800 rounded-2xl flex items-center justify-center shadow-lg ring-2 ring-blue-100">
-                  <BarChart3 className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
-                </div>
-                <div className="ml-3">
+              <div className="flex flex-wrap items-center min-w-0 flex-1 text-center">
+                {/* Logo Image */}
+                <img
+                  src="/logo.png"
+                  alt="RankBaaz Logo"
+                  className="w-full h-full object-contain p-3 rounded-3xl"
+                  onError={(e) => {
+                    // Fallback to icon if image fails to load
+                    e.target.style.display = "none";
+                    e.target.nextElementSibling.style.display = "flex";
+                  }}
+                />
+                <div className="ml-3 min-w-0 flex-1 break-words">
                   <h2 className="text-lg sm:text-xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">
-                    TestApp
+                    RankBaaz
                   </h2>
-                  <p className="text-xs text-gray-500 font-medium">
+                  <p className="text-xs text-gray-500 font-medium truncate">
                     Admin Panel
                   </p>
                 </div>
@@ -124,7 +137,7 @@ const Sidebar = ({ isOpen, onClose }) => {
               {/* Enhanced mobile close button */}
               <button
                 onClick={onClose}
-                className="md:hidden p-2 rounded-xl text-gray-400 hover:text-gray-600 hover:bg-gray-100/80 transition-all duration-200 active:scale-95"
+                className="md:hidden p-2 rounded-xl text-gray-400 hover:text-gray-600 hover:bg-gray-100/80 transition-all duration-200 active:scale-95 flex-shrink-0"
               >
                 <X className="w-5 h-5" />
               </button>
