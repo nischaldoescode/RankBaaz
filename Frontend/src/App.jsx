@@ -20,13 +20,14 @@ import {
   Heart,
   Code,
 } from "lucide-react";
-
 // Components
 import Header from "./components/common/Header";
 import Footer from "./components/common/Footer";
 import Loading from "./components/common/Loading";
 import ProtectedRoute from "./components/common/ProtectedRoute";
 import ErrorBoundary from "./components/common/ErrorBoundary";
+import { createHead, Head } from "@unhead/react";
+const head = createHead();
 
 // Lazy loaded for better performance
 const Home = React.lazy(() => import("./pages/Home"));
@@ -360,282 +361,36 @@ function App() {
   const location = useLocation();
 
   return (
-    <ErrorBoundary>
-      <ContentProvider>
-        <div className="bg-background text-foreground max-h-screen">
-          {/* Background Elements - Fixed behind all content */}
-          <BackgroundElements
-            animations={animations}
-            reducedMotion={reducedMotion}
-          />
+    <Head head={head}>
+      <ErrorBoundary>
+        <ContentProvider>
+          <div className="bg-background text-foreground max-h-screen">
+            {/* Background Elements - Fixed behind all content */}
+            <BackgroundElements
+              animations={animations}
+              reducedMotion={reducedMotion}
+            />
 
-          {/* Main Application */}
-          <div className="relative min-h-screen flex flex-col">
-            <Header />
+            {/* Main Application */}
+            <div className="relative min-h-screen flex flex-col">
+              <Header />
 
-            <main className="relative z-10 flex-1 bg-background/80 backdrop-blur-10">
-              <AnimatePresence mode="wait">
-                <Routes>
-                  {/* Public Routes */}
-                  <Route
-                    path="/"
-                    element={
-                      <Suspense
-                        fallback={
-                          <div className="min-h-screen pt-16">
-                            <Loading variant="page" />
-                          </div>
-                        }
-                      >
-                        <motion.div
-                          key="home"
-                          initial="initial"
-                          animate="in"
-                          exit="out"
-                          variants={
-                            animations && !reducedMotion ? pageVariants : {}
-                          }
-                          transition={
-                            animations && !reducedMotion ? pageTransition : {}
-                          }
-                        >
-                          <Home />
-                        </motion.div>
-                      </Suspense>
-                    }
-                  />
-
-                  <Route
-                    path="/login"
-                    element={
-                      isAuthenticated ? (
-                        <Navigate to="/" replace />
-                      ) : (
-                        <Suspense
-                          fallback={
-                            <div className="min-h-screen flex items-center justify-center pt-16">
-                              <Loading variant="auth" />
-                            </div>
-                          }
-                        >
-                          <motion.div
-                            key="login"
-                            initial="initial"
-                            animate="in"
-                            exit="out"
-                            variants={
-                              animations && !reducedMotion ? pageVariants : {}
-                            }
-                            transition={
-                              animations && !reducedMotion ? pageTransition : {}
-                            }
-                          >
-                            <Login />
-                          </motion.div>
-                        </Suspense>
-                      )
-                    }
-                  />
-
-                  <Route
-                    path="/register"
-                    element={
-                      isAuthenticated ? (
-                        <Navigate to="/" replace />
-                      ) : (
-                        <Suspense
-                          fallback={
-                            <div className="min-h-screen flex items-center justify-center pt-16">
-                              <Loading variant="auth" />
-                            </div>
-                          }
-                        >
-                          <motion.div
-                            key="register"
-                            initial="initial"
-                            animate="in"
-                            exit="out"
-                            variants={
-                              animations && !reducedMotion ? pageVariants : {}
-                            }
-                            transition={
-                              animations && !reducedMotion ? pageTransition : {}
-                            }
-                          >
-                            <Register />
-                          </motion.div>
-                        </Suspense>
-                      )
-                    }
-                  />
-                  <Route
-                    path="/:username"
-                    element={
-                      <Suspense fallback={<Loading variant="page" />}>
-                        <ProfileRouteGuard />
-                      </Suspense>
-                    }
-                  />
-
-                  {/* Static Pages */}
-                  <Route
-                    path="/contact"
-                    element={
-                      <Suspense fallback={<Loading variant="page" />}>
-                        <motion.div
-                          key="contact"
-                          initial="initial"
-                          animate="in"
-                          exit="out"
-                          variants={
-                            animations && !reducedMotion ? pageVariants : {}
-                          }
-                          transition={
-                            animations && !reducedMotion ? pageTransition : {}
-                          }
-                        >
-                          <Contact />
-                        </motion.div>
-                      </Suspense>
-                    }
-                  />
-
-                  <Route
-                    path="/about"
-                    element={
-                      <Suspense fallback={<Loading variant="page" />}>
-                        <motion.div
-                          key="about"
-                          initial="initial"
-                          animate="in"
-                          exit="out"
-                          variants={
-                            animations && !reducedMotion ? pageVariants : {}
-                          }
-                          transition={
-                            animations && !reducedMotion ? pageTransition : {}
-                          }
-                        >
-                          <About />
-                        </motion.div>
-                      </Suspense>
-                    }
-                  />
-
-                  <Route
-                    path="/privacy"
-                    element={
-                      <Suspense fallback={<Loading variant="page" />}>
-                        <motion.div
-                          key="privacy"
-                          initial="initial"
-                          animate="in"
-                          exit="out"
-                          variants={
-                            animations && !reducedMotion ? pageVariants : {}
-                          }
-                          transition={
-                            animations && !reducedMotion ? pageTransition : {}
-                          }
-                        >
-                          <PrivacyPolicy />
-                        </motion.div>
-                      </Suspense>
-                    }
-                  />
-
-                  <Route
-                    path="/terms"
-                    element={
-                      <Suspense fallback={<Loading variant="page" />}>
-                        <motion.div
-                          key="terms"
-                          initial="initial"
-                          animate="in"
-                          exit="out"
-                          variants={
-                            animations && !reducedMotion ? pageVariants : {}
-                          }
-                          transition={
-                            animations && !reducedMotion ? pageTransition : {}
-                          }
-                        >
-                          <TermsOfService />
-                        </motion.div>
-                      </Suspense>
-                    }
-                  />
-
-                  {/* Protected Routes */}
-                  <Route
-                    path="/courses"
-                    element={
-                      <Suspense
-                        fallback={
-                          <div className="min-h-screen pt-16">
-                            <Loading variant="page" />
-                          </div>
-                        }
-                      >
-                        <motion.div
-                          key="courses"
-                          initial="initial"
-                          animate="in"
-                          exit="out"
-                          variants={
-                            animations && !reducedMotion ? pageVariants : {}
-                          }
-                          transition={
-                            animations && !reducedMotion ? pageTransition : {}
-                          }
-                        >
-                          <Courses />
-                        </motion.div>
-                      </Suspense>
-                    }
-                  />
-
-                  <Route
-                    path="/app/test/:courseId"
-                    element={
-                      <Suspense
-                        fallback={
-                          <div className="min-h-screen pt-16">
-                            <Loading variant="test" />
-                          </div>
-                        }
-                      >
-                        <motion.div
-                          key="test"
-                          initial="initial"
-                          animate="in"
-                          exit="out"
-                          variants={
-                            animations && !reducedMotion ? pageVariants : {}
-                          }
-                          transition={
-                            animations && !reducedMotion ? pageTransition : {}
-                          }
-                        >
-                          <Test />
-                        </motion.div>
-                      </Suspense>
-                    }
-                  />
-
-                  <Route
-                    path="/profile"
-                    element={
-                      <ProtectedRoute>
+              <main className="relative z-10 flex-1 bg-background/80 backdrop-blur-10">
+                <AnimatePresence mode="wait">
+                  <Routes>
+                    {/* Public Routes */}
+                    <Route
+                      path="/"
+                      element={
                         <Suspense
                           fallback={
                             <div className="min-h-screen pt-16">
-                              <Loading variant="profile" />
+                              <Loading variant="page" />
                             </div>
                           }
                         >
                           <motion.div
-                            key="profile"
+                            key="home"
                             initial="initial"
                             animate="in"
                             exit="out"
@@ -646,83 +401,337 @@ function App() {
                               animations && !reducedMotion ? pageTransition : {}
                             }
                           >
-                            <Profile />
+                            <Home />
                           </motion.div>
                         </Suspense>
-                      </ProtectedRoute>
-                    }
-                  />
+                      }
+                    />
 
-                  {/* 404 Route */}
-                  <Route
-                    path="*"
-                    element={
-                      <Suspense
-                        fallback={
-                          <div className="min-h-screen pt-16">
-                            <Loading variant="page" />
-                          </div>
-                        }
-                      >
-                        <motion.div
-                          key="404"
-                          initial="initial"
-                          animate="in"
-                          exit="out"
-                          variants={
-                            animations && !reducedMotion ? pageVariants : {}
-                          }
-                          transition={
-                            animations && !reducedMotion ? pageTransition : {}
+                    <Route
+                      path="/login"
+                      element={
+                        isAuthenticated ? (
+                          <Navigate to="/" replace />
+                        ) : (
+                          <Suspense
+                            fallback={
+                              <div className="min-h-screen flex items-center justify-center pt-16">
+                                <Loading variant="auth" />
+                              </div>
+                            }
+                          >
+                            <motion.div
+                              key="login"
+                              initial="initial"
+                              animate="in"
+                              exit="out"
+                              variants={
+                                animations && !reducedMotion ? pageVariants : {}
+                              }
+                              transition={
+                                animations && !reducedMotion
+                                  ? pageTransition
+                                  : {}
+                              }
+                            >
+                              <Login />
+                            </motion.div>
+                          </Suspense>
+                        )
+                      }
+                    />
+
+                    <Route
+                      path="/register"
+                      element={
+                        isAuthenticated ? (
+                          <Navigate to="/" replace />
+                        ) : (
+                          <Suspense
+                            fallback={
+                              <div className="min-h-screen flex items-center justify-center pt-16">
+                                <Loading variant="auth" />
+                              </div>
+                            }
+                          >
+                            <motion.div
+                              key="register"
+                              initial="initial"
+                              animate="in"
+                              exit="out"
+                              variants={
+                                animations && !reducedMotion ? pageVariants : {}
+                              }
+                              transition={
+                                animations && !reducedMotion
+                                  ? pageTransition
+                                  : {}
+                              }
+                            >
+                              <Register />
+                            </motion.div>
+                          </Suspense>
+                        )
+                      }
+                    />
+                    <Route
+                      path="/:username"
+                      element={
+                        <Suspense fallback={<Loading variant="page" />}>
+                          <ProfileRouteGuard />
+                        </Suspense>
+                      }
+                    />
+
+                    {/* Static Pages */}
+                    <Route
+                      path="/contact"
+                      element={
+                        <Suspense fallback={<Loading variant="page" />}>
+                          <motion.div
+                            key="contact"
+                            initial="initial"
+                            animate="in"
+                            exit="out"
+                            variants={
+                              animations && !reducedMotion ? pageVariants : {}
+                            }
+                            transition={
+                              animations && !reducedMotion ? pageTransition : {}
+                            }
+                          >
+                            <Contact />
+                          </motion.div>
+                        </Suspense>
+                      }
+                    />
+
+                    <Route
+                      path="/about"
+                      element={
+                        <Suspense fallback={<Loading variant="page" />}>
+                          <motion.div
+                            key="about"
+                            initial="initial"
+                            animate="in"
+                            exit="out"
+                            variants={
+                              animations && !reducedMotion ? pageVariants : {}
+                            }
+                            transition={
+                              animations && !reducedMotion ? pageTransition : {}
+                            }
+                          >
+                            <About />
+                          </motion.div>
+                        </Suspense>
+                      }
+                    />
+
+                    <Route
+                      path="/privacy"
+                      element={
+                        <Suspense fallback={<Loading variant="page" />}>
+                          <motion.div
+                            key="privacy"
+                            initial="initial"
+                            animate="in"
+                            exit="out"
+                            variants={
+                              animations && !reducedMotion ? pageVariants : {}
+                            }
+                            transition={
+                              animations && !reducedMotion ? pageTransition : {}
+                            }
+                          >
+                            <PrivacyPolicy />
+                          </motion.div>
+                        </Suspense>
+                      }
+                    />
+
+                    <Route
+                      path="/terms"
+                      element={
+                        <Suspense fallback={<Loading variant="page" />}>
+                          <motion.div
+                            key="terms"
+                            initial="initial"
+                            animate="in"
+                            exit="out"
+                            variants={
+                              animations && !reducedMotion ? pageVariants : {}
+                            }
+                            transition={
+                              animations && !reducedMotion ? pageTransition : {}
+                            }
+                          >
+                            <TermsOfService />
+                          </motion.div>
+                        </Suspense>
+                      }
+                    />
+
+                    {/* Protected Routes */}
+                    <Route
+                      path="/courses"
+                      element={
+                        <Suspense
+                          fallback={
+                            <div className="min-h-screen pt-16">
+                              <Loading variant="page" />
+                            </div>
                           }
                         >
-                          <NotFound />
-                        </motion.div>
-                      </Suspense>
-                    }
-                  />
-                </Routes>
-              </AnimatePresence>
-            </main>
-            {!location.pathname.includes("/app/test") &&
-              !location.pathname.includes("/login") &&
-              !location.pathname.includes("/register") && <Footer />}
-          </div>
+                          <motion.div
+                            key="courses"
+                            initial="initial"
+                            animate="in"
+                            exit="out"
+                            variants={
+                              animations && !reducedMotion ? pageVariants : {}
+                            }
+                            transition={
+                              animations && !reducedMotion ? pageTransition : {}
+                            }
+                          >
+                            <Courses />
+                          </motion.div>
+                        </Suspense>
+                      }
+                    />
 
-          <Toaster
-            position="bottom-center"
-            limit={1}
-            toastOptions={{
-              duration: 4000,
-              style: {
-                background: "rgba(15, 23, 42, 0.9)",
-                color: "#fff",
-                border: "1px solid rgba(59, 130, 246, 0.3)",
-                borderRadius: "12px",
-                backdropFilter: "blur(16px)",
-                fontSize: "14px",
-              },
-              success: {
-                iconTheme: {
-                  primary: "#10b981",
-                  secondary: "#fff",
+                    <Route
+                      path="/app/test/:courseId"
+                      element={
+                        <Suspense
+                          fallback={
+                            <div className="min-h-screen pt-16">
+                              <Loading variant="test" />
+                            </div>
+                          }
+                        >
+                          <motion.div
+                            key="test"
+                            initial="initial"
+                            animate="in"
+                            exit="out"
+                            variants={
+                              animations && !reducedMotion ? pageVariants : {}
+                            }
+                            transition={
+                              animations && !reducedMotion ? pageTransition : {}
+                            }
+                          >
+                            <Test />
+                          </motion.div>
+                        </Suspense>
+                      }
+                    />
+
+                    <Route
+                      path="/profile"
+                      element={
+                        <ProtectedRoute>
+                          <Suspense
+                            fallback={
+                              <div className="min-h-screen pt-16">
+                                <Loading variant="profile" />
+                              </div>
+                            }
+                          >
+                            <motion.div
+                              key="profile"
+                              initial="initial"
+                              animate="in"
+                              exit="out"
+                              variants={
+                                animations && !reducedMotion ? pageVariants : {}
+                              }
+                              transition={
+                                animations && !reducedMotion
+                                  ? pageTransition
+                                  : {}
+                              }
+                            >
+                              <Profile />
+                            </motion.div>
+                          </Suspense>
+                        </ProtectedRoute>
+                      }
+                    />
+
+                    {/* 404 Route */}
+                    <Route
+                      path="*"
+                      element={
+                        <Suspense
+                          fallback={
+                            <div className="min-h-screen pt-16">
+                              <Loading variant="page" />
+                            </div>
+                          }
+                        >
+                          <motion.div
+                            key="404"
+                            initial="initial"
+                            animate="in"
+                            exit="out"
+                            variants={
+                              animations && !reducedMotion ? pageVariants : {}
+                            }
+                            transition={
+                              animations && !reducedMotion ? pageTransition : {}
+                            }
+                          >
+                            <NotFound />
+                          </motion.div>
+                        </Suspense>
+                      }
+                    />
+                  </Routes>
+                </AnimatePresence>
+              </main>
+              {!location.pathname.includes("/app/test") &&
+                !location.pathname.includes("/login") &&
+                !location.pathname.includes("/register") && <Footer />}
+            </div>
+
+            <Toaster
+              position="bottom-center"
+              limit={1}
+              toastOptions={{
+                duration: 4000,
+                style: {
+                  background: "rgba(15, 23, 42, 0.9)",
+                  color: "#fff",
+                  border: "1px solid rgba(59, 130, 246, 0.3)",
+                  borderRadius: "12px",
+                  backdropFilter: "blur(16px)",
+                  fontSize: "14px",
                 },
-              },
-              error: {
-                iconTheme: {
-                  primary: "#ef4444",
-                  secondary: "#fff",
+                success: {
+                  iconTheme: {
+                    primary: "#10b981",
+                    secondary: "#fff",
+                  },
                 },
-              },
-            }}
-            gutter={8}
-            containerStyle={{
-              bottom: 20,
-            }}
-          />
-        </div>
-      </ContentProvider>
-    </ErrorBoundary>
+                error: {
+                  iconTheme: {
+                    primary: "#ef4444",
+                    secondary: "#fff",
+                  },
+                },
+              }}
+              gutter={8}
+              containerStyle={{
+                bottom: 20,
+              }}
+            />
+          </div>
+        </ContentProvider>
+      </ErrorBoundary>
+    </Head>
   );
 }
 
