@@ -1783,7 +1783,6 @@ Generate complete .txt file which contains, content for all sections above.`;
       maxMarks: "",
       thumbnail: "",
       status: "draft",
-      categoryId: "",
       isPaid: false, // Add this line
       price: 0,
     });
