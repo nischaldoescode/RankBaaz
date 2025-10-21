@@ -117,7 +117,7 @@ const Footer = () => {
                   <img
                     src={contentSettings.logo.url}
                     alt={siteName}
-                    className="h-8 w-8 object-contain"
+                    className="h-10 w-auto object-contain rounded-xl"
                   />
                 ) : (
                   <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">

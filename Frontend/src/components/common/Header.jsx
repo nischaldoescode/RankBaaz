@@ -196,7 +196,7 @@ const Header = () => {
               <img
                 src={contentSettings.logo.url}
                 alt={contentSettings.siteName || "Logo"}
-                className="h-12 w-auto object-contain rounded-2xl"
+                className="h-12 w-auto object-contain rounded-xl"
               />
             ) : (
               <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
