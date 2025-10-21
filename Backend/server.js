@@ -98,6 +98,7 @@ const corsOptions = {
       "https://rankbaaz.com",
       "https://www.rankbaaz.com",
       "https://admin.rankbaaz.com",
+      "https://rankbaaz-admin.onrender.com",
     ];
 
     // Allow requests with no origin (mobile apps, etc.)
