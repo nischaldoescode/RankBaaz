@@ -18,7 +18,7 @@ import { useAuth } from "../context/AuthContext";
 import { useTheme } from "../context/ThemeContext";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/Card";
 import { Checkbox } from "@/components/ui/checkbox";
 import Loading from "../components/common/Loading";
 import { debounce } from "lodash";
