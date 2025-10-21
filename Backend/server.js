@@ -94,6 +94,10 @@ const corsOptions = {
       "http://localhost:5173",
       "http://locahost:7000",
       "http://localhost:6000",
+      "https://rankbaaz-frontend.onrender.com",
+      "https://rankbaaz.com",
+      "https://www.rankbaaz.com",
+      "https://admin.rankbaaz.com",
     ];
 
     // Allow requests with no origin (mobile apps, etc.)
