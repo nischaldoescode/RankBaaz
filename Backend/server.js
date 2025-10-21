@@ -9,7 +9,7 @@ import connectDB from "./Config/mongodb.js";
 import { v2 as cloudinary } from "cloudinary";
 import redisClient from "./Config/redis.js";
 import fileUpload from "express-fileupload";
-
+import mongoose from "mongoose";
 // Import routes
 import authRoutes from "./Routes/authRoutes.js";
 import courseRoutes from "./Routes/courseRoutes.js";
