@@ -2,12 +2,6 @@ import multer from "multer";
 import { CloudinaryStorage } from "multer-storage-cloudinary";
 import { v2 as cloudinary } from "cloudinary";
 
-// Video configuration for Cloudinary
-const videoTransformations = {
-  quality: "auto:low",
-  fetch_format: "mp4",
-  resource_type: "video",
-};
 
 // Create dynamic storage engine
 const dynamicStorage = new CloudinaryStorage({
