@@ -131,7 +131,7 @@ const Login = () => {
               <img
                 src="/logo.png"
                 alt="RankBaaz Logo"
-                className="w-full h-full object-contain p-2 sm:p-3"
+                className="w-full h-full object-contain p-4 sm:p-3 rounded-2xl"
                 onError={(e) => {
                   // Fallback to icon if image fails to load
                   e.target.style.display = "none";
