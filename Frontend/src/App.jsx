@@ -26,9 +26,7 @@ import Footer from "./components/common/Footer";
 import Loading from "./components/common/Loading";
 import ProtectedRoute from "./components/common/ProtectedRoute";
 import ErrorBoundary from "./components/common/ErrorBoundary";
-import { createHead, Head } from "@unhead/react";
-const head = createHead();
-
+import { useHead } from '@unhead/react';
 // Lazy loaded for better performance
 const Home = React.lazy(() => import("./pages/Home"));
 const Login = React.lazy(() => import("./pages/Login"));
@@ -359,9 +357,7 @@ function App() {
   const { loading: authLoading, isAuthenticated } = useAuth();
   const { animations, reducedMotion } = useTheme();
   const location = useLocation();
-
   return (
-    <Head head={head}>
       <ErrorBoundary>
         <ContentProvider>
           <div className="bg-background text-foreground max-h-screen">
@@ -731,7 +727,6 @@ function App() {
           </div>
         </ContentProvider>
       </ErrorBoundary>
-    </Head>
   );
 }
 
