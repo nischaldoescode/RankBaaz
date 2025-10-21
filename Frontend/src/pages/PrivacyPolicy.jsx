@@ -7,8 +7,7 @@ import Loading from "../components/common/Loading";
 import { useContent } from "../context/ContentContext";
 
 const PrivacyPolicy = () => {
-  const { contentSettings } = useContent();
-  const { legalPages, fetchLegalPage, loading } = useContent();
+  const { legalPages, fetchLegalPage, loading, contentSettings } = useContent();
   const { animations, reducedMotion } = useTheme();
   const [page, setPage] = useState(null);
   
