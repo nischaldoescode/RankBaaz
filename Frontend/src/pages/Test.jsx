@@ -6,7 +6,7 @@ import { useAuth } from "../context/AuthContext";
 import { useTheme } from "../context/ThemeContext";
 import TestQuestion from "../components/test/TestQuestion";
 import TestResult from "../components/test/TestResult";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import Modal from "@/components/ui/Modal";
 import Loading from "../components/common/Loading";

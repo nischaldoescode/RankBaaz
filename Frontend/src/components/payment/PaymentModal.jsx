@@ -12,7 +12,7 @@ import {
   Tag,
   AlertCircle,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Input } from "@/components/ui/input";
 import { apiMethods } from "@/services/api";
