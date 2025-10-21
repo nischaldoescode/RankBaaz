@@ -149,7 +149,7 @@ const PaymentModal = ({ isOpen, onClose, course, onSuccess }) => {
       amount: orderData.amount,
       currency: orderData.currency,
       order_id: orderData.orderId,
-      name: "TestMaster Pro",
+      name: "RankBaaz",
       description: `Purchase ${orderData.courseName}`,
       image: orderData.courseImage || "/logo.png",
 

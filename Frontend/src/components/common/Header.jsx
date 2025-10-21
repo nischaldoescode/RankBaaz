@@ -419,7 +419,7 @@ const Header = () => {
                                 <GraduationCap className="w-5 h-5 text-primary-foreground" />
                               </div>
                               <SheetTitle className="text-lg">
-                                TestMaster Pro
+                                {contentSettings?.siteName || "RankBaaz"}
                               </SheetTitle>
                             </div>
                           </SheetHeader>
