@@ -28,22 +28,22 @@ const Login = () => {
   // Redirect if already authenticated
 
   // Check if admin exists on component mount
-useEffect(() => {
-  const checkAdmin = async () => {
-    try {
-      const response = await checkAdminExists();
-      if (!response.exists) {
-        setShowRegister(true);
+  useEffect(() => {
+    const checkAdmin = async () => {
+      try {
+        const response = await checkAdminExists();
+        if (!response.exists) {
+          setShowRegister(true);
+        }
+      } catch (error) {
+        console.error("Error checking admin:", error);
+      } finally {
+        setCheckingAdmin(false);
       }
-    } catch (error) {
-      console.error("Error checking admin:", error);
-    } finally {
-      setCheckingAdmin(false);
-    }
-  };
-  
-  checkAdmin();
-}, [checkAdminExists]);
+    };
+
+    checkAdmin();
+  }, [checkAdminExists]);
   const showToast = (message, type) => {
     setToast({ show: true, message, type });
     // Auto-hide after 4 seconds
@@ -127,13 +127,23 @@ useEffect(() => {
         <div className="max-w-md w-full space-y-8">
           {/* Header */}
           <div className="text-center">
-            <div className="mx-auto h-16 w-16 bg-blue-600 rounded-xl flex items-center justify-center shadow-lg mb-6">
-              <BarChart3 className="h-8 w-8 text-white" />
-            </div>
-            <h2 className="text-3xl font-bold text-gray-900 mb-2">
+            {/* Logo Container */}
+              <img
+                src="/logo.png"
+                alt="RankBaaz Logo"
+                className="w-full h-full object-contain p-2 sm:p-3"
+                onError={(e) => {
+                  // Fallback to icon if image fails to load
+                  e.target.style.display = "none";
+                  e.target.nextElementSibling.style.display = "flex";
+                }}
+              />
+            <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-2">
               Welcome Back
             </h2>
-            <p className="text-gray-600">Sign in to your admin dashboard</p>
+            <p className="text-gray-600 text-sm sm:text-base">
+              Sign in to your admin dashboard
+            </p>
           </div>
 
           {/* Form Container */}
@@ -259,7 +269,7 @@ useEffect(() => {
           {/* Footer */}
           <div className="text-center">
             <p className="text-sm text-gray-500">
-              © 2025 TestApp Admin Panel. All rights reserved.
+              © 2025 RankBaaz Admin Panel. All rights reserved.
             </p>
           </div>
         </div>
