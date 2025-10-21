@@ -17,13 +17,15 @@ import {
 import { useAuth } from "../context/AuthContext";
 import { useTheme } from "../context/ThemeContext";
 import { Button } from "@/components/ui/Button";
-import { Input } from "@/components/ui/input";
+import { Input } from "@/components/ui/Input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import Loading from "../components/common/Loading";
 import { debounce } from "lodash";
 import { apiMethods } from "../services/api";
 import toast from "react-hot-toast";
+import { useContent } from "../context/ContentContext";
+import { useSEO } from "../hooks/useSEO";
 
 const Register = () => {
   const [formData, setFormData] = useState({
@@ -59,6 +61,40 @@ const Register = () => {
   } = useAuth();
   const { animations = true, reducedMotion = false } = useTheme() || {};
   const navigate = useNavigate();
+
+  const { contentSettings } = useContent();
+
+  useSEO({
+    title: "Register",
+    description: `Create your free ${
+      contentSettings?.siteName || "TestMaster Pro"
+    } account and start your learning journey today. Access courses, take tests, and track your progress.`,
+    keywords:
+      "register, sign up, create account, student registration, free account, join now, new user",
+    type: "website",
+    noindex: true, // Registration pages should not be indexed
+    structuredData: {
+      "@context": "https://schema.org",
+      "@type": "WebPage",
+      name: "Register",
+      description: `Create a free account on ${
+        contentSettings?.siteName || "TestMaster Pro"
+      }`,
+      url: window.location.href,
+      isPartOf: {
+        "@type": "WebSite",
+        name: contentSettings?.siteName || "TestMaster Pro",
+        url: contentSettings?.siteUrl || window.location.origin,
+      },
+      potentialAction: {
+        "@type": "RegisterAction",
+        target: {
+          "@type": "EntryPoint",
+          urlTemplate: window.location.href,
+        },
+      },
+    },
+  });
 
   useEffect(() => {
     setMounted(true);

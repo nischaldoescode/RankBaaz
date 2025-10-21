@@ -3,17 +3,16 @@ import { motion } from "framer-motion";
 import { Shield, Calendar, FileText } from "lucide-react";
 import { useContent } from "../context/ContentContext";
 import { useTheme } from "../context/ThemeContext";
-import ReactMarkdown from "react-markdown";
 import Loading from "../components/common/Loading";
+import { useContent } from "../context/ContentContext";
 
 const PrivacyPolicy = () => {
+  const { contentSettings } = useContent();
   const { legalPages, fetchLegalPage, loading } = useContent();
   const { animations, reducedMotion } = useTheme();
   const [page, setPage] = useState(null);
-
+  
   useEffect(() => {
-    document.title = "Privacy Policy - TestMaster Pro";
-
     const loadPage = async () => {
       if (legalPages.privacy) {
         setPage(legalPages.privacy);
@@ -25,6 +24,40 @@ const PrivacyPolicy = () => {
 
     loadPage();
   }, [legalPages.privacy]);
+
+  // SEO Configuration - only runs when page is loaded
+  useSEO({
+    title: page?.title || 'Privacy Policy',
+    description: `Read ${contentSettings?.siteName || 'TestMaster Pro'}'s Privacy Policy to understand how we collect, use, and protect your personal information.`,
+    keywords: 'privacy policy, data protection, personal information, privacy rights, GDPR, user privacy',
+    type: 'article',
+    author: contentSettings?.siteName || 'TestMaster Pro',
+    publishedTime: page?.metadata?.effectiveDate,
+    modifiedTime: page?.lastUpdated,
+    structuredData: {
+      '@context': 'https://schema.org',
+      '@type': 'WebPage',
+      name: page?.title || 'Privacy Policy',
+      description: `Privacy Policy for ${contentSettings?.siteName || 'TestMaster Pro'}`,
+      url: window.location.href,
+      datePublished: page?.metadata?.effectiveDate,
+      dateModified: page?.lastUpdated,
+      inLanguage: 'en-US',
+      isPartOf: {
+        '@type': 'WebSite',
+        name: contentSettings?.siteName || 'TestMaster Pro',
+        url: contentSettings?.siteUrl || window.location.origin
+      },
+      publisher: {
+        '@type': 'Organization',
+        name: contentSettings?.siteName || 'TestMaster Pro',
+        logo: {
+          '@type': 'ImageObject',
+          url: contentSettings?.logo?.url || `${contentSettings?.siteUrl || window.location.origin}/logo.png`
+        }
+      }
+    }
+  });
 
   const containerVariants = {
     hidden: { opacity: 0 },

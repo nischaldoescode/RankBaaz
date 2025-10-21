@@ -18,6 +18,7 @@ export const ContentProvider = ({ children }) => {
   const [contactInfo, setContactInfo] = useState(null);
   const [legalPages, setLegalPages] = useState({});
   const [loading, setLoading] = useState(false);
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
 
   // Fetch Content Settings
   const fetchContentSettings = async () => {
@@ -99,9 +100,18 @@ export const ContentProvider = ({ children }) => {
 
   // Initialize - fetch content on mount
   useEffect(() => {
-    fetchContentSettings();
-    fetchContactInfo();
-    fetchAllLegalPages();
+    const initializeContent = async () => {
+      setLoading(true);
+      await Promise.all([
+        fetchContentSettings(),
+        fetchContactInfo(),
+        fetchAllLegalPages(),
+      ]);
+      setLoading(false);
+      setIsInitialLoad(false);
+    };
+
+    initializeContent();
   }, []);
 
   // NEW: Listen for updates from admin panel

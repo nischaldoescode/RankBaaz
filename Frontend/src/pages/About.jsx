@@ -14,7 +14,7 @@ import { useTheme } from "../context/ThemeContext";
 import { useContent } from "../context/ContentContext";
 import { Link } from "react-router-dom";
 import Loading from "../components/common/Loading";
-
+import { useSEO } from "../hooks/useSEO";
 // Icon mapping
 const iconMap = {
   Target,
@@ -31,9 +31,12 @@ const About = () => {
   const { animations, reducedMotion } = useTheme();
   const { contentSettings, loading } = useContent();
 
-  useEffect(() => {
-    document.title = `About Us - ${contentSettings?.siteName || "TestMaster Pro"}`;
-  }, [contentSettings]);
+  useSEO({
+    title: 'About Us',
+    description: contentSettings?.siteDescription || "Learn about our mission to transform education through intelligent testing and personalized learning experiences.",
+    keywords: 'about us, mission, values, education platform, online learning',
+    type: 'website',
+  });
 
   const containerVariants = {
     hidden: { opacity: 0 },
