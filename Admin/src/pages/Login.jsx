@@ -44,6 +44,7 @@ const Login = () => {
 
     checkAdmin();
   }, [checkAdminExists]);
+
   const showToast = (message, type) => {
     setToast({ show: true, message, type });
     // Auto-hide after 4 seconds
@@ -92,7 +93,8 @@ const Login = () => {
 
       if (result.success) {
         showToast("Welcome back! Login successful", "success");
-        // Remove the redirect from here - AuthContext handles it
+        // The login function now handles the redirect with proper timing
+        // Don't add any redirect here to avoid race conditions
       } else {
         setErrors({ submit: result.message });
         showToast(result.message || "Login failed. Please try again.", "error");
@@ -128,16 +130,16 @@ const Login = () => {
           {/* Header */}
           <div className="text-center">
             {/* Logo Container */}
-              <img
-                src="/logo.png"
-                alt="RankBaaz Logo"
-                className="w-full h-full object-contain p-4 sm:p-3 rounded-2xl"
-                onError={(e) => {
-                  // Fallback to icon if image fails to load
-                  e.target.style.display = "none";
-                  e.target.nextElementSibling.style.display = "flex";
-                }}
-              />
+            <img
+              src="/logo.png"
+              alt="RankBaaz Logo"
+              className="w-full h-full object-contain p-4 sm:p-3 rounded-2xl"
+              onError={(e) => {
+                // Fallback to icon if image fails to load
+                e.target.style.display = "none";
+                e.target.nextElementSibling.style.display = "flex";
+              }}
+            />
             <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-2">
               Welcome Back
             </h2>
