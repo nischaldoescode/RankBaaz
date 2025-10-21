@@ -193,17 +193,17 @@ export const adminLogin = async (req, res) => {
       secure:
         process.env.NODE_ENV === "production" ||
         process.env.NODE_ENV === "development",
-      sameSite: "strict",
+      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
       maxAge: 7 * 24 * 60 * 60 * 1000,
+      path: "/",
     });
 
     res.cookie("adminRefreshToken", refreshToken, {
       httpOnly: true,
-      secure:
-        process.env.NODE_ENV === "production" ||
-        process.env.NODE_ENV === "development",
-      sameSite: "strict",
+      secure: process.env.NODE_ENV === "production",
+      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
       maxAge: 30 * 24 * 60 * 60 * 1000,
+      path: "/",
     });
 
     res.status(200).json({
