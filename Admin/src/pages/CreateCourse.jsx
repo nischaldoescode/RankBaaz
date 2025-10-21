@@ -1783,7 +1783,7 @@ Generate complete .txt file which contains, content for all sections above.`;
       maxMarks: "",
       thumbnail: "",
       status: "draft",
-      isPaid: false, // Add this line
+      isPaid: false,
       price: 0,
     });
     setSelectedDifficulties([]);
