@@ -5,7 +5,6 @@ import { useContent } from "../context/ContentContext";
 import { useTheme } from "../context/ThemeContext";
 import ReactMarkdown from "react-markdown";
 import Loading from "../components/common/Loading";
-import { useContent } from "../context/ContentContext";
 
 const TermsOfService = () => {
   const { legalPages, fetchLegalPage, loading, contentSettings } = useContent();
