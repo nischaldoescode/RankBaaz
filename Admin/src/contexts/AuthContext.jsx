@@ -22,29 +22,32 @@ axios.defaults.withCredentials = true; // This ensures cookies are sent
 axios.interceptors.response.use(
   (response) => response,
   async (error) => {
-    // Only redirect on 401 if we're not already on login page
+    const originalRequest = error.config;
+
+    // Prevent infinite loops
+    if (originalRequest._retry) {
+      return Promise.reject(error);
+    }
+
+    // Only redirect on 401 if we're not already on login page and not during initial auth check
     if (
       error.response?.status === 401 &&
-      !window.location.pathname.includes("/login")
+      !window.location.pathname.includes("/login") &&
+      !originalRequest.url.includes("/admin/profile")
     ) {
-      // Skip refresh logic for admin users - just redirect
+      originalRequest._retry = true;
+
+      // For admin, clear state and redirect
       if (localStorage.getItem("currentUser")) {
         const userData = JSON.parse(localStorage.getItem("currentUser"));
         if (userData.role === "admin") {
-          // For admin, just clear and redirect - don't try to refresh
           localStorage.removeItem("currentUser");
-          window.location.href = "/login";
+          // Delay redirect to allow current request to complete
+          setTimeout(() => {
+            window.location.href = "/login";
+          }, 100);
           return Promise.reject(error);
         }
-      }
-
-      // Only try refresh for regular users
-      try {
-        await axios.post("/auth/refresh-token");
-        return axios.request(error.config);
-      } catch (refreshError) {
-        localStorage.removeItem("currentUser");
-        window.location.href = "/login";
       }
     }
     return Promise.reject(error);
@@ -65,12 +68,32 @@ export const AuthProvider = ({ children }) => {
     try {
       setLoading(true);
 
-      // Just check localStorage - no need for immediate API verification
+      // Check localStorage first
       const savedUser = localStorage.getItem("currentUser");
       if (savedUser) {
         const userData = JSON.parse(savedUser);
-        setUser(userData);
-        setIsAuthenticated(true);
+
+        // Verify with backend that session is still valid (only for admin)
+        if (userData.role === "admin") {
+          try {
+            const response = await axios.get("/admin/profile");
+            if (response.data.success) {
+              setUser(userData);
+              setIsAuthenticated(true);
+            } else {
+              throw new Error("Invalid session");
+            }
+          } catch (error) {
+            // Session invalid, clear everything
+            console.error("Session validation failed:", error);
+            localStorage.removeItem("currentUser");
+            setUser(null);
+            setIsAuthenticated(false);
+          }
+        } else {
+          setUser(userData);
+          setIsAuthenticated(true);
+        }
       } else {
         setUser(null);
         setIsAuthenticated(false);
@@ -90,16 +113,24 @@ export const AuthProvider = ({ children }) => {
       setLoading(true);
       const response = await axios.post("/admin/login", credentials);
       if (response.data.success) {
-        const userData = response.data.data.admin; // Changed from 'user' to 'admin' as we have changed the admin model
+        const userData = response.data.data.admin;
+
+        // Set state first
         setUser(userData);
         setIsAuthenticated(true);
+
+        // Save to localStorage
         localStorage.setItem("currentUser", JSON.stringify(userData));
+
         toast.success("Login successful!");
-        // Add redirect here instead of relying on useEffect
-        setTimeout(() => {
-          window.location.href = "/dashboard";
-        }, 1000);
-        return { success: true };
+
+        // Wait longer to ensure cookies are set properly
+        return new Promise((resolve) => {
+          setTimeout(() => {
+            window.location.href = "/dashboard";
+            resolve({ success: true });
+          }, 1500); // Increased from 1000ms to 1500ms
+        });
       }
     } catch (error) {
       const message =
