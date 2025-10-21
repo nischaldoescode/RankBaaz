@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/Card";
 import { Progress } from "@/components/ui/progress";
 import { Clock, AlertTriangle, Zap } from "lucide-react";
 import { cn } from "@/lib/utils";

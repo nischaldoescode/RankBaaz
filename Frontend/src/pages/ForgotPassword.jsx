@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/Card";
 import Loading from "../components/common/Loading";
 import toast from "react-hot-toast";
 import { apiMethods, handleApiError } from "../services/api";
