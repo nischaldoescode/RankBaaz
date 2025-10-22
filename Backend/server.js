@@ -129,33 +129,51 @@ const corsOptions = {
       "http://localhost:3001",
       "http://127.0.0.1:3000",
       "http://localhost:5173",
-      "http://locahost:7000",
+      "http://localhost:7000",
       "http://localhost:6000",
       "https://rankbaaz-frontend.onrender.com",
       "https://rankbaaz.com",
       "https://www.rankbaaz.com",
-      "https://rankbaaz.com/",
       "https://admin.rankbaaz.com",
       "https://rankbaaz-admin.onrender.com",
-      "https://rankbaaz-frontend.onrender.com/",
       "https://rankbaaz.onrender.com",
     ];
 
+    const timestamp = new Date().toISOString();
+
+    // Handle requests without origin header
     if (!origin) {
-        // console.log("Request without origin allowed (development mode)");
-        return callback(null, true);
+      console.log(`[CORS] ${timestamp} - Request without origin header`);
+      console.log(
+        `[CORS] ${timestamp} - Environment: ${process.env.NODE_ENV || "development"}`
+      );
+      console.log(
+        `[CORS] ${timestamp} - Action: ALLOWED (same-origin, server-to-server, or mobile app)`
+      );
+      return callback(null, true);
     }
 
-    // Normalize and check origin
+    // Normalize origin by removing trailing slash
     const normalizedOrigin = origin.replace(/\/$/, "");
+
+    // Check if origin is allowed
     const isAllowed = allowedOrigins.some(
       (allowed) => allowed.replace(/\/$/, "") === normalizedOrigin
     );
 
     if (isAllowed) {
+      console.log(`[CORS] ${timestamp} - Origin: ${origin}`);
+      console.log(`[CORS] ${timestamp} - Normalized: ${normalizedOrigin}`);
+      console.log(`[CORS] ${timestamp} - Action: ALLOWED`);
       callback(null, true);
     } else {
-      // console.warn(`Blocked origin: ${origin}`);
+      console.warn(`[CORS] ${timestamp} - Origin: ${origin}`);
+      console.warn(`[CORS] ${timestamp} - Normalized: ${normalizedOrigin}`);
+      console.warn(`[CORS] ${timestamp} - Action: BLOCKED`);
+      console.warn(
+        `[CORS] ${timestamp} - Allowed origins:`,
+        allowedOrigins.join(", ")
+      );
       callback(new Error("Not allowed by CORS"));
     }
   },
