@@ -142,15 +142,8 @@ const corsOptions = {
     ];
 
     if (!origin) {
-      if (process.env.NODE_ENV === "development") {
-        // Allow Postman/Insomnia in development only
         // console.log("Request without origin allowed (development mode)");
         return callback(null, true);
-      } else {
-        // Block in production
-        // console.warn("Blocked request without origin header");
-        return callback(new Error("Not allowed Blocked"));
-      }
     }
 
     // Normalize and check origin
