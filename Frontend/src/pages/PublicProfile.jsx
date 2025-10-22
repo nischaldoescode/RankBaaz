@@ -17,6 +17,8 @@ import {
   Settings,
 } from "lucide-react";
 import toast from "react-hot-toast";
+import { useContent } from "../context/ContentContext";
+import { useSEO } from "../hooks/useSEO";
 
 const PublicProfile = () => {
   const { username: rawUsername } = useParams();
@@ -31,7 +33,6 @@ const PublicProfile = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const { contentSettings } = useContent();
-
   useSEO({
     title: profileData
       ? `${profileData.name || `@${profileData.username}`}`

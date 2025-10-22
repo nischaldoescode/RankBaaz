@@ -4,7 +4,7 @@ import { Shield, Calendar, FileText } from "lucide-react";
 import { useContent } from "../context/ContentContext";
 import { useTheme } from "../context/ThemeContext";
 import Loading from "../components/common/Loading";
-
+import { useSEO } from "../hooks/useSEO";
 const PrivacyPolicy = () => {
   const { legalPages, fetchLegalPage, loading, contentSettings } = useContent();
   const { animations, reducedMotion } = useTheme();

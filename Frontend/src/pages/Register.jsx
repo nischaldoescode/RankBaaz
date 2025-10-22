@@ -24,6 +24,7 @@ import Loading from "../components/common/Loading";
 import { debounce } from "lodash";
 import { apiMethods } from "../services/api";
 import toast from "react-hot-toast";
+import { useHead } from '@unhead/react';
 import { useContent } from "../context/ContentContext";
 import { useSEO } from "../hooks/useSEO";
 
