@@ -10,6 +10,7 @@ import { v2 as cloudinary } from "cloudinary";
 import redisClient from "./Config/redis.js";
 import fileUpload from "express-fileupload";
 import mongoose from "mongoose";
+import RedisStore from "rate-limit-redis";
 // Import routes
 import authRoutes from "./Routes/authRoutes.js";
 import courseRoutes from "./Routes/courseRoutes.js";
@@ -33,12 +34,18 @@ cloudinary.config({
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// Connect to MongoDB
 const mongoOptions = {
-  maxPoolSize: 50,
-  serverSelectionTimeoutMS: 5000,
-  socketTimeoutMS: 45000,
+  maxPoolSize: 100, // Increased for production
+  minPoolSize: 10, // Maintain minimum connections
+  serverSelectionTimeoutMS: 10000, // Increased timeout
+  socketTimeoutMS: 60000, // Increased socket timeout
+  connectTimeoutMS: 15000, // Add connection timeout
   bufferCommands: false,
+  retryWrites: true,
+  retryReads: true,
+  // Add these for better connection management
+  maxIdleTimeMS: 60000,
+  compressors: ["zlib"], // Enable compression
 };
 
 // we will await for the Data base connection
@@ -54,14 +61,21 @@ try {
 
 // Rate limiting
 const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: process.env.NODE_ENV === "production" ? 100 : 1000, // limit each IP
+  windowMs: 15 * 60 * 1000,
+  max: process.env.NODE_ENV === "production" ? 200 : 1000, // Increased for production
   message: {
     success: false,
     message: "Too many requests from this IP, please try again later.",
   },
   standardHeaders: true,
   legacyHeaders: false,
+  // Use Redis for distributed rate limiting
+  store: new RedisStore({
+    client: redisClient,
+    prefix: "ratelimit:",
+  }),
+  // Skip rate limiting for health checks
+  skip: (req) => req.path === "/health",
 });
 
 // ADD THIS NEW RATE LIMITER FOR COUPONS
@@ -98,14 +112,32 @@ const corsOptions = {
       "https://rankbaaz.com",
       "https://www.rankbaaz.com",
       "https://admin.rankbaaz.com",
-      "https://rankbaaz-admin.onrender.com","https://rankbaaz-frontend.onrender.com/"    ];
+      "https://rankbaaz-admin.onrender.com",
+      "https://rankbaaz-frontend.onrender.com/",
+    ];
 
-    // Allow requests with no origin (mobile apps, etc.)
-    if (!origin) return callback(null, true);
+    if (!origin) {
+      if (process.env.NODE_ENV === "development") {
+        // Allow Postman/Insomnia in development only
+        // console.log("Request without origin allowed (development mode)");
+        return callback(null, true);
+      } else {
+        // Block in production
+        // console.warn("Blocked request without origin header");
+        return callback(new Error("Not allowed Blocked"));
+      }
+    }
 
-    if (allowedOrigins.includes(origin)) {
+    // Normalize and check origin
+    const normalizedOrigin = origin.replace(/\/$/, "");
+    const isAllowed = allowedOrigins.some(
+      (allowed) => allowed.replace(/\/$/, "") === normalizedOrigin
+    );
+
+    if (isAllowed) {
       callback(null, true);
     } else {
+      // console.warn(`Blocked origin: ${origin}`);
       callback(new Error("Not allowed by CORS"));
     }
   },
@@ -113,6 +145,8 @@ const corsOptions = {
   methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
   exposedHeaders: ["X-Total-Count"],
+  maxAge: 86400,
+  preflightContinue: false,
 };
 
 // Middleware
@@ -192,12 +226,10 @@ app.use((req, res, next) => {
 
 // Health check endpoint
 app.get("/health", (req, res) => {
+  // Quick response for health checks
   res.status(200).json({
-    success: true,
-    message: "Server is running successfully",
-    timestamp: new Date().toISOString(),
-    uptime: process.uptime(),
-    environment: process.env.NODE_ENV || "development",
+    status: "ok",
+    uptime: Math.floor(process.uptime()),
   });
 });
 
