@@ -40,6 +40,7 @@ import {
   CartesianGrid,
 } from "recharts";
 
+import { useHead } from '@unhead/react';
 import { useAuth } from "../context/AuthContext";
 import { useTheme } from "../context/ThemeContext";
 import { useContent } from "../context/ContentContext";

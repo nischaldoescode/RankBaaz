@@ -10,7 +10,6 @@ import {
   MagnifyingGlassIcon,
   ExclamationTriangleIcon,
 } from "@heroicons/react/24/outline";
-
 import { useContent } from "../context/ContentContext";
 import { useSEO } from "../hooks/useSEO";
 const NotFound = () => {

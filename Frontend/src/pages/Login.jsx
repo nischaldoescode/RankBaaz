@@ -20,6 +20,7 @@ import Loading from "../components/common/Loading";
 import toast from "react-hot-toast";
 import ForgotPassword from "./ForgotPassword";
 import { apiMethods, handleApiError } from "../services/api";
+import { useHead } from '@unhead/react';
 import { useSEO } from "../hooks/useSEO";
 import { useContent } from "../context/ContentContext";
 

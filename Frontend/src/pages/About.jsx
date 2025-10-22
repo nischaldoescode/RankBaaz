@@ -26,6 +26,7 @@ const iconMap = {
   TrendingUp,
   Shield,
 };
+import { useHead } from '@unhead/react';
 
 const About = () => {
   const { animations, reducedMotion } = useTheme();
