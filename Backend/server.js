@@ -134,6 +134,7 @@ const corsOptions = {
       "https://rankbaaz-frontend.onrender.com",
       "https://rankbaaz.com",
       "https://www.rankbaaz.com",
+      "https://rankbaaz.com/",
       "https://admin.rankbaaz.com",
       "https://rankbaaz-admin.onrender.com",
       "https://rankbaaz-frontend.onrender.com/",
