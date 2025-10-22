@@ -10,7 +10,7 @@ import { v2 as cloudinary } from "cloudinary";
 import redisClient from "./Config/redis.js";
 import fileUpload from "express-fileupload";
 import mongoose from "mongoose";
-import RedisStore from "rate-limit-redis";
+import ioredisRatelimit from "ioredis-ratelimit";
 // Import routes
 import authRoutes from "./Routes/authRoutes.js";
 import courseRoutes from "./Routes/courseRoutes.js";
@@ -59,29 +59,51 @@ try {
   process.exit(1);
 }
 
+// Create rate limiter functions using ioredis-ratelimit
+const createRateLimiter = (options) => {
+  const limiter = ioredisRatelimit({
+    client: redisClient,
+    key: options.keyFn || ((req) => `ratelimit:${options.prefix}:${req.ip}`),
+    limit: options.max,
+    duration: options.windowMs,
+    mode: "binary",
+  });
+
+  console.log(
+    `Rate limiter '${options.prefix}' initialized - Max: ${options.max} requests per ${options.windowMs / 1000}s`
+  );
+
+  return async (req, res, next) => {
+    if (options.skip && options.skip(req)) {
+      return next();
+    }
+
+    try {
+      await limiter(req);
+      next();
+    } catch (error) {
+      return res.status(429).json(options.message);
+    }
+  };
+};
+
 // Rate limiting
-const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: process.env.NODE_ENV === "production" ? 200 : 1000, // Increased for production
+const limiter = createRateLimiter({
+  prefix: "general",
+  windowMs: 20 * 60 * 1000,
+  max: process.env.NODE_ENV === "production" ? 200 : 1000,
   message: {
     success: false,
-    message: "Too many requests from this IP, please try again later.",
+    message: "Too many requests, please try again later.",
   },
-  standardHeaders: true,
-  legacyHeaders: false,
-  // Use Redis for distributed rate limiting
-  store: new RedisStore({
-    client: redisClient,
-    prefix: "ratelimit:",
-  }),
-  // Skip rate limiting for health checks
   skip: (req) => req.path === "/health",
 });
 
-// ADD THIS NEW RATE LIMITER FOR COUPONS
-const couponLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 50, // 50 requests per window
+// Coupon rate limiter
+const couponLimiter = createRateLimiter({
+  prefix: "coupon",
+  windowMs: 20 * 60 * 1000,
+  max: 60,
   message: {
     success: false,
     message: "Too many coupon requests, please try again later.",
@@ -89,9 +111,10 @@ const couponLimiter = rateLimit({
 });
 
 // Stricter rate limiting for auth routes
-const authLimiter = rateLimit({
-  windowMs: 20 * 60 * 1000, // 15 minutes
-  max: 30, // limit each IP to 20 requests per windowMs
+const authLimiter = createRateLimiter({
+  prefix: "auth",
+  windowMs: 20 * 60 * 1000,
+  max: 30,
   message: {
     success: false,
     message: "Too many authentication attempts, please try again later.",

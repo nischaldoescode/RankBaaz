@@ -46,6 +46,7 @@
     "fluent-ffmpeg": "^2.1.3",
     "helmet": "^7.1.0",
     "ioredis": "^5.8.0",
+    "ioredis-ratelimit": "^2.3.0",
     "isomorphic-dompurify": "^2.29.0",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.18.0",
