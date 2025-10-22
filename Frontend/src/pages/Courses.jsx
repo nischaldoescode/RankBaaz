@@ -20,7 +20,6 @@ import Loading from "../components/common/Loading";
 import { useTheme } from "../context/ThemeContext";
 import { useSEO } from "../hooks/useSEO";
 
-
 const CourseCard = React.memo(
   ({ course, index, isExpanded, onExpandChange }) => {
     return (
@@ -28,11 +27,11 @@ const CourseCard = React.memo(
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: index * 0.05 }}
-        className="h-full flex flex-col"
+        className="flex flex-col"
         style={{ willChange: "auto" }}
       >
-        <Card className="h-full hover:shadow-md transition-shadow duration-200 cursor-pointer group bg-white border border-gray-200 hover:border-gray-300 overflow-hidden">
-          <CardContent className="p-0 flex flex-col h-full">
+        <Card className="hover:shadow-md transition-shadow duration-200 cursor-pointer group bg-white border border-gray-200 hover:border-gray-300 overflow-hidden">
+          <CardContent className="p-0 flex flex-col">
             <div className="relative aspect-video bg-gray-100 overflow-hidden rounded-t-lg flex-shrink-0">
               {course.image?.url ? (
                 <img
@@ -85,8 +84,6 @@ const CourseCard = React.memo(
     );
   },
   (prevProps, nextProps) => {
-
-
     if (prevProps.isExpanded !== nextProps.isExpanded) {
       return false; // Allow re-render
     }
@@ -208,20 +205,21 @@ const Courses = () => {
     hasFiltersApplied,
   } = useCourses();
 
-    const { contentSettings } = useContent();
-  
+  const { contentSettings } = useContent();
+
   useSEO({
-    title: 'Courses',
-    description: `Explore ${pagination.totalCourses || 'our'} courses designed to test and improve your skills. Find courses from beginner to advanced levels.`,
-    keywords: 'courses, online courses, learning, test preparation, skills development, education',
-    type: 'website',
+    title: "Courses",
+    description: `Explore ${
+      pagination.totalCourses || "our"
+    } courses designed to test and improve your skills. Find courses from beginner to advanced levels.`,
+    keywords:
+      "courses, online courses, learning, test preparation, skills development, education",
+    type: "website",
   });
   // const navigate = useNavigate();
   const { animations, reducedMotion } = useTheme();
 
   const handleExpandChange = useCallback((courseId, isExpanded) => {
-
-
     if (isExpanded) {
       setExpandedCourseId(courseId);
     } else {
@@ -599,7 +597,7 @@ const Courses = () => {
             }
           >
             {viewMode === "grid" ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-8 items-start">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-8 auto-rows-min">
                 {courses.map((course, index) => (
                   <CourseCard
                     key={course._id}
