@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useReducer, useEffect } from "react";
 import { apiMethods, handleApiError } from "../services/api";
 import toast from "react-hot-toast";
+import { cachedAPICall } from "../utils/cacheManager";
 
 // Initial state
 const initialState = {
@@ -247,12 +248,19 @@ export const CourseProvider = ({ children }) => {
         }
       }
 
-      // console.log("API params being sent:", params);
-      const response = await apiMethods.courses.getAll(params);
-      const { courses, pagination } = response.data.data || {
-        courses: [],
-        pagination: {},
-      };
+      // Use cached API call
+      const data = await cachedAPICall(
+        "/api/courses",
+        params,
+        async () => {
+          const response = await apiMethods.courses.getAll(params);
+          return response.data.data || { courses: [], pagination: {} };
+        },
+        // 30 minutes caching
+        { maxAge: 30 * 60 * 1000 }
+      );
+
+      const { courses, pagination } = data;
 
       dispatch({
         type: COURSE_ACTIONS.SET_COURSES,
@@ -268,10 +276,18 @@ export const CourseProvider = ({ children }) => {
 
   const loadCategories = async () => {
     try {
-      const response = await apiMethods.courses.getCategories();
+      const data = await cachedAPICall(
+        "/api/courses/categories",
+        {},
+        async () => {
+          const response = await apiMethods.courses.getCategories();
+          return response.data.data?.categories || [];
+        }
+      );
+
       dispatch({
         type: COURSE_ACTIONS.SET_CATEGORIES,
-        payload: response.data.data?.categories || [],
+        payload: data,
       });
     } catch (error) {
       console.error("Failed to load categories:", error);

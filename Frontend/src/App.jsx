@@ -26,7 +26,7 @@ import Footer from "./components/common/Footer";
 import Loading from "./components/common/Loading";
 import ProtectedRoute from "./components/common/ProtectedRoute";
 import ErrorBoundary from "./components/common/ErrorBoundary";
-import { createHead, UnheadProvider } from '@unhead/react/client'
+import { createHead, UnheadProvider } from "@unhead/react/client";
 // Lazy loaded for better performance
 const Home = React.lazy(() => import("./pages/Home"));
 const Login = React.lazy(() => import("./pages/Login"));
@@ -41,7 +41,7 @@ const About = React.lazy(() => import("./pages/About"));
 const PrivacyPolicy = React.lazy(() => import("./pages/PrivacyPolicy"));
 const TermsOfService = React.lazy(() => import("./pages/TermsOfService"));
 
-const head = createHead()
+const head = createHead();
 // Page transition variants
 const pageVariants = {
   initial: {
@@ -713,23 +713,30 @@ function App() {
                     primary: "#10b981",
                     secondary: "#fff",
                   },
+                  duration: 3000, // Shorter for success
                 },
                 error: {
                   iconTheme: {
                     primary: "#ef4444",
                     secondary: "#fff",
                   },
+                  duration: 5000, // Longer for errors
                 },
+                // Prevent duplicate toasts
+                id: "unique-toast",
               }}
               gutter={8}
               containerStyle={{
                 bottom: 20,
               }}
+              // Add this to prevent duplicates
+              containerClassName="toast-container"
+              reverseOrder={false}
             />
           </div>
         </ContentProvider>
       </ErrorBoundary>
-      </UnheadProvider>
+    </UnheadProvider>
   );
 }
 

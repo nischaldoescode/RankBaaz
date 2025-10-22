@@ -97,7 +97,6 @@ export const AuthProvider = ({ children }) => {
 
       if (userData) {
         const user = JSON.parse(userData);
-        // console.log("[INIT_AUTH] Found user in localStorage:", user.email);
 
         try {
           const response = await apiMethods.auth.getProfile();
@@ -109,7 +108,6 @@ export const AuthProvider = ({ children }) => {
             return;
           }
 
-
           dispatch({
             type: AUTH_ACTIONS.LOGIN_SUCCESS,
             payload: {
@@ -118,11 +116,12 @@ export const AuthProvider = ({ children }) => {
             },
           });
         } catch (error) {
-          console.error( {
+          console.error("Auth initialization failed:", {
             status: error.response?.status,
             message: error.response?.data?.message || error.message,
           });
 
+          // Silently clear auth - don't show toast on app initialization
           clearAuthData();
           dispatch({ type: AUTH_ACTIONS.LOGOUT });
         }
@@ -130,6 +129,7 @@ export const AuthProvider = ({ children }) => {
         dispatch({ type: AUTH_ACTIONS.SET_LOADING, payload: false });
       }
     } catch (error) {
+      console.error("InitializeAuth error:", error);
       dispatch({ type: AUTH_ACTIONS.SET_LOADING, payload: false });
     }
   };
@@ -145,30 +145,39 @@ export const AuthProvider = ({ children }) => {
       dispatch({ type: AUTH_ACTIONS.CLEAR_ERROR });
 
       const response = await apiMethods.auth.login(credentials);
-
-      // Backend returns { success, data: { user } }
       const user = response.data?.data?.user;
 
       if (!user) {
         throw new Error("User data not received from server");
       }
 
-
-      // Store user data only (no token needed - it's in httpOnly cookie)
       localStorage.setItem("user", JSON.stringify(user));
 
       dispatch({
         type: AUTH_ACTIONS.LOGIN_SUCCESS,
-        payload: { user, token: null }, // token is null because it's in httpOnly cookie
+        payload: { user, token: null },
       });
 
-      toast.success(`Welcome back, ${user.name}!`);
+      // Use toast.promise to prevent duplicate toasts
+      toast.success(`Welcome back, ${user.name}!`, {
+        id: "login-success", // Unique ID prevents duplicates
+      });
+
       return { success: true, user };
     } catch (error) {
       const errorMessage = handleApiError(error, "Login failed");
       dispatch({ type: AUTH_ACTIONS.SET_ERROR, payload: errorMessage });
-      toast.error(errorMessage);
+
+      // Only show toast if it's not a network error (component will handle network errors)
+      if (!error.isNetworkError) {
+        toast.error(errorMessage, {
+          id: "login-error", // Unique ID prevents duplicates
+        });
+      }
+
       return { success: false, error: errorMessage };
+    } finally {
+      dispatch({ type: AUTH_ACTIONS.SET_LOADING, payload: false });
     }
   };
 
@@ -411,7 +420,7 @@ export const AuthProvider = ({ children }) => {
     try {
       await apiMethods.auth.logout();
     } catch (error) {
-      console.error( error);
+      console.error(error);
     } finally {
       clearAuthData();
       dispatch({ type: AUTH_ACTIONS.LOGOUT });
