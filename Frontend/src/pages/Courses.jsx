@@ -18,7 +18,6 @@ import CourseDetailsExpander from "@/components/testandcourse/CourseDetailsExpan
 import { useCourses } from "../context/CourseContext";
 import Loading from "../components/common/Loading";
 import { useTheme } from "../context/ThemeContext";
-import { useHead } from '@unhead/react';
 import { useSEO } from "../hooks/useSEO";
 
 
