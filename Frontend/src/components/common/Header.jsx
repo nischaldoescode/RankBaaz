@@ -38,6 +38,8 @@ import { useContent } from "../../context/ContentContext";
 const Header = () => {
   const [scrolled, setScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [dragX, setDragX] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
 
   const { isAuthenticated, user, logout } = useAuth();
   const { animations, reducedMotion } = useTheme();
@@ -78,6 +80,7 @@ const Header = () => {
     const char = initial.charAt(0).toUpperCase();
     return colors[char] || colors.A;
   };
+
   // Handle scroll effect
   useEffect(() => {
     const handleScroll = () => {
@@ -87,6 +90,23 @@ const Header = () => {
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
+
+  // Add touch listeners for swipe gesture (only on mobile)
+  useEffect(() => {
+    if (window.innerWidth >= 1024) return; // Only on mobile/tablet
+
+    document.addEventListener("touchstart", handleTouchStart, {
+      passive: true,
+    });
+    document.addEventListener("touchmove", handleTouchMove, { passive: false });
+    document.addEventListener("touchend", handleTouchEnd, { passive: true });
+
+    return () => {
+      document.removeEventListener("touchstart", handleTouchStart);
+      document.removeEventListener("touchmove", handleTouchMove);
+      document.removeEventListener("touchend", handleTouchEnd);
+    };
+  }, [isDragging, dragX]);
 
   // Close mobile menu on route change
   useEffect(() => {
@@ -100,6 +120,51 @@ const Header = () => {
     handleCloseMenu();
     await logout();
     navigate("/");
+  };
+
+  // Touch/Drag handlers for swipe-to-open menu
+  const handleTouchStart = (e) => {
+    const touch = e.touches[0];
+    // Only start drag if touch begins near the right edge (within 20px)
+    if (window.innerWidth - touch.clientX < 20) {
+      setIsDragging(true);
+      setDragX(0);
+    }
+  };
+
+  const handleTouchMove = (e) => {
+    if (!isDragging) return;
+
+    const touch = e.touches[0];
+    const screenWidth = window.innerWidth;
+    const dragDistance = screenWidth - touch.clientX;
+
+    // Limit drag to screen width (320px max for the sheet width)
+    const clampedDrag = Math.min(Math.max(0, dragDistance), 320);
+    setDragX(clampedDrag);
+
+    // Prevent scrolling while dragging
+    if (clampedDrag > 10) {
+      e.preventDefault();
+    }
+  };
+
+  const handleTouchEnd = () => {
+    if (!isDragging) return;
+
+    // If dragged more than 100px (about 1/3 of menu width), keep it open
+    if (dragX > 100) {
+      setIsMobileMenuOpen(true);
+    } else {
+      // Otherwise close it
+      setIsMobileMenuOpen(false);
+    }
+
+    // Reset drag state after a short delay to allow animation
+    setTimeout(() => {
+      setIsDragging(false);
+      setDragX(0);
+    }, 50);
   };
 
   const isActivePath = (path) => {
@@ -289,7 +354,7 @@ const Header = () => {
 
                 {/* Mobile Hamburger Menu - Navigation Only */}
                 <Sheet
-                  open={isMobileMenuOpen}
+                  open={isMobileMenuOpen || isDragging}
                   onOpenChange={setIsMobileMenuOpen}
                 >
                   <SheetTrigger asChild>
@@ -306,18 +371,31 @@ const Header = () => {
                     side="right"
                     className="w-80 px-0"
                     aria-describedby={undefined}
+                    style={{
+                      transform: isDragging
+                        ? `translateX(${Math.max(0, 320 - dragX)}px)`
+                        : undefined,
+                      transition: isDragging
+                        ? "none"
+                        : "transform 0.3s ease-out",
+                    }}
                   >
                     {/* Mobile menu content - REMOVE user info section */}
                     <AnimatePresence mode="wait">
-                      {isMobileMenuOpen && (
+                      {(isMobileMenuOpen || isDragging) && (
                         <motion.div
                           initial={{ x: "100%" }}
-                          animate={{ x: 0 }}
+                          animate={{
+                            x: isDragging
+                              ? `${Math.max(0, 100 - (dragX / 320) * 100)}%`
+                              : 0,
+                          }}
                           exit={{ x: "100%" }}
                           transition={{
-                            type: "spring",
+                            type: isDragging ? "tween" : "spring",
                             stiffness: 300,
                             damping: 30,
+                            duration: isDragging ? 0 : undefined,
                           }}
                           className="h-full"
                         >
@@ -382,7 +460,7 @@ const Header = () => {
 
                 {/* Mobile Menu for Non-authenticated */}
                 <Sheet
-                  open={isMobileMenuOpen}
+                  open={isMobileMenuOpen || isDragging}
                   onOpenChange={setIsMobileMenuOpen}
                 >
                   <SheetTrigger asChild>
@@ -399,24 +477,41 @@ const Header = () => {
                     side="right"
                     className="w-80 px-0"
                     aria-describedby={undefined}
+                    style={{
+                      transform: isDragging
+                        ? `translateX(${Math.max(0, 320 - dragX)}px)`
+                        : undefined,
+                      transition: isDragging
+                        ? "none"
+                        : "transform 0.3s ease-out",
+                    }}
                   >
                     <AnimatePresence mode="wait">
-                      {isMobileMenuOpen && (
+                      {(isMobileMenuOpen || isDragging) && (
                         <motion.div
                           initial={{ x: "100%" }}
-                          animate={{ x: 0 }}
+                          animate={{
+                            x: isDragging
+                              ? `${Math.max(0, 100 - (dragX / 320) * 100)}%`
+                              : 0,
+                          }}
                           exit={{ x: "100%" }}
                           transition={{
-                            type: "spring",
+                            type: isDragging ? "tween" : "spring",
                             stiffness: 300,
                             damping: 30,
+                            duration: isDragging ? 0 : undefined,
                           }}
                           className="h-full"
                         >
                           <SheetHeader className="px-6 pb-4 border-b border-border">
                             <div className="flex items-center gap-3">
-                              <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-                                <GraduationCap className="w-5 h-5 text-primary-foreground" />
+                              <div className="w-auto h-auto bg-primary rounded-lg flex items-center justify-center">
+                                <img
+                                  src={contentSettings.logo.url}
+                                  alt={contentSettings.siteName || "Logo"}
+                                  className="h-12 w-auto object-contain rounded-xl"
+                                />
                               </div>
                               <SheetTitle className="text-lg">
                                 {contentSettings?.siteName || "RankBaaz"}
@@ -480,6 +575,17 @@ const Header = () => {
           </div>
         </div>
       </div>
+
+      {/* Drag indicator - shows when dragging from edge */}
+      {isDragging && dragX > 0 && (
+        <div
+          className="fixed inset-0 pointer-events-none z-40 lg:hidden"
+          style={{
+            background: `rgba(0, 0, 0, ${(dragX / 320) * 0.5})`,
+            transition: "none",
+          }}
+        />
+      )}
     </motion.header>
   );
 };
