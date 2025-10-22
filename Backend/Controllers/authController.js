@@ -727,7 +727,7 @@ export const initiateLogin = async (req, res) => {
     };
     await user.save();
 
-    console.log("[INITIATE_LOGIN] Login has been initiated for:", email);
+    // console.log("[INITIATE_LOGIN] Login has been initiated for:", email);
 
     // Fetch content settings
     let contentSettings;
@@ -754,7 +754,7 @@ export const initiateLogin = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("Initiate login error:", error);
+    console.error(error);
     res.status(500).json({
       success: false,
       message: "Failed to initiate login",
@@ -781,7 +781,7 @@ export const verifyLoginOTP = async (req, res) => {
     }
 
     const user = await User.findOne({ email });
-    console.log("[INITIATE_LOGIN] Login initiated for:", email);
+    console.log(email);
 
     if (!user) {
       return res.status(404).json({
@@ -836,7 +836,7 @@ export const verifyLoginOTP = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("Verify login OTP error:", error);
+    console.error(error);
     res.status(500).json({
       success: false,
       message: "Failed to verify OTP",
@@ -895,11 +895,11 @@ export const login = async (req, res) => {
         message: "Invalid credentials",
       });
     }
-    console.log("[LOGIN] User logged in successfully:", {
-      email: user.email,
-      userId: user._id,
-      timestamp: new Date().toISOString(),
-    });
+    // console.log({
+    //   email: user.email,
+    //   userId: user._id,
+    //   timestamp: new Date().toISOString(),
+    // });
 
     if (user.otp && user.otp.code) {
       user.otp = {
@@ -968,7 +968,7 @@ export const login = async (req, res) => {
       data: { user: userResponse },
     });
   } catch (error) {
-    console.error("Login error:", error);
+    console.error( error);
     res.status(500).json({
       success: false,
       message: "Login failed",
@@ -987,7 +987,7 @@ export const logout = async (req, res) => {
       message: "Logout successful",
     });
   } catch (error) {
-    console.error("Logout error:", error);
+    console.error( error);
     res.status(500).json({
       success: false,
       message: "Logout failed",
@@ -1069,7 +1069,7 @@ export const refreshToken = async (req, res) => {
       message: "Token refreshed successfully",
     });
   } catch (error) {
-    console.error("Refresh token error:", error);
+    console.error( error);
     res.status(401).json({
       success: false,
       message: "Invalid refresh token",
@@ -1102,7 +1102,7 @@ export const getProfile = async (req, res) => {
       data: { user },
     });
   } catch (error) {
-    console.error("Get profile error:", error);
+    console.error( error);
     res.status(500).json({
       success: false,
       message: "Failed to retrieve profile",
@@ -1190,7 +1190,7 @@ export const updateProfile = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("Update profile error:", error);
+    console.error( error);
     res.status(500).json({
       success: false,
       message: "Error updating profile",
@@ -1248,7 +1248,7 @@ export const forgotPassword = async (req, res) => {
     };
     await user.save();
 
-    console.log("[FORGOT_PASSWORD] Password reset initiated for:", user.email);
+    console.log( user.email);
 
     // Fetch content settings
     let contentSettings;
@@ -1280,7 +1280,7 @@ export const forgotPassword = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("Forgot password error:", error);
+    console.error( error);
     res.status(500).json({
       success: false,
       message: "Error initiating password reset. Please try again.",
@@ -1343,7 +1343,7 @@ export const verifyForgotPasswordOTP = async (req, res) => {
       });
     }
 
-    console.log("[FORGOT_PASSWORD] OTP verified for:", user.email);
+    console.log( user.email);
 
     // Mark OTP as used but don't clear it yet (will clear after password reset)
     user.otp.used = true;
@@ -1370,7 +1370,7 @@ export const verifyForgotPasswordOTP = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("Verify forgot password OTP error:", error);
+    console.error(error);
     res.status(500).json({
       success: false,
       message: "Internal Error. Please try again.",
