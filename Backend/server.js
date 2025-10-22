@@ -223,7 +223,8 @@ app.use(
           "razorpay.com",
           "api.razorpay.com",
           "https://api.razorpay.com",
-          "https://checkout.razorpay.com"
+          "https://checkout.razorpay.com",
+          "https://rankbaaz.com/",
         ],
         workerSrc: ["'self'", "blob:"],
       },
