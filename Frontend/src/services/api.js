@@ -36,10 +36,15 @@ api.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
 
-    // Handle network errors
+    // Handle network errors - DON'T show toast here, let component handle it
     if (!error.response) {
-      toast.error("Network error. Please check your connection.");
-      return Promise.reject(error);
+      console.error("Network error:", error.message);
+      // Return a structured error instead of showing toast
+      return Promise.reject({
+        message: "Network error. Please check your connection.",
+        isNetworkError: true,
+        originalError: error,
+      });
     }
 
     const { status, data } = error.response;
@@ -49,21 +54,20 @@ api.interceptors.response.use(
       originalRequest._retry = true;
 
       try {
-        // Try to refresh using the cookie
         await api.post("/api/auth/refresh-token");
-        // If successful, the new cookie is set automatically
-        // Retry the original request with the new cookie
         return api(originalRequest);
       } catch (refreshError) {
-        // If refresh fails, clear localStorage and redirect
         localStorage.removeItem("user");
+        // DON'T show toast here - let the auth context handle it
         window.location.href = "/login";
-        toast.error("Session expired. Please login again.");
-        return Promise.reject(refreshError);
+        return Promise.reject({
+          message: "Session expired. Please login again.",
+          isAuthError: true,
+        });
       }
     }
-    // Handle other HTTP errors - Log them but don't show toast
-    // Let individual components handle their own error messages
+
+    // Remove all toast.error() calls from here - let components handle them
     switch (status) {
       case 400:
         console.error("Bad request:", data?.message);

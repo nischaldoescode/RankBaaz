@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { apiMethods } from "../services/api";
 import toast from "react-hot-toast";
-
+import { cachedAPICall } from "../utils/cacheManager";
 const ContentContext = createContext();
 
 export const useContent = () => {
@@ -21,13 +21,23 @@ export const ContentProvider = ({ children }) => {
   const [isInitialLoad, setIsInitialLoad] = useState(true);
 
   // Fetch Content Settings
-  const fetchContentSettings = async () => {
+  const fetchContentSettings = async (forceRefresh = false) => {
     try {
-      const response = await apiMethods.get("/api/content/settings");
-      if (response.data.success) {
-        setContentSettings(response.data.data.settings);
-        return response.data.data.settings;
-      }
+      const data = await cachedAPICall(
+        "/api/content/settings",
+        {},
+        async () => {
+          const response = await apiMethods.get("/api/content/settings");
+          if (response.data.success) {
+            return response.data.data.settings;
+          }
+          throw new Error("Invalid response");
+        },
+        { forceRefresh }
+      );
+
+      setContentSettings(data);
+      return data;
     } catch (error) {
       console.error("Error fetching content settings:", error);
       return null;
@@ -50,13 +60,23 @@ export const ContentProvider = ({ children }) => {
   };
 
   // Fetch Contact Info
-  const fetchContactInfo = async () => {
+  const fetchContactInfo = async (forceRefresh = false) => {
     try {
-      const response = await apiMethods.get("/api/content/contact");
-      if (response.data.success) {
-        setContactInfo(response.data.data.contactInfo);
-        return response.data.data.contactInfo;
-      }
+      const data = await cachedAPICall(
+        "/api/content/contact",
+        {},
+        async () => {
+          const response = await apiMethods.get("/api/content/contact");
+          if (response.data.success) {
+            return response.data.data.contactInfo;
+          }
+          throw new Error("Invalid response");
+        },
+        { forceRefresh }
+      );
+
+      setContactInfo(data);
+      return data;
     } catch (error) {
       console.error("Error fetching contact info:", error);
       return null;
@@ -81,17 +101,26 @@ export const ContentProvider = ({ children }) => {
   };
 
   // Fetch all legal pages
-  const fetchAllLegalPages = async () => {
+  const fetchAllLegalPages = async (forceRefresh = false) => {
     try {
-      const response = await apiMethods.get("/api/content/legal");
-      if (response.data.success) {
-        const pages = response.data.data.pages.reduce((acc, page) => {
-          acc[page.type] = page;
-          return acc;
-        }, {});
-        setLegalPages(pages);
-        return pages;
-      }
+      const data = await cachedAPICall(
+        "/api/content/legal",
+        {},
+        async () => {
+          const response = await apiMethods.get("/api/content/legal");
+          if (response.data.success) {
+            return response.data.data.pages.reduce((acc, page) => {
+              acc[page.type] = page;
+              return acc;
+            }, {});
+          }
+          throw new Error("Invalid response");
+        },
+        { forceRefresh }
+      );
+
+      setLegalPages(data);
+      return data;
     } catch (error) {
       console.error("Error fetching legal pages:", error);
       return {};
