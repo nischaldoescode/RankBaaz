@@ -21,61 +21,151 @@ export const sendOtpEmail = async (
   logoUrl = null
 ) => {
   try {
-    const transporter = nodemailer.createTransport({
-      service: "gmail",
-      auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS,
-      },
-      pool: true,
-      maxConnections: 5,
-      maxMessages: 100,
-      rateDelta: 1000,
-      rateLimit: 5,
-    });
+    // Check which email service to use based on environment variable
+    const isGoDaddy = process.env.EMAIL_SERVICE === 'godaddy';
+    
+    let transportConfig;
+    
+    if (isGoDaddy) {
+      // GoDaddy SMTP Configuration
+      transportConfig = {
+        host: 'smtpout.secureserver.net',
+        port: 465,
+        secure: true, // Use SSL
+        auth: {
+          user: process.env.EMAIL_USER,
+          pass: process.env.EMAIL_PASS,
+        },
+        tls: {
+          rejectUnauthorized: false,
+          minVersion: 'TLSv1.2'
+        },
+        connectionTimeout: 10000,  // 10 second timeout
+        greetingTimeout: 10000,
+        socketTimeout: 10000,
+      };
+      
+      console.log(`[EMAIL] Using GoDaddy SMTP: ${process.env.EMAIL_USER}`);
+    } else {
+      // Gmail Configuration (fallback for local development)
+      transportConfig = {
+        service: "gmail",
+        auth: {
+          user: process.env.EMAIL_USER,
+          pass: process.env.EMAIL_PASS,
+        },
+        pool: true,
+        maxConnections: 5,
+        maxMessages: 100,
+        rateDelta: 1000,
+        rateLimit: 5,
+      };
+      
+      console.log(`[EMAIL] Using Gmail SMTP: ${process.env.EMAIL_USER}`);
+    }
+
+    const transporter = nodemailer.createTransport(transportConfig);
+
+    // Verify transporter configuration
+    try {
+      await transporter.verify();
+      console.log('[EMAIL] SMTP connection verified successfully');
+    } catch (verifyError) {
+      console.error('[EMAIL] SMTP verification failed:', verifyError.message);
+      throw new Error('Email service not properly configured');
+    }
 
     // Logo section - use image if provided, otherwise use text
     const logoSection = logoUrl
-      ? `<img src="${logoUrl}" alt="${siteName}" style="max-width: 150px; height: auto; margin-bottom: 10px;" />`
-      : `<h1 style="color: #333333; margin-bottom: 10px;">${siteName}</h1>`;
+      ? `<img src="${logoUrl}" alt="${siteName} Logo" style="max-width: 150px; height: auto;" />`
+      : `<h1 style="margin: 0; color: #333; font-size: 24px;">${siteName}</h1>`;
 
     const mailOptions = {
-      from: process.env.EMAIL_USER,
+      from: `"${siteName}" <${process.env.EMAIL_USER}>`, // Better formatting
       to: email,
       subject: `Your OTP Code for ${siteName}`,
       html: `
-            <div style="max-width: 600px; margin: 0 auto; font-family: 'Arial', sans-serif;">
-                <div style="text-align: center; margin-bottom: 20px;">
-                    ${logoSection}
-                    <p style="color: #666666; font-size: 16px;">
-                        You've requested a One-Time Password (OTP) for your account.
-                    </p>
-                </div>
-                <div style="background-color: #f8f9fa; border-radius: 8px; padding: 30px; text-align: center; margin-bottom: 30px;">
-                    <p style="color: #333333; font-size: 16px; margin-bottom: 15px;">
-                        Here's your verification code:
-                    </p>
-                    <div style="background-color: white; border-radius: 6px; padding: 15px; display: inline-block; 
-                                box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin: 0 auto;">
-                        <h2 style="font-size: 32px; letter-spacing: 5px; color: #007bff; margin: 0; font-weight: bold;">
-                            ${otp}
-                        </h2>
-                    </div>
-                    <p style="color: #666666; font-size: 14px; margin-top: 20px;">
-                        This code is valid for <strong>${process.env.OTP_EXPIRY_MINUTES || 5} minutes</strong>.
-                    </p>
-                </div>
-                <div style="text-align: center; color: #999999; font-size: 12px; padding-top: 20px; border-top: 1px solid #eeeeee;">
-                    <p style="margin-bottom: 5px;">If you didn't request this code, please ignore this email.</p>
-                    <p>© ${new Date().getFullYear()} ${siteName}. All rights reserved.</p>
-                </div>
-            </div>`,
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <meta charset="utf-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            </head>
+            <body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f4f4f4;">
+
+                <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f4f4f4; padding: 20px;">
+                    <tr>
+                        <td align="center">
+                            <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+
+                                <!-- Header -->
+                                <tr>
+                                    <td style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 40px 20px; text-align: center;">
+                                        ${logoSection}
+                                        <p style="margin: 20px 0 0 0; color: #ffffff; font-size: 16px;">
+                                            You've requested a One-Time Password (OTP) for your account.
+                                        </p>
+                                    </td>
+                                </tr>
+
+                                <!-- Body -->
+                                <tr>
+                                    <td style="padding: 40px 20px;">
+
+                                        <p style="margin: 0 0 20px 0; color: #666; font-size: 16px; text-align: center;">
+                                            Here's your verification code:
+                                        </p>
+
+                                        <table width="100%" cellpadding="0" cellspacing="0">
+                                            <tr>
+                                                <td align="center">
+                                                    <div style="background-color: #f8f9fa; border: 2px dashed #667eea; border-radius: 8px; padding: 20px; display: inline-block;">
+                                                        <span style="font-size: 32px; font-weight: bold; color: #667eea; letter-spacing: 8px;">${otp}</span>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        </table>
+
+                                        <p style="margin: 30px 0 0 0; color: #999; font-size: 14px; text-align: center;">
+                                            This code is valid for ${process.env.OTP_EXPIRY_MINUTES || 5} minutes.
+                                        </p>
+
+                                    </td>
+                                </tr>
+
+                                <!-- Footer -->
+                                <tr>
+                                    <td style="background-color: #f8f9fa; padding: 20px; text-align: center; border-top: 1px solid #e9ecef;">
+                                        <p style="margin: 0 0 10px 0; color: #999; font-size: 14px;">
+                                            If you didn't request this code, please ignore this email.
+                                        </p>
+                                        <p style="margin: 0; color: #999; font-size: 12px;">
+                                            © ${new Date().getFullYear()} ${siteName}. All rights reserved.
+                                        </p>
+                                    </td>
+                                </tr>
+
+                            </table>
+                        </td>
+                    </tr>
+                </table>
+
+            </body>
+            </html>
+      `,
     };
 
-    await transporter.sendMail(mailOptions);
+    const info = await transporter.sendMail(mailOptions);
+    console.log(`[EMAIL] OTP sent successfully to ${email}, MessageID: ${info.messageId}`);
     return true;
   } catch (error) {
-    console.error("Error sending OTP:", error);
+    console.error("[EMAIL] Error sending OTP:", error);
+    console.error("[EMAIL] Error details:", {
+      code: error.code,
+      command: error.command,
+      response: error.response,
+      responseCode: error.responseCode,
+    });
     throw new Error("Failed to send OTP. Please try again later.");
   }
 };
