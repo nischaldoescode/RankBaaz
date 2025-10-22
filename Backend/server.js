@@ -143,13 +143,13 @@ const corsOptions = {
 
     // Handle requests without origin header
     if (!origin) {
-      console.log(`[CORS] ${timestamp} - Request without origin header`);
-      console.log(
-        `[CORS] ${timestamp} - Environment: ${process.env.NODE_ENV || "development"}`
-      );
-      console.log(
-        `[CORS] ${timestamp} - Action: ALLOWED (same-origin, server-to-server, or mobile app)`
-      );
+      // console.log(`[CORS] ${timestamp} - Request without origin header`);
+      // console.log(
+      //   `[CORS] ${timestamp} - Environment: ${process.env.NODE_ENV || "development"}`
+      // );
+      // console.log(
+      //   `[CORS] ${timestamp} - Action: ALLOWED (same-origin, server-to-server, or mobile app)`
+      // );
       return callback(null, true);
     }
 
@@ -162,18 +162,18 @@ const corsOptions = {
     );
 
     if (isAllowed) {
-      console.log(`[CORS] ${timestamp} - Origin: ${origin}`);
-      console.log(`[CORS] ${timestamp} - Normalized: ${normalizedOrigin}`);
-      console.log(`[CORS] ${timestamp} - Action: ALLOWED`);
+      // console.log(`[CORS] ${timestamp} - Origin: ${origin}`);
+      // console.log(`[CORS] ${timestamp} - Normalized: ${normalizedOrigin}`);
+      // console.log(`[CORS] ${timestamp} - Action: ALLOWED`);
       callback(null, true);
     } else {
-      console.warn(`[CORS] ${timestamp} - Origin: ${origin}`);
-      console.warn(`[CORS] ${timestamp} - Normalized: ${normalizedOrigin}`);
-      console.warn(`[CORS] ${timestamp} - Action: BLOCKED`);
-      console.warn(
-        `[CORS] ${timestamp} - Allowed origins:`,
-        allowedOrigins.join(", ")
-      );
+      // console.warn(`[CORS] ${timestamp} - Origin: ${origin}`);
+      // console.warn(`[CORS] ${timestamp} - Normalized: ${normalizedOrigin}`);
+      // console.warn(`[CORS] ${timestamp} - Action: BLOCKED`);
+      // console.warn(
+      //   `[CORS] ${timestamp} - Allowed origins:`,
+      //   allowedOrigins.join(", ")
+      // );
       callback(new Error("Not allowed by CORS"));
     }
   },
