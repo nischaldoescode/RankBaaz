@@ -138,6 +138,7 @@ const corsOptions = {
       "https://admin.rankbaaz.com",
       "https://rankbaaz-admin.onrender.com",
       "https://rankbaaz-frontend.onrender.com/",
+      "https://rankbaaz.onrender.com",
     ];
 
     if (!origin) {
@@ -215,6 +216,14 @@ app.use(
           "https://res.cloudinary.com",
           "https://www.youtube.com",
           "https://player.vimeo.com",
+          "https://rankbaaz.onrender.com",
+          "wss://rankbaaz.onrender.com",
+          "https://rankbaaz.com",
+          "wss://rankbaaz.com",
+          "razorpay.com",
+          "api.razorpay.com",
+          "https://api.razorpay.com",
+          "https://checkout.razorpay.com"
         ],
         workerSrc: ["'self'", "blob:"],
       },
