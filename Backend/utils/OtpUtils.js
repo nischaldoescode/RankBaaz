@@ -25,29 +25,25 @@ export const sendOtpEmail = async (
 ) => {
   try {
     // Check which email service to use based on environment variable
-    const isGoDaddy = process.env.EMAIL_SERVICE === 'godaddy';
-    
+    const isGoDaddy = process.env.EMAIL_SERVICE === "godaddy";
+
     let transportConfig;
-    
+
     if (isGoDaddy) {
       // GoDaddy SMTP Configuration
       transportConfig = {
-        host: 'smtpout.secureserver.net',
+        host: "smtpout.secureserver.net", // GoDaddy's outgoing SMTP server
         port: 465,
         secure: true, // Use SSL
         auth: {
           user: process.env.EMAIL_USER,
           pass: process.env.EMAIL_PASS,
         },
-        tls: {
-          rejectUnauthorized: false,
-          minVersion: 'TLSv1.2'
-        },
-        connectionTimeout: 10000,  // 10 second timeout
+        connectionTimeout: 10000, // 10 second timeout
         greetingTimeout: 10000,
         socketTimeout: 10000,
       };
-      
+
       console.log(`[EMAIL] Using GoDaddy SMTP: ${process.env.EMAIL_USER}`);
     } else {
       // Gmail Configuration (fallback for local development)
@@ -63,7 +59,7 @@ export const sendOtpEmail = async (
         rateDelta: 1000,
         rateLimit: 5,
       };
-      
+
       console.log(`[EMAIL] Using Gmail SMTP: ${process.env.EMAIL_USER}`);
     }
 
@@ -72,10 +68,10 @@ export const sendOtpEmail = async (
     // Verify transporter configuration
     try {
       await transporter.verify();
-      console.log('[EMAIL] SMTP connection verified successfully');
+      console.log("[EMAIL] SMTP connection verified successfully");
     } catch (verifyError) {
-      console.error('[EMAIL] SMTP verification failed:', verifyError.message);
-      throw new Error('Email service not properly configured');
+      console.error("[EMAIL] SMTP verification failed:", verifyError.message);
+      throw new Error("Email service not properly configured");
     }
 
     // Logo section - use image if provided, otherwise use text
@@ -159,7 +155,9 @@ export const sendOtpEmail = async (
     };
 
     const info = await transporter.sendMail(mailOptions);
-    console.log(`[EMAIL] OTP sent successfully to ${email}, MessageID: ${info.messageId}`);
+    console.log(
+      `[EMAIL] OTP sent successfully to ${email}, MessageID: ${info.messageId}`
+    );
     return true;
   } catch (error) {
     console.error("[EMAIL] Error sending OTP:", error);
