@@ -31,20 +31,32 @@ export const sendOtpEmail = async (
 
     if (isGoDaddy) {
       // GoDaddy SMTP Configuration
+      const smtpPort = parseInt(process.env.SMTP_PORT) || 587; // Default to 587
+
       transportConfig = {
-        host: "smtpout.secureserver.net", // GoDaddy's outgoing SMTP server
-        port: 465,
-        secure: true, // Use SSL
+        host: "smtpout.secureserver.net",
+        port: smtpPort,
+        secure: smtpPort === 465, // true for 465, false for 587
+        requireTLS: smtpPort === 587, // enforce TLS for port 587
         auth: {
           user: process.env.EMAIL_USER,
           pass: process.env.EMAIL_PASS,
         },
-        connectionTimeout: 10000, // 10 second timeout
-        greetingTimeout: 10000,
-        socketTimeout: 10000,
+        tls: {
+          rejectUnauthorized: false,
+          minVersion: "TLSv1.2",
+          ciphers: "HIGH:MEDIUM:!aNULL:!eNULL:!EXPORT:!DES:!RC4:!MD5:!PSK",
+        },
+        connectionTimeout: 15000, // 15 seconds
+        greetingTimeout: 15000,
+        socketTimeout: 15000,
+        logger: true, // Enable logging
+        debug: process.env.NODE_ENV === "production", // Debug only in dev
       };
 
-      console.log(`[EMAIL] Using GoDaddy SMTP: ${process.env.EMAIL_USER}`);
+      console.log(
+        `[EMAIL] GoDaddy SMTP config - Host: smtpout.secureserver.net, Port: ${smtpPort}, User: ${process.env.EMAIL_USER}`
+      );
     } else {
       // Gmail Configuration (fallback for local development)
       transportConfig = {
@@ -66,12 +78,29 @@ export const sendOtpEmail = async (
     const transporter = nodemailer.createTransport(transportConfig);
 
     // Verify transporter configuration
+    // Verify transporter configuration
     try {
+      console.log("[EMAIL] Attempting SMTP verification...");
       await transporter.verify();
       console.log("[EMAIL] SMTP connection verified successfully");
     } catch (verifyError) {
-      console.error("[EMAIL] SMTP verification failed:", verifyError.message);
-      throw new Error("Email service not properly configured");
+      console.error("[EMAIL] SMTP verification failed");
+      console.error("[EMAIL] Error code:", verifyError.code);
+      console.error("[EMAIL] Error syscall:", verifyError.syscall);
+      console.error("[EMAIL] Error message:", verifyError.message);
+
+      // Specific error messages
+      if (verifyError.code === "ETIMEDOUT" || verifyError.code === "ESOCKET") {
+        throw new Error(
+          `SMTP connection timeout - Port ${transportConfig.port} may be blocked by hosting provider`
+        );
+      } else if (verifyError.code === "EAUTH") {
+        throw new Error("SMTP authentication failed - Check email credentials");
+      } else if (verifyError.code === "ECONNREFUSED") {
+        throw new Error("SMTP connection refused - Check host and port");
+      } else {
+        throw new Error(`SMTP error: ${verifyError.message}`);
+      }
     }
 
     // Logo section - use image if provided, otherwise use text
@@ -167,6 +196,16 @@ export const sendOtpEmail = async (
       response: error.response,
       responseCode: error.responseCode,
     });
+
+    if (error.message.includes("timeout")) {
+      throw new Error(
+        `Email service timeout - Port may be blocked. ${error.message}`
+      );
+    } else if (error.message.includes("authentication")) {
+      throw new Error("Email authentication failed - Invalid credentials");
+    } else {
+      throw new Error(`Email sending failed: ${error.message}`);
+    }
     throw new Error("Failed to send OTP. Please try again later.");
   }
 };
