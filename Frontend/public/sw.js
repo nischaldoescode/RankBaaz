@@ -4,52 +4,60 @@
  * Handles course images, logos, and other static assets
  */
 
-const CACHE_NAME = 'app-images-v1';
+const CACHE_NAME = "app-images-v1";
 const IMAGE_CACHE_DURATION = 24 * 60 * 60 * 1000; // 24 hours
 
 // Patterns to cache
 const CACHEABLE_PATTERNS = [
-  /\/api\/.*\.(jpg|jpeg|png|gif|webp|svg)$/i,
+  /\.(jpg|jpeg|png|gif|webp|svg)$/i,
   /cloudinary\.com/i,
+  /amazonaws\.com/i,
   /images/i,
-  /logo/i
+  /uploads/i,
+  /logo/i,
+  /\/api\/.*\.(jpg|jpeg|png|gif|webp|svg)$/i,
 ];
 
 // Check if URL should be cached
 function shouldCache(url) {
-  return CACHEABLE_PATTERNS.some(pattern => pattern.test(url));
+  return CACHEABLE_PATTERNS.some((pattern) => pattern.test(url));
 }
 
 // Install event
-self.addEventListener('install', (event) => {
-//   console.log('[SW] Service Worker installing');
+self.addEventListener("install", (event) => {
+  //   console.log('[SW] Service Worker installing');
   self.skipWaiting();
 });
 
 // Activate event
-self.addEventListener('activate', (event) => {
-//   console.log('[SW] Service Worker activating');
+self.addEventListener("activate", (event) => {
+  //   console.log('[SW] Service Worker activating');
   event.waitUntil(
-    caches.keys().then((cacheNames) => {
-      return Promise.all(
-        cacheNames
-          .filter((name) => name.startsWith('app-images-') && name !== CACHE_NAME)
-          .map((name) => {
-            // console.log('[SW] Deleting old cache:', name);
-            return caches.delete(name);
-          })
-      );
-    }).then(() => self.clients.claim())
+    caches
+      .keys()
+      .then((cacheNames) => {
+        return Promise.all(
+          cacheNames
+            .filter(
+              (name) => name.startsWith("app-images-") && name !== CACHE_NAME
+            )
+            .map((name) => {
+              // console.log('[SW] Deleting old cache:', name);
+              return caches.delete(name);
+            })
+        );
+      })
+      .then(() => self.clients.claim())
   );
 });
 
 // Fetch event - Network first, fallback to cache
-self.addEventListener('fetch', (event) => {
+self.addEventListener("fetch", (event) => {
   const { request } = event;
   const url = new URL(request.url);
 
   // Only handle GET requests for images
-  if (request.method !== 'GET' || !shouldCache(request.url)) {
+  if (request.method !== "GET" || !shouldCache(request.url)) {
     return;
   }
 
@@ -62,19 +70,19 @@ self.addEventListener('fetch', (event) => {
         // Check if it's a valid response
         if (response.ok) {
           const cache = await caches.open(CACHE_NAME);
-          
+
           // Add timestamp header for expiration tracking
           const headers = new Headers(response.headers);
-          headers.append('sw-cached-at', Date.now().toString());
-          
+          headers.append("sw-cached-at", Date.now().toString());
+
           const modifiedResponse = new Response(responseToCache.body, {
             status: response.status,
             statusText: response.statusText,
-            headers: headers
+            headers: headers,
           });
 
           await cache.put(request, modifiedResponse);
-        //   console.log('[SW] Cached image:', url.pathname);
+          //   console.log('[SW] Cached image:', url.pathname);
         }
 
         return response;
@@ -86,14 +94,14 @@ self.addEventListener('fetch', (event) => {
 
         if (cached) {
           // Check cache age
-          const cachedAt = cached.headers.get('sw-cached-at');
+          const cachedAt = cached.headers.get("sw-cached-at");
           if (cachedAt) {
             const age = Date.now() - parseInt(cachedAt);
             if (age < IMAGE_CACHE_DURATION) {
-            //   console.log('[SW] Serving cached image:', url.pathname, `(age: ${Math.round(age / 1000 / 60)}m)`);
+              //   console.log('[SW] Serving cached image:', url.pathname, `(age: ${Math.round(age / 1000 / 60)}m)`);
               return cached;
             } else {
-            //   console.log('[SW] Cached image expired:', url.pathname);
+              //   console.log('[SW] Cached image expired:', url.pathname);
               await cache.delete(request);
             }
           } else {
@@ -105,17 +113,17 @@ self.addEventListener('fetch', (event) => {
 
         // Return offline placeholder or error
         // console.log('[SW] No cache available for:', url.pathname);
-        return new Response( {
+        return new Response({
           status: 503,
-          statusText: 'Service Unavailable'
+          statusText: "Service Unavailable",
         });
       })
   );
 });
 
 // Message event for manual cache operations
-self.addEventListener('message', (event) => {
-  if (event.data && event.data.type === 'CLEAR_CACHE') {
+self.addEventListener("message", (event) => {
+  if (event.data && event.data.type === "CLEAR_CACHE") {
     event.waitUntil(
       caches.delete(CACHE_NAME).then(() => {
         // console.log('[SW] Cache cleared');
@@ -124,7 +132,7 @@ self.addEventListener('message', (event) => {
     );
   }
 
-  if (event.data && event.data.type === 'GET_CACHE_SIZE') {
+  if (event.data && event.data.type === "GET_CACHE_SIZE") {
     event.waitUntil(
       caches.open(CACHE_NAME).then(async (cache) => {
         const keys = await cache.keys();

@@ -72,7 +72,7 @@ if (loading || !contentSettings) {
           {/* Hero Section */}
           <motion.div variants={itemVariants} className="text-center">
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-foreground mb-6">
-              About {contentSettings?.siteName || "TestMaster Pro"}
+              About {contentSettings?.siteName || "RankBaaz"}
             </h1>
             <p className="text-xl text-muted-foreground max-w-3xl mx-auto leading-relaxed">
               {contentSettings?.siteDescription ||

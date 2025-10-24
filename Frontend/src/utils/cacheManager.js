@@ -5,12 +5,12 @@
  * Implements 24-hour TTL and version-based invalidation
  */
 
-const DB_NAME = 'AppCache';
+const DB_NAME = "AppCache";
 const DB_VERSION = 1;
 const STORES = {
-  API_CACHE: 'apiCache',
-  IMAGE_CACHE: 'imageCache',
-  METADATA: 'metadata'
+  API_CACHE: "apiCache",
+  IMAGE_CACHE: "imageCache",
+  METADATA: "metadata",
 };
 
 const CACHE_DURATION = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
@@ -29,7 +29,7 @@ class CacheManager {
       const request = indexedDB.open(DB_NAME, DB_VERSION);
 
       request.onerror = () => {
-        console.error('[Cache] Failed to open IndexedDB:', request.error);
+        console.error("[Cache] Failed to open IndexedDB:", request.error);
         reject(request.error);
       };
 
@@ -43,20 +43,24 @@ class CacheManager {
 
         // API Cache Store
         if (!db.objectStoreNames.contains(STORES.API_CACHE)) {
-          const apiStore = db.createObjectStore(STORES.API_CACHE, { keyPath: 'key' });
-          apiStore.createIndex('timestamp', 'timestamp', { unique: false });
-          apiStore.createIndex('endpoint', 'endpoint', { unique: false });
+          const apiStore = db.createObjectStore(STORES.API_CACHE, {
+            keyPath: "key",
+          });
+          apiStore.createIndex("timestamp", "timestamp", { unique: false });
+          apiStore.createIndex("endpoint", "endpoint", { unique: false });
         }
 
         // Image Cache Store
         if (!db.objectStoreNames.contains(STORES.IMAGE_CACHE)) {
-          const imageStore = db.createObjectStore(STORES.IMAGE_CACHE, { keyPath: 'url' });
-          imageStore.createIndex('timestamp', 'timestamp', { unique: false });
+          const imageStore = db.createObjectStore(STORES.IMAGE_CACHE, {
+            keyPath: "url",
+          });
+          imageStore.createIndex("timestamp", "timestamp", { unique: false });
         }
 
         // Metadata Store (for versioning)
         if (!db.objectStoreNames.contains(STORES.METADATA)) {
-          db.createObjectStore(STORES.METADATA, { keyPath: 'key' });
+          db.createObjectStore(STORES.METADATA, { keyPath: "key" });
         }
       };
     });
@@ -72,7 +76,7 @@ class CacheManager {
         acc[key] = params[key];
         return acc;
       }, {});
-    
+
     return `${endpoint}:${JSON.stringify(sortedParams)}`;
   }
 
@@ -92,7 +96,7 @@ class CacheManager {
       const key = this.generateKey(endpoint, params);
 
       return new Promise((resolve, reject) => {
-        const transaction = this.db.transaction([STORES.API_CACHE], 'readonly');
+        const transaction = this.db.transaction([STORES.API_CACHE], "readonly");
         const store = transaction.objectStore(STORES.API_CACHE);
         const request = store.get(key);
 
@@ -110,17 +114,17 @@ class CacheManager {
             return;
           }
 
-        //   console.log(`[Cache] Hit for ${endpoint} (age: ${Math.round((Date.now() - cached.timestamp) / 1000 / 60)}m)`);
+          //   console.log(`[Cache] Hit for ${endpoint} (age: ${Math.round((Date.now() - cached.timestamp) / 1000 / 60)}m)`);
           resolve(cached.data);
         };
 
         request.onerror = () => {
-        //   console.error(request.error);
+          //   console.error(request.error);
           reject(request.error);
         };
       });
     } catch (error) {
-    //   console.error(error);
+      //   console.error(error);
       return null;
     }
   }
@@ -134,7 +138,10 @@ class CacheManager {
       const key = this.generateKey(endpoint, params);
 
       return new Promise((resolve, reject) => {
-        const transaction = this.db.transaction([STORES.API_CACHE], 'readwrite');
+        const transaction = this.db.transaction(
+          [STORES.API_CACHE],
+          "readwrite"
+        );
         const store = transaction.objectStore(STORES.API_CACHE);
 
         const cacheEntry = {
@@ -142,23 +149,23 @@ class CacheManager {
           endpoint,
           params,
           data,
-          timestamp: Date.now()
+          timestamp: Date.now(),
         };
 
         const request = store.put(cacheEntry);
 
         request.onsuccess = () => {
-        //   console.log(`[Cache] Stored ${endpoint}`);
+          //   console.log(`[Cache] Stored ${endpoint}`);
           resolve();
         };
 
         request.onerror = () => {
-        //   console.error(request.error);
+          //   console.error(request.error);
           reject(request.error);
         };
       });
     } catch (error) {
-    //   console.error( error);
+      //   console.error( error);
     }
   }
 
@@ -168,11 +175,11 @@ class CacheManager {
   async deleteAPI(key) {
     try {
       await this.initPromise;
-      const transaction = this.db.transaction([STORES.API_CACHE], 'readwrite');
+      const transaction = this.db.transaction([STORES.API_CACHE], "readwrite");
       const store = transaction.objectStore(STORES.API_CACHE);
       store.delete(key);
     } catch (error) {
-    //   console.error(error);
+      //   console.error(error);
     }
   }
 
@@ -184,9 +191,12 @@ class CacheManager {
       await this.initPromise;
 
       return new Promise((resolve, reject) => {
-        const transaction = this.db.transaction([STORES.API_CACHE], 'readwrite');
+        const transaction = this.db.transaction(
+          [STORES.API_CACHE],
+          "readwrite"
+        );
         const store = transaction.objectStore(STORES.API_CACHE);
-        const index = store.index('endpoint');
+        const index = store.index("endpoint");
         const request = index.openCursor();
 
         request.onsuccess = (event) => {
@@ -194,7 +204,7 @@ class CacheManager {
           if (cursor) {
             if (cursor.value.endpoint.includes(endpointPattern)) {
               cursor.delete();
-            //   console.log(`[Cache] Cleared ${cursor.value.endpoint}`);
+              //   console.log(`[Cache] Cleared ${cursor.value.endpoint}`);
             }
             cursor.continue();
           } else {
@@ -205,7 +215,7 @@ class CacheManager {
         request.onerror = () => reject(request.error);
       });
     } catch (error) {
-    //   console.error(error);
+      //   console.error(error);
     }
   }
 
@@ -218,7 +228,10 @@ class CacheManager {
       let cleared = 0;
 
       return new Promise((resolve) => {
-        const transaction = this.db.transaction([STORES.API_CACHE], 'readwrite');
+        const transaction = this.db.transaction(
+          [STORES.API_CACHE],
+          "readwrite"
+        );
         const store = transaction.objectStore(STORES.API_CACHE);
         const request = store.openCursor();
 
@@ -232,14 +245,14 @@ class CacheManager {
             cursor.continue();
           } else {
             if (cleared > 0) {
-            //   console.log(`[Cache] Cleared ${cleared} expired entries`);
+              //   console.log(`[Cache] Cleared ${cleared} expired entries`);
             }
             resolve(cleared);
           }
         };
       });
     } catch (error) {
-    //   console.error(error);
+      //   console.error(error);
       return 0;
     }
   }
@@ -251,16 +264,19 @@ class CacheManager {
     try {
       await this.initPromise;
 
-      const transaction = this.db.transaction([STORES.API_CACHE, STORES.IMAGE_CACHE], 'readwrite');
-      
+      const transaction = this.db.transaction(
+        [STORES.API_CACHE, STORES.IMAGE_CACHE],
+        "readwrite"
+      );
+
       await Promise.all([
         transaction.objectStore(STORES.API_CACHE).clear(),
-        transaction.objectStore(STORES.IMAGE_CACHE).clear()
+        transaction.objectStore(STORES.IMAGE_CACHE).clear(),
       ]);
 
-    //   console.log('[Cache] All cache cleared');
+      //   console.log('[Cache] All cache cleared');
     } catch (error) {
-    //   console.error(error);
+      //   console.error(error);
     }
   }
 
@@ -272,7 +288,7 @@ class CacheManager {
       await this.initPromise;
 
       return new Promise((resolve) => {
-        const transaction = this.db.transaction([STORES.API_CACHE], 'readonly');
+        const transaction = this.db.transaction([STORES.API_CACHE], "readonly");
         const store = transaction.objectStore(STORES.API_CACHE);
         const countRequest = store.count();
 
@@ -298,9 +314,148 @@ class CacheManager {
         };
       });
     } catch (error) {
-    //   console.error(error);
+      //   console.error(error);
       return { total: 0, valid: 0, expired: 0 };
     }
+  }
+
+  /**
+   * Cache image by URL
+   */
+  async cacheImage(url) {
+    try {
+      if (!url) return false;
+
+      // Check if already cached
+      const cached = await this.getImage(url);
+      if (cached) {
+        // console.log('[Cache] Image already cached:', url);
+        return true;
+      }
+
+      // Fetch and cache the image
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch image: ${response.status}`);
+      }
+
+      const blob = await response.blob();
+
+      await this.setImage(url, blob);
+      // console.log('[Cache] Image cached:', url);
+      return true;
+    } catch (error) {
+      console.error("[Cache] Failed to cache image:", url, error);
+      return false;
+    }
+  }
+
+  /**
+   * Get cached image
+   */
+  async getImage(url) {
+    try {
+      await this.initPromise;
+
+      return new Promise((resolve, reject) => {
+        const transaction = this.db.transaction(
+          [STORES.IMAGE_CACHE],
+          "readonly"
+        );
+        const store = transaction.objectStore(STORES.IMAGE_CACHE);
+        const request = store.get(url);
+
+        request.onsuccess = () => {
+          const cached = request.result;
+
+          if (!cached) {
+            resolve(null);
+            return;
+          }
+
+          if (!this.isValid(cached.timestamp)) {
+            this.deleteImage(url);
+            resolve(null);
+            return;
+          }
+
+          resolve(cached.blob);
+        };
+
+        request.onerror = () => reject(request.error);
+      });
+    } catch (error) {
+      return null;
+    }
+  }
+
+  /**
+   * Set cached image
+   */
+  async setImage(url, blob) {
+    try {
+      await this.initPromise;
+
+      return new Promise((resolve, reject) => {
+        const transaction = this.db.transaction(
+          [STORES.IMAGE_CACHE],
+          "readwrite"
+        );
+        const store = transaction.objectStore(STORES.IMAGE_CACHE);
+
+        const cacheEntry = {
+          url,
+          blob,
+          timestamp: Date.now(),
+        };
+
+        const request = store.put(cacheEntry);
+
+        request.onsuccess = () => resolve();
+        request.onerror = () => reject(request.error);
+      });
+    } catch (error) {
+      console.error("[Cache] Failed to set image:", error);
+    }
+  }
+
+  /**
+   * Delete specific image cache entry
+   */
+  async deleteImage(url) {
+    try {
+      await this.initPromise;
+      const transaction = this.db.transaction(
+        [STORES.IMAGE_CACHE],
+        "readwrite"
+      );
+      const store = transaction.objectStore(STORES.IMAGE_CACHE);
+      store.delete(url);
+    } catch (error) {
+      console.error("[Cache] Failed to delete image:", error);
+    }
+  }
+
+  /**
+   * Preload multiple images
+   */
+  async preloadImages(urls) {
+    if (!Array.isArray(urls)) {
+      urls = [urls];
+    }
+
+    const validUrls = urls.filter((url) => url && typeof url === "string");
+
+    const results = await Promise.allSettled(
+      validUrls.map((url) => this.cacheImage(url))
+    );
+
+    const successful = results.filter(
+      (r) => r.status === "fulfilled" && r.value
+    ).length;
+    // console.log(`[Cache] Preloaded ${successful}/${validUrls.length} images`);
+
+    return successful;
   }
 }
 
@@ -308,11 +463,16 @@ class CacheManager {
 export const cacheManager = new CacheManager();
 
 // Utility function to wrap API calls with caching
-export async function cachedAPICall(endpoint, params, fetchFunction, options = {}) {
+export async function cachedAPICall(
+  endpoint,
+  params,
+  fetchFunction,
+  options = {}
+) {
   const {
     maxAge = CACHE_DURATION,
     forceRefresh = false,
-    skipCache = false
+    skipCache = false,
   } = options;
 
   // Skip cache if requested
@@ -332,16 +492,16 @@ export async function cachedAPICall(endpoint, params, fetchFunction, options = {
   // Fetch fresh data
   try {
     const data = await fetchFunction();
-    
+
     // Cache the result
     await cacheManager.setAPI(endpoint, params, data);
-    
+
     return data;
   } catch (error) {
     // If fetch fails, try to return stale cache as fallback
     const stale = await cacheManager.getAPI(endpoint, params);
     if (stale) {
-    //   console.log(`[Cache] Using stale cache for ${endpoint} due to fetch error`);
+      //   console.log(`[Cache] Using stale cache for ${endpoint} due to fetch error`);
       return stale;
     }
     throw error;

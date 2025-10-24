@@ -3,6 +3,7 @@
 # Allow all good bots
 User-agent: *
 Allow: /
+Allow: /@
 Allow: /about
 Allow: /contact
 Allow: /courses
@@ -23,8 +24,6 @@ Disallow: /*.xml$
 Disallow: /config/
 Disallow: /src/
 
-# Sitemap location
-Sitemap: https://yourdomain.com/sitemap.xml
 
 # Crawl-delay for polite bots
 Crawl-delay: 10
@@ -37,6 +36,9 @@ Disallow: /api/
 Disallow: /profile
 Disallow: /app/test/
 Crawl-delay: 5
+
+Sitemap: https://rankbaaz.com/sitemap.xml
+Sitemap: https://rankbaaz.com/sitemap-profiles.xml
 
 # Bing-specific rules
 User-agent: Bingbot
@@ -80,3 +82,5 @@ Disallow: /
 
 User-agent: Claude-Web
 Disallow: /
+
+Host: rankbaaz.com

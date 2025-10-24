@@ -39,11 +39,11 @@ const PublicProfile = () => {
       : "User Profile",
     description: profileData
       ? `View ${profileData.name || `@${profileData.username}`}'s profile on ${
-          contentSettings?.siteName || "TestMaster Pro"
+          contentSettings?.siteName || "RankBaazro"
         }. See their test scores, badges, and recent activity.`
-      : `View user profile on ${contentSettings?.siteName || "TestMaster Pro"}`,
+      : `View user profile on ${contentSettings?.siteName || "RankBaaz Pro"}`,
     keywords: `${username}, user profile, test scores, leaderboard, achievements, ${
-      contentSettings?.siteName || "TestMaster Pro"
+      contentSettings?.siteName || "RankBaaz Pro"
     }`,
     type: "profile",
     image: profileData?.avatar || contentSettings?.logo?.url,
@@ -89,7 +89,7 @@ const PublicProfile = () => {
           },
           isPartOf: {
             "@type": "WebSite",
-            name: contentSettings?.siteName || "TestMaster Pro",
+            name: contentSettings?.siteName || "RankBaaz Pro",
             url: contentSettings?.siteUrl || window.location.origin,
           },
         }

@@ -396,7 +396,7 @@ export const AuthProvider = ({ children }) => {
             payload: { user, token: null },
           });
 
-          toast.success(`Welcome to TestMaster Pro, ${user.name}!`);
+          toast.success(`Welcome to RankBaaz Pro, ${user.name}!`);
           return { success: true, user };
         }
 

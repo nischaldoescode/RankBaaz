@@ -34,6 +34,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useAuth } from "../../context/AuthContext";
 import { useTheme } from "../../context/ThemeContext";
 import { useContent } from "../../context/ContentContext";
+import CachedImage from "./CachedImage";
 
 const Header = () => {
   const [scrolled, setScrolled] = useState(false);
@@ -258,10 +259,15 @@ const Header = () => {
             className="flex items-center gap-3 hover:opacity-80 transition-opacity"
           >
             {contentSettings?.logo?.url ? (
-              <img
+              <CachedImage
                 src={contentSettings.logo.url}
                 alt={contentSettings.siteName || "Logo"}
                 className="h-12 w-auto object-contain rounded-xl"
+                fallback={
+                  <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
+                    <GraduationCap className="w-5 h-5 text-primary-foreground" />
+                  </div>
+                }
               />
             ) : (
               <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
@@ -270,7 +276,7 @@ const Header = () => {
             )}
             <div className="hidden sm:block">
               <h1 className="text-lg font-bold text-foreground">
-                {contentSettings?.siteName || "TestMaster Pro"}
+                {contentSettings?.siteName || "RankBaaz Pro"}
               </h1>
             </div>
           </Link>
@@ -402,10 +408,15 @@ const Header = () => {
                           <SheetHeader className="px-6 pb-4 border-b border-border">
                             <div className="flex items-center gap-3">
                               {contentSettings?.logo?.url ? (
-                                <img
+                                <CachedImage
                                   src={contentSettings.logo.url}
                                   alt={contentSettings.siteName || "Logo"}
-                                  className="h-8 w-auto object-contain"
+                                  className="h-12 w-auto object-contain rounded-xl"
+                                  fallback={
+                                    <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
+                                      <GraduationCap className="w-5 h-5 text-primary-foreground" />
+                                    </div>
+                                  }
                                 />
                               ) : (
                                 <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
@@ -413,7 +424,7 @@ const Header = () => {
                                 </div>
                               )}
                               <SheetTitle className="text-lg">
-                                {contentSettings?.siteName || "TestMaster Pro"}
+                                {contentSettings?.siteName || "RankBaaz"}
                               </SheetTitle>
                             </div>
                           </SheetHeader>

@@ -16,6 +16,7 @@ import { Button } from "@/components/ui/Button";
 import { Separator } from "@/components/ui/separator";
 import { useTheme } from "../../context/ThemeContext";
 import { useContent } from "../../context/ContentContext";
+import CachedImage from "./CachedImage";
 
 const Footer = () => {
   const { animations, reducedMotion } = useTheme();
@@ -23,13 +24,12 @@ const Footer = () => {
   const currentYear = new Date().getFullYear();
 
   // Get dynamic data
-  const siteName = contentSettings?.siteName || "TestMaster Pro";
+  const siteName = contentSettings?.siteName || "RankBaaz Pro";
   const footerDescription =
     contactInfo?.footerDescription ||
     "Empowering students with comprehensive test preparation and learning management tools. Master your exams with confidence.";
   const copyrightText = (
-    contactInfo?.copyrightText ||
-    "© {year} TestMaster Pro. All rights reserved."
+    contactInfo?.copyrightText || "© {year} RankBaaz Pro. All rights reserved."
   ).replace("{year}", currentYear);
 
   const quickLinks =
@@ -114,10 +114,15 @@ const Footer = () => {
             >
               <div className="flex items-center gap-3 mb-4">
                 {contentSettings?.logo?.url ? (
-                  <img
+                  <CachedImage
                     src={contentSettings.logo.url}
                     alt={siteName}
                     className="h-12 w-auto object-contain rounded-xl"
+                    fallback={
+                      <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
+                        <GraduationCap className="w-5 h-5 text-primary-foreground" />
+                      </div>
+                    }
                   />
                 ) : (
                   <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
@@ -179,7 +184,7 @@ const Footer = () => {
                 Quick Links
               </h3>
               <ul className="space-y-3">
-                {displayQuickLinks.map((item) => ( 
+                {displayQuickLinks.map((item) => (
                   <li key={item.name}>
                     <Link
                       to={item.href}

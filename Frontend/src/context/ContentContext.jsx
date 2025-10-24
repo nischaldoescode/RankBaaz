@@ -1,6 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { apiMethods } from "../services/api";
-import toast from "react-hot-toast";
 import { cachedAPICall } from "../utils/cacheManager";
 const ContentContext = createContext();
 
@@ -37,6 +36,17 @@ export const ContentProvider = ({ children }) => {
       );
 
       setContentSettings(data);
+
+      // Preload logo image if it exists
+      if (data?.logo?.url) {
+        // Dynamic import to avoid circular dependency
+        import("../utils/cacheManager").then(({ cacheManager }) => {
+          cacheManager.cacheImage(data.logo.url).catch((err) => {
+            console.error("[Content] Failed to preload logo:", err);
+          });
+        });
+      }
+
       return data;
     } catch (error) {
       console.error("Error fetching content settings:", error);
