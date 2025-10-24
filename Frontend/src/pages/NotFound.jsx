@@ -26,7 +26,7 @@ const NotFound = () => {
 
     useSEO({
     title: '404 - Page Not Found',
-    description: `The page you're looking for doesn't exist on ${contentSettings?.siteName || 'TestMaster Pro'}. Navigate back to our homepage or explore our courses.`,
+    description: `The page you're looking for doesn't exist on ${contentSettings?.siteName || 'RankBaaz Pro'}. Navigate back to our homepage or explore our courses.`,
     keywords: '404, page not found, error page, not found',
     type: 'website',
     noindex: true, // 404 pages should not be indexed
@@ -38,7 +38,7 @@ const NotFound = () => {
       url: window.location.href,
       isPartOf: {
         '@type': 'WebSite',
-        name: contentSettings?.siteName || 'TestMaster Pro',
+        name: contentSettings?.siteName || 'RankBaaz Pro',
         url: contentSettings?.siteUrl || window.location.origin
       }
     }

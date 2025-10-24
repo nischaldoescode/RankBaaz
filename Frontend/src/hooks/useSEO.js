@@ -18,7 +18,7 @@ export const useSEO = ({
 }) => {
   const { contentSettings } = useContent();
 
-  const siteName = contentSettings?.siteName || 'TestMaster Pro';
+  const siteName = contentSettings?.siteName || 'RankBaaz';
   const defaultDescription = contentSettings?.siteDescription || 'Transform how students learn and prepare for exams through intelligent testing.';
   const siteUrl = contentSettings?.siteUrl || window.location.origin;
   

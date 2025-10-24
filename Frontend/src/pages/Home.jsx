@@ -382,7 +382,7 @@ const Home = () => {
             <h2 className="text-3xl lg:text-4xl font-bold mb-4">
               {contentSettings?.featuresTitle || "Why Choose"}{" "}
               <span className="text-primary">
-                {contentSettings?.siteName || "TestMaster Pro"}
+                {contentSettings?.siteName || "RankBaaz"}
               </span>
             </h2>
             <p className="text-xl text-muted-foreground max-w-3xl mx-auto">

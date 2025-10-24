@@ -293,7 +293,7 @@ const Profile = () => {
 
     useSEO({
     title: 'My Profile',
-    description: `Manage your ${contentSettings?.siteName || 'TestMaster Pro'} profile, view test history, track progress, and check leaderboard rankings.`,
+    description: `Manage your ${contentSettings?.siteName || 'RankBaaz Pro'} profile, view test history, track progress, and check leaderboard rankings.`,
     keywords: 'profile, dashboard, test history, progress tracking, leaderboard, user profile',
     type: 'website',
     noindex: true, // Private profile pages should not be indexed

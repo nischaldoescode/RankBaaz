@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
@@ -24,7 +24,7 @@ import Loading from "../components/common/Loading";
 import { debounce } from "lodash";
 import { apiMethods } from "../services/api";
 import toast from "react-hot-toast";
-import { useHead } from '@unhead/react';
+import { useHead } from "@unhead/react";
 import { useContent } from "../context/ContentContext";
 import { useSEO } from "../hooks/useSEO";
 
@@ -68,7 +68,7 @@ const Register = () => {
   useSEO({
     title: "Register",
     description: `Create your free ${
-      contentSettings?.siteName || "TestMaster Pro"
+      contentSettings?.siteName || "RankBaaz Pro"
     } account and start your learning journey today. Access courses, take tests, and track your progress.`,
     keywords:
       "register, sign up, create account, student registration, free account, join now, new user",
@@ -79,12 +79,12 @@ const Register = () => {
       "@type": "WebPage",
       name: "Register",
       description: `Create a free account on ${
-        contentSettings?.siteName || "TestMaster Pro"
+        contentSettings?.siteName || "RankBaaz Pro"
       }`,
       url: window.location.href,
       isPartOf: {
         "@type": "WebSite",
-        name: contentSettings?.siteName || "TestMaster Pro",
+        name: contentSettings?.siteName || "RankBaaz Pro",
         url: contentSettings?.siteUrl || window.location.origin,
       },
       potentialAction: {
@@ -129,22 +129,27 @@ const Register = () => {
     return () => clearInterval(interval);
   }, [otpTimer]);
 
-  const handleChange = (e) => {
-    const { name, value, type, checked } = e.target;
-    const inputValue = type === "checkbox" ? checked : value;
+  const handleChange = useCallback(
+    (e) => {
+      const { name, value, type, checked } = e.target;
+      const inputValue = type === "checkbox" ? checked : value;
 
-    setFormData((prev) => ({
-      ...prev,
-      [name]: inputValue,
-    }));
-
-    if (errors[name]) {
-      setErrors((prev) => ({
+      setFormData((prev) => ({
         ...prev,
-        [name]: "",
+        [name]: inputValue,
       }));
-    }
-  };
+
+      // Only clear error if it exists
+      if (errors[name]) {
+        setErrors((prev) => {
+          const newErrors = { ...prev };
+          delete newErrors[name];
+          return newErrors;
+        });
+      }
+    },
+    [errors]
+  );
 
   const checkUsernameAvailability = useCallback(
     debounce(async (username) => {
@@ -196,28 +201,32 @@ const Register = () => {
     []
   );
 
-  const handleDateChange = (e) => {
-    let value = e.target.value.replace(/\D/g, ""); // Remove non-digits
+  const handleDateChange = useCallback(
+    (e) => {
+      let value = e.target.value.replace(/\D/g, ""); // Remove non-digits
 
-    if (value.length >= 2) {
-      value = value.slice(0, 2) + "/" + value.slice(2);
-    }
-    if (value.length >= 5) {
-      value = value.slice(0, 5) + "/" + value.slice(5, 9);
-    }
+      if (value.length >= 2) {
+        value = value.slice(0, 2) + "/" + value.slice(2);
+      }
+      if (value.length >= 5) {
+        value = value.slice(0, 5) + "/" + value.slice(5, 9);
+      }
 
-    setFormData((prev) => ({
-      ...prev,
-      dateOfBirth: value,
-    }));
-
-    if (errors.dateOfBirth) {
-      setErrors((prev) => ({
+      setFormData((prev) => ({
         ...prev,
-        dateOfBirth: "",
+        dateOfBirth: value,
       }));
-    }
-  };
+
+      if (errors.dateOfBirth) {
+        setErrors((prev) => {
+          const newErrors = { ...prev };
+          delete newErrors.dateOfBirth;
+          return newErrors;
+        });
+      }
+    },
+    [errors.dateOfBirth]
+  );
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -426,10 +435,9 @@ const Register = () => {
     },
   };
 
-  const getPasswordStrength = () => {
-    if (!formData.password) return { strength: 0, text: "" };
+  const passwordStrength = useMemo(() => {
+    if (!formData.password) return { strength: 0, text: "", checks: {} };
 
-    let strength = 0;
     const checks = {
       length: formData.password.length >= 8,
       lowercase: /[a-z]/.test(formData.password),
@@ -438,7 +446,7 @@ const Register = () => {
       special: /[!@#$%^&*(),.?":{}|<>]/.test(formData.password),
     };
 
-    strength = Object.values(checks).filter(Boolean).length;
+    const strength = Object.values(checks).filter(Boolean).length;
 
     const strengthTexts = {
       1: "Very Weak",
@@ -453,9 +461,7 @@ const Register = () => {
       text: strengthTexts[strength] || "",
       checks,
     };
-  };
-
-  const passwordStrength = getPasswordStrength();
+  }, [formData.password]);
 
   return (
     <div className="min-h-screen relative pt-1">
@@ -493,16 +499,9 @@ const Register = () => {
               <CardContent className="p-6 sm:p-7 md:p-8 overflow-hidden">
                 <motion.div
                   key={registerStep}
-                  initial={
-                    animations && !reducedMotion ? { x: 100, opacity: 0 } : {}
-                  }
-                  animate={
-                    animations && !reducedMotion ? { x: 0, opacity: 1 } : {}
-                  }
-                  exit={
-                    animations && !reducedMotion ? { x: -100, opacity: 0 } : {}
-                  }
-                  transition={{ duration: 0.3, ease: "easeInOut" }}
+                  initial={animations && !reducedMotion ? { opacity: 0 } : {}}
+                  animate={animations && !reducedMotion ? { opacity: 1 } : {}}
+                  transition={{ duration: 0.2 }}
                 >
                   {registerStep === 1 ? (
                     <form
@@ -822,6 +821,8 @@ const Register = () => {
                             value={formData.password}
                             onChange={handleChange}
                             disabled={isLoading}
+                            data-lpignore="false"
+                            data-form-type="other"
                           />
                           <button
                             type="button"
@@ -948,6 +949,8 @@ const Register = () => {
                             value={formData.confirmPassword}
                             onChange={handleChange}
                             disabled={isLoading}
+                            data-lpignore="false"
+                            data-form-type="other"
                           />
                           <button
                             type="button"
@@ -1327,7 +1330,13 @@ const Register = () => {
                                   ""
                                 );
                                 setUsername(cleanedValue);
-                                checkUsernameAvailability(cleanedValue);
+
+                                // Only check if length is at least 3
+                                if (cleanedValue.length >= 3) {
+                                  checkUsernameAvailability(cleanedValue);
+                                } else {
+                                  setUsernameAvailable(null);
+                                }
                               }}
                               disabled={isLoading}
                               minLength={3}

@@ -53,7 +53,7 @@ const Login = () => {
   useSEO({
     title: "Login",
     description: `Sign in to your ${
-      contentSettings?.siteName || "TestMaster Pro"
+      contentSettings?.siteName || "RankBaaz Pro"
     } account to continue your learning journey. Access your courses, track progress, and take tests.`,
     keywords:
       "login, sign in, user login, account access, student login, online learning login",
@@ -64,12 +64,12 @@ const Login = () => {
       "@type": "WebPage",
       name: "Login",
       description: `Sign in to your ${
-        contentSettings?.siteName || "TestMaster Pro"
+        contentSettings?.siteName || "RankBaaz Pro"
       } account`,
       url: window.location.href,
       isPartOf: {
         "@type": "WebSite",
-        name: contentSettings?.siteName || "TestMaster Pro",
+        name: contentSettings?.siteName || "RankBaaz Pro",
         url: contentSettings?.siteUrl || window.location.origin,
       },
     },
