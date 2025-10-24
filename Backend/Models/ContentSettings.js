@@ -5,7 +5,7 @@ const contentSettingsSchema = new mongoose.Schema({
   // Site Identity
   siteName: {
     type: String,
-    default: 'TestMaster Pro',
+    default: 'RankBaaz Pro',
     required: true,
   },
   siteTagline: {
@@ -82,7 +82,7 @@ const contentSettingsSchema = new mongoose.Schema({
   // Features Section for Home Page
   featuresTitle: {
     type: String,
-    default: 'Why Choose TestMaster Pro',
+    default: 'Why Choose RankBaaz Pro',
   },
   featuresDescription: {
     type: String,

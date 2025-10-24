@@ -99,7 +99,7 @@ const contactInfoSchema = new mongoose.Schema(
     // Footer Text
     copyrightText: {
       type: String,
-      default: "© {year} TestMaster Pro. All rights reserved.",
+      default: "© {year} RankBaaz Pro. All rights reserved.",
     },
     footerDescription: {
       type: String,
