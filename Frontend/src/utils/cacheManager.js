@@ -35,7 +35,7 @@ class CacheManager {
 
       request.onsuccess = () => {
         this.db = request.result;
-        console.log('[Cache] IndexedDB initialized successfully');
+        // console.log('[Cache] IndexedDB initialized successfully');
         resolve(this.db);
       };
 
@@ -60,7 +60,7 @@ class CacheManager {
           db.createObjectStore(STORES.METADATA, { keyPath: 'key' });
         }
 
-        console.log('[Cache] Database schema created');
+        // console.log('[Cache] Database schema created');
       };
     });
   }
