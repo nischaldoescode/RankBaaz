@@ -1,4 +1,3 @@
-import nodemailer from "nodemailer";
 import { Resend } from "resend";
 import dotenv from "dotenv";
 
@@ -112,65 +111,6 @@ export const sendOtpEmail = async (
       messageId = data.id;
       console.log(`[EMAIL] Resend success - ID: ${messageId}`);
       
-    } else if (emailService === "godaddy") {
-      // GODADDY SMTP - FALLBACK
-      const smtpPort = parseInt(process.env.SMTP_PORT) || 587;
-      
-      const transporter = nodemailer.createTransport({
-        host: "smtpout.secureserver.net",
-        port: smtpPort,
-        secure: smtpPort === 465,
-        requireTLS: smtpPort === 587,
-        auth: {
-          user: process.env.EMAIL_USER,
-          pass: process.env.EMAIL_PASS,
-        },
-        tls: {
-          rejectUnauthorized: false,
-          minVersion: "TLSv1.2",
-        },
-        connectionTimeout: 15000,
-        greetingTimeout: 15000,
-        socketTimeout: 15000,
-      });
-
-      console.log(`[EMAIL] GoDaddy SMTP - Port: ${smtpPort}`);
-
-      // Verify connection
-      await transporter.verify();
-      console.log("[EMAIL] SMTP verified");
-
-      const info = await transporter.sendMail({
-        from: `"${siteName}" <${process.env.EMAIL_USER}>`,
-        to: email,
-        subject: `Your OTP Code for ${siteName}`,
-        html: htmlContent,
-      });
-
-      messageId = info.messageId;
-      console.log(`[EMAIL] GoDaddy success - ID: ${messageId}`);
-      
-    } else {
-      // GMAIL - LOCAL DEVELOPMENT ONLY
-      const transporter = nodemailer.createTransport({
-        service: "gmail",
-        auth: {
-          user: process.env.EMAIL_USER,
-          pass: process.env.EMAIL_PASS,
-        },
-      });
-
-      console.log("[EMAIL] Gmail SMTP");
-
-      const info = await transporter.sendMail({
-        from: `"${siteName}" <${process.env.EMAIL_USER}>`,
-        to: email,
-        subject: `Your OTP Code for ${siteName}`,
-        html: htmlContent,
-      });
-
-      messageId = info.messageId;
-      console.log(`[EMAIL] Gmail success - ID: ${messageId}`);
     }
 
     const duration = Date.now() - startTime;
