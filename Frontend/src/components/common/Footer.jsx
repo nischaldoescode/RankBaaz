@@ -105,8 +105,8 @@ const Footer = () => {
   return (
     <>
       <motion.footer {...motionProps} className="border-t bg-background">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 lg:py-16">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-8 lg:gap-12">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 lg:gap-8">
             {/* Brand section */}
             <motion.div
               {...itemMotionProps}
@@ -133,7 +133,7 @@ const Footer = () => {
                   {siteName}
                 </span>
               </div>
-              <p className="text-sm text-muted-foreground mb-6 leading-relaxed">
+              <p className="text-sm text-muted-foreground mb-4 leading-relaxed">
                 {footerDescription}
               </p>
 
@@ -180,7 +180,7 @@ const Footer = () => {
 
             {/* Quick Links - Dynamic */}
             <motion.div {...itemMotionProps} className="col-span-1">
-              <h3 className="text-sm font-semibold text-foreground mb-4">
+              <h3 className="text-sm font-semibold text-foreground mb-3">
                 Quick Links
               </h3>
               <ul className="space-y-3">
@@ -202,7 +202,7 @@ const Footer = () => {
               <h3 className="text-sm font-semibold text-foreground mb-4">
                 Resources
               </h3>
-              <ul className="space-y-3">
+              <ul className="space-y-2">
                 {resources.map((item) => (
                   <li key={item.name}>
                     <Link
