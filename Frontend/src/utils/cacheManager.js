@@ -35,7 +35,6 @@ class CacheManager {
 
       request.onsuccess = () => {
         this.db = request.result;
-        // console.log('[Cache] IndexedDB initialized successfully');
         resolve(this.db);
       };
 
@@ -59,8 +58,6 @@ class CacheManager {
         if (!db.objectStoreNames.contains(STORES.METADATA)) {
           db.createObjectStore(STORES.METADATA, { keyPath: 'key' });
         }
-
-        // console.log('[Cache] Database schema created');
       };
     });
   }
