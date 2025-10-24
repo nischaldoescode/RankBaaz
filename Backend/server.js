@@ -21,6 +21,8 @@ import connection2 from "./Config/mongodb2.js";
 import contentRoutes from "./Routes/contentRoutes.js";
 import paymentRoutes from "./Routes/paymentRoutes.js";
 import couponRoutes from "./Routes/couponRoutes.js";
+import User from "./Models/User.js";
+
 // Load environment variables
 dotenv.config();
 
@@ -267,6 +269,41 @@ app.use((req, res, next) => {
     abortOnLimit: true,
     createParentPath: true,
   })(req, res, next);
+});
+
+// Add before error handlers
+app.get("/sitemap-profiles.xml", async (req, res) => {
+  try {
+    // Fetch all users with public profiles
+    const users = await User.find({ isVerified: true })
+      .select("username updatedAt")
+      .lean()
+      .limit(50000); // Google's limit per sitemap
+    
+    const siteUrl = process.env.SITE_URL || "https://rankbaaz.com";
+    
+    // Generate XML
+    const sitemap = `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  ${users
+    .map(
+      (user) => `
+  <url>
+    <loc>${siteUrl}/@${user.username}</loc>
+    <lastmod>${new Date(user.updatedAt).toISOString().split("T")[0]}</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+  </url>`
+    )
+    .join("")}
+</urlset>`;
+    
+    res.header("Content-Type", "application/xml");
+    res.send(sitemap);
+  } catch (error) {
+    console.error("Sitemap generation error:", error);
+    res.status(500).send("Error generating sitemap");
+  }
 });
 
 // Health check endpoint

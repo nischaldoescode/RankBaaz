@@ -21,7 +21,6 @@ export const getPublicProfile = async (req, res) => {
     }
 
     // Fetch from database
-    // Fetch from database
     const user = await User.findOne({ username: username.toLowerCase() })
       .select("username name nameVisibility points badges stats createdAt")
       .lean();
