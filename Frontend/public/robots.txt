@@ -26,7 +26,7 @@ Disallow: /src/
 
 
 # Crawl-delay for polite bots
-Crawl-delay: 10
+Crawl-delay: 15
 
 # Google-specific rules
 User-agent: Googlebot
@@ -35,7 +35,7 @@ Disallow: /admin/
 Disallow: /api/
 Disallow: /profile
 Disallow: /app/test/
-Crawl-delay: 5
+Crawl-delay: 6
 
 Sitemap: https://rankbaaz.com/sitemap.xml
 Sitemap: https://rankbaaz.com/sitemap-profiles.xml
