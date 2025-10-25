@@ -129,27 +129,25 @@ const Register = () => {
     return () => clearInterval(interval);
   }, [otpTimer]);
 
-  const handleChange = useCallback(
-    (e) => {
-      const { name, value, type, checked } = e.target;
-      const inputValue = type === "checkbox" ? checked : value;
+const handleChange = useCallback((e) => {
+  const { name, value, type, checked } = e.target;
+  const inputValue = type === "checkbox" ? checked : value;
 
-      setFormData((prev) => ({
-        ...prev,
-        [name]: inputValue,
-      }));
+  setFormData((prev) => ({
+    ...prev,
+    [name]: inputValue,
+  }));
 
-      // Only clear error if it exists
-      if (errors[name]) {
-        setErrors((prev) => {
-          const newErrors = { ...prev };
-          delete newErrors[name];
-          return newErrors;
-        });
-      }
-    },
-    [errors]
-  );
+  // Clear error using functional update - no dependency needed
+  setErrors((prev) => {
+    if (prev[name]) {
+      const newErrors = { ...prev };
+      delete newErrors[name];
+      return newErrors;
+    }
+    return prev;
+  });
+}, []); // Empty dependency array - function never recreates
 
   const checkUsernameAvailability = useCallback(
     debounce(async (username) => {
@@ -201,32 +199,31 @@ const Register = () => {
     []
   );
 
-  const handleDateChange = useCallback(
-    (e) => {
-      let value = e.target.value.replace(/\D/g, ""); // Remove non-digits
+const handleDateChange = useCallback((e) => {
+  let value = e.target.value.replace(/\D/g, ""); // Remove non-digits
 
-      if (value.length >= 2) {
-        value = value.slice(0, 2) + "/" + value.slice(2);
-      }
-      if (value.length >= 5) {
-        value = value.slice(0, 5) + "/" + value.slice(5, 9);
-      }
+  if (value.length >= 2) {
+    value = value.slice(0, 2) + "/" + value.slice(2);
+  }
+  if (value.length >= 5) {
+    value = value.slice(0, 5) + "/" + value.slice(5, 9);
+  }
 
-      setFormData((prev) => ({
-        ...prev,
-        dateOfBirth: value,
-      }));
+  setFormData((prev) => ({
+    ...prev,
+    dateOfBirth: value,
+  }));
 
-      if (errors.dateOfBirth) {
-        setErrors((prev) => {
-          const newErrors = { ...prev };
-          delete newErrors.dateOfBirth;
-          return newErrors;
-        });
-      }
-    },
-    [errors.dateOfBirth]
-  );
+  // Use functional update - no dependency needed
+  setErrors((prev) => {
+    if (prev.dateOfBirth) {
+      const newErrors = { ...prev };
+      delete newErrors.dateOfBirth;
+      return newErrors;
+    }
+    return prev;
+  });
+}, []); // Empty dependency array
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -436,33 +433,37 @@ const Register = () => {
   };
 
   const passwordStrength = useMemo(() => {
-    if (!formData.password) return { strength: 0, text: "", checks: {} };
+// Extract password to a separate variable BEFORE useMemo
+const currentPassword = formData.password;
 
-    const checks = {
-      length: formData.password.length >= 8,
-      lowercase: /[a-z]/.test(formData.password),
-      uppercase: /[A-Z]/.test(formData.password),
-      number: /\d/.test(formData.password),
-      special: /[!@#$%^&*(),.?":{}|<>]/.test(formData.password),
-    };
+const passwordStrength = useMemo(() => {
+  if (!currentPassword) return { strength: 0, text: "", checks: {} };
 
-    const strength = Object.values(checks).filter(Boolean).length;
+  const checks = {
+    length: currentPassword.length >= 8,
+    lowercase: /[a-z]/.test(currentPassword),
+    uppercase: /[A-Z]/.test(currentPassword),
+    number: /\d/.test(currentPassword),
+    special: /[!@#$%^&*(),.?":{}|<>]/.test(currentPassword),
+  };
 
-    const strengthTexts = {
-      1: "Very Weak",
-      2: "Weak",
-      3: "Fair",
-      4: "Good",
-      5: "Strong",
-    };
+  const strength = Object.values(checks).filter(Boolean).length;
 
-    return {
-      strength,
-      text: strengthTexts[strength] || "",
-      checks,
-    };
-  }, [formData.password]);
+  const strengthTexts = {
+    1: "Very Weak",
+    2: "Weak",
+    3: "Fair",
+    4: "Good",
+    5: "Strong",
+  };
 
+  return {
+    strength,
+    text: strengthTexts[strength] || "",
+    checks,
+  };
+}, [currentPassword]); // Now depends on primitive string value, not object
+    
   return (
     <div className="min-h-screen relative pt-1">
       <div className="flex items-center justify-center min-h-screen relative z-10 px-4 sm:px-6 lg:px-6 py-4">
