@@ -38,7 +38,6 @@ Disallow: /app/test/
 Crawl-delay: 6
 
 Sitemap: https://rankbaaz.com/sitemap.xml
-Sitemap: https://rankbaaz.com/sitemap-profiles.xml
 
 # Bing-specific rules
 User-agent: Bingbot
