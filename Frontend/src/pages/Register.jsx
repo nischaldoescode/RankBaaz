@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from "react";
+import React, { useState, useEffect, useCallback, useMemo, memo } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
@@ -24,9 +24,27 @@ import Loading from "../components/common/Loading";
 import { debounce } from "lodash";
 import { apiMethods } from "../services/api";
 import toast from "react-hot-toast";
-import { useHead } from "@unhead/react";
 import { useContent } from "../context/ContentContext";
 import { useSEO } from "../hooks/useSEO";
+
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: { duration: 0.6, staggerChildren: 0.1 },
+  },
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.5 } },
+};
+
+const MemoizedInput = memo(({ className, ...props }) => {
+  return <Input className={className} {...props} />;
+});
+
+MemoizedInput.displayName = "MemoizedInput";
 
 const Register = () => {
   const [formData, setFormData] = useState({
@@ -53,6 +71,7 @@ const Register = () => {
   const [otpValue, setOtpValue] = useState("");
   const [usernameAvailable, setUsernameAvailable] = useState(null);
   const [checkingUsername, setCheckingUsername] = useState(false);
+  const [debouncedPassword, setDebouncedPassword] = useState(formData.password);
 
   const {
     register,
@@ -129,25 +148,25 @@ const Register = () => {
     return () => clearInterval(interval);
   }, [otpTimer]);
 
-const handleChange = useCallback((e) => {
-  const { name, value, type, checked } = e.target;
-  const inputValue = type === "checkbox" ? checked : value;
+  const handleChange = useCallback((e) => {
+    const { name, value, type, checked } = e.target;
+    const inputValue = type === "checkbox" ? checked : value;
 
-  setFormData((prev) => ({
-    ...prev,
-    [name]: inputValue,
-  }));
+    setFormData((prev) => ({
+      ...prev,
+      [name]: inputValue,
+    }));
 
-  // Clear error using functional update - no dependency needed
-  setErrors((prev) => {
-    if (prev[name]) {
-      const newErrors = { ...prev };
-      delete newErrors[name];
-      return newErrors;
-    }
-    return prev;
-  });
-}, []); // Empty dependency array - function never recreates
+    // Clear error using functional update - no dependency needed
+    setErrors((prev) => {
+      if (prev[name]) {
+        const newErrors = { ...prev };
+        delete newErrors[name];
+        return newErrors;
+      }
+      return prev;
+    });
+  }, []); // Empty dependency array - function never recreates
 
   const checkUsernameAvailability = useCallback(
     debounce(async (username) => {
@@ -199,31 +218,31 @@ const handleChange = useCallback((e) => {
     []
   );
 
-const handleDateChange = useCallback((e) => {
-  let value = e.target.value.replace(/\D/g, ""); // Remove non-digits
+  const handleDateChange = useCallback((e) => {
+    let value = e.target.value.replace(/\D/g, ""); // Remove non-digits
 
-  if (value.length >= 2) {
-    value = value.slice(0, 2) + "/" + value.slice(2);
-  }
-  if (value.length >= 5) {
-    value = value.slice(0, 5) + "/" + value.slice(5, 9);
-  }
-
-  setFormData((prev) => ({
-    ...prev,
-    dateOfBirth: value,
-  }));
-
-  // Use functional update - no dependency needed
-  setErrors((prev) => {
-    if (prev.dateOfBirth) {
-      const newErrors = { ...prev };
-      delete newErrors.dateOfBirth;
-      return newErrors;
+    if (value.length >= 2) {
+      value = value.slice(0, 2) + "/" + value.slice(2);
     }
-    return prev;
-  });
-}, []); // Empty dependency array
+    if (value.length >= 5) {
+      value = value.slice(0, 5) + "/" + value.slice(5, 9);
+    }
+
+    setFormData((prev) => ({
+      ...prev,
+      dateOfBirth: value,
+    }));
+
+    // Use functional update - no dependency needed
+    setErrors((prev) => {
+      if (prev.dateOfBirth) {
+        const newErrors = { ...prev };
+        delete newErrors.dateOfBirth;
+        return newErrors;
+      }
+      return prev;
+    });
+  }, []); // Empty dependency array
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -404,6 +423,47 @@ const handleDateChange = useCallback((e) => {
     }
   };
 
+  const shouldAnimate = animations && !reducedMotion;
+  const errorAnimation = shouldAnimate
+    ? { initial: { opacity: 0, y: -10 }, animate: { opacity: 1, y: 0 } }
+    : {};
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedPassword(formData.password);
+    }, 150);
+
+    return () => clearTimeout(timer);
+  }, [formData.password]);
+
+  const passwordStrength = useMemo(() => {
+    if (!debouncedPassword) return { strength: 0, text: "", checks: {} };
+
+    const checks = {
+      length: debouncedPassword.length >= 8,
+      lowercase: /[a-z]/.test(debouncedPassword),
+      uppercase: /[A-Z]/.test(debouncedPassword),
+      number: /\d/.test(debouncedPassword),
+      special: /[!@#$%^&*(),.?":{}|<>]/.test(debouncedPassword),
+    };
+
+    const strength = Object.values(checks).filter(Boolean).length;
+
+    const strengthTexts = {
+      1: "Very Weak",
+      2: "Weak",
+      3: "Fair",
+      4: "Good",
+      5: "Strong",
+    };
+
+    return {
+      strength,
+      text: strengthTexts[strength] || "",
+      checks,
+    };
+  }, [debouncedPassword]);
+
   if (!mounted || authLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center pt-16">
@@ -412,57 +472,6 @@ const handleDateChange = useCallback((e) => {
     );
   }
 
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: {
-        duration: 0.6,
-        staggerChildren: 0.1,
-      },
-    },
-  };
-
-  const itemVariants = {
-    hidden: { opacity: 0, y: 20 },
-    visible: {
-      opacity: 1,
-      y: 0,
-      transition: { duration: 0.5 },
-    },
-  };
-
-// Extract password to a separate variable BEFORE useMemo
-const currentPassword = formData.password;
-
-const passwordStrength = useMemo(() => {
-  if (!currentPassword) return { strength: 0, text: "", checks: {} };
-
-  const checks = {
-    length: currentPassword.length >= 8,
-    lowercase: /[a-z]/.test(currentPassword),
-    uppercase: /[A-Z]/.test(currentPassword),
-    number: /\d/.test(currentPassword),
-    special: /[!@#$%^&*(),.?":{}|<>]/.test(currentPassword),
-  };
-
-  const strength = Object.values(checks).filter(Boolean).length;
-
-  const strengthTexts = {
-    1: "Very Weak",
-    2: "Weak",
-    3: "Fair",
-    4: "Good",
-    5: "Strong",
-  };
-
-  return {
-    strength,
-    text: strengthTexts[strength] || "",
-    checks,
-  };
-}, [currentPassword]); // Now depends on primitive string value, not object
-    
   return (
     <div className="min-h-screen relative pt-1">
       <div className="flex items-center justify-center min-h-screen relative z-10 px-4 sm:px-6 lg:px-6 py-4">
@@ -541,7 +550,7 @@ const passwordStrength = useMemo(() => {
                             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                               <User className="h-4 w-4 text-muted-foreground" />
                             </div>
-                            <Input
+                            <MemoizedInput
                               id="firstName"
                               name="firstName"
                               type="text"
@@ -558,16 +567,7 @@ const passwordStrength = useMemo(() => {
                           </div>
                           {errors.firstName && (
                             <motion.p
-                              initial={
-                                animations && !reducedMotion
-                                  ? { opacity: 0, y: -10 }
-                                  : {}
-                              }
-                              animate={
-                                animations && !reducedMotion
-                                  ? { opacity: 1, y: 0 }
-                                  : {}
-                              }
+                              {...errorAnimation}
                               className="text-sm text-destructive"
                             >
                               {errors.firstName}
@@ -586,7 +586,7 @@ const passwordStrength = useMemo(() => {
                             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                               <User className="h-4 w-4 text-muted-foreground" />
                             </div>
-                            <Input
+                            <MemoizedInput
                               id="lastName"
                               name="lastName"
                               type="text"
@@ -603,16 +603,7 @@ const passwordStrength = useMemo(() => {
                           </div>
                           {errors.lastName && (
                             <motion.p
-                              initial={
-                                animations && !reducedMotion
-                                  ? { opacity: 0, y: -10 }
-                                  : {}
-                              }
-                              animate={
-                                animations && !reducedMotion
-                                  ? { opacity: 1, y: 0 }
-                                  : {}
-                              }
+                              {...errorAnimation}
                               className="text-sm text-destructive"
                             >
                               {errors.lastName}
@@ -633,7 +624,7 @@ const passwordStrength = useMemo(() => {
                           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                             <Mail className="h-4 w-4 text-muted-foreground" />
                           </div>
-                          <Input
+                          <MemoizedInput
                             id="email"
                             name="email"
                             type="email"
@@ -650,16 +641,7 @@ const passwordStrength = useMemo(() => {
                         </div>
                         {errors.email && (
                           <motion.p
-                            initial={
-                              animations && !reducedMotion
-                                ? { opacity: 0, y: -10 }
-                                : {}
-                            }
-                            animate={
-                              animations && !reducedMotion
-                                ? { opacity: 1, y: 0 }
-                                : {}
-                            }
+                            {...errorAnimation}
                             className="text-sm text-destructive"
                           >
                             {errors.email}
@@ -674,7 +656,7 @@ const passwordStrength = useMemo(() => {
                         >
                           Date of Birth
                         </label>
-                        <Input
+                        <MemoizedInput
                           id="dateOfBirth"
                           name="dateOfBirth"
                           type="text"
@@ -693,16 +675,7 @@ const passwordStrength = useMemo(() => {
                         </p>
                         {errors.dateOfBirth && (
                           <motion.p
-                            initial={
-                              animations && !reducedMotion
-                                ? { opacity: 0, y: -10 }
-                                : {}
-                            }
-                            animate={
-                              animations && !reducedMotion
-                                ? { opacity: 1, y: 0 }
-                                : {}
-                            }
+                            {...errorAnimation}
                             className="text-sm text-destructive"
                           >
                             {errors.dateOfBirth}
@@ -779,16 +752,7 @@ const passwordStrength = useMemo(() => {
                         </div>
                         {errors.gender && (
                           <motion.p
-                            initial={
-                              animations && !reducedMotion
-                                ? { opacity: 0, y: -10 }
-                                : {}
-                            }
-                            animate={
-                              animations && !reducedMotion
-                                ? { opacity: 1, y: 0 }
-                                : {}
-                            }
+                            {...errorAnimation}
                             className="text-sm text-destructive"
                           >
                             {errors.gender}
@@ -808,7 +772,7 @@ const passwordStrength = useMemo(() => {
                           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                             <Lock className="h-4 w-4 text-muted-foreground" />
                           </div>
-                          <Input
+                          <MemoizedInput
                             id="password"
                             name="password"
                             type={showPassword ? "text" : "password"}
@@ -907,16 +871,7 @@ const passwordStrength = useMemo(() => {
 
                         {errors.password && (
                           <motion.p
-                            initial={
-                              animations && !reducedMotion
-                                ? { opacity: 0, y: -10 }
-                                : {}
-                            }
-                            animate={
-                              animations && !reducedMotion
-                                ? { opacity: 1, y: 0 }
-                                : {}
-                            }
+                            {...errorAnimation}
                             className="text-sm text-destructive"
                           >
                             {errors.password}
@@ -936,7 +891,7 @@ const passwordStrength = useMemo(() => {
                           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                             <Lock className="h-4 w-4 text-muted-foreground" />
                           </div>
-                          <Input
+                          <MemoizedInput
                             id="confirmPassword"
                             name="confirmPassword"
                             type={showConfirmPassword ? "text" : "password"}
@@ -969,16 +924,7 @@ const passwordStrength = useMemo(() => {
                         </div>
                         {errors.confirmPassword && (
                           <motion.p
-                            initial={
-                              animations && !reducedMotion
-                                ? { opacity: 0, y: -10 }
-                                : {}
-                            }
-                            animate={
-                              animations && !reducedMotion
-                                ? { opacity: 1, y: 0 }
-                                : {}
-                            }
+                            {...errorAnimation}
                             className="text-sm text-destructive"
                           >
                             {errors.confirmPassword}
@@ -1023,16 +969,7 @@ const passwordStrength = useMemo(() => {
                         </div>
                         {errors.agreeToTerms && (
                           <motion.p
-                            initial={
-                              animations && !reducedMotion
-                                ? { opacity: 0, y: -10 }
-                                : {}
-                            }
-                            animate={
-                              animations && !reducedMotion
-                                ? { opacity: 1, y: 0 }
-                                : {}
-                            }
+                            {...errorAnimation}
                             className="text-sm text-destructive"
                           >
                             {errors.agreeToTerms}
@@ -1127,7 +1064,7 @@ const passwordStrength = useMemo(() => {
                           </label>
                           <div className="flex justify-center gap-1.5 sm:gap-2">
                             {[0, 1, 2, 3, 4, 5].map((index) => (
-                              <Input
+                              <MemoizedInput
                                 key={index}
                                 id={`reg-otp-${index}`}
                                 type="text"
@@ -1225,17 +1162,8 @@ const passwordStrength = useMemo(() => {
                           </div>
                           {errors.otp && (
                             <motion.p
-                              initial={
-                                animations && !reducedMotion
-                                  ? { opacity: 0, y: -10 }
-                                  : {}
-                              }
-                              animate={
-                                animations && !reducedMotion
-                                  ? { opacity: 1, y: 0 }
-                                  : {}
-                              }
-                              className="text-sm text-destructive text-center"
+                              {...errorAnimation}
+                              className="text-sm text-destructive"
                             >
                               {errors.otp}
                             </motion.p>
@@ -1296,7 +1224,7 @@ const passwordStrength = useMemo(() => {
                             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                               <User className="h-4 w-4 text-muted-foreground" />
                             </div>
-                            <Input
+                            <MemoizedInput
                               id="username"
                               name="username"
                               type="text"
@@ -1359,17 +1287,8 @@ const passwordStrength = useMemo(() => {
                           </p>
                           {errors.username && (
                             <motion.p
-                              initial={
-                                animations && !reducedMotion
-                                  ? { opacity: 0, y: -10 }
-                                  : {}
-                              }
-                              animate={
-                                animations && !reducedMotion
-                                  ? { opacity: 1, y: 0 }
-                                  : {}
-                              }
-                              className="text-sm text-destructive text-left"
+                              {...errorAnimation}
+                              className="text-sm text-destructive"
                             >
                               {errors.username}
                             </motion.p>
