@@ -439,7 +439,7 @@ const VideoPlayerModal = ({ video, onClose }) => {
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center p-2 sm:p-4 z-50">
+    <div className="fixed inset-0 bg-white/10 backdrop-blur-md flex items-center justify-center p-2 sm:p-4 z-50">
       <div className="bg-white rounded-xl shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-hidden flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-200 bg-gray-50">
@@ -1066,10 +1066,10 @@ const Courses = () => {
   };
 
   const handleToggleCourseStatus = async (course) => {
-    const result = await updateCourse(editingCourse._id, editFormData);
+    const result = await toggleCourseStatus(course._id);
     if (result.success) {
-      setEditingCourse(null);
-      setEditFormData({});
+      // Refresh courses list in background
+      await fetchCourses();
     }
   };
 
@@ -1732,8 +1732,8 @@ const Courses = () => {
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
                 >
                   <option value="">All Status</option>
-                  <option value="active">Active</option>
-                  <option value="inactive">Inactive</option>
+                  <option value="active">Active Only</option>
+                  <option value="inactive">Inactive Only</option>
                 </select>
               </div>
 
@@ -1984,7 +1984,7 @@ const Courses = () => {
                             className={`p-2 rounded-lg transition-all duration-200 group cursor-pointer flex-shrink-0 ${
                               course.isActive || course.status === "active"
                                 ? "text-green-600 hover:text-green-700 hover:bg-green-50"
-                                : "text-red-600 hover:text-red-700 hover:bg-red-50"
+                                : "text-gray-400 hover:text-red-600 hover:bg-red-50"
                             }`}
                             title={`${
                               course.isActive || course.status === "active"
@@ -1992,7 +1992,11 @@ const Courses = () => {
                                 : "Activate"
                             } Course`}
                           >
-                            <Eye className="h-4 w-4 sm:h-5 sm:w-5 group-hover:scale-110 transition-transform" />
+                            {course.isActive || course.status === "active" ? (
+                              <Eye className="h-4 w-4 sm:h-5 sm:w-5 group-hover:scale-110 transition-transform" />
+                            ) : (
+                              <Eye className="h-4 w-4 sm:h-5 sm:w-5 group-hover:scale-110 transition-transform opacity-50" />
+                            )}
                           </button>
                           <button
                             onClick={() => handleEditCourse(course)}
@@ -2438,6 +2442,7 @@ const Courses = () => {
                           <CourseCoupons courseId={course._id} />
                         </div>
                       )}
+
                       {/* Video Content Preview with Edit/Delete buttons */}
                       {course.videoContent &&
                         course.videoContent.type &&
