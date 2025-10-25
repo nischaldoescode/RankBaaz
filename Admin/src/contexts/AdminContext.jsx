@@ -144,15 +144,19 @@ export const AdminProvider = ({ children }) => {
       const data = response.data;
 
       if (data.success) {
+        // Update local state immediately
         setCourses((prev) =>
           prev.map((course) =>
             course._id === courseId
-              ? { ...course, isActive: !course.isActive }
+              ? {
+                  ...course,
+                  isActive: data.data?.course?.isActive ?? !course.isActive,
+                }
               : course
           )
         );
         toast.success(data.message);
-        return data;
+        return { success: true, data: data.data };
       } else {
         toast.error(data.message || "Failed to toggle course status");
         return { success: false };
@@ -165,7 +169,6 @@ export const AdminProvider = ({ children }) => {
       return { success: false };
     }
   };
-
   const fetchCourses = async (force = false) => {
     try {
       // Don't show loading for background refreshes
@@ -911,9 +914,6 @@ export const AdminProvider = ({ children }) => {
       }
     }
   };
-
-
-
 
   const createCoupon = async (couponData) => {
     try {
