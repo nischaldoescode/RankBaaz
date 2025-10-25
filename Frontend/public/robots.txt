@@ -10,6 +10,7 @@ Allow: /courses
 Allow: /privacy
 Allow: /terms
 Allow: /login
+Allow: /profile
 
 # Block private/auth pages
 Disallow: /admin/
@@ -32,11 +33,11 @@ User-agent: Googlebot
 Allow: /
 Disallow: /admin/
 Disallow: /api/
-Disallow: /profile
 Disallow: /app/test/
 Crawl-delay: 6
 
 Sitemap: https://rankbaaz.com/sitemap.xml
+Sitemap: https://rankbaaz.onrender.com/sitemap-profiles.xml
 
 # Bing-specific rules
 User-agent: Bingbot
