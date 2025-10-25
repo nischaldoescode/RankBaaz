@@ -3,7 +3,6 @@ import cors from "cors";
 import cookieParser from "cookie-parser";
 import dotenv from "dotenv";
 import helmet from "helmet";
-import rateLimit from "express-rate-limit";
 import compression from "compression";
 import connectDB from "./Config/mongodb.js";
 import { v2 as cloudinary } from "cloudinary";
@@ -274,14 +273,29 @@ app.use((req, res, next) => {
 // Add before error handlers
 app.get("/sitemap-profiles.xml", async (req, res) => {
   try {
+    // we will Check Redis cache first (cache for 1 hour)
+    const cacheKey = "sitemap:profiles";
+
+    try {
+      const cached = await redisClient.get(cacheKey);
+      if (cached) {
+        console.log("Serving sitemap from cache");
+        res.header("Content-Type", "application/xml");
+        res.header("Cache-Control", "public, max-age=3600"); // 1 hour browser cache
+        return res.send(cached);
+      }
+    } catch (cacheError) {
+      console.warn("Cache read failed, generating fresh:", cacheError);
+    }
+
     // Fetch all users with public profiles
     const users = await User.find({ isVerified: true })
       .select("username updatedAt")
       .lean()
       .limit(50000); // Google's limit per sitemap
-    
+
     const siteUrl = process.env.SITE_URL || "https://rankbaaz.com";
-    
+
     // Generate XML
     const sitemap = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
@@ -297,8 +311,17 @@ app.get("/sitemap-profiles.xml", async (req, res) => {
     )
     .join("")}
 </urlset>`;
-    
+
+    // Cache for 1 hour (3600 seconds)
+    try {
+      await redisClient.setex(cacheKey, 3600, sitemap);
+      console.log("Sitemap cached successfully");
+    } catch (cacheError) {
+      console.warn("Cache write failed:", cacheError);
+    }
+
     res.header("Content-Type", "application/xml");
+    res.header("Cache-Control", "public, max-age=3600"); // 1 hour browser cache
     res.send(sitemap);
   } catch (error) {
     console.error("Sitemap generation error:", error);
