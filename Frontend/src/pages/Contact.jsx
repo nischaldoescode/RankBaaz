@@ -5,7 +5,7 @@ import { Mail, Phone, MapPin, Clock, Send, MessageSquare } from "lucide-react";
 import { useContent } from "../context/ContentContext";
 import { useTheme } from "../context/ThemeContext";
 import Loading from "../components/common/Loading";
-import { useHead } from '@unhead/react';
+import { useSEO } from "@/hooks/useSEO";
 
 const Contact = () => {
   const { contactInfo, loading } = useContent();
