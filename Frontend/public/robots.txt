@@ -20,7 +20,6 @@ Disallow: /app/test/
 
 # Block sensitive files
 Disallow: /*.json$
-Disallow: /*.xml$
 Disallow: /config/
 Disallow: /src/
 
