@@ -432,7 +432,6 @@ const handleDateChange = useCallback((e) => {
     },
   };
 
-  const passwordStrength = useMemo(() => {
 // Extract password to a separate variable BEFORE useMemo
 const currentPassword = formData.password;
 
