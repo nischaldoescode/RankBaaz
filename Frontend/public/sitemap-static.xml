@@ -2,63 +2,47 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
         xmlns:xhtml="http://www.w3.org/1999/xhtml"
         xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
-  
-  <!-- Homepage - Highest Priority -->
   <url>
     <loc>https://rankbaaz.com/</loc>
     <changefreq>daily</changefreq>
     <priority>1.0</priority>
     <lastmod>2025-01-21</lastmod>
   </url>
-
-  <!-- About Page -->
   <url>
     <loc>https://rankbaaz.com/about</loc>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
     <lastmod>2025-01-21</lastmod>
   </url>
-
-  <!-- Contact Page -->
   <url>
     <loc>https://rankbaaz.com/contact</loc>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
     <lastmod>2025-01-21</lastmod>
   </url>
-
-  <!-- Courses Page -->
   <url>
     <loc>https://rankbaaz.com/courses</loc>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
     <lastmod>2025-01-21</lastmod>
   </url>
-
-  <!-- Privacy Policy -->
   <url>
     <loc>https://rankbaaz.com/privacy</loc>
     <changefreq>monthly</changefreq>
     <priority>0.5</priority>
     <lastmod>2025-01-21</lastmod>
   </url>
-
-  <!-- Terms of Service -->
   <url>
     <loc>https://rankbaaz.com/terms</loc>
     <changefreq>monthly</changefreq>
     <priority>0.5</priority>
     <lastmod>2025-01-21</lastmod>
   </url>
-
-  <!-- Login Page (No Index) -->
   <url>
     <loc>https://rankbaaz.com/login</loc>
     <changefreq>yearly</changefreq>
     <priority>0.3</priority>
   </url>
-
-  <!-- Register Page (No Index) -->
   <url>
     <loc>https://rankbaaz.com/register</loc>
     <changefreq>yearly</changefreq>
