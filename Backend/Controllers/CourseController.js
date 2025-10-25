@@ -882,16 +882,11 @@ export const updateCourse = async (req, res) => {
         req.body.isPaid === "true" || req.body.isPaid === true;
       updateData.isPaid = isPaidBoolean;
 
-      // CRITICAL: Delete videos when changing from paid to free
+      // When changing from paid to free, just clear video content (no deletion needed for links)
       if (!isPaidBoolean) {
-        const course = await Course.findById(courseId);
-        if (course?.videoContent) {
-          await deleteAllCourseVideos(course.videoContent);
-        }
-
         videoContentUpdate = {
           type: "none",
-          courseVideo: { links: [], uploadedVideo: null },
+          courseVideo: { links: [] },
           difficultyVideos: [],
         };
       }
