@@ -38,6 +38,7 @@ Crawl-delay: 6
 
 Sitemap: https://rankbaaz.com/sitemap.xml
 Sitemap: https://rankbaaz.onrender.com/sitemap-profiles.xml
+Sitemap: https://rankbaaz.com/sitemap-static.xml
 
 # Bing-specific rules
 User-agent: Bingbot
