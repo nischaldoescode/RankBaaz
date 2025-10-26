@@ -8,7 +8,7 @@ import Loading from "../components/common/Loading";
 import { useSEO } from "@/hooks/useSEO";
 
 const Contact = () => {
-  const { contactInfo, loading } = useContent();
+  const { contactInfo, loading, contentSettings } = useContent();
   const { animations, reducedMotion } = useTheme();
   
   useSEO({
