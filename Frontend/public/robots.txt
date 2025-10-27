@@ -11,12 +11,12 @@ Allow: /privacy
 Allow: /terms
 Allow: /login
 Allow: /profile
+Allow: /register
+Allow: /profile
 
 # Block private/auth pages
 Disallow: /admin/
 Disallow: /api/
-Disallow: /register
-Disallow: /profile
 Disallow: /app/test/
 
 # Block sensitive files
