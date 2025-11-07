@@ -140,8 +140,14 @@ export const apiMethods = {
       api.get(`/api/profile/search?query=${query}&limit=${limit}`),
   },
   // course methods
+  // course methods
   courses: {
-    getAll: (params = {}) => api.get("/api/courses", { params }),
+    getAll: (params = {}) => {
+      // SAFETY: Never allow frontend to request inactive courses
+      const safeParams = { ...params };
+      delete safeParams.isActive; // Remove any isActive filter attempts
+      return api.get("/api/courses", { params: safeParams });
+    },
     getById: (id) => api.get(`/api/courses/${id}`),
     getCategories: () => api.get("/api/courses/categories"),
     search: (query) =>
