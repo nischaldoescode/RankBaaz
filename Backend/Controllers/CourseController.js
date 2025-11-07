@@ -1154,11 +1154,21 @@ export const getAllCourses = async (req, res) => {
     const skip = (page - 1) * limit;
     const search = req.query.search || "";
     const isActive = req.query.isActive;
-    const isAdmin = req.user?.role === "admin";
+    const isAdmin = req.user?.role === "admin" || req.admin?.isAdmin === true;
     const { category, difficulty, isPaid, sortBy = "newest" } = req.query;
 
-    // Base query - only show active courses for non-admin users
-    const baseQuery = isAdmin ? {} : { isActive: true };
+    // CRITICAL CHANGE: Force active courses for non-admin, even if isActive filter is passed
+    let baseQuery;
+    if (isAdmin) {
+      // Admin can see all courses OR filter by isActive
+      baseQuery = {};
+      if (isActive !== undefined) {
+        baseQuery.isActive = isActive === "true";
+      }
+    } else {
+      // Non-admin (frontend) ALWAYS sees only active courses
+      baseQuery = { isActive: true };
+    }
 
     let filterQuery = { ...baseQuery };
 
@@ -1167,14 +1177,9 @@ export const getAllCourses = async (req, res) => {
       filterQuery.name = { $regex: search, $options: "i" };
     }
 
-    // Add status filter
-    if (isActive !== undefined) {
-      filterQuery.isActive = isActive === "true";
-    }
-
     // Add category filter
     if (category) {
-      filterQuery.category = new mongoose.Types.ObjectId.createFromHexString(
+      filterQuery.category = mongoose.Types.ObjectId.createFromHexString(
         category
       );
     }
@@ -2241,7 +2246,30 @@ export const updateCourseQuestion = async (req, res) => {
         public_id: req.file.filename,
         url: req.file.path,
       };
-    } // AFTER - Handle different question types properly
+    }
+
+    // NEW: Handle explicit image deletion
+    if (updates.image === null || updates.image === "null") {
+      // Delete from Cloudinary if exists
+      if (question.image && question.image.public_id) {
+        try {
+          await cloudinary.uploader.destroy(question.image.public_id);
+          console.log(
+            `Deleted image from Cloudinary: ${question.image.public_id}`
+          );
+        } catch (error) {
+          console.error("Failed to delete image from Cloudinary:", error);
+        }
+      }
+
+      // Clear the image field completely
+      question.image = undefined;
+      question.markModified("image"); // Ensure Mongoose detects the change
+
+      // Remove image from updates to prevent it being set again
+      delete updates.image;
+    }
+
     const allowedUpdates = [
       "question",
       "correctAnswer",
