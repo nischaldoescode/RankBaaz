@@ -724,6 +724,15 @@ export const AdminProvider = ({ children }) => {
             "Content-Type": "multipart/form-data",
           },
         };
+      } else if (questionData.image === null) {
+        // NEW: Explicitly handle image deletion
+        // Send null as JSON to signal image removal
+        payload = { ...questionData, image: null };
+        config = {
+          headers: {
+            "Content-Type": "application/json",
+          },
+        };
       }
 
       const response = await axios.put(
