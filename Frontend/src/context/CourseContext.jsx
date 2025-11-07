@@ -248,6 +248,10 @@ export const CourseProvider = ({ children }) => {
         }
       }
 
+      // IMPORTANT: Never send isActive parameter from frontend
+      // Backend enforces active courses for non-admin users
+      delete params.isActive;
+
       // Use cached API call
       const data = await cachedAPICall(
         "/api/courses",
@@ -260,13 +264,24 @@ export const CourseProvider = ({ children }) => {
         { maxAge: 30 * 60 * 1000 }
       );
 
-      const { courses, pagination } = data;
+      const { courses = [], pagination = {} } = data;
 
+      // ALWAYS dispatch success, even with empty results
       dispatch({
         type: COURSE_ACTIONS.SET_COURSES,
-        payload: { courses, pagination },
+        payload: {
+          courses,
+          pagination: {
+            ...state.pagination,
+            ...pagination,
+          },
+        },
       });
+
+      // Clear any previous errors
+      dispatch({ type: COURSE_ACTIONS.CLEAR_ERROR });
     } catch (error) {
+      // Only show error for actual network/server errors
       if (error.response?.status !== 401) {
         const errorMessage = handleApiError(error, "Failed to load courses");
         dispatch({ type: COURSE_ACTIONS.SET_ERROR, payload: errorMessage });

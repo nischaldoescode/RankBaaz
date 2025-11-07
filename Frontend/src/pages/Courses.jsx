@@ -577,11 +577,39 @@ const Courses = () => {
               No courses found
             </h3>
             <p className="text-slate-400 mb-6">
-              Try adjusting your search criteria or filters
+              {hasFiltersApplied
+                ? (() => {
+                    // Build dynamic message based on active filters
+                    const activeFilters = [];
+                    if (filters.category && filters.category !== "all") {
+                      const categoryName =
+                        categories.find((c) => c._id === filters.category)
+                          ?.name || "this category";
+                      activeFilters.push(`in ${categoryName}`);
+                    }
+                    if (filters.difficulty && filters.difficulty !== "all") {
+                      activeFilters.push(`at ${filters.difficulty} level`);
+                    }
+                    if (filters.price) {
+                      activeFilters.push(
+                        filters.price === "free"
+                          ? "free courses"
+                          : "paid courses"
+                      );
+                    }
+                    if (filters.searchTerm) {
+                      activeFilters.push(`matching "${filters.searchTerm}"`);
+                    }
+
+                    return activeFilters.length > 0
+                      ? `No courses available ${activeFilters.join(", ")}`
+                      : "Try adjusting your search criteria or filters";
+                  })()
+                : "No courses are currently available. Check back later!"}
             </p>
             {hasFiltersApplied && (
               <button onClick={clearFilters} className="btn-primary">
-                Clear Filters
+                Clear All Filters
               </button>
             )}
           </motion.div>
