@@ -210,8 +210,15 @@ const Login = () => {
 
   const handleChangeEmail = () => {
     setLoginStep(1);
-    setFormData({ ...formData, otp: "", password: "" });
+    // Clear OTP and password, preserve email
+    setFormData((prev) => ({
+      ...prev,
+      otp: "",
+      password: "",
+    }));
     setErrors({});
+    setOtpTimer(0);
+    setCanResendOtp(false);
   };
 
   const handleSubmit = async (e) => {
@@ -309,13 +316,34 @@ const Login = () => {
             >
               {/* Back Button */}
               <motion.div variants={itemVariants}>
-                <Link
-                  to="/"
-                  className="inline-flex items-center space-x-2 text-muted-foreground hover:text-foreground transition-colors duration-200"
-                >
-                  <ArrowLeft className="w-4 h-4" />
-                  <span className="text-sm sm:text-base">Back to home</span>
-                </Link>
+                {loginStep === 1 ? (
+                  <Link
+                    to="/"
+                    className="inline-flex items-center space-x-2 text-muted-foreground hover:text-foreground transition-colors duration-200"
+                  >
+                    <ArrowLeft className="w-4 h-4" />
+                    <span className="text-sm sm:text-base">Back to home</span>
+                  </Link>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setLoginStep(1);
+                      setFormData((prev) => ({
+                        ...prev,
+                        otp: "",
+                        password: "",
+                      }));
+                      setErrors({});
+                      setOtpTimer(0);
+                      setCanResendOtp(false);
+                    }}
+                    className="inline-flex items-center space-x-2 text-muted-foreground hover:text-foreground transition-colors duration-200"
+                  >
+                    <ArrowLeft className="w-4 h-4" />
+                    <span className="text-sm sm:text-base">Back to email</span>
+                  </button>
+                )}
               </motion.div>
 
               {/* Header */}
