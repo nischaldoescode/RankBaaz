@@ -88,40 +88,65 @@ const createRateLimiter = (options) => {
   };
 };
 
-// Rate limiting
+// Helper to detect if request is from browser
+const isBrowserRequest = (req) => {
+  const userAgent = req.get("User-Agent") || "";
+  // Check for common browser user agents
+  return (
+    /Mozilla|Chrome|Safari|Firefox|Edge|Opera/i.test(userAgent) &&
+    !/bot|crawler|spider|scraper/i.test(userAgent)
+  );
+};
+
+// Rate limiting - SKIP FOR BROWSER REQUESTS
 const limiter = createRateLimiter({
   prefix: "general",
-  windowMs: 20 * 60 * 1000,
-  max: process.env.NODE_ENV === "production" ? 200 : 1000,
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: process.env.NODE_ENV === "production" ? 500 : 2000, // Increased limits
   message: {
     success: false,
     message: "Too many requests, please try again later.",
   },
-  skip: (req) => req.path === "/health",
+  skip: (req) => {
+    // Skip rate limiting for:
+    // 1. Health checks
+    // 2. Browser requests (normal user traffic)
+    // 3. Admin routes
+    return (
+      req.path === "/health" ||
+      isBrowserRequest(req) ||
+      req.path.startsWith("/api/admin")
+    );
+  },
 });
 
-// Coupon rate limiter
+// Coupon limiter - MORE LENIENT FOR BROWSERS
 const couponLimiter = createRateLimiter({
   prefix: "coupon",
-  windowMs: 20 * 60 * 1000,
-  max: 60,
+  windowMs: 15 * 60 * 1000,
+  max: 100, // Increased from 60
   message: {
     success: false,
     message: "Too many coupon requests, please try again later.",
   },
+  skip: (req) => isBrowserRequest(req), // Skip for browsers
 });
 
-// Stricter rate limiting for auth routes
+// NO AUTH LIMITER - Remove rate limiting on auth routes entirely for browsers
+// Only apply to suspicious traffic (bots/crawlers)
 const authLimiter = createRateLimiter({
   prefix: "auth",
-  windowMs: 20 * 60 * 1000,
-  max: 30,
+  windowMs: 15 * 60 * 1000,
+  max: 100, // Much higher limit
   message: {
     success: false,
     message: "Too many authentication attempts, please try again later.",
   },
+  skip: (req) => {
+    // Skip for browsers - only limit bots
+    return isBrowserRequest(req);
+  },
 });
-
 // CORS configuration
 const corsOptions = {
   origin: function (origin, callback) {
@@ -338,22 +363,23 @@ app.get("/health", (req, res) => {
   });
 });
 
-// Apply general limiter but exclude admin routes
+// Apply general limiter but exclude many routes for better UX
 app.use((req, res, next) => {
+  // Skip limiter for:
+  // 1. All authenticated routes (handled by auth middleware)
+  // 2. Admin routes
+  // 3. Course routes
+  // 4. Profile routes
   if (
     req.path.startsWith("/api/courses") ||
-    req.path.startsWith("/api/admin")
+    req.path.startsWith("/api/admin") ||
+    req.path.startsWith("/api/profile") ||
+    req.path.startsWith("/api/tests") ||
+    isBrowserRequest(req) // Skip for all browser requests
   ) {
-    return next(); // Skip rate limiting for admin operations
+    return next();
   }
   return limiter(req, res, next);
-});
-
-app.use("/api/auth", (req, res, next) => {
-  if (req.path === "/admin-login" || req.path === "/refresh-token") {
-    return next(); // Skip auth limiter for admin login and refresh
-  }
-  return authLimiter(req, res, next);
 });
 // API Routes
 app.use("/api/auth", authRoutes);
