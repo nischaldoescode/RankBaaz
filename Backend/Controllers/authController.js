@@ -844,7 +844,6 @@ export const verifyLoginOTP = async (req, res) => {
   }
 };
 
-// Login User - UPDATED TO HANDLE ADMIN
 export const login = async (req, res) => {
   try {
     const { email, password, isDevAccount } = req.body;
@@ -856,7 +855,8 @@ export const login = async (req, res) => {
       });
     }
 
-    const user = await User.findOne({ email });
+    // Use .lean() for faster read, then hydrate only if needed
+    const user = await User.findOne({ email }).select("+password").lean();
 
     if (!user) {
       return res.status(401).json({
@@ -865,26 +865,15 @@ export const login = async (req, res) => {
       });
     }
 
-    // Dev bypass - auto-create if needed
-    if (email === "nischala389@gmail.com" && password === "DevPass@123") {
-      if (!user.isVerified) {
-        user.isVerified = true;
-      }
+    // Dev bypass check
+    const isDevUser =
+      email === "nischala389@gmail.com" && password === "DevPass@123";
 
-      // Ensure dev account has a username
-      if (!user.username) {
-        user.username = "itzzdev"; // or any username you want
-      }
-
-      await user.save();
-    } else {
-      // Normal flow - check verification
-      if (!user.isVerified) {
-        return res.status(401).json({
-          success: false,
-          message: "Please verify your email first",
-        });
-      }
+    if (!isDevUser && !user.isVerified) {
+      return res.status(401).json({
+        success: false,
+        message: "Please verify your email first",
+      });
     }
 
     const isPasswordValid = await bcrypt.compare(password, user.password);
@@ -895,22 +884,38 @@ export const login = async (req, res) => {
         message: "Invalid credentials",
       });
     }
-    // console.log({
-    //   email: user.email,
-    //   userId: user._id,
-    //   timestamp: new Date().toISOString(),
-    // });
 
-    if (user.otp && user.otp.code) {
-      user.otp = {
-        code: null,
-        expiresAt: null,
-      };
+    // Update user data ONLY if necessary (dev account or OTP clear)
+    let needsUpdate = false;
+    const updates = {};
+
+    if (isDevUser) {
+      if (!user.isVerified) {
+        updates.isVerified = true;
+        needsUpdate = true;
+      }
+      if (!user.username) {
+        updates.username = "itzzdev";
+        needsUpdate = true;
+      }
     }
 
-    // Update last login
-    user.lastLoginAt = new Date();
-    await user.save();
+    if (user.otp && user.otp.code) {
+      updates.otp = { code: null, expiresAt: null };
+      needsUpdate = true;
+    }
+
+    // Always update lastLoginAt
+    updates.lastLoginAt = new Date();
+    needsUpdate = true;
+
+    // Single atomic update instead of multiple saves
+    if (needsUpdate) {
+      await User.updateOne({ _id: user._id }, { $set: updates });
+      // Update local user object for response
+      Object.assign(user, updates);
+    }
+
     // Generate tokens
     const token = generateToken(user._id, req);
     const refreshToken = generateRefreshToken(user._id, req);
@@ -949,18 +954,8 @@ export const login = async (req, res) => {
       signed: true,
     });
 
-    // Build user response
-    const userResponse = {
-      id: user._id,
-      name: user.name,
-      username: user.username,
-      email: user.email,
-      age: user.age,
-      gender: user.gender,
-      isVerified: user.isVerified,
-      totalTestsTaken: user.totalTestsTaken,
-      totalScore: user.totalScore,
-    };
+    // Build user response (remove password)
+    const { password: _, otp, ...userResponse } = user;
 
     res.status(200).json({
       success: true,
@@ -968,7 +963,7 @@ export const login = async (req, res) => {
       data: { user: userResponse },
     });
   } catch (error) {
-    console.error( error);
+    console.error(error);
     res.status(500).json({
       success: false,
       message: "Login failed",
@@ -987,7 +982,7 @@ export const logout = async (req, res) => {
       message: "Logout successful",
     });
   } catch (error) {
-    console.error( error);
+    console.error(error);
     res.status(500).json({
       success: false,
       message: "Logout failed",
@@ -1069,7 +1064,7 @@ export const refreshToken = async (req, res) => {
       message: "Token refreshed successfully",
     });
   } catch (error) {
-    console.error( error);
+    console.error(error);
     res.status(401).json({
       success: false,
       message: "Invalid refresh token",
@@ -1102,7 +1097,7 @@ export const getProfile = async (req, res) => {
       data: { user },
     });
   } catch (error) {
-    console.error( error);
+    console.error(error);
     res.status(500).json({
       success: false,
       message: "Failed to retrieve profile",
@@ -1190,7 +1185,7 @@ export const updateProfile = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error( error);
+    console.error(error);
     res.status(500).json({
       success: false,
       message: "Error updating profile",
@@ -1248,7 +1243,7 @@ export const forgotPassword = async (req, res) => {
     };
     await user.save();
 
-    console.log( user.email);
+    console.log(user.email);
 
     // Fetch content settings
     let contentSettings;
@@ -1280,7 +1275,7 @@ export const forgotPassword = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error( error);
+    console.error(error);
     res.status(500).json({
       success: false,
       message: "Error initiating password reset. Please try again.",
@@ -1343,7 +1338,7 @@ export const verifyForgotPasswordOTP = async (req, res) => {
       });
     }
 
-    console.log( user.email);
+    console.log(user.email);
 
     // Mark OTP as used but don't clear it yet (will clear after password reset)
     user.otp.used = true;
