@@ -483,13 +483,34 @@ const Register = () => {
         >
           {/* Back Button */}
           <motion.div variants={itemVariants}>
-            <Link
-              to="/"
-              className="inline-flex items-center space-x-2 text-muted-foreground hover:text-foreground transition-colors duration-200"
-            >
-              <ArrowLeft className="w-4 h-4" />
-              <span className="text-sm sm:text-base">Back to home</span>
-            </Link>
+            {registerStep === 1 ? (
+              <Link
+                to="/"
+                className="inline-flex items-center space-x-2 text-muted-foreground hover:text-foreground transition-colors duration-200"
+              >
+                <ArrowLeft className="w-4 h-4" />
+                <span className="text-sm sm:text-base">Back to home</span>
+              </Link>
+            ) : (
+              <button
+                type="button"
+                onClick={() => {
+                  setRegisterStep(1);
+                  setOtpValue("");
+                  setUsername("");
+                  setUsernameAvailable(null);
+                  setErrors({});
+                  setOtpTimer(0);
+                  setCanResendOtp(false);
+                }}
+                className="inline-flex items-center space-x-2 text-muted-foreground hover:text-foreground transition-colors duration-200"
+              >
+                <ArrowLeft className="w-4 h-4" />
+                <span className="text-sm sm:text-base">
+                  Back to registration form
+                </span>
+              </button>
+            )}
           </motion.div>
 
           {/* Header */}
@@ -1052,7 +1073,11 @@ const Register = () => {
                           onClick={() => {
                             setRegisterStep(1);
                             setOtpValue("");
+                            setUsername("");
+                            setUsernameAvailable(null);
                             setErrors({});
+                            setOtpTimer(0);
+                            setCanResendOtp(false);
                           }}
                           className="text-xs text-primary hover:text-primary/80 transition-colors"
                         >
