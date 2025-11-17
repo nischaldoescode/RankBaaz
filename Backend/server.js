@@ -364,23 +364,19 @@ app.get("/health", (req, res) => {
 });
 
 // Apply general limiter but exclude many routes for better UX
-app.use((req, res, next) => {
-  // Skip limiter for:
-  // 1. All authenticated routes (handled by auth middleware)
-  // 2. Admin routes
-  // 3. Course routes
-  // 4. Profile routes
-  if (
-    req.path.startsWith("/api/courses") ||
-    req.path.startsWith("/api/admin") ||
-    req.path.startsWith("/api/profile") ||
-    req.path.startsWith("/api/tests") ||
-    isBrowserRequest(req) // Skip for all browser requests
-  ) {
-    return next();
-  }
-  return limiter(req, res, next);
-});
+// app.use((req, res, next) => {
+//   // Skip limiter for:
+//   if (
+//     req.path.startsWith("/api/courses") ||
+//     req.path.startsWith("/api/admin") ||
+//     req.path.startsWith("/api/profile") ||
+//     req.path.startsWith("/api/tests") ||
+//     isBrowserRequest(req) // Skip for all browser requests
+//   ) {
+//     return next();
+//   }
+//   return limiter(req, res, next);
+// });
 // API Routes
 app.use("/api/auth", authRoutes);
 app.use("/api/courses", courseRoutes);
