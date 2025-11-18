@@ -30,6 +30,7 @@ import { authenticateAdmin, authenticateUser } from "../Middleware/auth.js";
 import { uploadCourseImage, handleUploadError } from "../Middleware/Upload.js";
 import { cacheStats } from "../Middleware/statsCache.js";
 import { statsLimiter } from "../helpers/statsLimiter.js";
+import { advancedCache, invalidateOnMutation } from '../Middleware/advancedCache.js';
 
 const router = express.Router();
 
@@ -37,7 +38,7 @@ router.get("/", cacheStats("all-courses", 150), getAllCourses);
 router.get("/categories", cacheStats("all-categories", 500), getAllCategories);
 router.get("/categories/:categoryId", getCategoryById);
 router.get("/:courseId", getCourseById);
-router.get("/:courseId/questions", getCourseQuestions);
+router.get("/:courseId/questions", advancedCache({ ttl: 300 }), getCourseQuestions);
 router.get("/admin/all", authenticateAdmin, getAllCourses);
 router.get(
   "/admin/stats",
@@ -70,7 +71,7 @@ router.post(
   courseValidation,
   createCourse
 );
-router.post("/categories", authenticateAdmin, createCategory);
+router.post("/categories", authenticateAdmin, invalidateOnMutation(['categories', 'courses']), createCategory);
 router.post(
   "/:courseId/questions",
   authenticateAdmin,
@@ -117,16 +118,18 @@ router.put(
 
 router.patch("/:courseId/toggle-status", authenticateAdmin, toggleCourseStatus);
 
-router.delete("/:courseId", authenticateAdmin, deleteCourse);
-router.delete("/categories/:categoryId", authenticateAdmin, deleteCategory);
+router.delete("/:courseId", authenticateAdmin, invalidateOnMutation(['courses']), deleteCourse);
+router.delete("/categories/:categoryId", authenticateAdmin, invalidateOnMutation(['categories', 'courses']), deleteCategory);
 router.delete(
   "/:courseId/questions/bulk",
   authenticateAdmin,
+  invalidateOnMutation(['courses']),
   bulkDeleteQuestions
 );
 router.delete(
   "/:courseId/questions/:questionId",
   authenticateAdmin,
+  invalidateOnMutation(['courses']),
   deleteCourseQuestion
 );
 

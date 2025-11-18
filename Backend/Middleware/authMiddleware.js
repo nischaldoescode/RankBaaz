@@ -241,3 +241,7 @@ export const authenticateAny = async (req, res, next) => {
     });
   }
 };
+
+// Alias exports for compatibility with different route files
+export const protect = authenticateUser;
+export const adminOnly = authenticateAdmin;

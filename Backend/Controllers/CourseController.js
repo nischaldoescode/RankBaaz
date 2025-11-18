@@ -7,6 +7,7 @@ import Category from "../Models/Category.js";
 import mongoose from "mongoose";
 import videoProcessingService from "../services/videoProcessingService.js";
 import questionCacheService from "../services/questionCacheService.js";
+import { invalidateCache } from "../Config/redis.js";
 
 export const parseFormDataArrays = (req, res, next) => {
   if (req.body.difficulties && typeof req.body.difficulties === "string") {
@@ -616,6 +617,8 @@ export const createCourse = async (req, res) => {
     const newCourse = new Course(courseData);
     await newCourse.save();
 
+    await invalidateCache.allCourses();
+
     res.status(201).json({
       success: true,
       message: "Course created successfully",
@@ -904,6 +907,8 @@ export const updateCourse = async (req, res) => {
       runValidators: true,
     }).populate("category", "name description");
 
+        await invalidateCache.course(courseId);
+    await invalidateCache.allCourses();
     res.status(200).json({
       success: true,
       message: "Course updated successfully",
@@ -1133,6 +1138,9 @@ export const deleteCourse = async (req, res) => {
     }
 
     await Course.findByIdAndDelete(courseId);
+        await invalidateCache.course(courseId);
+    await invalidateCache.allCourses();
+
 
     res.status(200).json({
       success: true,
@@ -1411,7 +1419,7 @@ export const addQuestionToCourse = async (req, res) => {
       .reduce((total, q) => total + (q.marksPerQuestion || 0), 0);
 
     await course.save();
-
+await invalidateCache.course(courseId);
     res.status(201).json({
       success: true,
       message: "Question added successfully",
@@ -2099,6 +2107,8 @@ export const deleteCourseQuestion = async (req, res) => {
         console.error("Failed to invalidate question cache:", cacheError);
       }
     }
+
+    await invalidateCache.course(courseId);
     res.status(200).json({
       success: true,
       message: "Question and its image deleted successfully",
@@ -2193,6 +2203,8 @@ export const bulkDeleteQuestions = async (req, res) => {
         console.error("Failed to bulk invalidate question cache:", cacheError);
       }
     }
+
+    await invalidateCache.course(courseId);
 
     res.status(200).json({
       success: true,
@@ -2305,6 +2317,8 @@ export const updateCourseQuestion = async (req, res) => {
         console.error("Failed to invalidate question cache:", cacheError);
       }
     }
+
+    await invalidateCache.course(courseId);
     res.status(200).json({
       success: true,
       message: "Question updated successfully",
@@ -2334,7 +2348,8 @@ export const toggleCourseStatus = async (req, res) => {
 
     course.isActive = !course.isActive;
     await course.save();
-
+    await invalidateCache.course(courseId);
+    await invalidateCache.allCourses();
     res.status(200).json({
       success: true,
       message: `Course ${course.isActive ? "activated" : "deactivated"} successfully`,
@@ -2377,7 +2392,7 @@ export const createCategory = async (req, res) => {
     });
 
     await newCategory.save();
-
+await invalidateCache.allCourses();
     res.status(201).json({
       success: true,
       message: "Category created successfully",
@@ -2506,7 +2521,7 @@ export const updateCategory = async (req, res) => {
       },
       { new: true, runValidators: true }
     );
-
+await invalidateCache.allCourses();
     res.status(200).json({
       success: true,
       message: "Category updated successfully",
@@ -2561,6 +2576,7 @@ export const deleteCategory = async (req, res) => {
 
     await Category.findByIdAndDelete(categoryId);
 
+    await invalidateCache.allCourses();
     res.status(200).json({
       success: true,
       message: "Category deleted successfully",

@@ -15,6 +15,7 @@ import {
 import { checkCourseAccess} from "../helpers/CheckCourseAccess.js";
 
 import { authenticateUser } from "../Middleware/auth.js";
+import { advancedCache } from '../Middleware/advancedCache.js';
 
 const router = express.Router();
 
@@ -31,7 +32,7 @@ router.get("/result/:testId", getTestResult);
 router.get("/history", getTestHistory);
 router.get("/performance", getPerformanceStats);
 router.get("/leaderboard/info", getLeaderboardInfo);
-router.get("/leaderboard/:courseId", getLeaderboard);
+router.get("/leaderboard/:courseId", advancedCache({ ttl: 60 }), getLeaderboard);
 router.post("/check-answer", checkAnswer);
 
 router.post("/abandon", authenticateUser, abandonTest);

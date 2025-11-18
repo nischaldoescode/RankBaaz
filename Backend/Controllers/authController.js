@@ -6,6 +6,7 @@ import User from "../Models/User.js";
 import redisClient from "../Config/redis.js";
 import PendingRegistration from "../Models/PendingRegistration.js";
 import ContentSettings from "../Models/ContentSettings.js";
+import { invalidateCache } from "../Config/redis.js";
 
 import {
   generateOtp,
@@ -1168,6 +1169,8 @@ export const updateProfile = async (req, res) => {
 
     await user.save();
 
+    await invalidateCache.user(userId, user.username);
+
     res.status(200).json({
       success: true,
       message: "Profile updated successfully",
@@ -1664,6 +1667,9 @@ export const changePassword = async (req, res) => {
     // Update password
     user.password = hashedNewPassword;
     await user.save();
+
+    // Invalidate user cache after password change
+    await invalidateCache.user(userId);
 
     res.status(200).json({
       success: true,
