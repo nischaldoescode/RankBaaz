@@ -7,6 +7,7 @@ import mongoose from "mongoose";
 import redisClient from "../Config/redis.js";
 import Payment from "../Models/Payment.js";
 import questionCacheService from "../services/questionCacheService.js";
+import { invalidateCache } from "../Config/redis.js";
 
 // Test submission validation rules
 export const testSubmissionValidation = [
@@ -639,7 +640,10 @@ export const submitTest = async (req, res) => {
     // Get new rank after points update
     const newRank = await pointsService.getUserRank(userId);
     const rankChange = previousRank && newRank ? previousRank - newRank : null;
-
+    // Invalidate leaderboard and user caches after test submission
+    await invalidateCache.leaderboard(courseId);
+    await invalidateCache.test(userId, testId);
+    
     res.status(201).json({
       success: true,
       message: "Test submitted successfully",

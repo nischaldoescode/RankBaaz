@@ -3,6 +3,7 @@ import FAQ from "../Models/FAQ.js";
 import ContactInfo from "../Models/ContactInfo.js";
 import LegalPage from "../Models/LegalPages.js";
 import { v2 as cloudinary } from "cloudinary";
+import { invalidateCache } from "../Config/redis.js";
 
 // ============ CONTENT SETTINGS ============
 
@@ -94,7 +95,7 @@ export const updateContentSettings = async (req, res) => {
 
     Object.assign(settings, updateData);
     await settings.save();
-
+    await invalidateCache.content();
     res.status(200).json({
       success: true,
       message: "Content settings updated successfully",
@@ -135,7 +136,7 @@ export const deleteLogo = async (req, res) => {
     };
     settings.lastModifiedBy = req.admin.userId;
     await settings.save();
-
+    await invalidateCache.content();
     res.status(200).json({
       success: true,
       message: "Logo deleted successfully",
@@ -187,7 +188,7 @@ export const createFAQ = async (req, res) => {
     };
 
     const faq = await FAQ.create(faqData);
-
+    await invalidateCache.content();
     res.status(201).json({
       success: true,
       message: "FAQ created successfully",
@@ -221,7 +222,7 @@ export const updateFAQ = async (req, res) => {
         message: "FAQ not found",
       });
     }
-
+    await invalidateCache.content();
     res.status(200).json({
       success: true,
       message: "FAQ updated successfully",
@@ -248,7 +249,7 @@ export const deleteFAQ = async (req, res) => {
         message: "FAQ not found",
       });
     }
-
+    await invalidateCache.content();
     res.status(200).json({
       success: true,
       message: "FAQ deleted successfully",
@@ -284,6 +285,7 @@ export const bulkUpdateFAQOrder = async (req, res) => {
     // Fetch updated FAQs
     const updatedFAQs = await FAQ.find().sort({ order: 1 });
 
+    await invalidateCache.content();
     res.status(200).json({
       success: true,
       message: "FAQ order updated successfully",
@@ -328,7 +330,7 @@ export const updateContactInfo = async (req, res) => {
 
     Object.assign(contactInfo, updateData);
     await contactInfo.save();
-
+    await invalidateCache.content();
     res.status(200).json({
       success: true,
       message: "Contact info updated successfully",
@@ -478,6 +480,9 @@ export const updateLegalPage = async (req, res) => {
     page.lastModifiedBy = req.admin.userId;
     await page.save();
 
+    // Invalidate legal page cache
+    await invalidateCache.legalPage(type);
+    await invalidateCache.content();
     res.status(200).json({
       success: true,
       message: "Legal page updated successfully",
@@ -544,6 +549,7 @@ export const bulkUpdateSectionOrder = async (req, res) => {
     page.lastUpdated = new Date();
     await page.save();
 
+    await invalidateCache.legalPage(type);
     res.status(200).json({
       success: true,
       message: "Section order updated successfully",

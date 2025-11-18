@@ -112,11 +112,7 @@ const limiter = createRateLimiter({
     // 1. Health checks
     // 2. Browser requests (normal user traffic)
     // 3. Admin routes
-    return (
-      req.path === "/health" ||
-      isBrowserRequest(req) ||
-      req.path.startsWith("/api/admin")
-    );
+    return true;
   },
 });
 
@@ -143,8 +139,7 @@ const authLimiter = createRateLimiter({
     message: "Too many authentication attempts, please try again later.",
   },
   skip: (req) => {
-    // Skip for browsers - only limit bots
-    return isBrowserRequest(req);
+    return true;
   },
 });
 // CORS configuration
@@ -363,20 +358,6 @@ app.get("/health", (req, res) => {
   });
 });
 
-// Apply general limiter but exclude many routes for better UX
-// app.use((req, res, next) => {
-//   // Skip limiter for:
-//   if (
-//     req.path.startsWith("/api/courses") ||
-//     req.path.startsWith("/api/admin") ||
-//     req.path.startsWith("/api/profile") ||
-//     req.path.startsWith("/api/tests") ||
-//     isBrowserRequest(req) // Skip for all browser requests
-//   ) {
-//     return next();
-//   }
-//   return limiter(req, res, next);
-// });
 // API Routes
 app.use("/api/auth", authRoutes);
 app.use("/api/courses", courseRoutes);
