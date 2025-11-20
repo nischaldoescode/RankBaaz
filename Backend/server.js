@@ -60,34 +60,6 @@ try {
   process.exit(1);
 }
 
-// Create rate limiter functions using ioredis-ratelimit
-const createRateLimiter = (options) => {
-  const limiter = ioredisRatelimit({
-    client: redisClient,
-    key: options.keyFn || ((req) => `ratelimit:${options.prefix}:${req.ip}`),
-    limit: options.max,
-    duration: options.windowMs,
-    mode: "binary",
-  });
-
-  console.log(
-    `Rate limiter '${options.prefix}' initialized - Max: ${options.max} requests per ${options.windowMs / 1000}s`
-  );
-
-  return async (req, res, next) => {
-    if (options.skip && options.skip(req)) {
-      return next();
-    }
-
-    try {
-      await limiter(req);
-      next();
-    } catch (error) {
-      return res.status(429).json(options.message);
-    }
-  };
-};
-
 // Helper to detect if request is from browser
 const isBrowserRequest = (req) => {
   const userAgent = req.get("User-Agent") || "";
@@ -98,50 +70,6 @@ const isBrowserRequest = (req) => {
   );
 };
 
-// Rate limiting - SKIP FOR BROWSER REQUESTS
-const limiter = createRateLimiter({
-  prefix: "general",
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: process.env.NODE_ENV === "production" ? 500 : 2000, // Increased limits
-  message: {
-    success: false,
-    message: "Too many requests, please try again later.",
-  },
-  skip: (req) => {
-    // Skip rate limiting for:
-    // 1. Health checks
-    // 2. Browser requests (normal user traffic)
-    // 3. Admin routes
-    return true;
-  },
-});
-
-// Coupon limiter - MORE LENIENT FOR BROWSERS
-const couponLimiter = createRateLimiter({
-  prefix: "coupon",
-  windowMs: 15 * 60 * 1000,
-  max: 100, // Increased from 60
-  message: {
-    success: false,
-    message: "Too many coupon requests, please try again later.",
-  },
-  skip: (req) => isBrowserRequest(req), // Skip for browsers
-});
-
-// NO AUTH LIMITER - Remove rate limiting on auth routes entirely for browsers
-// Only apply to suspicious traffic (bots/crawlers)
-const authLimiter = createRateLimiter({
-  prefix: "auth",
-  windowMs: 15 * 60 * 1000,
-  max: 100, // Much higher limit
-  message: {
-    success: false,
-    message: "Too many authentication attempts, please try again later.",
-  },
-  skip: (req) => {
-    return true;
-  },
-});
 // CORS configuration
 const corsOptions = {
   origin: function (origin, callback) {
@@ -366,7 +294,7 @@ app.use("/api/admin", adminRoutes);
 app.use("/api/profile", profileRoutes);
 app.use("/api/content", contentRoutes);
 app.use("/api/payments", paymentRoutes);
-app.use("/api/coupons", couponLimiter, couponRoutes);
+app.use("/api/coupons", couponRoutes);
 // Root endpoint
 app.get("/", (req, res) => {
   res.status(200).json({
