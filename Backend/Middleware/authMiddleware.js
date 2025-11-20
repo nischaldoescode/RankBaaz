@@ -18,14 +18,14 @@ const decryptCookieData = (encryptedData) => {
     const encryptionKey = process.env.COOKIE_ENCRYPTION_KEY;
     const bytes = CryptoJS.AES.decrypt(encryptedData, encryptionKey);
     const decrypted = JSON.parse(bytes.toString(CryptoJS.enc.Utf8));
-    
+
     // Cache the result (with size limit)
     if (cookieCache.size >= COOKIE_CACHE_SIZE) {
       const firstKey = cookieCache.keys().next().value;
       cookieCache.delete(firstKey);
     }
     cookieCache.set(encryptedData, decrypted);
-    
+
     return decrypted;
   } catch (error) {
     return null;
@@ -57,14 +57,19 @@ const getCachedUser = async (userId) => {
   }
 };
 
+// Change TTL from 300 seconds (5 min) to 600 seconds (10 min)
 const setCachedUser = async (userId, userData) => {
   const cacheKey = `user:${userId}`;
   try {
-    await redisClient.setex(cacheKey, 300, JSON.stringify(userData)); // 5 min cache
+    // Increased to 10 minutes for better performance
+    await redisClient.setex(cacheKey, 600, JSON.stringify(userData));
   } catch (error) {
     console.warn("Redis cache write failed:", error);
   }
 };
+
+// Add pending auth requests tracking
+const pendingAuthRequests = new Map();
 
 export const authenticateUser = async (req, res, next) => {
   try {
@@ -86,41 +91,64 @@ export const authenticateUser = async (req, res, next) => {
       });
     }
 
-    const decoded = jwt.verify(cookieData.token, process.env.JWT_SECRET);
-
-    // REMOVED: Strict device/IP validation for better UX (users on mobile switch networks frequently)
-    // Only validate on sensitive operations (password change, etc.)
-    
-    // Try cache first
-    let user = await getCachedUser(decoded.userId);
-    
-    if (!user) {
-      // Cache miss - query database
-      user = await User.findById(decoded.userId)
-        .select("-password -otp")
-        .lean(); // .lean() returns plain JS object (faster)
-
-      if (!user || !user.isVerified) {
+    let decoded;
+    try {
+      decoded = jwt.verify(cookieData.token, process.env.JWT_SECRET);
+    } catch (jwtError) {
+      if (jwtError.name === "TokenExpiredError") {
         return res.status(401).json({
           success: false,
-          message: "Login Error",
+          message: "Session expired. Please login again.",
         });
       }
-
-      // Cache for next request
-      await setCachedUser(decoded.userId, user);
+      throw jwtError;
     }
 
-    req.user = { userId: user._id, ...user };
-    next();
-  } catch (error) {
-    if (error.name === 'TokenExpiredError') {
+    const userId = decoded.userId;
+
+    // Request deduplication: Check if auth is already pending for this user
+    if (pendingAuthRequests.has(userId)) {
+      const pendingRequest = await pendingAuthRequests.get(userId);
+      req.user = pendingRequest;
+      return next();
+    }
+
+    // Create pending promise
+    const authPromise = (async () => {
+      // Try cache first
+      let user = await getCachedUser(userId);
+
+      if (!user) {
+        // Cache miss - query database
+        user = await User.findById(userId).select("-password -otp").lean();
+
+        if (!user || !user.isVerified) {
+          pendingAuthRequests.delete(userId);
+          return null;
+        }
+
+        // Cache for next request (increase TTL to 10 minutes)
+        await setCachedUser(userId, user);
+      }
+
+      pendingAuthRequests.delete(userId);
+      return { userId: user._id, ...user };
+    })();
+
+    pendingAuthRequests.set(userId, authPromise);
+
+    const user = await authPromise;
+
+    if (!user) {
       return res.status(401).json({
         success: false,
-        message: "Session expired. Please login again.",
+        message: "Login Error",
       });
     }
-    
+
+    req.user = user;
+    next();
+  } catch (error) {
     console.error("Auth middleware error:", error);
     res.status(401).json({
       success: false,
@@ -140,10 +168,10 @@ export const authenticateAdmin = async (req, res, next) => {
     }
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    
+
     // Try cache first
     let admin = await getCachedUser(`admin:${decoded.userId}`);
-    
+
     if (!admin) {
       admin = await Admin.findById(decoded.userId).select("-password").lean();
 
@@ -177,10 +205,12 @@ export const authenticateAny = async (req, res, next) => {
     if (adminToken) {
       try {
         const decoded = jwt.verify(adminToken, process.env.JWT_SECRET);
-        
+
         let admin = await getCachedUser(`admin:${decoded.userId}`);
         if (!admin) {
-          admin = await Admin.findById(decoded.userId).select("-password").lean();
+          admin = await Admin.findById(decoded.userId)
+            .select("-password")
+            .lean();
           if (!admin) {
             return res.status(401).json({
               success: false,
@@ -189,7 +219,7 @@ export const authenticateAny = async (req, res, next) => {
           }
           await setCachedUser(`admin:${decoded.userId}`, admin);
         }
-        
+
         req.admin = { userId: admin._id, isAdmin: true, ...admin };
         return next();
       } catch (error) {
@@ -219,9 +249,11 @@ export const authenticateAny = async (req, res, next) => {
     const decoded = jwt.verify(cookieData.token, process.env.JWT_SECRET);
 
     let user = await getCachedUser(decoded.userId);
-    
+
     if (!user) {
-      user = await User.findById(decoded.userId).select("-password -otp").lean();
+      user = await User.findById(decoded.userId)
+        .select("-password -otp")
+        .lean();
       if (!user || !user.isVerified) {
         return res.status(401).json({
           success: false,
