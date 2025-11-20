@@ -23,6 +23,21 @@ api.interceptors.request.use(
 );
 
 // Response interceptor for handling common errors
+// Track refresh token request to prevent multiple simultaneous calls
+let isRefreshing = false;
+let failedQueue = [];
+
+const processQueue = (error, token = null) => {
+  failedQueue.forEach((prom) => {
+    if (error) {
+      prom.reject(error);
+    } else {
+      prom.resolve(token);
+    }
+  });
+  failedQueue = [];
+};
+
 api.interceptors.response.use(
   (response) => {
     if (response.config.url?.includes("/auth/")) {
@@ -36,10 +51,9 @@ api.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
 
-    // Handle network errors - DON'T show toast here, let component handle it
+    // Handle network errors
     if (!error.response) {
       console.error("Network error:", error.message);
-      // Return a structured error instead of showing toast
       return Promise.reject({
         message: "Network error. Please check your connection.",
         isNetworkError: true,
@@ -49,17 +63,68 @@ api.interceptors.response.use(
 
     const { status, data } = error.response;
 
-    // Handle authentication errors
-    if (status === 401 && !originalRequest._retry) {
+    // CRITICAL FIX: Prevent refresh loop
+    if (status === 401) {
+      // Don't retry if:
+      // 1. Already retried this request
+      // 2. The failed request IS the refresh token endpoint
+      // 3. The error message indicates no refresh token exists
+      if (
+        originalRequest._retry ||
+        originalRequest.url?.includes("/refresh-token") ||
+        data?.message === "Refresh token not found"
+      ) {
+        // Clear auth and redirect to login
+        localStorage.removeItem("user");
+        isRefreshing = false;
+        processQueue(error, null);
+        
+        // Only redirect if not already on auth pages
+        if (!window.location.pathname.includes("/login") && 
+            !window.location.pathname.includes("/register")) {
+          window.location.href = "/login";
+        }
+        
+        return Promise.reject({
+          message: "Session expired. Please login again.",
+          isAuthError: true,
+        });
+      }
+
+      // Mark request as retried
       originalRequest._retry = true;
+
+      // If already refreshing, queue this request
+      if (isRefreshing) {
+        return new Promise((resolve, reject) => {
+          failedQueue.push({ resolve, reject });
+        })
+          .then(() => {
+            return api(originalRequest);
+          })
+          .catch((err) => {
+            return Promise.reject(err);
+          });
+      }
+
+      // Start refresh process
+      isRefreshing = true;
 
       try {
         await api.post("/api/auth/refresh-token");
+        isRefreshing = false;
+        processQueue(null);
         return api(originalRequest);
       } catch (refreshError) {
+        isRefreshing = false;
+        processQueue(refreshError, null);
         localStorage.removeItem("user");
-        // DON'T show toast here - let the auth context handle it
-        window.location.href = "/login";
+        
+        if (!window.location.pathname.includes("/login") && 
+            !window.location.pathname.includes("/register")) {
+          window.location.href = "/login";
+        }
+        
         return Promise.reject({
           message: "Session expired. Please login again.",
           isAuthError: true,
@@ -67,7 +132,7 @@ api.interceptors.response.use(
       }
     }
 
-    // Remove all toast.error() calls from here - let components handle them
+    // Log other errors
     switch (status) {
       case 400:
         console.error("Bad request:", data?.message);

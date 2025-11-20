@@ -98,6 +98,9 @@ const CourseDetailsExpander = ({
   }, [hasPurchased, course._id, isAuthenticated, course.isPaid]);
 
   const handleStartTest = () => {
+    // NEW: Grant session access
+    sessionStorage.setItem(`test_access_${course._id}`, "granted");
+
     if (!isAuthenticated) {
       toast.error("Please login to take tests");
       navigate("/login", { state: { from: `/courses` } });

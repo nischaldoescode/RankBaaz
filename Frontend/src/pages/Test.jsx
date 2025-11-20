@@ -104,6 +104,61 @@ const Test = () => {
     setCourseData(null);
   }, [courseId]);
 
+  // NEW: Protect direct navigation to test routes
+  useEffect(() => {
+    // Check if user came directly to test URL (no referrer from courses page)
+    const cameFromCourses =
+      document.referrer.includes("/courses") ||
+      sessionStorage.getItem(`test_access_${courseId}`) === "granted";
+
+    if (!cameFromCourses && !currentTest && !testResult) {
+      // User is trying to access test directly
+      if (!isAuthenticated) {
+        toast.error("Please login to access tests");
+        navigate("/login", { state: { from: location } });
+        return;
+      }
+
+      // Check if course is paid and user has purchased it
+      const checkAccess = async () => {
+        try {
+          const courseResponse = await apiMethods.courses.getById(courseId);
+          const course = courseResponse.data.course;
+
+          if (course.isPaid) {
+            const purchaseCheck = await apiMethods.payments.checkPurchase(
+              courseId
+            );
+
+            if (!purchaseCheck.data.data.hasPurchased) {
+              toast.error("Please purchase this course to access the test");
+              navigate("/courses");
+              return;
+            }
+          }
+
+          // Access granted - set session flag
+          sessionStorage.setItem(`test_access_${courseId}`, "granted");
+        } catch (error) {
+          console.error("Access check failed:", error);
+          toast.error(
+            "Failed to verify access. Please try again from courses page."
+          );
+          navigate("/courses");
+        }
+      };
+
+      checkAccess();
+    }
+  }, [courseId, isAuthenticated, navigate, location, currentTest, testResult]);
+
+  // Clear session flag when component unmounts
+  useEffect(() => {
+    return () => {
+      sessionStorage.removeItem(`test_access_${courseId}`);
+    };
+  }, [courseId]);
+
   // Handle browser navigation with custom modal
   useEffect(() => {
     const handleBeforeUnload = (e) => {
