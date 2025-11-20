@@ -329,16 +329,48 @@ export const TestProvider = ({ children }) => {
   const startTest = async (courseId, difficulty) => {
     try {
       dispatch({ type: TEST_ACTIONS.SET_LOADING, payload: true });
-      const response = await apiMethods.tests.startTest(courseId, difficulty);
-      const test = response.data.data;
+      
+      // NEW: Check if test data is already in session storage
+      const cachedKey = `test_${courseId}_${difficulty}`;
+      const cached = sessionStorage.getItem(cachedKey);
+      
+      let test;
+      if (cached) {
+        try {
+          const parsedCache = JSON.parse(cached);
+          const cacheAge = Date.now() - parsedCache.timestamp;
+          
+          // Use cache if less than 2 minutes old
+          if (cacheAge < 2 * 60 * 1000) {
+            test = parsedCache.data;
+            console.log("Using cached test data");
+          }
+        } catch (e) {
+          console.warn("Failed to parse cached test", e);
+        }
+      }
+      
+      // Fetch from API if no valid cache
+      if (!test) {
+        const response = await apiMethods.tests.startTest(courseId, difficulty);
+        test = response.data.data;
+        
+        // Cache for future use
+        sessionStorage.setItem(cachedKey, JSON.stringify({
+          data: test,
+          timestamp: Date.now()
+        }));
+      }
 
       dispatch({
         type: TEST_ACTIONS.START_TEST,
         payload: { test, difficulty: difficulty, courseId: courseId },
       });
+      
       if (!state.testState.isActive) {
         toast.success("Test started! Good luck!");
       }
+      
       return { success: true, test, difficulty: difficulty };
     } catch (err) {
       // NEW: Extract the exact error message from backend
