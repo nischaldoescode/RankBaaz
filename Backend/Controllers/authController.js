@@ -258,8 +258,47 @@ export const register = async (req, res) => {
       subscribeNewsletter,
     } = req.body;
 
+    // NEW: Strict input validation
+    const fields = {
+      firstName,
+      lastName,
+      email,
+      password,
+      dateOfBirth,
+      gender,
+    };
+
+    // Check for array attacks
+    for (const [key, value] of Object.entries(fields)) {
+      if (Array.isArray(value)) {
+        return res.status(400).json({
+          success: false,
+          message: `Invalid ${key} format`,
+        });
+      }
+    }
+
+    // Validate string fields
+    if (
+      typeof firstName !== "string" ||
+      typeof lastName !== "string" ||
+      typeof email !== "string" ||
+      typeof password !== "string" ||
+      typeof dateOfBirth !== "string" ||
+      typeof gender !== "string"
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid data types provided",
+      });
+    }
+
+    // Sanitize email
+    const sanitizedEmail = email.trim().toLowerCase();
+
     // Check if email already registered
-    const existingUser = await User.findOne({ email });
+    const existingUser = await User.findOne({ email: sanitizedEmail });
+    
     if (existingUser) {
       return res.status(400).json({
         success: false,
@@ -849,6 +888,7 @@ export const login = async (req, res) => {
   try {
     const { email, password, isDevAccount } = req.body;
 
+    // NEW: Strict input validation to prevent manipulation
     if (!email || !password) {
       return res.status(400).json({
         success: false,
@@ -856,8 +896,44 @@ export const login = async (req, res) => {
       });
     }
 
-    // Use .lean() for faster read, then hydrate only if needed
-    const user = await User.findOne({ email }).select("+password").lean();
+    // CRITICAL FIX: Reject array payloads
+    if (Array.isArray(email) || Array.isArray(password)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid request format",
+      });
+    }
+
+    // Validate email format
+    if (
+      typeof email !== "string" ||
+      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid email format",
+      });
+    }
+
+    // Validate password is string
+    if (
+      typeof password !== "string" ||
+      password.length < 6 ||
+      password.length > 128
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid password format",
+      });
+    }
+
+    // Sanitize email (trim, lowercase)
+    const sanitizedEmail = email.trim().toLowerCase();
+
+    // Use .lean() for faster read
+    const user = await User.findOne({ email: sanitizedEmail })
+      .select("+password")
+      .lean();
 
     if (!user) {
       return res.status(401).json({
