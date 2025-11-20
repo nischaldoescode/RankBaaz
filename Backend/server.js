@@ -60,16 +60,6 @@ try {
   process.exit(1);
 }
 
-// Helper to detect if request is from browser
-const isBrowserRequest = (req) => {
-  const userAgent = req.get("User-Agent") || "";
-  // Check for common browser user agents
-  return (
-    /Mozilla|Chrome|Safari|Firefox|Edge|Opera/i.test(userAgent) &&
-    !/bot|crawler|spider|scraper/i.test(userAgent)
-  );
-};
-
 // CORS configuration
 const corsOptions = {
   origin: function (origin, callback) {
