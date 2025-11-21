@@ -20,8 +20,6 @@ import {
   ExclamationTriangleIcon,
   CheckCircleIcon,
   XMarkIcon,
-  PauseIcon,
-  PlayIcon,
 } from "@heroicons/react/24/outline";
 import { apiMethods } from "@/services/api";
 
@@ -105,28 +103,30 @@ const Test = () => {
     setCourseData(null);
   }, [courseId]);
 
-  // NEW: Protect direct navigation to test routes
   useEffect(() => {
-    // Check if user came directly to test URL (no referrer from courses page)
+    // Skip if course data hasn't loaded yet
+    if (!courseData) {
+      return;
+    }
+
+    // Check if user came directly to test URL
     const cameFromCourses =
       document.referrer.includes("/courses") ||
       sessionStorage.getItem(`test_access_${courseId}`) === "granted";
 
+    // Only enforce checks if NOT from courses page
     if (!cameFromCourses && !currentTest && !testResult) {
-      // User is trying to access test directly
+      // Authentication check
       if (!isAuthenticated) {
         toast.error("Please login to access tests");
         navigate("/login", { state: { from: location } });
         return;
       }
 
-      // Check if course is paid and user has purchased it
-      const checkAccess = async () => {
-        try {
-          const courseResponse = await apiMethods.courses.getById(courseId);
-          const course = courseResponse.data.course;
-
-          if (course.isPaid) {
+      // Paid course check
+      if (courseData.isPaid) {
+        const checkPurchase = async () => {
+          try {
             const purchaseCheck = await apiMethods.payments.checkPurchase(
               courseId
             );
@@ -136,22 +136,31 @@ const Test = () => {
               navigate("/courses");
               return;
             }
+
+            // Access granted
+            sessionStorage.setItem(`test_access_${courseId}`, "granted");
+          } catch (error) {
+            console.error("Purchase check failed:", error);
+            toast.error("Failed to verify purchase. Please try from courses.");
+            navigate("/courses");
           }
+        };
 
-          // Access granted - set session flag
-          sessionStorage.setItem(`test_access_${courseId}`, "granted");
-        } catch (error) {
-          console.error("Access check failed:", error);
-          toast.error(
-            "Failed to verify access. Please try again from courses page."
-          );
-          navigate("/courses");
-        }
-      };
-
-      checkAccess();
+        checkPurchase();
+      } else {
+        // Free course - grant access immediately
+        sessionStorage.setItem(`test_access_${courseId}`, "granted");
+      }
     }
-  }, [courseId, isAuthenticated, navigate, location, currentTest, testResult]);
+  }, [
+    courseData,
+    courseId,
+    isAuthenticated,
+    navigate,
+    location,
+    currentTest,
+    testResult,
+  ]);
 
   // Clear session flag when component unmounts
   useEffect(() => {
@@ -327,7 +336,7 @@ const Test = () => {
   );
 
   const handleStartTest = useCallback(async () => {
-    // CHANGE: Add comprehensive validation
+    // Add comprehensive validation
     if (!isAuthenticated) {
       console.error("Authentication required");
       toast.error("Please log in to start the test");
@@ -340,7 +349,7 @@ const Test = () => {
       return { success: false, error: "No difficulty selected" };
     }
 
-    // CHANGE: Verify courseData is loaded
+    // Verify courseData is loaded
     if (!courseData) {
       console.error("Course data not loaded");
       toast.error("Course information not loaded. Please try again.");
@@ -350,8 +359,8 @@ const Test = () => {
     try {
       clearError();
 
-      // CHANGE: Add loading indicator
-      dispatch({ type: TEST_ACTIONS.SET_LOADING, payload: true });
+      // REMOVED: dispatch({ type: TEST_ACTIONS.SET_LOADING, payload: true });
+      // The loading state is already managed by the startTest function in TestContext
 
       console.log(
         `[START_TEST] Starting test for course: ${courseId}, difficulty: ${selectedDifficulty.name}`
@@ -359,7 +368,7 @@ const Test = () => {
 
       const result = await startTest(courseId, selectedDifficulty.name);
 
-      // CHANGE: Better error handling
+      // Better error handling
       if (!result) {
         throw new Error("No response from start test");
       }
@@ -373,7 +382,6 @@ const Test = () => {
       }
 
       if (result.isNoQuestionsError) {
-        // NEW: Use the flag instead of string checking
         // Auto-skip to next difficulty if no questions
         const allDiffOrder = ["Easy", "Medium", "Hard"];
         const currentIndex = allDiffOrder.indexOf(selectedDifficulty.name);
@@ -404,7 +412,7 @@ const Test = () => {
         return result;
       }
 
-      // CHANGE: Handle authentication errors specifically
+      // Handle authentication errors specifically
       if (
         result.error?.includes("Credentials") ||
         result.error?.includes("authentication")
@@ -421,7 +429,7 @@ const Test = () => {
     } catch (error) {
       console.error("[START_TEST] Exception:", error);
 
-      // CHANGE: Handle network/auth errors
+      // Handle network/auth errors
       if (error.response?.status === 401) {
         toast.error("Session expired. Please login again.");
         navigate("/login", { state: { from: location } });
@@ -430,10 +438,8 @@ const Test = () => {
       }
 
       return { success: false, error: error.message };
-    } finally {
-      // CHANGE: Always clear loading state
-      dispatch({ type: TEST_ACTIONS.SET_LOADING, payload: false });
     }
+    // REMOVED: finally block with dispatch
   }, [
     courseId,
     selectedDifficulty,
@@ -443,9 +449,7 @@ const Test = () => {
     navigate,
     location,
     isAuthenticated,
-    dispatch,
   ]);
-
   const handleTermsAccept = useCallback(async () => {
     setTermsAccepted(true);
     setShowTerms(false);
@@ -773,42 +777,53 @@ const Test = () => {
     const loadCourseInfo = async () => {
       if (!courseId) {
         console.error("[COURSE_LOAD] No courseId provided");
+        navigate("/courses");
         return;
       }
 
-      setCourseLoading(true); // ADD THIS LINE
+      setCourseLoading(true);
 
       try {
         console.log(`[COURSE_LOAD] Loading course data for: ${courseId}`);
         const response = await apiMethods.courses.getById(courseId);
 
-        if (response?.data?.success && response.data.data?.course) {
-          console.log(`[COURSE_LOAD] Course loaded:`, {
-            name: response.data.data.course.name,
-            isPaid: response.data.data.course.isPaid,
-            difficulties: response.data.data.course.difficulties?.length,
-          });
-          setCourseData(response.data.data.course);
-        } else {
+        // ✅ BETTER VALIDATION
+        if (!response?.data?.data?.course) {
           console.error("[COURSE_LOAD] Invalid response structure:", response);
           toast.error("Failed to load course information");
           navigate("/courses");
+          return;
         }
+
+        const course = response.data.data.course;
+
+        console.log(`[COURSE_LOAD] Course loaded:`, {
+          name: course.name,
+          isPaid: course.isPaid,
+          difficulties: course.difficulties?.length,
+        });
+
+        setCourseData(course);
       } catch (error) {
         console.error("[COURSE_LOAD] Error loading course:", error);
 
+        // Better error handling
         if (error.response?.status === 404) {
           toast.error("Course not found");
         } else if (error.response?.status === 401) {
           toast.error("Please login to access this course");
           navigate("/login", { state: { from: location } });
+          return; // ✅ EARLY RETURN
+        } else if (error.response?.status === 403) {
+          toast.error("Access denied");
         } else {
           toast.error("Failed to load course. Please try again.");
         }
 
+        // Redirect after showing error
         setTimeout(() => navigate("/courses"), 2000);
       } finally {
-        setCourseLoading(false); // ADD THIS LINE
+        setCourseLoading(false);
       }
     };
 
