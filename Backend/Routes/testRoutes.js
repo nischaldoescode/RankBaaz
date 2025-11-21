@@ -19,9 +19,6 @@ import { advancedCache } from '../Middleware/advancedCache.js';
 
 const router = express.Router();
 
-// all test routes does require user authentication
-// for testting purpose disabled it (temporary)
-
 // authenticates every request (tomporary disabled for testing)
 router.use(authenticateUser);
 
