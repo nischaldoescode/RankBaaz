@@ -128,6 +128,7 @@ const corsOptions = {
       "https://admin.rankbaaz.com",
       "https://rankbaaz-admin.onrender.com",
       "https://rankbaaz.onrender.com",
+      "https://rankbaaz.onrender.com/",
       "http://localhost:4173"
     ];
 
