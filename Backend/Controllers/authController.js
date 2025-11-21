@@ -657,7 +657,7 @@ export const verifyOTP = async (req, res) => {
     const cookieOptions = {
       httpOnly: true,
       secure: true,
-      sameSite: process.env.NODE_ENV === "production" ? "none" : "strict",
+      sameSite: process.env.NODE_ENV === "production" ? "lax" : "strict",
       maxAge: 7 * 24 * 60 * 60 * 1000,
       signed: true,
       path: "/",
@@ -679,7 +679,7 @@ export const verifyOTP = async (req, res) => {
     const refreshCookieOptions = {
       httpOnly: true,
       secure: true,
-      sameSite: process.env.NODE_ENV === "production" ? "none" : "strict",
+      sameSite: process.env.NODE_ENV === "production" ? "lax" : "strict",
       maxAge: 30 * 24 * 60 * 60 * 1000,
       signed: true,
       path: "/",
@@ -1019,7 +1019,7 @@ export const login = async (req, res) => {
     const cookieOptions = {
       httpOnly: true,
       secure: true, // ALWAYS true for production HTTPS
-      sameSite: process.env.NODE_ENV === "production" ? "none" : "strict", // CRITICAL: "none" for cross-site in prod
+      sameSite: process.env.NODE_ENV === "production" ? "lax" : "strict", // CRITICAL: "none" for cross-site in prod
       maxAge: 7 * 24 * 60 * 60 * 1000,
       signed: true,
       path: "/", // Explicitly set path
@@ -1042,7 +1042,7 @@ export const login = async (req, res) => {
     const refreshCookieOptions = {
       httpOnly: true,
       secure: true,
-      sameSite: process.env.NODE_ENV === "production" ? "none" : "strict",
+      sameSite: process.env.NODE_ENV === "production" ? "lax" : "strict",
       maxAge: 30 * 24 * 60 * 60 * 1000,
       signed: true,
       path: "/",
@@ -1137,7 +1137,7 @@ export const refreshToken = async (req, res) => {
       secure:
         process.env.NODE_ENV === "production" ||
         process.env.NODE_ENV === "development",
-      sameSite: "strict",
+      sameSite: "lax",
       maxAge: 7 * 24 * 60 * 60 * 1000,
       signed: true,
     });
@@ -1154,7 +1154,7 @@ export const refreshToken = async (req, res) => {
       secure:
         process.env.NODE_ENV === "production" ||
         process.env.NODE_ENV === "development",
-      sameSite: "strict",
+      sameSite: "lax",
       maxAge: 30 * 24 * 60 * 60 * 1000,
       signed: true,
     });
