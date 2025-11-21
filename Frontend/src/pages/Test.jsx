@@ -336,13 +336,24 @@ const Test = () => {
   );
 
   const handleStartTest = useCallback(async () => {
-    // Add comprehensive validation
+    // CHANGE: Add auth verification BEFORE API call
     if (!isAuthenticated) {
       console.error("Authentication required");
       toast.error("Please log in to start the test");
       navigate("/login", { state: { from: location } });
       return { success: false, error: "Not authenticated" };
     }
+
+    // CHANGE: Verify localStorage user exists
+    const storedUser = localStorage.getItem("user");
+    if (!storedUser) {
+      console.error("[START_TEST] No user in localStorage");
+      toast.error("Session expired. Please login again.");
+      navigate("/login", { state: { from: location } });
+      return { success: false, error: "No session" };
+    }
+
+    console.log("[START_TEST] Auth check passed, proceeding with test start");
 
     if (!selectedDifficulty) {
       console.error("No difficulty selected");
