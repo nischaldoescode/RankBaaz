@@ -75,10 +75,34 @@ export const authenticateUser = async (req, res, next) => {
   try {
     const encryptedCookie = req.signedCookies.auth_session;
 
+    // CHANGE: Add detailed logging for debugging
+    console.log("[AUTH_MIDDLEWARE] Request to:", req.path);
+    console.log("[AUTH_MIDDLEWARE] Cookies present:", Object.keys(req.cookies));
+    console.log(
+      "[AUTH_MIDDLEWARE] Signed cookies present:",
+      Object.keys(req.signedCookies)
+    );
+    console.log("[AUTH_MIDDLEWARE] Auth cookie exists:", !!encryptedCookie);
+
     if (!encryptedCookie) {
+      console.error("[AUTH_MIDDLEWARE] No auth_session cookie found");
+      console.error("[AUTH_MIDDLEWARE] Available cookies:", req.cookies);
+      console.error(
+        "[AUTH_MIDDLEWARE] Available signed cookies:",
+        req.signedCookies
+      );
+
       return res.status(401).json({
         success: false,
         message: "Credentials Error.",
+        debug:
+          process.env.NODE_ENV === "development"
+            ? {
+                cookiesReceived: Object.keys(req.cookies),
+                signedCookiesReceived: Object.keys(req.signedCookies),
+                path: req.path,
+              }
+            : undefined,
       });
     }
 

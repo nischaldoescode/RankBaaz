@@ -298,7 +298,7 @@ export const register = async (req, res) => {
 
     // Check if email already registered
     const existingUser = await User.findOne({ email: sanitizedEmail });
-    
+
     if (existingUser) {
       return res.status(400).json({
         success: false,
@@ -653,15 +653,21 @@ export const verifyOTP = async (req, res) => {
       issuedAt: Date.now(),
     });
 
-    res.cookie("auth_session", authCookieData, {
+    // SAME cookieOptions configuration as above
+    const cookieOptions = {
       httpOnly: true,
-      secure:
-        process.env.NODE_ENV === "production" ||
-        process.env.NODE_ENV === "development",
-      sameSite: "strict",
+      secure: true,
+      sameSite: process.env.NODE_ENV === "production" ? "none" : "strict",
       maxAge: 7 * 24 * 60 * 60 * 1000,
       signed: true,
-    });
+      path: "/",
+    };
+
+    if (process.env.NODE_ENV === "production") {
+      cookieOptions.domain = ".rankbaaz.com"; // Your domain
+    }
+
+    res.cookie("auth_session", authCookieData, cookieOptions);
 
     const refreshCookieData = encryptCookieData({
       token: refreshToken,
@@ -670,15 +676,20 @@ export const verifyOTP = async (req, res) => {
       issuedAt: Date.now(),
     });
 
-    res.cookie("refresh_session", refreshCookieData, {
+    const refreshCookieOptions = {
       httpOnly: true,
-      secure:
-        process.env.NODE_ENV === "production" ||
-        process.env.NODE_ENV === "development",
-      sameSite: "strict",
+      secure: true,
+      sameSite: process.env.NODE_ENV === "production" ? "none" : "strict",
       maxAge: 30 * 24 * 60 * 60 * 1000,
       signed: true,
-    });
+      path: "/",
+    };
+
+    if (process.env.NODE_ENV === "production") {
+      refreshCookieOptions.domain = ".rankbaaz.com";
+    }
+
+    res.cookie("refresh_session", refreshCookieData, refreshCookieOptions);
 
     res.status(200).json({
       success: true,
@@ -1004,15 +1015,22 @@ export const login = async (req, res) => {
       issuedAt: Date.now(),
     });
 
-    res.cookie("auth_session", authCookieData, {
+    // CHANGE: Add domain and path explicitly for production
+    const cookieOptions = {
       httpOnly: true,
-      secure:
-        process.env.NODE_ENV === "production" ||
-        process.env.NODE_ENV === "development",
-      sameSite: "strict",
+      secure: true, // ALWAYS true for production HTTPS
+      sameSite: process.env.NODE_ENV === "production" ? "none" : "strict", // CRITICAL: "none" for cross-site in prod
       maxAge: 7 * 24 * 60 * 60 * 1000,
       signed: true,
-    });
+      path: "/", // Explicitly set path
+    };
+
+    // Add domain only in production
+    if (process.env.NODE_ENV === "production") {
+      cookieOptions.domain = ".rankbaaz.com"; // CHANGE: Add your actual domain
+    }
+
+    res.cookie("auth_session", authCookieData, cookieOptions);
 
     const refreshCookieData = encryptCookieData({
       token: refreshToken,
@@ -1021,15 +1039,20 @@ export const login = async (req, res) => {
       issuedAt: Date.now(),
     });
 
-    res.cookie("refresh_session", refreshCookieData, {
+    const refreshCookieOptions = {
       httpOnly: true,
-      secure:
-        process.env.NODE_ENV === "production" ||
-        process.env.NODE_ENV === "development",
-      sameSite: "strict",
+      secure: true,
+      sameSite: process.env.NODE_ENV === "production" ? "none" : "strict",
       maxAge: 30 * 24 * 60 * 60 * 1000,
       signed: true,
-    });
+      path: "/",
+    };
+
+    if (process.env.NODE_ENV === "production") {
+      refreshCookieOptions.domain = ".rankbaaz.com";
+    }
+
+    res.cookie("refresh_session", refreshCookieData, refreshCookieOptions);
 
     // Build user response (remove password)
     const { password: _, otp, ...userResponse } = user;
