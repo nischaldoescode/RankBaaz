@@ -329,63 +329,99 @@ export const TestProvider = ({ children }) => {
   const startTest = async (courseId, difficulty) => {
     try {
       dispatch({ type: TEST_ACTIONS.SET_LOADING, payload: true });
-      
-      // NEW: Check if test data is already in session storage
-      const cachedKey = `test_${courseId}_${difficulty}`;
-      const cached = sessionStorage.getItem(cachedKey);
-      
+
+      console.log(
+        `[TEST_CONTEXT] Starting test - Course: ${courseId}, Difficulty: ${difficulty}`
+      );
+
+      // CHANGE: Remove caching for now to ensure fresh data
+      // The cache was causing stale authentication issues
+
       let test;
-      if (cached) {
-        try {
-          const parsedCache = JSON.parse(cached);
-          const cacheAge = Date.now() - parsedCache.timestamp;
-          
-          // Use cache if less than 2 minutes old
-          if (cacheAge < 2 * 60 * 1000) {
-            test = parsedCache.data;
-            console.log("Using cached test data");
-          }
-        } catch (e) {
-          console.warn("Failed to parse cached test", e);
-        }
-      }
-      
-      // Fetch from API if no valid cache
-      if (!test) {
+      try {
         const response = await apiMethods.tests.startTest(courseId, difficulty);
+
+        // CHANGE: Validate response structure
+        if (!response || !response.data || !response.data.data) {
+          throw new Error("Invalid response structure from API");
+        }
+
         test = response.data.data;
-        
-        // Cache for future use
-        sessionStorage.setItem(cachedKey, JSON.stringify({
-          data: test,
-          timestamp: Date.now()
-        }));
+        console.log(`[TEST_CONTEXT] Test data received:`, {
+          questionCount: test.questions?.length,
+          courseName: test.courseInfo?.name,
+          difficulty: test.courseInfo?.difficulty?.name,
+        });
+      } catch (apiError) {
+        // CHANGE: Better error categorization
+        console.error("[TEST_CONTEXT] API Error:", apiError);
+
+        if (apiError.response?.status === 401) {
+          const msg = "Session expired. Please login again.";
+          dispatch({ type: TEST_ACTIONS.SET_ERROR, payload: msg });
+          return {
+            success: false,
+            error: msg,
+            requiresAuth: true, // CHANGE: New flag
+          };
+        }
+
+        if (apiError.response?.status === 403) {
+          const msg = apiError.response.data.message || "Access denied";
+          dispatch({ type: TEST_ACTIONS.SET_ERROR, payload: msg });
+          return {
+            success: false,
+            error: msg,
+            requiresPayment: apiError.response.data.requiresPayment,
+          };
+        }
+
+        throw apiError; // Re-throw for outer catch
+      }
+
+      // CHANGE: Validate test data before dispatching
+      if (!test.questions || test.questions.length === 0) {
+        const msg = "No questions available for this difficulty";
+        dispatch({ type: TEST_ACTIONS.SET_ERROR, payload: msg });
+        return {
+          success: false,
+          error: msg,
+          isNoQuestionsError: true,
+        };
       }
 
       dispatch({
         type: TEST_ACTIONS.START_TEST,
-        payload: { test, difficulty: difficulty, courseId: courseId },
+        payload: {
+          test,
+          difficulty: difficulty,
+          courseId: courseId,
+        },
       });
-      
+
+      dispatch({ type: TEST_ACTIONS.SET_LOADING, payload: false });
+
       if (!state.testState.isActive) {
         toast.success("Test started! Good luck!");
       }
-      
+
       return { success: true, test, difficulty: difficulty };
     } catch (err) {
-      // NEW: Extract the exact error message from backend
+      console.error("[TEST_CONTEXT] Start test error:", err);
+
+      // CHANGE: Extract backend error message properly
       const backendMessage = err.response?.data?.message || "";
       const msg = handleApiError(err, "Failed to start test");
 
       dispatch({ type: TEST_ACTIONS.SET_ERROR, payload: msg });
-
-      // NEW: Don't show toast here - let caller handle it
-      // This allows the caller to determine if it's a fatal error or just "no questions"
+      dispatch({ type: TEST_ACTIONS.SET_LOADING, payload: false });
 
       return {
         success: false,
         error: msg,
-        isNoQuestionsError: backendMessage.includes("No questions available"), // NEW: Flag to identify the specific error
+        isNoQuestionsError: backendMessage.includes("No questions available"),
+        requiresAuth: err.response?.status === 401,
+        requiresPayment: err.response?.status === 403,
       };
     }
   };

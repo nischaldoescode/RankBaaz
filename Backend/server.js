@@ -60,6 +60,56 @@ try {
   process.exit(1);
 }
 
+// Create rate limiter functions using ioredis-ratelimit
+const createRateLimiter = (options) => {
+  const limiter = ioredisRatelimit({
+    client: redisClient,
+    key: options.keyFn || ((req) => `ratelimit:${options.prefix}:${req.ip}`),
+    limit: options.max,
+    duration: options.windowMs,
+    mode: "binary",
+  });
+
+  console.log(
+    `Rate limiter '${options.prefix}' initialized - Max: ${options.max} requests per ${options.windowMs / 1000}s`
+  );
+
+  return async (req, res, next) => {
+    if (options.skip && options.skip(req)) {
+      return next();
+    }
+
+    try {
+      await limiter(req);
+      next();
+    } catch (error) {
+      return res.status(429).json(options.message);
+    }
+  };
+};
+
+// Helper to detect if request is from browser
+const isBrowserRequest = (req) => {
+  const userAgent = req.get("User-Agent") || "";
+  // Check for common browser user agents
+  return (
+    /Mozilla|Chrome|Safari|Firefox|Edge|Opera/i.test(userAgent) &&
+    !/bot|crawler|spider|scraper/i.test(userAgent)
+  );
+};
+
+// Coupon limiter - MORE LENIENT FOR BROWSERS
+const couponLimiter = createRateLimiter({
+  prefix: "coupon",
+  windowMs: 15 * 60 * 1000,
+  max: 100, // Increased from 60
+  message: {
+    success: false,
+    message: "Too many coupon requests, please try again later.",
+  },
+  skip: (req) => isBrowserRequest(req), // Skip for browsers
+});
+
 // CORS configuration
 const corsOptions = {
   origin: function (origin, callback) {
@@ -284,7 +334,7 @@ app.use("/api/admin", adminRoutes);
 app.use("/api/profile", profileRoutes);
 app.use("/api/content", contentRoutes);
 app.use("/api/payments", paymentRoutes);
-app.use("/api/coupons", couponRoutes);
+app.use("/api/coupons", couponLimiter, couponRoutes);
 // Root endpoint
 app.get("/", (req, res) => {
   res.status(200).json({

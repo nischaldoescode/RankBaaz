@@ -173,7 +173,13 @@ const TestQuestion = ({
       }
     }, [isDragging, dragStart, zoom]);
 
-    return showImageModal ? (
+    // CHANGE: Don't show modal if image is invalid
+    const hasValidImage =
+      question.image &&
+      (question.image.url ||
+        (typeof question.image === "string" && question.image.length > 0));
+
+    return showImageModal && hasValidImage ? (
       <div
         className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/90 backdrop-blur-sm"
         onClick={() => {
@@ -457,26 +463,34 @@ const TestQuestion = ({
             />
           </div>
 
-          {/* Question Image */}
-          {question.image && (
-            <div
-              className="mb-6 cursor-pointer flex justify-center"
-              onClick={() => setShowImageModal(true)}
-            >
-              <div className="w-full max-w-2xl group">
-                <div className="relative overflow-hidden rounded-lg border-2 border-gray-200 dark:border-gray-600 transition-all duration-200 group-hover:border-blue-400 group-hover:shadow-lg">
-                  <img
-                    src={question.image.url || question.image}
-                    alt="Question illustration"
-                    className="w-full h-auto max-h-96 sm:max-h-[500px] object-contain bg-gray-50 dark:bg-gray-900 group-hover:opacity-90 transition-opacity duration-200"
-                  />
+          {/* Question Image - CHANGE: Better validation */}
+          {question.image &&
+            (question.image.url ||
+              (typeof question.image === "string" &&
+                question.image.length > 0)) && (
+              <div
+                className="mb-6 cursor-pointer flex justify-center"
+                onClick={() => setShowImageModal(true)}
+              >
+                <div className="w-full max-w-2xl group">
+                  <div className="relative overflow-hidden rounded-lg border-2 border-gray-200 dark:border-gray-600 transition-all duration-200 group-hover:border-blue-400 group-hover:shadow-lg">
+                    <img
+                      src={question.image.url || question.image}
+                      alt="Question illustration"
+                      className="w-full h-auto max-h-96 sm:max-h-[500px] object-contain bg-gray-50 dark:bg-gray-900 group-hover:opacity-90 transition-opacity duration-200"
+                      onError={(e) => {
+                        // CHANGE: Hide image if it fails to load
+                        e.target.parentElement.parentElement.style.display =
+                          "none";
+                      }}
+                    />
+                  </div>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-2 text-center group-hover:text-blue-500 transition-colors duration-200">
+                    Click to enlarge
+                  </p>
                 </div>
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-2 text-center group-hover:text-blue-500 transition-colors duration-200">
-                  Click to enlarge
-                </p>
               </div>
-            </div>
-          )}
+            )}
 
           {/* Answer Options */}
           <div className="mb-6">{renderQuestionContent()}</div>

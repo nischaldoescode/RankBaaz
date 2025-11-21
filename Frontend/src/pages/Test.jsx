@@ -50,8 +50,8 @@ const Test = () => {
     submitAnswer,
     nextQuestion,
     submitTest,
-    pauseTest,
-    resumeTest,
+    // pauseTest,
+    // resumeTest,
     resetTest,
     isLastQuestion,
     answeredQuestions,
@@ -71,6 +71,7 @@ const Test = () => {
   const [showReloadWarning, setShowReloadWarning] = useState(false);
   const [answers, setAnswers] = useState({});
   const [allDifficultyResults, setAllDifficultyResults] = useState([]);
+  const [courseLoading, setCourseLoading] = useState(true); // ADD THIS LINE
 
   const themeClasses = getThemeClasses();
   const primaryColors = getPrimaryColorClasses();
@@ -326,24 +327,52 @@ const Test = () => {
   );
 
   const handleStartTest = useCallback(async () => {
+    // CHANGE: Add comprehensive validation
     if (!isAuthenticated) {
+      console.error("Authentication required");
       toast.error("Please log in to start the test");
       navigate("/login", { state: { from: location } });
-      return;
+      return { success: false, error: "Not authenticated" };
     }
+
     if (!selectedDifficulty) {
+      console.error("No difficulty selected");
       return { success: false, error: "No difficulty selected" };
+    }
+
+    // CHANGE: Verify courseData is loaded
+    if (!courseData) {
+      console.error("Course data not loaded");
+      toast.error("Course information not loaded. Please try again.");
+      return { success: false, error: "Course data missing" };
     }
 
     try {
       clearError();
+
+      // CHANGE: Add loading indicator
+      dispatch({ type: TEST_ACTIONS.SET_LOADING, payload: true });
+
+      console.log(
+        `[START_TEST] Starting test for course: ${courseId}, difficulty: ${selectedDifficulty.name}`
+      );
+
       const result = await startTest(courseId, selectedDifficulty.name);
 
-      if (result && result.success) {
+      // CHANGE: Better error handling
+      if (!result) {
+        throw new Error("No response from start test");
+      }
+
+      if (result.success) {
+        console.log("[START_TEST] Test started successfully");
         setTestPhase("active");
         setSelectedAnswer(null);
         setAnswers({});
-      } else if (result.isNoQuestionsError) {
+        return result;
+      }
+
+      if (result.isNoQuestionsError) {
         // NEW: Use the flag instead of string checking
         // Auto-skip to next difficulty if no questions
         const allDiffOrder = ["Easy", "Medium", "Hard"];
@@ -372,16 +401,38 @@ const Test = () => {
           );
           navigate("/courses");
         }
-      } else {
-        // Other error - show it
-        console.error(result);
-        toast.error(result.error || "Failed to start test");
+        return result;
       }
 
+      // CHANGE: Handle authentication errors specifically
+      if (
+        result.error?.includes("Credentials") ||
+        result.error?.includes("authentication")
+      ) {
+        console.error("[START_TEST] Authentication error");
+        toast.error("Session expired. Please login again.");
+        navigate("/login", { state: { from: location } });
+        return result;
+      }
+
+      console.error("[START_TEST] Test start failed:", result.error);
+      toast.error(result.error || "Failed to start test");
       return result;
     } catch (error) {
-      console.error(error);
+      console.error("[START_TEST] Exception:", error);
+
+      // CHANGE: Handle network/auth errors
+      if (error.response?.status === 401) {
+        toast.error("Session expired. Please login again.");
+        navigate("/login", { state: { from: location } });
+      } else {
+        toast.error(error.message || "Failed to start test");
+      }
+
       return { success: false, error: error.message };
+    } finally {
+      // CHANGE: Always clear loading state
+      dispatch({ type: TEST_ACTIONS.SET_LOADING, payload: false });
     }
   }, [
     courseId,
@@ -391,6 +442,8 @@ const Test = () => {
     courseData,
     navigate,
     location,
+    isAuthenticated,
+    dispatch,
   ]);
 
   const handleTermsAccept = useCallback(async () => {
@@ -455,26 +508,6 @@ const Test = () => {
       // No more questions - prepare for difficulty completion
     }
   }, [nextQuestion, currentQuestion, selectedAnswer]);
-
-  // Handle test pause
-  const handlePauseTest = useCallback(async () => {
-    try {
-      await pauseTest();
-      setTestPhase("paused");
-    } catch (error) {
-      // console.error("Failed to pause test:", error);
-    }
-  }, [pauseTest]);
-
-  // Handle test resume
-  const handleResumeTest = useCallback(async () => {
-    try {
-      await resumeTest();
-      setTestPhase("active");
-    } catch (error) {
-      // console.error("Failed to resume test:", error);
-    }
-  }, [resumeTest]);
 
   // Handle test submission
   const handleSubmitTest = useCallback(async () => {
@@ -738,52 +771,99 @@ const Test = () => {
 
   useEffect(() => {
     const loadCourseInfo = async () => {
+      if (!courseId) {
+        console.error("[COURSE_LOAD] No courseId provided");
+        return;
+      }
+
+      setCourseLoading(true); // ADD THIS LINE
+
       try {
+        console.log(`[COURSE_LOAD] Loading course data for: ${courseId}`);
         const response = await apiMethods.courses.getById(courseId);
-        if (response.data.success) {
+
+        if (response?.data?.success && response.data.data?.course) {
+          console.log(`[COURSE_LOAD] Course loaded:`, {
+            name: response.data.data.course.name,
+            isPaid: response.data.data.course.isPaid,
+            difficulties: response.data.data.course.difficulties?.length,
+          });
           setCourseData(response.data.data.course);
+        } else {
+          console.error("[COURSE_LOAD] Invalid response structure:", response);
+          toast.error("Failed to load course information");
+          navigate("/courses");
         }
       } catch (error) {
-        console.error("Failed to load course data:", error);
+        console.error("[COURSE_LOAD] Error loading course:", error);
+
+        if (error.response?.status === 404) {
+          toast.error("Course not found");
+        } else if (error.response?.status === 401) {
+          toast.error("Please login to access this course");
+          navigate("/login", { state: { from: location } });
+        } else {
+          toast.error("Failed to load course. Please try again.");
+        }
+
+        setTimeout(() => navigate("/courses"), 2000);
+      } finally {
+        setCourseLoading(false); // ADD THIS LINE
       }
     };
 
     loadCourseInfo();
-  }, [courseId]);
+  }, [courseId, navigate, location]);
 
-  // In Test.jsx - SECURE APPROACH
+  // In Test.jsx - Fixed version with proper error handling
   useEffect(() => {
     const checkAndLoadExistingTest = async () => {
-      if (!courseData?.isPaid || !isAuthenticated) {
+      // CHANGE: Check authentication first before checking isPaid
+      if (!isAuthenticated) {
+        console.log("User not authenticated, redirecting to login");
+        navigate("/login", { state: { from: location } });
         return;
       }
 
-      try {
-        // Get user's test history from backend
-        const response = await apiMethods.tests.getHistory();
-        const userTests = response.data.data.testHistory;
-
-        const existingTest = userTests.find(
-          (test) => test.course._id === courseId
-        );
-
-        if (existingTest) {
-          // Load the result using the testId
-          // Backend will verify ownership in getTestResult
-          await apiMethods.tests.getResult(existingTest._id);
-          setTestPhase("result");
-          return;
-        }
-      } catch (error) {
-        console.error("Failed to check test history:", error);
+      // CHANGE: Wait for courseData to be loaded before checking
+      if (!courseData) {
+        console.log("Course data still loading...");
+        return;
       }
 
-      // If no existing test found, proceed normally
-      setTestPhase("start");
+      // CHANGE: Only check for existing tests if course is paid
+      if (courseData.isPaid) {
+        try {
+          const response = await apiMethods.tests.getHistory();
+          const userTests = response.data.data.testHistory;
+
+          const existingTest = userTests.find(
+            (test) => test.course._id === courseId
+          );
+
+          if (existingTest) {
+            await apiMethods.tests.getResult(existingTest._id);
+            setTestPhase("result");
+            return;
+          }
+        } catch (error) {
+          console.error("Failed to check test history:", error);
+          // CHANGE: Don't block if history check fails
+          if (error.response?.status === 401) {
+            navigate("/login", { state: { from: location } });
+            return;
+          }
+        }
+      }
+
+      // CHANGE: Only proceed if we have both auth and courseData
+      if (isAuthenticated && courseData) {
+        setTestPhase("start");
+      }
     };
 
     checkAndLoadExistingTest();
-  }, [courseData, courseId, isAuthenticated, currentTest, testResult]);
+  }, [courseData, courseId, isAuthenticated, navigate, location]);
 
   // Handle test exit
   const handleExitTest = useCallback(() => {
@@ -880,6 +960,16 @@ const Test = () => {
         <div className="max-w-2xl mx-auto text-center">
           <Card className="!p-8">
             <Loading message="Loading your test result..." />
+          </Card>
+        </div>
+      );
+    }
+
+    if (courseLoading) {
+      return (
+        <div className="max-w-2xl mx-auto text-center">
+          <Card className="!p-8">
+            <Loading message="Loading course information..." />
           </Card>
         </div>
       );
@@ -990,16 +1080,6 @@ const Test = () => {
                           .padStart(2, "0")}
                       </span>
                     </div>
-
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={handlePauseTest}
-                      className="cursor-pointer"
-                    >
-                      <PauseIcon className="w-4 h-4" />
-                      Pause
-                    </Button>
 
                     <Button
                       variant="ghost"
@@ -1118,38 +1198,6 @@ const Test = () => {
             </div>
           </motion.div>
         );
-      case "paused":
-        return (
-          <div className="max-w-2xl mx-auto text-center">
-            <Card className="!p-8">
-              <div className="text-yellow-500 text-6xl mb-4">⏸️</div>
-              <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
-                Test Paused
-              </h2>
-              <p className="text-gray-600 dark:text-gray-400 mb-6">
-                Your test has been paused. Click resume to continue from where
-                you left off.
-              </p>
-              <div className="flex gap-4 justify-center">
-                <Button
-                  onClick={handleResumeTest}
-                  leftIcon={<PlayIcon className="w-4 h-4" />}
-                  className="cursor-pointer"
-                >
-                  Resume Test
-                </Button>
-                <Button
-                  variant="ghost"
-                  onClick={handleExitTest}
-                  className="cursor-pointer"
-                >
-                  Exit Test
-                </Button>
-              </div>
-            </Card>
-          </div>
-        );
-
       case "completing":
         return (
           <div className="max-w-2xl mx-auto text-center">
