@@ -123,13 +123,25 @@ const Header = () => {
     navigate("/");
   };
 
-  // Touch/Drag handlers for swipe-to-open menu
+  // CHANGE: Enhanced touch handlers with swipe-in AND swipe-out support
   const handleTouchStart = (e) => {
     const touch = e.touches[0];
-    // Only start drag if touch begins near the right edge (within 20px)
-    if (window.innerWidth - touch.clientX < 20) {
-      setIsDragging(true);
-      setDragX(0);
+    const screenWidth = window.innerWidth;
+
+    // CHANGE: Support both swipe-in (from right edge) and swipe-out (when menu is open)
+    if (isMobileMenuOpen) {
+      // Menu is open - allow swipe from anywhere in the menu area
+      if (touch.clientX < 320) {
+        // 320px is the menu width
+        setIsDragging(true);
+        setDragX(320); // Start from fully open position
+      }
+    } else {
+      // Menu is closed - only start drag if touch begins near the right edge (within 20px)
+      if (screenWidth - touch.clientX < 20) {
+        setIsDragging(true);
+        setDragX(0);
+      }
     }
   };
 
@@ -138,14 +150,24 @@ const Header = () => {
 
     const touch = e.touches[0];
     const screenWidth = window.innerWidth;
-    const dragDistance = screenWidth - touch.clientX;
 
-    // Limit drag to screen width (320px max for the sheet width)
+    // CHANGE: Calculate drag distance based on menu state
+    let dragDistance;
+
+    if (isMobileMenuOpen) {
+      // Swipe-out: Calculate how far user has swiped right (closing direction)
+      dragDistance = Math.max(0, Math.min(320, touch.clientX));
+    } else {
+      // Swipe-in: Calculate how far user has swiped left (opening direction)
+      dragDistance = screenWidth - touch.clientX;
+    }
+
+    // Limit drag to menu width (320px max)
     const clampedDrag = Math.min(Math.max(0, dragDistance), 320);
     setDragX(clampedDrag);
 
     // Prevent scrolling while dragging
-    if (clampedDrag > 10) {
+    if (Math.abs(clampedDrag) > 10) {
       e.preventDefault();
     }
   };
@@ -153,12 +175,23 @@ const Header = () => {
   const handleTouchEnd = () => {
     if (!isDragging) return;
 
-    // If dragged more than 100px (about 1/3 of menu width), keep it open
-    if (dragX > 100) {
-      setIsMobileMenuOpen(true);
+    // CHANGE: Different threshold logic based on menu state
+    if (isMobileMenuOpen) {
+      // Menu is open - if swiped right more than 160px (half width), close it
+      if (dragX < 160) {
+        // Less than half means swipe-out
+        setIsMobileMenuOpen(false);
+      } else {
+        // Otherwise keep it open
+        setIsMobileMenuOpen(true);
+      }
     } else {
-      // Otherwise close it
-      setIsMobileMenuOpen(false);
+      // Menu is closed - if swiped left more than 100px, open it
+      if (dragX > 100) {
+        setIsMobileMenuOpen(true);
+      } else {
+        setIsMobileMenuOpen(false);
+      }
     }
 
     // Reset drag state after a short delay to allow animation
@@ -293,71 +326,6 @@ const Header = () => {
           <div className="flex items-center gap-3">
             {isAuthenticated ? (
               <>
-                {/* User Avatar Dropdown - Shows on ALL screen sizes */}
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      className="flex items-center gap-2 px-2 h-10"
-                    >
-                      <Avatar className="w-8 h-8">
-                        <AvatarFallback
-                          className="text-xs font-semibold text-white"
-                          style={{
-                            backgroundColor: getAvatarColor(getUserInitials()),
-                          }}
-                        >
-                          {getUserInitials()}
-                        </AvatarFallback>
-                      </Avatar>
-                      <span className="text-sm font-medium hidden lg:block max-w-24 truncate">
-                        {user?.name}
-                      </span>
-                      <ChevronDown className="w-4 h-4 hidden lg:block" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent
-                    align="end"
-                    className="w-48"
-                    sideOffset={8}
-                    alignOffset={-4}
-                  >
-                    <div className="px-2 py-1.5 text-sm font-semibold">
-                      {user?.name}
-                    </div>
-                    <div className="px-2 py-1 text-xs text-muted-foreground truncate">
-                      {user?.email}
-                    </div>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem asChild>
-                      <Link
-                        to="/profile"
-                        className="flex items-center gap-2 cursor-pointer"
-                      >
-                        <User className="w-4 h-4" />
-                        <span>Profile</span>
-                      </Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem asChild>
-                      <Link
-                        to="/profile?tab=settings"
-                        className="flex items-center gap-2 cursor-pointer"
-                      >
-                        <Settings className="w-4 h-4" />
-                        <span>Settings</span>
-                      </Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem
-                      onClick={handleLogout}
-                      className="text-destructive focus:text-destructive cursor-pointer"
-                    >
-                      <LogOut className="w-4 h-4 mr-2" />
-                      <span>Logout</span>
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-
                 {/* Mobile Hamburger Menu - Navigation Only */}
                 <Sheet
                   open={isMobileMenuOpen || isDragging}
@@ -367,7 +335,7 @@ const Header = () => {
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="lg:hidden h-10 w-10"
+                      className="lg:hidden h-10 w-10 order-2"
                     >
                       <Menu className="w-5 h-5" />
                       <span className="sr-only">Toggle menu</span>
@@ -378,12 +346,15 @@ const Header = () => {
                     className="w-80 px-0"
                     aria-describedby={undefined}
                     style={{
+                      // CHANGE: Updated transform calculation to support both directions
                       transform: isDragging
-                        ? `translateX(${Math.max(0, 320 - dragX)}px)`
+                        ? isMobileMenuOpen
+                          ? `translateX(${Math.max(0, 320 - dragX)}px)` // Swipe-out: increase translation
+                          : `translateX(${Math.max(0, 320 - dragX)}px)` // Swipe-in: decrease translation
                         : undefined,
                       transition: isDragging
                         ? "none"
-                        : "transform 0.3s ease-out",
+                        : "transform 0.3s cubic-bezier(0.32, 0.72, 0, 1)", // CHANGE: Better easing
                     }}
                   >
                     {/* Mobile menu content - REMOVE user info section */}
@@ -456,6 +427,71 @@ const Header = () => {
                     </AnimatePresence>
                   </SheetContent>
                 </Sheet>
+
+                {/* User Avatar Dropdown - Shows on ALL screen sizes */}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      className="flex items-center gap-2 px-2 h-10 order-1"
+                    >
+                      <Avatar className="w-8 h-8">
+                        <AvatarFallback
+                          className="text-xs font-semibold text-white"
+                          style={{
+                            backgroundColor: getAvatarColor(getUserInitials()),
+                          }}
+                        >
+                          {getUserInitials()}
+                        </AvatarFallback>
+                      </Avatar>
+                      <span className="text-sm font-medium hidden lg:block max-w-24 truncate">
+                        {user?.name}
+                      </span>
+                      <ChevronDown className="w-4 h-4 hidden lg:block" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent
+                    align="end"
+                    className="w-48"
+                    sideOffset={8}
+                    alignOffset={-4}
+                  >
+                    <div className="px-2 py-1.5 text-sm font-semibold">
+                      {user?.name}
+                    </div>
+                    <div className="px-2 py-1 text-xs text-muted-foreground truncate">
+                      {user?.email}
+                    </div>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem asChild>
+                      <Link
+                        to="/profile"
+                        className="flex items-center gap-2 cursor-pointer"
+                      >
+                        <User className="w-4 h-4" />
+                        <span>Profile</span>
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link
+                        to="/profile?tab=settings"
+                        className="flex items-center gap-2 cursor-pointer"
+                      >
+                        <Settings className="w-4 h-4" />
+                        <span>Settings</span>
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      onClick={handleLogout}
+                      className="text-destructive focus:text-destructive cursor-pointer"
+                    >
+                      <LogOut className="w-4 h-4 mr-2" />
+                      <span>Logout</span>
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </>
             ) : (
               <>
@@ -587,13 +623,27 @@ const Header = () => {
         </div>
       </div>
 
-      {/* Drag indicator - shows when dragging from edge */}
-      {isDragging && dragX > 0 && (
+      {/* CHANGE: Enhanced backdrop with tap-to-close when menu is open */}
+      {((isDragging && dragX > 0) || isMobileMenuOpen) && (
         <div
-          className="fixed inset-0 pointer-events-none z-40 lg:hidden"
+          className="fixed inset-0 z-40 lg:hidden"
           style={{
-            background: `rgba(0, 0, 0, ${(dragX / 320) * 0.5})`,
-            transition: "none",
+            // CHANGE: Calculate opacity based on drag position and menu state
+            background: isMobileMenuOpen
+              ? isDragging
+                ? `rgba(0, 0, 0, ${
+                    ((320 - Math.abs(dragX - 320)) / 320) * 0.5
+                  })`
+                : "rgba(0, 0, 0, 0.5)"
+              : `rgba(0, 0, 0, ${(dragX / 320) * 0.5})`,
+            transition: isDragging ? "none" : "background 0.3s ease-out",
+            pointerEvents: isMobileMenuOpen && !isDragging ? "auto" : "none", // CHANGE: Allow tap-to-close
+          }}
+          onClick={() => {
+            // CHANGE: Close menu when clicking backdrop (only when menu is fully open)
+            if (isMobileMenuOpen && !isDragging) {
+              setIsMobileMenuOpen(false);
+            }
           }}
         />
       )}
