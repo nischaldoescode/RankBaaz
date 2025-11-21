@@ -657,7 +657,7 @@ export const verifyOTP = async (req, res) => {
     const cookieOptions = {
       httpOnly: true,
       secure: true,
-      sameSite: process.env.NODE_ENV === "production" ? "lax" : "strict",
+      sameSite: "none",
       maxAge: 7 * 24 * 60 * 60 * 1000,
       signed: true,
       path: "/",
@@ -679,7 +679,7 @@ export const verifyOTP = async (req, res) => {
     const refreshCookieOptions = {
       httpOnly: true,
       secure: true,
-      sameSite: process.env.NODE_ENV === "production" ? "lax" : "strict",
+      sameSite: "none",
       maxAge: 30 * 24 * 60 * 60 * 1000,
       signed: true,
       path: "/",
@@ -1019,7 +1019,7 @@ export const login = async (req, res) => {
     const cookieOptions = {
       httpOnly: true,
       secure: true, // ALWAYS true for production HTTPS
-      sameSite: process.env.NODE_ENV === "production" ? "lax" : "strict", // CRITICAL: "none" for cross-site in prod
+      sameSite: "none",
       maxAge: 7 * 24 * 60 * 60 * 1000,
       signed: true,
       path: "/", // Explicitly set path
@@ -1042,7 +1042,7 @@ export const login = async (req, res) => {
     const refreshCookieOptions = {
       httpOnly: true,
       secure: true,
-      sameSite: process.env.NODE_ENV === "production" ? "lax" : "strict",
+      sameSite: "none",
       maxAge: 30 * 24 * 60 * 60 * 1000,
       signed: true,
       path: "/",
@@ -1137,7 +1137,7 @@ export const refreshToken = async (req, res) => {
       secure:
         process.env.NODE_ENV === "production" ||
         process.env.NODE_ENV === "development",
-      sameSite: "lax",
+      sameSite: "none",
       maxAge: 7 * 24 * 60 * 60 * 1000,
       signed: true,
     });
@@ -1154,7 +1154,7 @@ export const refreshToken = async (req, res) => {
       secure:
         process.env.NODE_ENV === "production" ||
         process.env.NODE_ENV === "development",
-      sameSite: "lax",
+      sameSite: "none",
       maxAge: 30 * 24 * 60 * 60 * 1000,
       signed: true,
     });
