@@ -343,7 +343,7 @@ const Header = () => {
                   </SheetTrigger>
                   <SheetContent
                     side="right"
-                    className="w-80 px-0"
+                    className="w-80 px-0 pb-safe"
                     aria-describedby={undefined}
                     style={{
                       // CHANGE: Updated transform calculation to support both directions
@@ -355,6 +355,7 @@ const Header = () => {
                       transition: isDragging
                         ? "none"
                         : "transform 0.3s cubic-bezier(0.32, 0.72, 0, 1)", // CHANGE: Better easing
+                      paddingBottom: "env(safe-area-inset-bottom)",
                     }}
                   >
                     {/* Mobile menu content - REMOVE user info section */}
@@ -522,7 +523,7 @@ const Header = () => {
                   </SheetTrigger>
                   <SheetContent
                     side="right"
-                    className="w-80 px-0"
+                    className="w-80 px-0 pb-safe"
                     aria-describedby={undefined}
                     style={{
                       transform: isDragging
@@ -531,6 +532,7 @@ const Header = () => {
                       transition: isDragging
                         ? "none"
                         : "transform 0.3s ease-out",
+                      paddingBottom: "env(safe-area-inset-bottom)",
                     }}
                   >
                     <AnimatePresence mode="wait">
@@ -589,7 +591,13 @@ const Header = () => {
                             </div>
 
                             {/* Auth Actions */}
-                            <div className="p-6 border-t border-border space-y-3">
+                            <div
+                              className="p-6 border-t border-border space-y-3"
+                              style={{
+                                paddingBottom:
+                                  "calc(1.5rem + env(safe-area-inset-bottom))", // NEW: Safe area support
+                              }}
+                            >
                               <Button
                                 variant="outline"
                                 className="w-full"
