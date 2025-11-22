@@ -316,7 +316,7 @@ export const TestProvider = ({ children }) => {
       state.testState.timeRemaining === 0 &&
       !state.testResult
     ) {
-      console.log("Difficulty time expired, checking for next difficulty");
+      // console.log("Difficulty time expired, checking for next difficulty");
       // Handle difficulty transition instead of auto-submit
       // This should be handled in Test.jsx component
     }
@@ -330,9 +330,9 @@ export const TestProvider = ({ children }) => {
     try {
       dispatch({ type: TEST_ACTIONS.SET_LOADING, payload: true });
 
-      console.log(
-        `[TEST_CONTEXT] Starting test - Course: ${courseId}, Difficulty: ${difficulty}`
-      );
+      // console.log(
+      //   `[TEST_CONTEXT] Starting test - Course: ${courseId}, Difficulty: ${difficulty}`
+      // );
 
       // CHANGE: Remove caching for now to ensure fresh data
       // The cache was causing stale authentication issues
@@ -347,14 +347,14 @@ export const TestProvider = ({ children }) => {
         }
 
         test = response.data.data;
-        console.log(`[TEST_CONTEXT] Test data received:`, {
-          questionCount: test.questions?.length,
-          courseName: test.courseInfo?.name,
-          difficulty: test.courseInfo?.difficulty?.name,
-        });
+        // console.log(`[TEST_CONTEXT] Test data received:`, {
+        //   questionCount: test.questions?.length,
+        //   courseName: test.courseInfo?.name,
+        //   difficulty: test.courseInfo?.difficulty?.name,
+        // });
       } catch (apiError) {
         // CHANGE: Better error categorization
-        console.error("[TEST_CONTEXT] API Error:", apiError);
+        // console.error("[TEST_CONTEXT] API Error:", apiError);
 
         if (apiError.response?.status === 401) {
           const msg = "Session expired. Please login again.";
@@ -407,7 +407,7 @@ export const TestProvider = ({ children }) => {
 
       return { success: true, test, difficulty: difficulty };
     } catch (err) {
-      console.error("[TEST_CONTEXT] Start test error:", err);
+      // console.error("[TEST_CONTEXT] Start test error:", err);
 
       // CHANGE: Extract backend error message properly
       const backendMessage = err.response?.data?.message || "";
@@ -509,10 +509,10 @@ export const TestProvider = ({ children }) => {
       }
 
       // Final submission only - use accumulated results from component
-      console.log(
-        "Final submission with accumulated results:",
-        accumulatedResults
-      );
+      // console.log(
+      //   "Final submission with accumulated results:",
+      //   accumulatedResults
+      // );
 
       if (!accumulatedResults || accumulatedResults.length === 0) {
         throw new Error("No accumulated results provided for final submission");

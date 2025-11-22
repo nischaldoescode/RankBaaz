@@ -36,6 +36,8 @@ const Test = () => {
   const [completedDifficulties, setCompletedDifficulties] = useState([]);
   const [currentDifficultyIndex, setCurrentDifficultyIndex] = useState(0);
   const [allDifficulties, setAllDifficulties] = useState([]);
+  const [devToolsOpen, setDevToolsOpen] = useState(false);
+  const [violationRecorded, setViolationRecorded] = useState(false);
 
   const {
     currentTest,
@@ -71,9 +73,151 @@ const Test = () => {
   const [allDifficultyResults, setAllDifficultyResults] = useState([]);
   const [courseLoading, setCourseLoading] = useState(true); // ADD THIS LINE
 
-  const themeClasses = getThemeClasses();
   const primaryColors = getPrimaryColorClasses();
 
+    useEffect(() => {
+    // Only run in production
+    if (import.meta.env.MODE !== 'production') {
+      return;
+    }
+
+    // Skip if not in active test
+    if (!testState.isActive || testPhase !== 'active') {
+      return;
+    }
+
+    let detectionInterval;
+    let performanceCheck;
+
+    // Method 1: Console detection
+    const consoleCheck = () => {
+      const startTime = performance.now();
+      debugger; // Will pause if DevTools open
+      const endTime = performance.now();
+      
+      // If execution takes >100ms, DevTools likely open
+      return (endTime - startTime) > 100;
+    };
+
+    // Method 2: Window size detection
+    const sizeCheck = () => {
+      const widthThreshold = window.outerWidth - window.innerWidth > 160;
+      const heightThreshold = window.outerHeight - window.innerHeight > 160;
+      return widthThreshold || heightThreshold;
+    };
+
+    // Method 3: Performance timing check
+    performanceCheck = () => {
+      const start = performance.now();
+      
+      // Trigger potential DevTools detection
+      const devtools = /./;
+      devtools.toString = function() {
+        return true;
+      };
+      
+      console.log('%c', devtools);
+      
+      const end = performance.now();
+      return (end - start) > 100;
+    };
+
+    // Combined detection
+    const detectDevTools = () => {
+      const detected = consoleCheck() || sizeCheck() || performanceCheck();
+      
+      if (detected && !devToolsOpen && !violationRecorded) {
+        setDevToolsOpen(true);
+        handleDevToolsDetected();
+      } else if (!detected && devToolsOpen) {
+        setDevToolsOpen(false);
+      }
+    };
+
+    // Run detection every 1 second
+    detectionInterval = setInterval(detectDevTools, 1000);
+
+    // Also detect on window resize
+    window.addEventListener('resize', detectDevTools);
+
+    // Prevent right-click context menu
+    const preventContextMenu = (e) => {
+      if (testState.isActive && testPhase === 'active') {
+        e.preventDefault();
+        toast.error("Right-click disabled during test");
+      }
+    };
+
+    document.addEventListener('contextmenu', preventContextMenu);
+
+    // Prevent F12 and Ctrl+Shift+I
+    const preventDevToolsShortcuts = (e) => {
+      if (testState.isActive && testPhase === 'active') {
+        if (
+          e.key === 'F12' ||
+          (e.ctrlKey && e.shiftKey && e.key === 'I') ||
+          (e.ctrlKey && e.shiftKey && e.key === 'J') ||
+          (e.ctrlKey && e.shiftKey && e.key === 'C') ||
+          (e.ctrlKey && e.key === 'U')
+        ) {
+          e.preventDefault();
+          toast.error("Keyboard shortcuts disabled during test");
+          handleDevToolsDetected();
+        }
+      }
+    };
+
+    document.addEventListener('keydown', preventDevToolsShortcuts);
+
+    return () => {
+      clearInterval(detectionInterval);
+      window.removeEventListener('resize', detectDevTools);
+      document.removeEventListener('contextmenu', preventContextMenu);
+      document.removeEventListener('keydown', preventDevToolsShortcuts);
+    };
+  }, [testState.isActive, testPhase, devToolsOpen, violationRecorded]);
+
+  // NEW: Handle DevTools detection
+  const handleDevToolsDetected = async () => {
+    if (violationRecorded) return;
+
+    setViolationRecorded(true);
+
+    try {
+      const response = await apiMethods.post('/api/devtools/violation', {
+        courseId,
+        courseName: courseData?.name,
+        detectionMethod: 'multiple',
+      });
+
+      if (response.data.success) {
+        const { violationCount, warningsRemaining, pointsDeducted } = response.data.data;
+
+        toast.error(
+          `⚠️ DevTools detected! -${pointsDeducted} points. ` +
+          `${warningsRemaining > 0 ? `${warningsRemaining} warnings remaining before ban.` : 'You have been banned from this course.'}`,
+          { duration: 10000 }
+        );
+
+        // If banned, end test and redirect
+        if (warningsRemaining === 0) {
+          setTimeout(() => {
+            resetTest();
+            navigate('/courses');
+          }, 3000);
+        }
+      } else if (response.data.banned) {
+        toast.error("You have been banned from this course", { duration: 5000 });
+        setTimeout(() => {
+          resetTest();
+          navigate('/courses');
+        }, 2000);
+      }
+    } catch (error) {
+      console.error("Failed to record violation:", error);
+    }
+  };
+  
   // Initialize test phase based on current state
   useEffect(() => {
     if (testResult) {
@@ -140,7 +284,7 @@ const Test = () => {
             // Access granted
             sessionStorage.setItem(`test_access_${courseId}`, "granted");
           } catch (error) {
-            console.error("Purchase check failed:", error);
+            console.error("Purchase error", error);
             toast.error("Failed to verify purchase. Please try from courses.");
             navigate("/courses");
           }
@@ -279,7 +423,7 @@ const Test = () => {
   // use effect to Auto-submit when time runs out
   useEffect(() => {
     if (testState.isActive && testState.timeRemaining === 0 && !testResult) {
-      console.log("Time expired - resetting test");
+      // console.log("Time expired - resetting test");
       handleTimeExpiredSubmit();
     }
   }, [
@@ -338,7 +482,7 @@ const Test = () => {
   const handleStartTest = useCallback(async () => {
     // CHANGE: Add auth verification BEFORE API call
     if (!isAuthenticated) {
-      console.error("Authentication required");
+      // console.error("Authentication required");
       toast.error("Please log in to start the test");
       navigate("/login", { state: { from: location } });
       return { success: false, error: "Not authenticated" };
@@ -347,22 +491,22 @@ const Test = () => {
     // CHANGE: Verify localStorage user exists
     const storedUser = localStorage.getItem("user");
     if (!storedUser) {
-      console.error("[START_TEST] No user in localStorage");
+      // console.error("[START_TEST] No user in localStorage");
       toast.error("Session expired. Please login again.");
       navigate("/login", { state: { from: location } });
       return { success: false, error: "No session" };
     }
 
-    console.log("[START_TEST] Auth check passed, proceeding with test start");
+    // console.log("[START_TEST] Auth check passed, proceeding with test start");
 
     if (!selectedDifficulty) {
-      console.error("No difficulty selected");
+      // console.error("No difficulty selected");
       return { success: false, error: "No difficulty selected" };
     }
 
     // Verify courseData is loaded
     if (!courseData) {
-      console.error("Course data not loaded");
+      // console.error("Course data not loaded");
       toast.error("Course information not loaded. Please try again.");
       return { success: false, error: "Course data missing" };
     }
@@ -373,9 +517,9 @@ const Test = () => {
       // REMOVED: dispatch({ type: TEST_ACTIONS.SET_LOADING, payload: true });
       // The loading state is already managed by the startTest function in TestContext
 
-      console.log(
-        `[START_TEST] Starting test for course: ${courseId}, difficulty: ${selectedDifficulty.name}`
-      );
+      // console.log(
+      //   `[START_TEST] Starting test for course: ${courseId}, difficulty: ${selectedDifficulty.name}`
+      // );
 
       const result = await startTest(courseId, selectedDifficulty.name);
 
@@ -385,7 +529,7 @@ const Test = () => {
       }
 
       if (result.success) {
-        console.log("[START_TEST] Test started successfully");
+        // console.log("[START_TEST] Test started successfully");
         setTestPhase("active");
         setSelectedAnswer(null);
         setAnswers({});
@@ -428,17 +572,17 @@ const Test = () => {
         result.error?.includes("Credentials") ||
         result.error?.includes("authentication")
       ) {
-        console.error("[START_TEST] Authentication error");
+        // console.error("[START_TEST] Authentication error");
         toast.error("Session expired. Please login again.");
         navigate("/login", { state: { from: location } });
         return result;
       }
 
-      console.error("[START_TEST] Test start failed:", result.error);
+      // console.error("[START_TEST] Test start failed:", result.error);
       toast.error(result.error || "Failed to start test");
       return result;
     } catch (error) {
-      console.error("[START_TEST] Exception:", error);
+      // console.error("[START_TEST] Exception:", error);
 
       // Handle network/auth errors
       if (error.response?.status === 401) {
@@ -770,7 +914,7 @@ const Test = () => {
         }
       }
     } catch (error) {
-      console.error("Auto-transition failed:", error);
+      // console.error("Auto-transition failed:", error);
       toast.error("Failed to proceed");
     }
   }, [
@@ -787,7 +931,7 @@ const Test = () => {
   useEffect(() => {
     const loadCourseInfo = async () => {
       if (!courseId) {
-        console.error("[COURSE_LOAD] No courseId provided");
+        // console.error("[COURSE_LOAD] No courseId provided");
         navigate("/courses");
         return;
       }
@@ -795,12 +939,11 @@ const Test = () => {
       setCourseLoading(true);
 
       try {
-        console.log(`[COURSE_LOAD] Loading course data for: ${courseId}`);
+        // console.log(`[COURSE_LOAD] Loading course data for: ${courseId}`);
         const response = await apiMethods.courses.getById(courseId);
 
-        // ✅ BETTER VALIDATION
         if (!response?.data?.data?.course) {
-          console.error("[COURSE_LOAD] Invalid response structure:", response);
+          // console.error("[COURSE_LOAD] Invalid response structure:", response);
           toast.error("Failed to load course information");
           navigate("/courses");
           return;
@@ -808,15 +951,15 @@ const Test = () => {
 
         const course = response.data.data.course;
 
-        console.log(`[COURSE_LOAD] Course loaded:`, {
-          name: course.name,
-          isPaid: course.isPaid,
-          difficulties: course.difficulties?.length,
-        });
+        // console.log(`[COURSE_LOAD] Course loaded:`, {
+        //   name: course.name,
+        //   isPaid: course.isPaid,
+        //   difficulties: course.difficulties?.length,
+        // });
 
         setCourseData(course);
       } catch (error) {
-        console.error("[COURSE_LOAD] Error loading course:", error);
+        // console.error("[COURSE_LOAD] Error loading course:", error);
 
         // Better error handling
         if (error.response?.status === 404) {
@@ -824,7 +967,7 @@ const Test = () => {
         } else if (error.response?.status === 401) {
           toast.error("Please login to access this course");
           navigate("/login", { state: { from: location } });
-          return; // ✅ EARLY RETURN
+          return;
         } else if (error.response?.status === 403) {
           toast.error("Access denied");
         } else {
@@ -846,14 +989,14 @@ const Test = () => {
     const checkAndLoadExistingTest = async () => {
       // CHANGE: Check authentication first before checking isPaid
       if (!isAuthenticated) {
-        console.log("User not authenticated, redirecting to login");
+        // console.log("User not authenticated, redirecting to login");
         navigate("/login", { state: { from: location } });
         return;
       }
 
       // CHANGE: Wait for courseData to be loaded before checking
       if (!courseData) {
-        console.log("Course data still loading...");
+        // console.log("Course data still loading...");
         return;
       }
 
@@ -873,7 +1016,7 @@ const Test = () => {
             return;
           }
         } catch (error) {
-          console.error("Failed to check test history:", error);
+          // console.error("Failed to check test history:", error);
           // CHANGE: Don't block if history check fails
           if (error.response?.status === 401) {
             navigate("/login", { state: { from: location } });
@@ -915,7 +1058,7 @@ const Test = () => {
       resetTest();
       navigate("/courses");
     } catch (error) {
-      console.error("Failed to record abandonment:", error);
+      // console.error("Failed to record abandonment:", error);
     }
   }, [
     courseId,
@@ -959,24 +1102,18 @@ const Test = () => {
     return <Loading message="Loading test..." />;
   }
 
-  // Error state
   if (error && !currentTest) {
-    return (
-      <div className={`min-h-screen ${themeClasses.background} py-8`}>
-        <div className="max-w-2xl mx-auto px-4">
-          <Card className="text-center">
-            <div className="text-red-500 text-6xl mb-4">⚠️</div>
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
-              Test Error
-            </h1>
-            <p className="text-gray-600 dark:text-gray-400 mb-6">{error}</p>
-            <Button onClick={() => navigate("/courses")}>
-              Return to Courses
-            </Button>
-          </Card>
-        </div>
-      </div>
-    );
+    // Log error details for monitoring
+    console.error("[TEST_ERROR]", {
+      error,
+      courseId,
+      timestamp: new Date().toISOString(),
+      userAgent: navigator.userAgent,
+      testState,
+    });
+
+    // Throw error to be caught by ErrorBoundary
+    throw new Error(`Test Error: ${error}`);
   }
 
   const renderTestPhase = () => {

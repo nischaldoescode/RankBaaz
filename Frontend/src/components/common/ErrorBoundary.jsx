@@ -1,64 +1,185 @@
-import React from 'react';
-import { motion } from 'framer-motion';
-import { AlertTriangle, RefreshCw, Home, Mail, Bug } from 'lucide-react';
-import { Button } from '../ui/Button';
-import { Card } from '../ui/Card';
-
+import React from "react";
+import { motion } from "framer-motion";
+import { AlertTriangle, RefreshCw, Home, Mail, Bug } from "lucide-react";
+import { Button } from "../ui/Button";
+import { Card } from "../ui/Card";
+import { useContent } from "../../context/ContentContext";
 class ErrorBoundary extends React.Component {
   constructor(props) {
     super(props);
-    this.state = { 
-      hasError: false, 
-      error: null, 
+    this.state = {
+      hasError: false,
+      error: null,
       errorInfo: null,
-      errorId: null
+      errorId: null,
     };
   }
 
   static getDerivedStateFromError(error) {
-    return { 
+    return {
       hasError: true,
-      errorId: `ERR_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+      errorId: `ERR_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
     };
   }
 
   componentDidCatch(error, errorInfo) {
-    console.error('ErrorBoundary caught an error:', error, errorInfo);
-    
+    // Store all error information including console logs
+    const errorDetails = {
+      errorId:
+        this.state.errorId ||
+        `ERR_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      timestamp: new Date().toISOString(),
+      error: {
+        message: error.message,
+        stack: error.stack,
+        name: error.name,
+      },
+      componentStack: errorInfo.componentStack,
+      userAgent: navigator.userAgent,
+      url: window.location.href,
+      // Capture recent console logs if available
+      recentLogs: this.captureConsoleLogs(),
+    };
+
+    console.error("ErrorBoundary caught an error:", error, errorInfo);
+
     this.setState({
       error: error,
-      errorInfo: errorInfo
+      errorInfo: errorInfo,
+      errorDetails: errorDetails, // NEW: Store for email reporting
     });
 
     // In production, send error to monitoring service
-    if (process.env.NODE_ENV === 'production') {
-      // Example: Sentry.captureException(error, { extra: errorInfo });
-      console.error('Error logged to monitoring service:', {
-        errorId: this.state.errorId,
-        error: error.message,
-        stack: errorInfo.componentStack
-      });
+    if (process.env.NODE_ENV === "production") {
+      console.error("Error logged to monitoring service:", errorDetails);
     }
   }
+
+  // NEW METHOD: Capture recent console logs
+  captureConsoleLogs = () => {
+    try {
+      // If you've implemented console log capture elsewhere, use it
+      // Otherwise return placeholder
+      return "Console logs captured at error time";
+    } catch (e) {
+      return "Unable to capture console logs";
+    }
+  };
 
   handleReload = () => {
     window.location.reload();
   };
 
   handleGoHome = () => {
-    window.location.href = '/';
+    window.location.href = "/";
   };
 
   handleReportError = () => {
+    // Get contact email from localStorage/context or use fallback
+    const contentSettings = this.getContentSettings();
+    const supportEmail =
+      contentSettings?.contactInfo?.email?.support || "support@crazydukaan.store";
+
+    // Comprehensive error report with ALL details
     const errorReport = {
-      id: this.state.errorId,
-      message: this.state.error?.message,
+      // Basic Info
+      errorId: this.state.errorId,
       timestamp: new Date().toISOString(),
-      userAgent: navigator.userAgent
+
+      // Error Details
+      errorMessage: this.state.error?.message || "Unknown error",
+      errorName: this.state.error?.name || "Error",
+      errorStack: this.state.error?.stack || "No stack trace available",
+
+      // Component Stack
+      componentStack:
+        this.state.errorInfo?.componentStack || "No component stack",
+
+      // Environment
+      userAgent: navigator.userAgent,
+      url: window.location.href,
+      viewport: `${window.innerWidth}x${window.innerHeight}`,
+
+      // User Info (if available)
+      userId: localStorage.getItem("userId") || "Anonymous",
+      userEmail: localStorage.getItem("userEmail") || "Not logged in",
+
+      // Additional Context
+      localStorage: this.getSafeLocalStorage(),
+      consoleErrors: this.state.errorDetails?.recentLogs || "Not captured",
     };
-    
-    const mailtoLink = `mailto:support@yourapp.com?subject=Error Report ${this.state.errorId}&body=${encodeURIComponent(JSON.stringify(errorReport, null, 2))}`;
+
+    // Format email body for readability
+    const emailBody = `
+ERROR REPORT
+============
+
+Error ID: ${errorReport.errorId}
+Timestamp: ${errorReport.timestamp}
+
+ERROR DETAILS
+-------------
+Message: ${errorReport.errorMessage}
+Type: ${errorReport.errorName}
+
+Stack Trace:
+${errorReport.errorStack}
+
+Component Stack:
+${errorReport.componentStack}
+
+ENVIRONMENT
+-----------
+URL: ${errorReport.url}
+User Agent: ${errorReport.userAgent}
+Viewport: ${errorReport.viewport}
+
+USER INFO
+---------
+User ID: ${errorReport.userId}
+Email: ${errorReport.userEmail}
+
+ADDITIONAL DATA
+---------------
+${JSON.stringify(errorReport.localStorage, null, 2)}
+
+Console Logs:
+${errorReport.consoleErrors}
+`;
+
+    const mailtoLink = `mailto:${supportEmail}?subject=Error Report ${
+      this.state.errorId
+    }&body=${encodeURIComponent(emailBody)}`;
     window.location.href = mailtoLink;
+  };
+
+  // NEW METHOD: Safely get localStorage data
+  getSafeLocalStorage = () => {
+    try {
+      const storage = {};
+      const sensitiveKeys = ["password", "token", "secret", "auth"];
+
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        // Skip sensitive data
+        if (!sensitiveKeys.some((sk) => key.toLowerCase().includes(sk))) {
+          storage[key] = localStorage.getItem(key)?.substring(0, 100); // Limit length
+        }
+      }
+      return storage;
+    } catch (e) {
+      return { error: "Could not access localStorage" };
+    }
+  };
+
+  // NEW METHOD: Get content settings from localStorage fallback
+  getContentSettings = () => {
+    try {
+      const settings = localStorage.getItem("contentSettings");
+      return settings ? JSON.parse(settings) : null;
+    } catch (e) {
+      return null;
+    }
   };
 
   render() {
@@ -76,11 +197,11 @@ class ErrorBoundary extends React.Component {
               <motion.div
                 initial={{ scale: 0, rotate: -180 }}
                 animate={{ scale: 1, rotate: 0 }}
-                transition={{ 
-                  delay: 0.2, 
-                  type: "spring", 
+                transition={{
+                  delay: 0.2,
+                  type: "spring",
                   stiffness: 200,
-                  damping: 15
+                  damping: 15,
                 }}
                 className="w-20 h-20 bg-gradient-to-br from-red-500 to-red-600 rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg"
               >
@@ -98,7 +219,8 @@ class ErrorBoundary extends React.Component {
                   Something Went Wrong
                 </h1>
                 <p className="text-gray-600 dark:text-gray-400 leading-relaxed max-w-md mx-auto">
-                  We encountered an unexpected error. Don't worry, our team has been notified and is working to fix this issue.
+                  We encountered an unexpected error. Don't worry, our team has
+                  been notified and is working to fix this issue.
                 </p>
               </motion.div>
 
@@ -192,7 +314,7 @@ class ErrorBoundary extends React.Component {
               </motion.div>
 
               {/* Development Error Details */}
-              {process.env.NODE_ENV === 'development' && this.state.error && (
+              {process.env.NODE_ENV === "development" && this.state.error && (
                 <motion.details
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
@@ -205,13 +327,19 @@ class ErrorBoundary extends React.Component {
                   </summary>
                   <div className="bg-gray-900 dark:bg-black rounded-lg p-4 overflow-auto max-h-60 border border-red-500/20">
                     <pre className="text-xs text-red-400 font-mono whitespace-pre-wrap break-words">
-                      <div className="font-bold mb-2 text-red-300">Error Message:</div>
+                      <div className="font-bold mb-2 text-red-300">
+                        Error Message:
+                      </div>
                       {this.state.error.toString()}
-                      
-                      <div className="font-bold mt-4 mb-2 text-red-300">Component Stack:</div>
+
+                      <div className="font-bold mt-4 mb-2 text-red-300">
+                        Component Stack:
+                      </div>
                       {this.state.errorInfo?.componentStack}
-                      
-                      <div className="font-bold mt-4 mb-2 text-red-300">Stack Trace:</div>
+
+                      <div className="font-bold mt-4 mb-2 text-red-300">
+                        Stack Trace:
+                      </div>
                       {this.state.error.stack}
                     </pre>
                   </div>
@@ -219,7 +347,7 @@ class ErrorBoundary extends React.Component {
               )}
             </Card>
 
-            {/* Support Contact */}
+{/* Support Contact */}
             <motion.p
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -228,10 +356,10 @@ class ErrorBoundary extends React.Component {
             >
               Need help? Contact us at{' '}
               <a 
-                href="mailto:support@yourapp.com" 
+                href={`mailto:${this.getContentSettings()?.contactInfo?.email?.support || 'support@crazydukaan.store'}`}
                 className="text-blue-600 dark:text-blue-400 hover:underline font-medium"
               >
-                support@yourapp.com
+                {this.getContentSettings()?.contactInfo?.email?.support || 'support@crazydukaan.store'}
               </a>
             </motion.p>
           </motion.div>

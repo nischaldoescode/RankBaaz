@@ -19,10 +19,28 @@ const DifficultySelection = ({ courseId, onSelectDifficulty, onCancel }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selectedDiff, setSelectedDiff] = useState(null);
+  const [banInfo, setBanInfo] = useState(null);
 
   useEffect(() => {
     loadCourseData();
+    checkBanStatus(); // NEW
   }, [courseId]);
+
+  // NEW: Check if user is banned
+  const checkBanStatus = async () => {
+    try {
+      const response = await apiMethods.get(
+        `/api/devtools/check-ban/${courseId}`
+      );
+
+      if (response.data.banned) {
+        setError("banned");
+        setBanInfo(response.data.data);
+      }
+    } catch (error) {
+      console.error("Ban check error:", error);
+    }
+  };
 
   const loadCourseData = async () => {
     try {
@@ -115,20 +133,96 @@ const DifficultySelection = ({ courseId, onSelectDifficulty, onCancel }) => {
   }
 
   if (error) {
+    // NEW: Handle banned state with custom UI
+    if (error === "banned" && banInfo) {
+      return (
+        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-red-50 to-orange-50 dark:from-red-950 dark:to-orange-950 p-4">
+          <Card className="max-w-2xl w-full border-2 border-red-200 dark:border-red-800 shadow-2xl">
+            <CardContent className="p-8 text-center">
+              {/* Icon */}
+              <div className="w-24 h-24 bg-gradient-to-br from-red-500 to-orange-600 rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg">
+                <svg
+                  className="w-12 h-12 text-white"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                  />
+                </svg>
+              </div>
+
+              {/* Title */}
+              <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">
+                Access Denied
+              </h1>
+
+              {/* Message */}
+              <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-6 mb-6">
+                <p className="text-lg font-semibold text-red-900 dark:text-red-200 mb-2">
+                  You have been banned from {banInfo.courseName}
+                </p>
+                <p className="text-sm text-red-700 dark:text-red-300 mb-4">
+                  {banInfo.reason}
+                </p>
+                <div className="text-xs text-red-600 dark:text-red-400">
+                  Banned on: {new Date(banInfo.bannedAt).toLocaleDateString()}
+                  {banInfo.permanent && " (Permanent)"}
+                </div>
+              </div>
+
+              {/* Support Info */}
+              <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 mb-6">
+                <p className="text-sm text-gray-700 dark:text-gray-300 mb-2">
+                  If you believe this is a mistake, please contact our support
+                  team:
+                </p>
+                <a
+                  href={`mailto:support@rankbaaz.com?subject=Appeal Ban - ${banInfo.courseName}`}
+                  className="text-blue-600 dark:text-blue-400 hover:underline font-medium"
+                >
+                  support@rankbaaz.com
+                </a>
+              </div>
+
+              {/* Action Button */}
+              <Button onClick={onCancel} className="w-full max-w-xs" size="lg">
+                Return to Courses
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      );
+    }
+
+    // Polished + centered + professional error UI
     return (
-      <div className="max-w-2xl mx-auto p-4">
-        <Card className="text-center">
-          <CardContent className="p-6">
-            <div className="text-red-500 text-6xl mb-4">⚠️</div>
-            <h1 className="text-2xl font-bold mb-4">Error Loading Course</h1>
-            <p className="text-muted-foreground mb-6">{error}</p>
-            <Button onClick={onCancel}>Return to Courses</Button>
+      <div className="flex items-center justify-center min-h-[60vh] bg-white px-4">
+        <Card className="w-full max-w-xl shadow-lg border bg-white text-black">
+          <CardContent className="p-8 text-center">
+            <div className="text-6xl mb-4">⚠️</div>
+
+            <h1 className="text-3xl font-semibold mb-3">
+              Error Loading Course
+            </h1>
+
+            <p className="text-gray-600 mb-6 text-base">{error}</p>
+
+            <Button
+              onClick={onCancel}
+              className="px-6 py-2 text-base font-medium"
+            >
+              Return to Courses
+            </Button>
           </CardContent>
         </Card>
       </div>
     );
   }
-
   return (
     <div className="max-w-4xl mx-auto p-4 bg-white/90 dark:bg-gray-900/90 backdrop-blur-sm rounded-lg">
       {/* Header */}
