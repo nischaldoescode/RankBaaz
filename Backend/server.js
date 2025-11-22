@@ -129,7 +129,8 @@ const corsOptions = {
       "https://rankbaaz-admin.onrender.com",
       "https://rankbaaz.onrender.com",
       "https://rankbaaz.onrender.com/",
-      "http://localhost:4173"
+      "http://localhost:4173",
+      "https://rankbaaz-admin.onrender.com/",
     ];
 
     const timestamp = new Date().toISOString();
