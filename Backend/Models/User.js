@@ -114,6 +114,39 @@ const userSchema = new mongoose.Schema(
       lastKnownRank: { type: Number, default: null },
       rankLastUpdated: { type: Date, default: null },
     },
+
+    // NEW: DevTools violation tracking
+    devToolsViolations: {
+      count: { type: Number, default: 0 },
+      lastViolation: { type: Date, default: null },
+      violationDetails: [
+        {
+          timestamp: { type: Date, required: true },
+          courseId: { type: mongoose.Schema.Types.ObjectId, ref: "Course" },
+          courseName: String,
+          detectionMethod: String, // 'debugger', 'console', 'performance', 'resize'
+          userAgent: String,
+          ipAddress: String,
+        },
+      ],
+    },
+
+    // NEW: Course-specific bans
+    bannedCourses: [
+      {
+        courseId: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "Course",
+          required: true,
+        },
+        courseName: String,
+        bannedAt: { type: Date, default: Date.now },
+        bannedBy: { type: mongoose.Schema.Types.ObjectId, ref: "Admin" },
+        reason: String,
+        permanent: { type: Boolean, default: true },
+        unbanAt: Date, // For temporary bans
+      },
+    ],
   },
 
   {
@@ -124,8 +157,8 @@ const userSchema = new mongoose.Schema(
 // userSchema.index({ username: 1 }, { unique: true });
 userSchema.index({ points: -1 });
 userSchema.index({ "stats.leaderboardDaysOnTop": -1 });
-userSchema.index({ 'stats.testsCompleted': -1 });
+userSchema.index({ "stats.testsCompleted": -1 });
 userSchema.index({ createdAt: -1 });
-userSchema.index({ name: 'text', email: 'text', username: 'text' });
+userSchema.index({ name: "text", email: "text", username: "text" });
 
 export default mongoose.model("User", userSchema);

@@ -21,6 +21,7 @@ import contentRoutes from "./Routes/contentRoutes.js";
 import paymentRoutes from "./Routes/paymentRoutes.js";
 import couponRoutes from "./Routes/couponRoutes.js";
 import User from "./Models/User.js";
+import devToolsRoutes from "./Routes/devToolsRoutes.js"; 
 
 // Load environment variables
 dotenv.config();
@@ -324,6 +325,7 @@ app.use("/api/profile", profileRoutes);
 app.use("/api/content", contentRoutes);
 app.use("/api/payments", paymentRoutes);
 app.use("/api/coupons", couponLimiter, couponRoutes);
+app.use("/api/devtools", devToolsRoutes);
 // Root endpoint
 app.get("/", (req, res) => {
   res.status(200).json({
