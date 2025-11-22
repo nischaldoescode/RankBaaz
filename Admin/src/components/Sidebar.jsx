@@ -10,6 +10,8 @@ import {
   X,
   FileText,
   TicketPercent,
+  ShieldAlert,
+  Medal
 } from "lucide-react";
 
 const Sidebar = ({ isOpen, onClose }) => {
@@ -65,6 +67,18 @@ const Sidebar = ({ isOpen, onClose }) => {
       icon: TicketPercent,
       color: "from-indigo-500 to-indigo-600",
     },
+    {
+      href: "/violations",
+      name: "Security Violations",
+      icon: ShieldAlert,
+      color: "from-red-500 to-red-600",
+    },
+    {
+      href: "/leaderboard",
+      name: "Global Leaderboard",
+      icon: Medal,
+      color: "from-yellow-500 to-yellow-600",
+    }
   ];
 
   // Close sidebar when route changes on mobile
