@@ -25,6 +25,9 @@ import AdminRegister from "./pages/AdminRegister.jsx";
 import UserManagement from "./pages/UserManageMent.jsx";
 import ContentManagement from "./pages/ContentManagement.jsx";
 import CouponManagement from "./pages/UniversalCoupons.jsx";
+import Violations from "./pages/Violations.jsx";
+import GlobalLeaderboard from "./pages/GlobalLeaderBoard.jsx";
+
 function App() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
@@ -115,6 +118,16 @@ function App() {
                                 <Route
                                   path="/coupons"
                                   element={<CouponManagement />}
+                                />
+
+                                <Route
+                                  path="/leaderboard"
+                                  element={<GlobalLeaderboard />}
+                                />
+
+                                <Route
+                                  path="/violations"
+                                  element={<Violations />}
                                 />
                               </Routes>
                             </div>
