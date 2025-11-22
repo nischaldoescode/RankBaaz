@@ -28,8 +28,9 @@ export const recordViolation = async (req, res) => {
 
     // Check if already banned from this course
     const isBanned = user.bannedCourses.some(
-      (ban) => ban.courseId.toString() === courseId && 
-               (ban.permanent || (ban.unbanAt && ban.unbanAt > new Date()))
+      (ban) =>
+        ban.courseId.toString() === courseId &&
+        (ban.permanent || (ban.unbanAt && ban.unbanAt > new Date()))
     );
 
     if (isBanned) {
@@ -52,47 +53,53 @@ export const recordViolation = async (req, res) => {
       ipAddress: req.ip || req.connection.remoteAddress,
     });
 
-    // Deduct points
-    const pointsDeduction = 5;
+    // Deduct points (increased for severity)
+    const pointsDeduction = 10; // CHANGED: 5 → 10 points
     await pointsService.updateUserPoints(
-      userId, 
-      -pointsDeduction, 
+      userId,
+      -pointsDeduction,
       "devtools_violation"
     );
 
-    // Auto-ban after 3 violations for the same course
+    // INSTANT BAN on first violation for this course
     const courseViolations = user.devToolsViolations.violationDetails.filter(
       (v) => v.courseId.toString() === courseId
     );
 
-    if (courseViolations.length >= 3) {
+    // CHANGED: Check if this is first violation for this course (>= 1 instead of >= 3)
+    if (courseViolations.length >= 1) {
       user.bannedCourses.push({
         courseId,
         courseName,
         bannedAt: new Date(),
-        reason: "Multiple DevTools violations detected during test",
+        reason:
+          "DevTools/Inspector detected during test - Zero tolerance policy",
         permanent: true,
       });
 
       await user.save();
-      
+
       // Invalidate user cache
       await invalidateCache.user(userId, user.username);
 
       return res.status(403).json({
         success: false,
-        message: "You have been permanently banned from this course due to repeated violations",
+        message:
+          "You have been permanently banned from this course for attempting to use DevTools during the test",
         banned: true,
         violations: courseViolations.length,
         pointsDeducted: pointsDeduction,
+        reason: "Zero-tolerance policy: DevTools usage detected",
       });
     }
 
+    // This code will never execute now, but keep for safety
     await user.save();
-    
+
     // Invalidate user cache
     await invalidateCache.user(userId, user.username);
 
+    // This response will never be sent since we ban on first violation
     res.status(200).json({
       success: true,
       message: "Violation recorded",
@@ -100,7 +107,7 @@ export const recordViolation = async (req, res) => {
         violationCount: courseViolations.length,
         totalViolations: user.devToolsViolations.count,
         pointsDeducted: pointsDeduction,
-        warningsRemaining: 3 - courseViolations.length,
+        warningsRemaining: 0, // CHANGED: No warnings
       },
     });
   } catch (error) {
@@ -127,8 +134,9 @@ export const checkCourseBan = async (req, res) => {
     }
 
     const ban = user.bannedCourses.find(
-      (b) => b.courseId.toString() === courseId &&
-             (b.permanent || (b.unbanAt && b.unbanAt > new Date()))
+      (b) =>
+        b.courseId.toString() === courseId &&
+        (b.permanent || (b.unbanAt && b.unbanAt > new Date()))
     );
 
     if (ban) {
@@ -170,12 +178,15 @@ export const getViolationStats = async (req, res) => {
 
     const stats = {
       totalViolators: users.length,
-      totalViolations: users.reduce((sum, u) => sum + u.devToolsViolations.count, 0),
-      totalBannedUsers: users.filter(u => u.bannedCourses.length > 0).length,
+      totalViolations: users.reduce(
+        (sum, u) => sum + u.devToolsViolations.count,
+        0
+      ),
+      totalBannedUsers: users.filter((u) => u.bannedCourses.length > 0).length,
       recentViolations: users
-        .filter(u => u.devToolsViolations.lastViolation)
+        .filter((u) => u.devToolsViolations.lastViolation)
         .slice(0, 10)
-        .map(u => ({
+        .map((u) => ({
           userId: u._id,
           name: u.name,
           username: u.username,
@@ -251,13 +262,13 @@ export const adminBanUser = async (req, res) => {
     });
 
     await user.save();
-    
+
     // Invalidate user cache
     await invalidateCache.user(userId, user.username);
 
     res.status(200).json({
       success: true,
-      message: `User ${permanent !== false ? 'permanently banned' : 'banned'} from ${course.name}`,
+      message: `User ${permanent !== false ? "permanently banned" : "banned"} from ${course.name}`,
     });
   } catch (error) {
     console.error("Admin ban user error:", error);
@@ -296,7 +307,7 @@ export const adminUnbanUser = async (req, res) => {
     user.bannedCourses.splice(banIndex, 1);
 
     await user.save();
-    
+
     // Invalidate user cache
     await invalidateCache.user(userId, user.username);
 
