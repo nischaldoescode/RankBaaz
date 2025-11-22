@@ -75,14 +75,14 @@ const Test = () => {
 
   const primaryColors = getPrimaryColorClasses();
 
-    useEffect(() => {
+  useEffect(() => {
     // Only run in production
-    if (import.meta.env.MODE !== 'production') {
+    if (import.meta.env.MODE !== "production") {
       return;
     }
 
     // Skip if not in active test
-    if (!testState.isActive || testPhase !== 'active') {
+    if (!testState.isActive || testPhase !== "active") {
       return;
     }
 
@@ -94,9 +94,9 @@ const Test = () => {
       const startTime = performance.now();
       debugger; // Will pause if DevTools open
       const endTime = performance.now();
-      
+
       // If execution takes >100ms, DevTools likely open
-      return (endTime - startTime) > 100;
+      return endTime - startTime > 100;
     };
 
     // Method 2: Window size detection
@@ -109,23 +109,23 @@ const Test = () => {
     // Method 3: Performance timing check
     performanceCheck = () => {
       const start = performance.now();
-      
+
       // Trigger potential DevTools detection
       const devtools = /./;
-      devtools.toString = function() {
+      devtools.toString = function () {
         return true;
       };
-      
-      console.log('%c', devtools);
-      
+
+      console.log("%c", devtools);
+
       const end = performance.now();
-      return (end - start) > 100;
+      return end - start > 100;
     };
 
     // Combined detection
     const detectDevTools = () => {
       const detected = consoleCheck() || sizeCheck() || performanceCheck();
-      
+
       if (detected && !devToolsOpen && !violationRecorded) {
         setDevToolsOpen(true);
         handleDevToolsDetected();
@@ -138,27 +138,27 @@ const Test = () => {
     detectionInterval = setInterval(detectDevTools, 1000);
 
     // Also detect on window resize
-    window.addEventListener('resize', detectDevTools);
+    window.addEventListener("resize", detectDevTools);
 
     // Prevent right-click context menu
     const preventContextMenu = (e) => {
-      if (testState.isActive && testPhase === 'active') {
+      if (testState.isActive && testPhase === "active") {
         e.preventDefault();
         toast.error("Right-click disabled during test");
       }
     };
 
-    document.addEventListener('contextmenu', preventContextMenu);
+    document.addEventListener("contextmenu", preventContextMenu);
 
     // Prevent F12 and Ctrl+Shift+I
     const preventDevToolsShortcuts = (e) => {
-      if (testState.isActive && testPhase === 'active') {
+      if (testState.isActive && testPhase === "active") {
         if (
-          e.key === 'F12' ||
-          (e.ctrlKey && e.shiftKey && e.key === 'I') ||
-          (e.ctrlKey && e.shiftKey && e.key === 'J') ||
-          (e.ctrlKey && e.shiftKey && e.key === 'C') ||
-          (e.ctrlKey && e.key === 'U')
+          e.key === "F12" ||
+          (e.ctrlKey && e.shiftKey && e.key === "I") ||
+          (e.ctrlKey && e.shiftKey && e.key === "J") ||
+          (e.ctrlKey && e.shiftKey && e.key === "C") ||
+          (e.ctrlKey && e.key === "U")
         ) {
           e.preventDefault();
           toast.error("Keyboard shortcuts disabled during test");
@@ -167,57 +167,73 @@ const Test = () => {
       }
     };
 
-    document.addEventListener('keydown', preventDevToolsShortcuts);
+    document.addEventListener("keydown", preventDevToolsShortcuts);
 
     return () => {
       clearInterval(detectionInterval);
-      window.removeEventListener('resize', detectDevTools);
-      document.removeEventListener('contextmenu', preventContextMenu);
-      document.removeEventListener('keydown', preventDevToolsShortcuts);
+      window.removeEventListener("resize", detectDevTools);
+      document.removeEventListener("contextmenu", preventContextMenu);
+      document.removeEventListener("keydown", preventDevToolsShortcuts);
     };
   }, [testState.isActive, testPhase, devToolsOpen, violationRecorded]);
 
-  // NEW: Handle DevTools detection
+  // NEW: Handle DevTools detection (INSTANT BAN)
   const handleDevToolsDetected = async () => {
     if (violationRecorded) return;
 
     setViolationRecorded(true);
 
     try {
-      const response = await apiMethods.post('/api/devtools/violation', {
+      const response = await apiMethods.post("/api/devtools/violation", {
         courseId,
         courseName: courseData?.name,
-        detectionMethod: 'multiple',
+        detectionMethod: "multiple",
       });
 
-      if (response.data.success) {
-        const { violationCount, warningsRemaining, pointsDeducted } = response.data.data;
+      // CHANGED: Instant ban message (no warnings)
+      if (response.data.banned || response.data.success === false) {
+        const pointsDeducted = response.data.pointsDeducted || 10;
 
+        // Show severe warning toast
         toast.error(
-          `⚠️ DevTools detected! -${pointsDeducted} points. ` +
-          `${warningsRemaining > 0 ? `${warningsRemaining} warnings remaining before ban.` : 'You have been banned from this course.'}`,
-          { duration: 10000 }
+          `🚫 SECURITY VIOLATION DETECTED!\n\n` +
+            `DevTools/Inspector usage is strictly prohibited.\n` +
+            `-${pointsDeducted} points deducted.\n\n` +
+            `You have been permanently banned from "${courseData?.name}".`,
+          {
+            duration: 10000,
+            style: {
+              background: "#991b1b",
+              color: "#fff",
+              fontSize: "16px",
+              fontWeight: "bold",
+            },
+          }
         );
 
-        // If banned, end test and redirect
-        if (warningsRemaining === 0) {
-          setTimeout(() => {
-            resetTest();
-            navigate('/courses');
-          }, 3000);
-        }
-      } else if (response.data.banned) {
-        toast.error("You have been banned from this course", { duration: 5000 });
+        // CHANGED: Immediate redirect (reduced delay to 3 seconds)
         setTimeout(() => {
           resetTest();
-          navigate('/courses');
-        }, 2000);
+          navigate("/courses");
+        }, 3000);
+      } else {
+        // This branch should never execute with instant ban
+        toast.error("Violation recorded", { duration: 5000 });
       }
     } catch (error) {
       console.error("Failed to record violation:", error);
+
+      // Still redirect on error to prevent cheating
+      toast.error("Security violation detected. Exiting test.", {
+        duration: 5000,
+      });
+      setTimeout(() => {
+        resetTest();
+        navigate("/courses");
+      }, 3000);
     }
   };
-  
+
   // Initialize test phase based on current state
   useEffect(() => {
     if (testResult) {

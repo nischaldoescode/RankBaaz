@@ -1,5 +1,12 @@
-import React, { useState } from 'react';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/Card";
+import React, { useState } from "react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -19,7 +26,8 @@ const TermsOfService = ({ onAccept, onCancel, courseName, difficulty }) => {
           </div>
           <CardTitle>Test Terms & Conditions</CardTitle>
           <CardDescription>
-            Please read and accept the terms before starting the {courseName} - {difficulty} test
+            Please read and accept the terms before starting the {courseName} -{" "}
+            {difficulty} test
           </CardDescription>
         </CardHeader>
 
@@ -27,7 +35,69 @@ const TermsOfService = ({ onAccept, onCancel, courseName, difficulty }) => {
           <ScrollArea className="h-64 w-full rounded-md border p-4">
             <div className="space-y-4 text-sm">
               <div>
-                <h4 className="font-semibold mb-2">Test Rules & Restrictions</h4>
+                <h4 className="font-semibold mb-2">
+                  Test Rules & Restrictions
+                </h4>
+                <div className="bg-red-100 dark:bg-red-900/20 border-2 border-red-500 rounded-lg p-6">
+                  <div className="flex items-start gap-3 mb-4">
+                    <AlertTriangle className="w-6 h-6 text-red-600 flex-shrink-0 mt-1" />
+                    <div>
+                      <h3 className="text-xl font-bold text-red-900 dark:text-red-200 mb-2">
+                        ⚠️ ZERO-TOLERANCE POLICY
+                      </h3>
+                      <p className="text-red-800 dark:text-red-300 font-semibold">
+                        Opening Developer Tools, Inspector, or Console during
+                        the test will result in:
+                      </p>
+                    </div>
+                  </div>
+
+                  <ul className="space-y-2 ml-9">
+                    <li className="flex items-center gap-2 text-red-900 dark:text-red-200">
+                      <span className="w-2 h-2 bg-red-600 rounded-full"></span>
+                      <span>
+                        <strong>INSTANT PERMANENT BAN</strong> from this course
+                      </span>
+                    </li>
+                    <li className="flex items-center gap-2 text-red-900 dark:text-red-200">
+                      <span className="w-2 h-2 bg-red-600 rounded-full"></span>
+                      <span>
+                        <strong>-10 Points</strong> penalty
+                      </span>
+                    </li>
+                    <li className="flex items-center gap-2 text-red-900 dark:text-red-200">
+                      <span className="w-2 h-2 bg-red-600 rounded-full"></span>
+                      <span>
+                        <strong>No warnings given</strong> - First offense = Ban
+                      </span>
+                    </li>
+                    <li className="flex items-center gap-2 text-red-900 dark:text-red-200">
+                      <span className="w-2 h-2 bg-red-600 rounded-full"></span>
+                      <span>
+                        <strong>No appeals</strong> - All detections are final
+                      </span>
+                    </li>
+                  </ul>
+                </div>
+
+                {/* Monitored Actions */}
+                <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Eye className="w-5 h-5 text-yellow-600" />
+                    <h4 className="font-bold text-yellow-900 dark:text-yellow-200">
+                      Monitored Activities
+                    </h4>
+                  </div>
+                  <ul className="space-y-1 text-sm text-yellow-800 dark:text-yellow-300">
+                    <li>✗ Opening Browser DevTools (F12, Ctrl+Shift+I)</li>
+                    <li>✗ Right-click "Inspect Element"</li>
+                    <li>✗ Console access</li>
+                    <li>✗ Window resize manipulation</li>
+                    <li>✗ Performance debugging</li>
+                    <li>✗ Copy-pasting code/answers</li>
+                  </ul>
+                </div>
+
                 <ul className="space-y-1 text-muted-foreground">
                   <li>• Once started, you cannot switch difficulty levels</li>
                   <li>• The test must be completed in one session</li>
@@ -42,7 +112,9 @@ const TermsOfService = ({ onAccept, onCancel, courseName, difficulty }) => {
               <div>
                 <h4 className="font-semibold mb-2">Security & Monitoring</h4>
                 <ul className="space-y-1 text-muted-foreground">
-                  <li>• Your session will be monitored for security violations</li>
+                  <li>
+                    • Your session will be monitored for security violations
+                  </li>
                   <li>• Multiple violations may result in test termination</li>
                   <li>• Screen recording or screenshots are prohibited</li>
                   <li>• Use of external resources is not allowed</li>
@@ -66,14 +138,15 @@ const TermsOfService = ({ onAccept, onCancel, courseName, difficulty }) => {
           <Alert>
             <AlertTriangle className="h-4 w-4" />
             <AlertDescription>
-              By proceeding, you agree to follow all test guidelines and understand that violations may result in test termination.
+              By proceeding, you agree to follow all test guidelines and
+              understand that violations may result in test termination.
             </AlertDescription>
           </Alert>
 
           <div className="flex items-center space-x-2">
-            <Checkbox 
-              id="terms" 
-              checked={accepted} 
+            <Checkbox
+              id="terms"
+              checked={accepted}
               onCheckedChange={setAccepted}
             />
             <label
@@ -89,8 +162,8 @@ const TermsOfService = ({ onAccept, onCancel, courseName, difficulty }) => {
           <Button variant="outline" onClick={onCancel}>
             Cancel
           </Button>
-          <Button 
-            onClick={onAccept} 
+          <Button
+            onClick={onAccept}
             disabled={!accepted}
             className="min-w-[120px]"
           >
