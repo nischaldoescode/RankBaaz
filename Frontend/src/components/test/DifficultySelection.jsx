@@ -161,17 +161,25 @@ const DifficultySelection = ({ courseId, onSelectDifficulty, onCancel }) => {
                 Access Denied
               </h1>
 
-              {/* Message */}
               <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-6 mb-6">
+                <p className="text-xl font-bold text-red-900 dark:text-red-200 mb-3">
+                  🚫 PERMANENTLY BANNED
+                </p>
                 <p className="text-lg font-semibold text-red-900 dark:text-red-200 mb-2">
-                  You have been banned from {banInfo.courseName}
+                  Course: {banInfo.courseName}
                 </p>
-                <p className="text-sm text-red-700 dark:text-red-300 mb-4">
-                  {banInfo.reason}
-                </p>
-                <div className="text-xs text-red-600 dark:text-red-400">
-                  Banned on: {new Date(banInfo.bannedAt).toLocaleDateString()}
-                  {banInfo.permanent && " (Permanent)"}
+                <div className="bg-red-100 dark:bg-red-900/40 border-l-4 border-red-600 p-4 mb-4">
+                  <p className="text-sm font-semibold text-red-800 dark:text-red-200 mb-2">
+                    Violation Reason:
+                  </p>
+                  <p className="text-sm text-red-700 dark:text-red-300">
+                    {banInfo.reason}
+                  </p>
+                </div>
+                <div className="text-xs text-red-600 dark:text-red-400 space-y-1">
+                  <p>Banned: {new Date(banInfo.bannedAt).toLocaleString()}</p>
+                  <p className="font-bold">Status: PERMANENT BAN</p>
+                  <p className="italic">Zero-tolerance policy enforced</p>
                 </div>
               </div>
 
