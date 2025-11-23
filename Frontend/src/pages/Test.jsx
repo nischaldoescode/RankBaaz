@@ -20,7 +20,6 @@ import {
   ExclamationTriangleIcon,
   CheckCircleIcon,
   XMarkIcon,
-  Eye
 } from "@heroicons/react/24/outline";
 import { apiMethods } from "@/services/api";
 

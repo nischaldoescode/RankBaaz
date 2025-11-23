@@ -12,7 +12,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Shield, AlertTriangle, Eye, AlertTriangle } from "lucide-react";
+import { Shield, AlertTriangle, Eye } from "lucide-react";
 
 const TermsOfService = ({ onAccept, onCancel, courseName, difficulty }) => {
   const [accepted, setAccepted] = useState(false);
