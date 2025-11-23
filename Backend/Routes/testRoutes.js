@@ -13,7 +13,7 @@ import {
 } from "../Controllers/testController.js";
 
 import { checkCourseAccess} from "../helpers/CheckCourseAccess.js";
-
+import { validateCSRFToken } from "../Middleware/csrf.js";
 import { authenticateUser } from "../Middleware/auth.js";
 import { advancedCache } from '../Middleware/advancedCache.js';
 
@@ -23,7 +23,7 @@ const router = express.Router();
 router.use(authenticateUser);
 
 // Test operations
-router.get("/start/:courseId/:difficulty", checkCourseAccess, startTest);
+router.get("/start/:courseId/:difficulty", validateCSRFToken, checkCourseAccess, startTest);
 router.post("/submit", testSubmissionValidation, submitTest);
 router.get("/result/:testId", getTestResult);
 router.get("/history", getTestHistory);
@@ -32,6 +32,6 @@ router.get("/leaderboard/info", getLeaderboardInfo);
 router.get("/leaderboard/:courseId", advancedCache({ ttl: 60 }), getLeaderboard);
 router.post("/check-answer", checkAnswer);
 
-router.post("/abandon", authenticateUser, abandonTest);
+router.post("/abandon", authenticateUser, validateCSRFToken, abandonTest);
 
 export default router;
