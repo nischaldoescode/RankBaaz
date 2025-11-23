@@ -11,6 +11,51 @@ const api = axios.create({
   },
 });
 
+// frontend/src/services/api.js
+
+// Add interceptor to include CSRF token
+api.interceptors.request.use(
+  async (config) => {
+    // Skip for GET requests
+    if (config.method === "get") return config;
+
+    // Get CSRF token from localStorage or fetch new one
+    let csrfToken = localStorage.getItem("csrf_token");
+
+    if (!csrfToken) {
+      const response = await axios.get("/api/security/csrf-token");
+      csrfToken = response.data.data.csrfToken;
+      localStorage.setItem("csrf_token", csrfToken);
+    }
+
+    // Add token to header
+    config.headers["X-CSRF-Token"] = csrfToken;
+
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
+
+// Handle CSRF token expiration
+api.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    if (error.response?.data?.code === "CSRF_TOKEN_EXPIRED") {
+      // Fetch new token and retry
+      const response = await axios.get("/api/security/csrf-token");
+      const newToken = response.data.data.csrfToken;
+      localStorage.setItem("csrf_token", newToken);
+
+      // Retry original request
+      error.config.headers["X-CSRF-Token"] = newToken;
+      return axios(error.config);
+    }
+    return Promise.reject(error);
+  }
+);
+
 // Request interceptor for adding auth token
 api.interceptors.request.use(
   (config) => {
@@ -78,13 +123,15 @@ api.interceptors.response.use(
         localStorage.removeItem("user");
         isRefreshing = false;
         processQueue(error, null);
-        
+
         // Only redirect if not already on auth pages
-        if (!window.location.pathname.includes("/login") && 
-            !window.location.pathname.includes("/register")) {
+        if (
+          !window.location.pathname.includes("/login") &&
+          !window.location.pathname.includes("/register")
+        ) {
           window.location.href = "/login";
         }
-        
+
         return Promise.reject({
           message: "Session expired. Please login again.",
           isAuthError: true,
@@ -119,12 +166,14 @@ api.interceptors.response.use(
         isRefreshing = false;
         processQueue(refreshError, null);
         localStorage.removeItem("user");
-        
-        if (!window.location.pathname.includes("/login") && 
-            !window.location.pathname.includes("/register")) {
+
+        if (
+          !window.location.pathname.includes("/login") &&
+          !window.location.pathname.includes("/register")
+        ) {
           window.location.href = "/login";
         }
-        
+
         return Promise.reject({
           message: "Session expired. Please login again.",
           isAuthError: true,
