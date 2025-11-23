@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { Eye } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -10,7 +9,7 @@ import {
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { Clock, Trophy, Target, Zap, ArrowLeft } from "lucide-react";
+import { Clock, Trophy, Target, Zap, ArrowLeft,Eye } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { apiMethods } from "../../services/api";
 import Loading from "../common/Loading";
