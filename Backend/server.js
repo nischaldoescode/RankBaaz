@@ -21,8 +21,21 @@ import contentRoutes from "./Routes/contentRoutes.js";
 import paymentRoutes from "./Routes/paymentRoutes.js";
 import couponRoutes from "./Routes/couponRoutes.js";
 import User from "./Models/User.js";
-import devToolsRoutes from "./Routes/devToolsRoutes.js"; 
+import devToolsRoutes from "./Routes/devToolsRoutes.js";
+import { generateCSRFToken, getCSRFToken } from "./Middleware/csrf.js";
+import { botProtection, verifyChallenge } from "./Middleware/botProtection.js";
+import session from "express-session";
+import { createRequire } from "module";
 
+const require = createRequire(import.meta.url);
+
+// Your module exports: { RedisStore }
+const { RedisStore } = require("connect-redis");
+
+// Create store instance
+const store = new RedisStore({
+  client: redisClient,
+});
 // Load environment variables
 dotenv.config();
 
@@ -228,6 +241,76 @@ app.use(cors(corsOptions));
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 app.use(cookieParser(process.env.JWT_SECRET));
+
+app.use(
+  session({
+    store: store,
+    secret: process.env.SESSION_SECRET || process.env.JWT_SECRET,
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+      secure: process.env.NODE_ENV === "production",
+      httpOnly: true,
+      maxAge: 24 * 60 * 60 * 1000, // 24 hours
+      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+    },
+    name: "sid",
+  })
+);
+
+// Apply bot protection globally (before routes)
+app.use(botProtection);
+
+// CSRF token generation for authenticated routes
+app.use(generateCSRFToken);
+
+// Security endpoints (before API Routes)
+app.get("/api/security/csrf-token", getCSRFToken);
+app.post("/api/security/verify-challenge", verifyChallenge);
+
+/**
+ * Express-level micro-caching
+ * Caches responses in memory for ultra-fast repeated requests
+ * Duration: 1 second (perfect for burst traffic)
+ */
+const microCache = {};
+const MICRO_CACHE_DURATION = 5000; // 1 second
+
+app.use((req, res, next) => {
+  // Only cache GET requests
+  if (req.method !== "GET") return next();
+
+  // Skip for authenticated users (admin/user routes)
+  if (req.path.includes("/admin") || req.user || req.admin) {
+    return next();
+  }
+
+  const key = req.url;
+  const cached = microCache[key];
+
+  if (cached && Date.now() - cached.timestamp < MICRO_CACHE_DURATION) {
+    return res.send(cached.data);
+  }
+
+  // Override res.send to cache response
+  const originalSend = res.send.bind(res);
+  res.send = (data) => {
+    if (res.statusCode === 200) {
+      microCache[key] = {
+        data,
+        timestamp: Date.now(),
+      };
+
+      // Auto-cleanup after expiration
+      setTimeout(() => {
+        delete microCache[key];
+      }, MICRO_CACHE_DURATION);
+    }
+    return originalSend(data);
+  };
+
+  next();
+});
 
 // Apply express-fileupload ONLY to routes that need it
 app.use((req, res, next) => {

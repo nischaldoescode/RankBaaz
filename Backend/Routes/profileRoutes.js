@@ -6,8 +6,9 @@ import {
   getUserLeaderboardPosition,
   searchUsernames,
 } from "../Controllers/profileController.js";
-import {authenticateUser as authMiddleware } from "../Middleware/auth.js"
+import { authenticateUser as authMiddleware } from "../Middleware/auth.js"
 import { advancedCache } from '../Middleware/advancedCache.js';
+import { validateCSRFToken } from "../Middleware/csrf.js";
 
 const router = express.Router();
 
@@ -17,7 +18,7 @@ router.get("/leaderboard/global", advancedCache({ ttl: 60, key: 'leaderboard:glo
 router.get("/search", advancedCache({ ttl: 120 }), searchUsernames);
 
 // Protected routes
-router.get("/settings", authMiddleware, getUserSettings);
-router.get("/leaderboard/position", authMiddleware, getUserLeaderboardPosition);
+router.get("/settings", authMiddleware, validateCSRFToken, getUserSettings);
+router.get("/leaderboard/position", authMiddleware, validateCSRFToken, getUserLeaderboardPosition);
 
 export default router;
