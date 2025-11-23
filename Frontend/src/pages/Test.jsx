@@ -20,6 +20,7 @@ import {
   ExclamationTriangleIcon,
   CheckCircleIcon,
   XMarkIcon,
+  Eye
 } from "@heroicons/react/24/outline";
 import { apiMethods } from "@/services/api";
 
@@ -168,8 +169,21 @@ const Test = () => {
     };
 
     document.addEventListener("keydown", preventDevToolsShortcuts);
+    // NEW: Tab change / window inactive detection
+    const handleVisibilityChange = () => {
+      if (document.hidden && testState.isActive && testPhase === "active") {
+        toast.error(
+          "Tab switching or minimizing is not allowed during the test"
+        );
+        handleDevToolsDetected();
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
 
     return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+
       clearInterval(detectionInterval);
       window.removeEventListener("resize", detectDevTools);
       document.removeEventListener("contextmenu", preventContextMenu);
