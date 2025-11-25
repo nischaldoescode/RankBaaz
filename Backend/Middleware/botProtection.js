@@ -2,20 +2,11 @@ import redisClient from "../Config/redis.js";
 import crypto from "crypto";
 import { botBlockedPage } from "./ErrorsPages/errorPages.js";
 
-/**
- * Enhanced Bot Protection with Mathematical Challenge
- * - User-Agent specific banning (doesn't ban entire IP)
- * - SHA-256 proof-of-work challenge
- * - Origin validation
- * - Localhost browser whitelisting in development
- */
-
 const BOT_SCORE_THRESHOLD = 60;
 const CHALLENGE_TTL = 300;
 const BOT_BAN_TTL = 3600;
 const CHALLENGE_DIFFICULTY = 4;
 
-// Allowed origins (production domains)
 const ALLOWED_ORIGINS = [
   "http://localhost:3000",
   "http://localhost:3001",
@@ -33,16 +24,12 @@ const ALLOWED_ORIGINS = [
   "http://localhost:4173",
 ];
 
-/**
- * Enhanced bot score calculation
- */
 const calculateBotScore = (req) => {
   let score = 0;
   const ua = req.get("User-Agent") || "";
   const origin = req.get("Origin") || req.get("Referer") || "";
   const acceptHeader = req.get("Accept") || "";
 
-  // 1. User-Agent scoring (STRICT)
   if (!ua) {
     score += 40;
   } else if (/curl|wget|python-requests|go-http-client/i.test(ua)) {
@@ -57,12 +44,10 @@ const calculateBotScore = (req) => {
     }
   }
 
-  // 2. Browser-specific checks
   const browserHeaders = ["Accept", "Accept-Language", "Accept-Encoding"];
   const missing = browserHeaders.filter((h) => !req.get(h));
   score += missing.length * 15;
 
-  // 3. Accept header validation
   if (acceptHeader) {
     if (acceptHeader === "*/*" || acceptHeader === "application/json") {
       score += 30;
@@ -72,7 +57,6 @@ const calculateBotScore = (req) => {
     }
   }
 
-  // 4. Sec-Fetch-* headers
   const secFetchSite = req.get("Sec-Fetch-Site");
   const secFetchMode = req.get("Sec-Fetch-Mode");
   const secFetchDest = req.get("Sec-Fetch-Dest");
@@ -81,7 +65,6 @@ const calculateBotScore = (req) => {
     score += 25;
   }
 
-  // 5. Origin validation
   if (origin) {
     const isValidOrigin = ALLOWED_ORIGINS.some((allowed) =>
       origin.toLowerCase().includes(allowed.toLowerCase())
@@ -111,7 +94,6 @@ const calculateBotScore = (req) => {
     }
   }
 
-  // 6. Connection type
   const connection = req.get("Connection");
   if (connection && connection.toLowerCase() === "close") {
     score += 10;
@@ -120,26 +102,17 @@ const calculateBotScore = (req) => {
   return Math.min(score, 100);
 };
 
-/**
- * Check if IP+UserAgent is banned
- */
 const isBannedWithUA = async (ip, userAgent) => {
-  // Check for IP-only ban (legacy/catch-all)
   const ipOnlyKey = `bot:ban:${ip}`;
   const ipOnlyBan = await redisClient.get(ipOnlyKey);
   if (ipOnlyBan) return true;
 
-  // Check for IP+UA specific ban
   const uaHash = crypto.createHash("md5").update(userAgent || "unknown").digest("hex").substring(0, 8);
   const key = `bot:ban:${ip}:${uaHash}`;
   return !!(await redisClient.get(key));
 };
 
-/**
- * Ban specific IP+UserAgent combination
- */
 const banIPWithUA = async (ip, userAgent, reason) => {
-  // Create unique key combining IP and User-Agent hash
   const uaHash = crypto.createHash("md5").update(userAgent || "unknown").digest("hex").substring(0, 8);
   const key = `bot:ban:${ip}:${uaHash}`;
   
@@ -157,9 +130,6 @@ const banIPWithUA = async (ip, userAgent, reason) => {
   console.log(`[BOT_PROTECTION] Banned ${ip} with UA ${userAgent?.substring(0, 30)} - ${reason}`);
 };
 
-/**
- * Generate mathematical challenge
- */
 const generateChallenge = async (ip) => {
   const seed = crypto.randomBytes(16).toString("hex");
   const timestamp = Date.now();
@@ -184,9 +154,6 @@ const generateChallenge = async (ip) => {
   };
 };
 
-/**
- * Verify mathematical challenge solution
- */
 const verifyChallengeSolution = async (ip, seed, nonce) => {
   const challengeKey = `bot:challenge:${ip}`;
   const stored = await redisClient.get(challengeKey);
@@ -225,7 +192,7 @@ const verifyChallengeSolution = async (ip, seed, nonce) => {
 };
 
 /**
- * BOT PROTECTION MIDDLEWARE
+ * BOT PROTECTION MIDDLEWARE - FIXED
  */
 export const botProtection = async (req, res, next) => {
   try {
@@ -248,22 +215,34 @@ export const botProtection = async (req, res, next) => {
                           !/postman|insomnia|curl|wget/i.test(ua);
     const isApiRoute = req.path.startsWith("/api/");
 
-    // 1. Check if this specific IP+UA combination is banned
+    // 1. Check if banned
     if (await isBannedWithUA(ip, ua)) {
       console.log(`[BOT_PROTECTION] Banned IP+UA attempted access: ${ip}`);
 
-      if (isApiRoute || !isRealBrowser) {
-        return res.status(403).send(
-          botBlockedPage("Your access has been temporarily restricted due to automated activity.")
-        );
-      } else {
+      // API routes ALWAYS get JSON
+      if (isApiRoute) {
+        return res.status(403).json({
+          success: false,
+          message: "Access temporarily restricted due to suspicious activity",
+          code: "BOT_DETECTED",
+        });
+      }
+      
+      // Non-API routes: HTML for browsers, JSON for bots
+      if (isRealBrowser) {
         return res.status(403).send(
           botBlockedPage("Your access has been temporarily restricted due to suspicious activity.")
         );
+      } else {
+        return res.status(403).json({
+          success: false,
+          message: "Automated access detected",
+          code: "BOT_DETECTED",
+        });
       }
     }
 
-    // 2. Check if challenge already passed for this IP
+    // 2. Check if challenge passed
     const passedKey = `bot:challenge:passed:${ip}`;
     const hasPassed = await redisClient.get(passedKey);
 
@@ -278,16 +257,17 @@ export const botProtection = async (req, res, next) => {
       `[BOT_PROTECTION] IP: ${ip}, Score: ${score}, UA: ${ua.substring(0, 50)}`
     );
 
-    // Low score = human-like
+    // Low score = human
     if (score < 30) {
       return next();
     }
 
-    // Medium score = challenge required
+    // Medium score = challenge
     if (score < BOT_SCORE_THRESHOLD) {
       const challenge = await generateChallenge(ip);
 
-      if (isApiRoute || !isRealBrowser) {
+      // API routes ALWAYS get JSON
+      if (isApiRoute) {
         return res.status(403).json({
           success: false,
           message: "Security verification required. Please complete the challenge.",
@@ -298,26 +278,51 @@ export const botProtection = async (req, res, next) => {
             instruction: `Find a nonce such that SHA-256(seed + nonce) starts with ${CHALLENGE_DIFFICULTY} zeros`,
           },
         });
-      } else {
+      }
+      
+      // Non-API routes
+      if (isRealBrowser) {
         return res.status(403).send(
           botBlockedPage("Security verification required. Please use a standard web browser to access this site.")
         );
+      } else {
+        return res.status(403).json({
+          success: false,
+          message: "Security verification required",
+          code: "CHALLENGE_REQUIRED",
+          data: {
+            seed: challenge.seed,
+            difficulty: challenge.difficulty,
+          },
+        });
       }
     }
 
-    // High score = immediate ban (BAN THE SPECIFIC USER-AGENT, NOT THE IP)
+    // High score = ban
     await banIPWithUA(ip, ua, `High bot score: ${score}`);
 
     console.log(`[BOT_PROTECTION] Auto-banned: ${ip} (Score: ${score})`);
 
-    if (isApiRoute || !isRealBrowser) {
-      return res.status(403).send(
-          botBlockedPage("Automated access detected. Access Denied.")
-        );
-    } else {
+    // API routes ALWAYS get JSON
+    if (isApiRoute) {
+      return res.status(403).json({
+        success: false,
+        message: "Automated access detected",
+        code: "BOT_DETECTED",
+      });
+    }
+
+    // Non-API routes
+    if (isRealBrowser) {
       return res.status(403).send(
         botBlockedPage("Automated access detected. Please use a standard web browser.")
       );
+    } else {
+      return res.status(403).json({
+        success: false,
+        message: "Automated access detected",
+        code: "BOT_DETECTED",
+      });
     }
   } catch (err) {
     console.error("[BOT_PROTECTION] Error:", err);
@@ -325,9 +330,6 @@ export const botProtection = async (req, res, next) => {
   }
 };
 
-/**
- * VERIFY CHALLENGE ENDPOINT
- */
 export const verifyChallenge = async (req, res) => {
   try {
     const { seed, nonce } = req.body;
@@ -362,9 +364,6 @@ export const verifyChallenge = async (req, res) => {
   }
 };
 
-/**
- * ADVANCED RATE LIMITER
- */
 export const advancedRateLimit = (maxReq = 100, windowMs = 60000) => {
   return async (req, res, next) => {
     try {
@@ -377,9 +376,30 @@ export const advancedRateLimit = (maxReq = 100, windowMs = 60000) => {
       if (count >= maxReq) {
         const ua = req.get("User-Agent") || "";
         await banIPWithUA(ip, ua, `Rate limit exceeded: ${count} req`);
-        return res.status(429).send(
-          botBlockedPage("Too many requests. Access restricted.")
-        );
+        
+        const isApiRoute = req.path.startsWith("/api/");
+        const isRealBrowser = /Mozilla|Chrome|Safari|Firefox|Edge|Opera/i.test(ua) && 
+                              !/postman|insomnia|curl|wget/i.test(ua);
+        
+        if (isApiRoute) {
+          return res.status(429).json({
+            success: false,
+            message: "Too many requests. Please try again later.",
+            code: "RATE_LIMIT_EXCEEDED",
+          });
+        }
+        
+        if (isRealBrowser) {
+          return res.status(429).send(
+            botBlockedPage("Too many requests. Access restricted.")
+          );
+        } else {
+          return res.status(429).json({
+            success: false,
+            message: "Too many requests",
+            code: "RATE_LIMIT_EXCEEDED",
+          });
+        }
       }
 
       const multi = redisClient.multi();
