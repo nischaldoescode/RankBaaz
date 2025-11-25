@@ -108,28 +108,97 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  /**
+   * SHA-256 solver for admin captcha (same as user-facing)
+   */
+  const solveAdminCaptcha = async (seed, difficulty) => {
+    let nonce = 0;
+    const requiredPrefix = "0".repeat(difficulty);
+    const encoder = new TextEncoder();
+
+    while (true) {
+      const data = encoder.encode(seed + nonce);
+      const hashBuffer = await crypto.subtle.digest("SHA-256", data);
+      const hashArray = Array.from(new Uint8Array(hashBuffer));
+      const hashHex = hashArray
+        .map((b) => b.toString(16).padStart(2, "0"))
+        .join("");
+
+      if (hashHex.startsWith(requiredPrefix)) {
+        return nonce;
+      }
+
+      nonce++;
+
+      // Yield every 1000 attempts
+      if (nonce % 1000 === 0) {
+        await new Promise((resolve) => setTimeout(resolve, 0));
+      }
+
+      if (nonce > 2000000) {
+        throw new Error("Captcha solving timeout");
+      }
+    }
+  };
+
   const login = async (credentials) => {
     try {
       setLoading(true);
-      const response = await axios.post("/admin/login", credentials);
+
+      // First attempt - might trigger captcha
+      let response;
+      try {
+        response = await axios.post("/admin/login", credentials);
+      } catch (error) {
+        // Check if captcha is required
+        if (error.response?.data?.code === "CAPTCHA_REQUIRED") {
+          const captchaData = error.response.data.data;
+
+          // Show solving toast
+          const solvingToast = toast.loading(
+            "Solving security challenge... (this may take 10-30 seconds)"
+          );
+
+          try {
+            // Solve captcha
+            const nonce = await solveAdminCaptcha(
+              captchaData.seed,
+              captchaData.difficulty
+            );
+
+            toast.dismiss(solvingToast);
+
+            // Retry login with captcha solution
+            response = await axios.post("/admin/login", {
+              ...credentials,
+              captchaSeed: captchaData.seed,
+              captchaNonce: nonce,
+            });
+          } catch (solveError) {
+            toast.dismiss(solvingToast);
+            toast.error("Security verification failed. Please try again.");
+            return { success: false, message: "Captcha solving failed" };
+          }
+        } else {
+          throw error; // Re-throw other errors
+        }
+      }
+
       if (response.data.success) {
         const userData = response.data.data.admin;
 
-        // Set state first
         setUser(userData);
         setIsAuthenticated(true);
 
-        // Save to localStorage
         localStorage.setItem("currentUser", JSON.stringify(userData));
 
         toast.success("Login successful!");
 
-        // Wait longer to ensure cookies are set properly
         return new Promise((resolve) => {
           setTimeout(() => {
             window.location.href = "/dashboard";
             resolve({ success: true });
-          }, 1500); // Increased from 1000ms to 1500ms
+          }, 1500);
         });
       }
     } catch (error) {
