@@ -4,6 +4,11 @@ import { body, validationResult } from "express-validator";
 import Admin from "../Models/Admin.js";
 import User from "../Models/User.js";
 import TestResult from "../Models/TestResult.js";
+import {
+  trackAdminLoginAttempt,
+  isCaptchaRequired,
+  generateAdminCaptcha,
+} from "../Middleware/adminCaptcha.js";
 
 // Validation rules (same as before)
 
@@ -153,81 +158,125 @@ export const adminRegister = async (req, res) => {
 // Admin Login
 export const adminLogin = async (req, res) => {
   try {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({
-        success: false,
-        message: "Validation failed",
-        errors: errors.array(),
-      });
+    const { email, password, captchaSeed, captchaNonce } = req.body;
+
+    // Check if captcha is required
+    const captchaRequired = await isCaptchaRequired(email);
+
+    if (captchaRequired) {
+      // Verify captcha was provided
+      if (!captchaSeed || !captchaNonce) {
+        const captcha = await generateAdminCaptcha(email);
+
+        return res.status(403).json({
+          success: false,
+          message:
+            "Security verification required due to multiple failed login attempts",
+          code: "CAPTCHA_REQUIRED",
+          data: {
+            seed: captcha.seed,
+            difficulty: captcha.difficulty,
+          },
+        });
+      }
+
+      // Captcha verification happens in middleware, so if we're here it's valid
     }
 
-    const { email, password } = req.body;
+    // Find admin
+    const admin = await Admin.findOne({ email }).select("+password");
 
-    const admin = await Admin.findOne({ email });
     if (!admin) {
-      return res.status(401).json({
-        success: false,
-        message: "Invalid credentials or insufficient permissions",
-      });
-    }
+      // Track failed attempt
+      const attemptInfo = await trackAdminLoginAttempt(email, false);
 
-    const isPasswordValid = await bcrypt.compare(password, admin.password);
-    if (!isPasswordValid) {
       return res.status(401).json({
         success: false,
         message: "Invalid credentials",
+        ...(attemptInfo.requiresCaptcha && {
+          code: "CAPTCHA_REQUIRED_NEXT",
+          data: {
+            message: "Captcha will be required on next attempt",
+            attemptsRemaining: 0,
+          },
+        }),
       });
     }
 
-    // Update last login
-    admin.lastLoginAt = new Date();
+    // Verify password
+    const isPasswordValid = await bcrypt.compare(password, admin.password);
+
+    if (!isPasswordValid) {
+      // Track failed attempt
+      const attemptInfo = await trackAdminLoginAttempt(email, false);
+
+      return res.status(401).json({
+        success: false,
+        message: "Invalid credentials",
+        ...(attemptInfo.requiresCaptcha && {
+          code: "CAPTCHA_REQUIRED_NEXT",
+          data: {
+            message: "Captcha will be required on next attempt",
+            attemptsRemaining: 0,
+          },
+        }),
+      });
+    }
+
+    // SUCCESS - Clear failed attempts
+    await trackAdminLoginAttempt(email, true);
+
+    // Generate tokens
+    const accessToken = jwt.sign(
+      { adminId: admin._id, role: "admin" },
+      process.env.ADMIN_JWT_SECRET,
+      { expiresIn: "7d" }
+    );
+
+    const refreshToken = jwt.sign(
+      { adminId: admin._id, role: "admin" },
+      process.env.ADMIN_JWT_SECRET,
+      { expiresIn: "30d" }
+    );
+
+    // Save refresh token
+    admin.refreshToken = refreshToken;
+    admin.lastLogin = new Date();
     await admin.save();
 
-    // Generate simple admin tokens
-    const token = generateAdminToken(admin._id);
-    const refreshToken = generateAdminRefreshToken(admin._id);
-
-    res.cookie("adminToken", token, {
+    // Set HTTP-only cookies
+    res.cookie("adminAccessToken", accessToken, {
       httpOnly: true,
-      secure:
-        process.env.NODE_ENV === "production" ||
-        process.env.NODE_ENV === "development",
+      secure: process.env.NODE_ENV === "production",
       sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-      path: "/",
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     });
 
     res.cookie("adminRefreshToken", refreshToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
-      maxAge: 30 * 24 * 60 * 60 * 1000,
-      path: "/",
+      maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
     });
+
+    // Return admin data
+    const adminData = {
+      id: admin._id,
+      name: admin.name,
+      email: admin.email,
+      role: admin.role,
+    };
 
     res.status(200).json({
       success: true,
-      message: "Admin login successful",
-      data: {
-        admin: {
-          _id: admin._id,
-          name: admin.name,
-          email: admin.email,
-          age: admin.age,
-          gender: admin.gender,
-          role: admin.role,
-          createdAt: admin.createdAt,
-          updatedAt: admin.updatedAt,
-          lastLogin: admin.lastLoginAt,
-        },
-      },
+      message: "Login successful",
+      data: { admin: adminData },
     });
   } catch (error) {
     console.error("Admin login error:", error);
     res.status(500).json({
       success: false,
-      message: "Admin login failed",
+      message: "Login failed",
     });
   }
 };

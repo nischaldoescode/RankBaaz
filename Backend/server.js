@@ -26,6 +26,7 @@ import { generateCSRFToken, getCSRFToken } from "./Middleware/csrf.js";
 import { botProtection, verifyChallenge } from "./Middleware/botProtection.js";
 import session from "express-session";
 import { createRequire } from "module";
+import { corsErrorPage } from "./Middleware/ErrorsPages/errorPages.js";
 
 const require = createRequire(import.meta.url);
 
@@ -124,7 +125,6 @@ const couponLimiter = createRateLimiter({
   skip: (req) => isBrowserRequest(req), // Skip for browsers
 });
 
-// CORS configuration
 const corsOptions = {
   origin: function (origin, callback) {
     const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(",") || [
@@ -147,26 +147,46 @@ const corsOptions = {
       "https://rankbaaz-admin.onrender.com/",
     ];
 
-    const timestamp = new Date().toISOString();
-
-    // Handle requests without origin header
+    // Handle requests without origin header (server-to-server, curl, etc.)
     if (!origin) {
       return callback(null, true);
     }
 
-    // Normalize origin by removing trailing slash
+    // Normalize origin
     const normalizedOrigin = origin.replace(/\/$/, "");
 
-    // Check if origin is allowed
+    // Check for exact match
     const isAllowed = allowedOrigins.some(
       (allowed) => allowed.replace(/\/$/, "") === normalizedOrigin
     );
 
     if (isAllowed) {
-      callback(null, true);
-    } else {
-      callback(new Error("Not allowed by CORS"));
+      return callback(null, true);
     }
+
+    // SECURITY: Check for origin mimicking
+    try {
+      const originHostname = new URL(normalizedOrigin).hostname;
+      const isMimicking = allowedOrigins.some((allowed) => {
+        const allowedHostname = new URL(allowed).hostname;
+        return (
+          originHostname.includes(allowedHostname) &&
+          originHostname !== allowedHostname
+        );
+      });
+
+      if (isMimicking) {
+        console.warn(`[SECURITY] Detected origin mimicking attempt: ${origin}`);
+        return callback(new Error("Not allowed by CORS - Invalid origin"));
+      }
+    } catch (e) {
+      // Invalid URL format
+      return callback(new Error("Not allowed by CORS - Malformed origin"));
+    }
+
+    // Log rejected origin for monitoring
+    console.warn(`[CORS] Rejected origin: ${origin}`);
+    callback(new Error("Not allowed by CORS"));
   },
   credentials: true,
   methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
@@ -445,12 +465,21 @@ app.use("*", (req, res) => {
 app.use((error, req, res, next) => {
   console.error("Error:", error);
 
+  const acceptsJson = req.get("Accept")?.includes("application/json");
+  const isApiRoute = req.path.startsWith("/api/");
+
   // CORS error
   if (error.message === "Not allowed by CORS") {
-    return res.status(403).json({
-      success: false,
-      message: "CORS policy violation - origin not allowed",
-    });
+    if (acceptsJson || isApiRoute) {
+      return res.status(403).json({
+        success: false,
+        message: "CORS policy violation - origin not allowed",
+      });
+    } else {
+      return res
+        .status(403)
+        .send(corsErrorPage(req.get("Origin") || "Unknown"));
+    }
   }
 
   // Validation error

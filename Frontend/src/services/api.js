@@ -11,6 +11,43 @@ const api = axios.create({
   },
 });
 
+/**
+ * SHA-256 Challenge Solver (Browser-compatible)
+ * Finds nonce where SHA-256(seed + nonce) starts with N zeros
+ */
+const solveChallenge = async (seed, difficulty) => {
+  let nonce = 0;
+  const requiredPrefix = "0".repeat(difficulty);
+
+  // Use Web Crypto API (available in all modern browsers)
+  const encoder = new TextEncoder();
+
+  while (true) {
+    const data = encoder.encode(seed + nonce);
+    const hashBuffer = await crypto.subtle.digest("SHA-256", data);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    const hashHex = hashArray
+      .map((b) => b.toString(16).padStart(2, "0"))
+      .join("");
+
+    if (hashHex.startsWith(requiredPrefix)) {
+      return nonce;
+    }
+
+    nonce++;
+
+    // Prevent UI freeze - yield to event loop every 1000 attempts
+    if (nonce % 1000 === 0) {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    }
+
+    // Safety limit (should solve in ~5000 attempts for difficulty 4)
+    if (nonce > 1000000) {
+      throw new Error("Challenge solving timeout");
+    }
+  }
+};
+
 // frontend/src/services/api.js
 
 // Add interceptor to include CSRF token
@@ -38,20 +75,52 @@ api.interceptors.request.use(
   }
 );
 
-// Handle CSRF token expiration
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
+    const originalRequest = error.config;
+
+    // Handle CSRF token expiration
     if (error.response?.data?.code === "CSRF_TOKEN_EXPIRED") {
-      // Fetch new token and retry
       const response = await axios.get("/api/security/csrf-token");
       const newToken = response.data.data.csrfToken;
       localStorage.setItem("csrf_token", newToken);
 
-      // Retry original request
-      error.config.headers["X-CSRF-Token"] = newToken;
-      return axios(error.config);
+      originalRequest.headers["X-CSRF-Token"] = newToken;
+      return axios(originalRequest);
     }
+
+    // Handle bot challenge requirement
+    if (error.response?.data?.code === "CHALLENGE_REQUIRED") {
+      const challengeData = error.response.data.data;
+
+      try {
+        // Show solving toast
+        const solvingToast = toast.loading("Verifying security...");
+
+        // Solve challenge
+        const nonce = await solveChallenge(
+          challengeData.seed,
+          challengeData.difficulty
+        );
+
+        // Submit solution
+        await axios.post("/api/security/verify-challenge", {
+          seed: challengeData.seed,
+          nonce,
+        });
+
+        // Dismiss toast
+        toast.dismiss(solvingToast);
+
+        // Retry original request
+        return axios(originalRequest);
+      } catch (challengeError) {
+        toast.error("Security verification failed. Please refresh the page.");
+        return Promise.reject(challengeError);
+      }
+    }
+
     return Promise.reject(error);
   }
 );
