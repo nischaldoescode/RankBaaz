@@ -14,10 +14,11 @@ import {
   getAllUsers, // NEW
   searchUsers, // NEW
   getUserDetails,
-  exportUsersToCSV
+  exportUsersToCSV,
 } from "../Controllers/adminController.js";
 
 import { authenticateAdmin } from "../Middleware/auth.js";
+import { requireAdminCaptcha } from "../Middleware/adminCaptcha.js";
 
 const router = express.Router();
 
@@ -26,7 +27,7 @@ router.get("/check-exists", admincheckExists);
 
 // Admin public routes
 router.post("/register", registerValidation, adminRegister);
-router.post("/login", loginValidation, adminLogin);
+router.post("/login", loginValidation, requireAdminCaptcha, adminLogin);
 
 // Admin protected routes
 router.get("/profile", authenticateAdmin, adminGetProfile);
