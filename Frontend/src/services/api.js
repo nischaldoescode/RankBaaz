@@ -3,7 +3,7 @@ import toast from "react-hot-toast";
 
 // Create axios instance with default config
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || "http://localhost:5000",
+  baseURL: import.meta.env.VITE_API_URL || "http://localhost:7000",
   timeout: 60000,
   withCredentials: true,
   headers: {
@@ -13,13 +13,10 @@ const api = axios.create({
 
 /**
  * SHA-256 Challenge Solver (Browser-compatible)
- * Finds nonce where SHA-256(seed + nonce) starts with N zeros
  */
 const solveChallenge = async (seed, difficulty) => {
   let nonce = 0;
   const requiredPrefix = "0".repeat(difficulty);
-
-  // Use Web Crypto API (available in all modern browsers)
   const encoder = new TextEncoder();
 
   while (true) {
@@ -36,21 +33,17 @@ const solveChallenge = async (seed, difficulty) => {
 
     nonce++;
 
-    // Prevent UI freeze - yield to event loop every 1000 attempts
     if (nonce % 1000 === 0) {
       await new Promise((resolve) => setTimeout(resolve, 0));
     }
 
-    // Safety limit (should solve in ~5000 attempts for difficulty 4)
     if (nonce > 1000000) {
       throw new Error("Challenge solving timeout");
     }
   }
 };
 
-// frontend/src/services/api.js
-
-// Add interceptor to include CSRF token
+// CSRF Token Interceptor
 api.interceptors.request.use(
   async (config) => {
     // Skip for GET requests
@@ -60,13 +53,24 @@ api.interceptors.request.use(
     let csrfToken = localStorage.getItem("csrf_token");
 
     if (!csrfToken) {
-      const response = await axios.get("/api/security/csrf-token");
-      csrfToken = response.data.data.csrfToken;
-      localStorage.setItem("csrf_token", csrfToken);
+      try {
+        // Use full URL to avoid interceptor recursion
+        const baseURL = import.meta.env.VITE_API_URL || "http://localhost:7000";
+        const response = await axios.get(`${baseURL}/api/security/csrf-token`, {
+          withCredentials: true,
+        });
+        csrfToken = response.data.data.csrfToken;
+        localStorage.setItem("csrf_token", csrfToken);
+      } catch (error) {
+        console.error("Failed to fetch CSRF token:", error);
+        // Continue without CSRF - backend will handle missing token
+      }
     }
 
     // Add token to header
-    config.headers["X-CSRF-Token"] = csrfToken;
+    if (csrfToken) {
+      config.headers["X-CSRF-Token"] = csrfToken;
+    }
 
     return config;
   },
@@ -75,6 +79,7 @@ api.interceptors.request.use(
   }
 );
 
+// Response Interceptor - Handle CSRF & Challenge
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
@@ -82,12 +87,20 @@ api.interceptors.response.use(
 
     // Handle CSRF token expiration
     if (error.response?.data?.code === "CSRF_TOKEN_EXPIRED") {
-      const response = await axios.get("/api/security/csrf-token");
-      const newToken = response.data.data.csrfToken;
-      localStorage.setItem("csrf_token", newToken);
+      try {
+        const baseURL = import.meta.env.VITE_API_URL || "http://localhost:7000";
+        const response = await axios.get(`${baseURL}/api/security/csrf-token`, {
+          withCredentials: true,
+        });
+        const newToken = response.data.data.csrfToken;
+        localStorage.setItem("csrf_token", newToken);
 
-      originalRequest.headers["X-CSRF-Token"] = newToken;
-      return axios(originalRequest);
+        originalRequest.headers["X-CSRF-Token"] = newToken;
+        return api(originalRequest);
+      } catch (csrfError) {
+        console.error("CSRF token refresh failed:", csrfError);
+        return Promise.reject(error);
+      }
     }
 
     // Handle bot challenge requirement
@@ -95,26 +108,30 @@ api.interceptors.response.use(
       const challengeData = error.response.data.data;
 
       try {
-        // Show solving toast
         const solvingToast = toast.loading("Verifying security...");
 
-        // Solve challenge
         const nonce = await solveChallenge(
           challengeData.seed,
           challengeData.difficulty
         );
 
         // Submit solution
-        await axios.post("/api/security/verify-challenge", {
-          seed: challengeData.seed,
-          nonce,
-        });
+        const baseURL = import.meta.env.VITE_API_URL || "http://localhost:7000";
+        await axios.post(
+          `${baseURL}/api/security/verify-challenge`,
+          {
+            seed: challengeData.seed,
+            nonce,
+          },
+          {
+            withCredentials: true,
+          }
+        );
 
-        // Dismiss toast
         toast.dismiss(solvingToast);
 
         // Retry original request
-        return axios(originalRequest);
+        return api(originalRequest);
       } catch (challengeError) {
         toast.error("Security verification failed. Please refresh the page.");
         return Promise.reject(challengeError);
@@ -125,19 +142,7 @@ api.interceptors.response.use(
   }
 );
 
-// Request interceptor for adding auth token
-api.interceptors.request.use(
-  (config) => {
-    return config;
-  },
-  (error) => {
-    console.error("Request interceptor error:", error);
-    return Promise.reject(error);
-  }
-);
-
-// Response interceptor for handling common errors
-// Track refresh token request to prevent multiple simultaneous calls
+// Response Interceptor - Handle Auth & Errors
 let isRefreshing = false;
 let failedQueue = [];
 
@@ -177,23 +182,17 @@ api.interceptors.response.use(
 
     const { status, data } = error.response;
 
-    // CRITICAL FIX: Prevent refresh loop
+    // Handle 401 Unauthorized
     if (status === 401) {
-      // Don't retry if:
-      // 1. Already retried this request
-      // 2. The failed request IS the refresh token endpoint
-      // 3. The error message indicates no refresh token exists
       if (
         originalRequest._retry ||
         originalRequest.url?.includes("/refresh-token") ||
         data?.message === "Refresh token not found"
       ) {
-        // Clear auth and redirect to login
         localStorage.removeItem("user");
         isRefreshing = false;
         processQueue(error, null);
 
-        // Only redirect if not already on auth pages
         if (
           !window.location.pathname.includes("/login") &&
           !window.location.pathname.includes("/register")
@@ -207,10 +206,8 @@ api.interceptors.response.use(
         });
       }
 
-      // Mark request as retried
       originalRequest._retry = true;
 
-      // If already refreshing, queue this request
       if (isRefreshing) {
         return new Promise((resolve, reject) => {
           failedQueue.push({ resolve, reject });
@@ -223,7 +220,6 @@ api.interceptors.response.use(
           });
       }
 
-      // Start refresh process
       isRefreshing = true;
 
       try {
@@ -280,14 +276,12 @@ api.interceptors.response.use(
 
 // API methods
 export const apiMethods = {
-  // Generic methods
   get: (url, config = {}) => api.get(url, config),
   post: (url, data = {}, config = {}) => api.post(url, data, config),
   put: (url, data = {}, config = {}) => api.put(url, data, config),
   patch: (url, data = {}, config = {}) => api.patch(url, data, config),
   delete: (url, config = {}) => api.delete(url, config),
 
-  // Auth methods
   auth: {
     quickCheckUsername: (username) =>
       api.get(`/api/auth/username-available/${username}`),
@@ -322,13 +316,11 @@ export const apiMethods = {
     searchUsernames: (query, limit = 10) =>
       api.get(`/api/profile/search?query=${query}&limit=${limit}`),
   },
-  // course methods
-  // course methods
+
   courses: {
     getAll: (params = {}) => {
-      // SAFETY: Never allow frontend to request inactive courses
       const safeParams = { ...params };
-      delete safeParams.isActive; // Remove any isActive filter attempts
+      delete safeParams.isActive;
       return api.get("/api/courses", { params: safeParams });
     },
     getById: (id) => api.get(`/api/courses/${id}`),
@@ -338,7 +330,6 @@ export const apiMethods = {
     getByCategory: (categoryId) => api.get(`/courses/categories/${categoryId}`),
   },
 
-  // payment routes
   payments: {
     createOrder: (data) => api.post("/api/payments/create-order", data),
     verifyPayment: (paymentData) =>
@@ -351,7 +342,7 @@ export const apiMethods = {
   coupons: {
     verify: (data) => api.post("/api/coupons/verify", data),
   },
-  // content methods
+
   content: {
     getSettings: () => api.get("/api/content/settings"),
     getFAQs: (category = null) => {
@@ -363,11 +354,9 @@ export const apiMethods = {
     getAllLegalPages: () => api.get("/api/content/legal"),
   },
 
-  // Test methods
   tests: {
     startTest: (courseId, difficulty) =>
       api.get(`/api/tests/start/${courseId}/${difficulty}`),
-
     checkAnswer: (courseId, questionId, answer, showAnswer = false) =>
       api.post(`/api/tests/check-answer`, {
         courseId,
@@ -375,18 +364,12 @@ export const apiMethods = {
         answer,
         showAnswer,
       }),
-
     submitAnswer: (testId, questionId, answer) =>
       api.post(`/api/tests/${testId}/answer`, { questionId, answer }),
-
     submitTest: (data) => api.post(`/api/tests/submit`, data),
-
     getResult: (testId) => api.get(`/api/tests/result/${testId}`),
-
     getHistory: () => api.get(`/api/tests/history`),
-
     getStats: () => api.get(`/api/tests/performance`),
-
     getLeaderboard: (courseId, difficulty = null) => {
       const params = difficulty ? `?difficulty=${difficulty}` : "";
       return api.get(`/api/tests/leaderboard/${courseId}${params}`);
@@ -396,7 +379,6 @@ export const apiMethods = {
   },
 };
 
-// Helper functions for common operations
 export const handleApiError = (error, defaultMessage = "An error occurred") => {
   console.error("API Error:", error);
 
