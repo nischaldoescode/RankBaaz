@@ -127,7 +127,7 @@ const banIPWithUA = async (ip, userAgent, reason) => {
     })
   );
 
-  console.log(`[BOT_PROTECTION] Banned ${ip} with UA ${userAgent?.substring(0, 30)} - ${reason}`);
+  // console.log(`[BOT_PROTECTION] Banned ${ip} with UA ${userAgent?.substring(0, 30)} - ${reason}`);
 };
 
 const generateChallenge = async (ip) => {
@@ -206,7 +206,7 @@ export const botProtection = async (req, res, next) => {
                             !/postman|insomnia|curl|wget/i.test(ua);
       
       if (isLocalhost && isRealBrowser) {
-        console.log(`[BOT_PROTECTION] Development mode: Allowing localhost browser`);
+        // console.log(`[BOT_PROTECTION] Development mode: Allowing localhost browser`);
         return next();
       }
     }
@@ -217,7 +217,7 @@ export const botProtection = async (req, res, next) => {
 
     // 1. Check if banned
     if (await isBannedWithUA(ip, ua)) {
-      console.log(`[BOT_PROTECTION] Banned IP+UA attempted access: ${ip}`);
+      // console.log(`[BOT_PROTECTION] Banned IP+UA attempted access: ${ip}`);
 
       // API routes ALWAYS get JSON
       if (isApiRoute) {
@@ -253,9 +253,9 @@ export const botProtection = async (req, res, next) => {
     // 3. Calculate bot score
     const score = calculateBotScore(req);
 
-    console.log(
-      `[BOT_PROTECTION] IP: ${ip}, Score: ${score}, UA: ${ua.substring(0, 50)}`
-    );
+    // console.log(
+    //   `[BOT_PROTECTION] IP: ${ip}, Score: ${score}, UA: ${ua.substring(0, 50)}`
+    // );
 
     // Low score = human
     if (score < 30) {
@@ -301,7 +301,7 @@ export const botProtection = async (req, res, next) => {
     // High score = ban
     await banIPWithUA(ip, ua, `High bot score: ${score}`);
 
-    console.log(`[BOT_PROTECTION] Auto-banned: ${ip} (Score: ${score})`);
+    // console.log(`[BOT_PROTECTION] Auto-banned: ${ip} (Score: ${score})`);
 
     // API routes ALWAYS get JSON
     if (isApiRoute) {
