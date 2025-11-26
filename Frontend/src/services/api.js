@@ -43,34 +43,77 @@ const solveChallenge = async (seed, difficulty) => {
   }
 };
 
-// CSRF Token Interceptor
 api.interceptors.request.use(
   async (config) => {
     // Skip for GET requests
     if (config.method === "get") return config;
 
-    // Get CSRF token from localStorage or fetch new one
-    let csrfToken = localStorage.getItem("csrf_token");
+    // Skip CSRF token fetch endpoint
+    if (config.url?.includes("/api/security/csrf-token")) {
+      return config;
+    }
 
-    if (!csrfToken) {
+    // CRITICAL: Skip CSRF for public auth endpoints
+    const publicAuthEndpoints = [
+      "/api/auth/register",
+      "/api/auth/initiate-login",
+      "/api/auth/verify-login-otp",
+      "/api/auth/login",
+      "/api/auth/resend-otp",
+      "/api/auth/verify-otp",
+      "/api/auth/forgot-password",
+      "/api/auth/verify-forgot-password-otp",
+      "/api/auth/reset-password",
+    ];
+
+    const isPublicEndpoint = publicAuthEndpoints.some((endpoint) =>
+      config.url?.includes(endpoint)
+    );
+
+    if (isPublicEndpoint) {
+      // console.log("[CSRF] Skipping CSRF for public endpoint:", config.url);
+      return config;
+    }
+
+    // Get CSRF token for authenticated endpoints only
+    let csrfToken = localStorage.getItem("csrf_token");
+    let csrfExpiry = localStorage.getItem("csrf_token_expiry");
+
+    const isTokenExpired = csrfExpiry
+      ? Date.now() > parseInt(csrfExpiry)
+      : true;
+
+    if (!csrfToken || isTokenExpired) {
       try {
-        // Use full URL to avoid interceptor recursion
+        // console.log("[CSRF] Token missing or expired, fetching new one");
+
         const baseURL = import.meta.env.VITE_API_URL || "http://localhost:7000";
         const response = await axios.get(`${baseURL}/api/security/csrf-token`, {
           withCredentials: true,
         });
+
         csrfToken = response.data.data.csrfToken;
+        const expiresIn = response.data.data.expiresIn || 3600;
+
         localStorage.setItem("csrf_token", csrfToken);
+        localStorage.setItem(
+          "csrf_token_expiry",
+          Date.now() + (expiresIn - 30) * 1000
+        );
+
+        // console.log("[CSRF] New token fetched");
       } catch (error) {
-        console.error("Failed to fetch CSRF token:", error);
-        // Continue without CSRF - backend will handle missing token
+        console.error(error);
+
+        return Promise.reject({
+          message: "Failed to obtain security token",
+          isCSRFError: true,
+          originalError: error,
+        });
       }
     }
 
-    // Add token to header
-    if (csrfToken) {
-      config.headers["X-CSRF-Token"] = csrfToken;
-    }
+    config.headers["X-CSRF-Token"] = csrfToken;
 
     return config;
   },
@@ -79,26 +122,67 @@ api.interceptors.request.use(
   }
 );
 
-// Response Interceptor - Handle CSRF & Challenge
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
 
-    // Handle CSRF token expiration
-    if (error.response?.data?.code === "CSRF_TOKEN_EXPIRED") {
+    // CRITICAL FIX: Handle all CSRF-related errors (EXPIRED, MISSING, INVALID)
+    const csrfErrorCodes = [
+      "CSRF_TOKEN_EXPIRED",
+      "CSRF_TOKEN_MISSING",
+      "CSRF_TOKEN_INVALID",
+    ];
+
+    if (
+      error.response?.data?.code &&
+      csrfErrorCodes.includes(error.response.data.code)
+    ) {
+      // Prevent infinite retry loops
+      if (originalRequest._csrfRetry) {
+        console.error("Retry failed");
+        localStorage.removeItem("csrf_token");
+        localStorage.removeItem("csrf_token_expiry");
+        return Promise.reject(error);
+      }
+
       try {
+        // console.log(
+        //   `[CSRF] Handling ${error.response.data.code}, fetching new token...`
+        // );
+
+        // Mark this request as a retry
+        originalRequest._csrfRetry = true;
+
+        // Clear old token and expiry
+        localStorage.removeItem("csrf_token");
+        localStorage.removeItem("csrf_token_expiry");
+
         const baseURL = import.meta.env.VITE_API_URL || "http://localhost:7000";
         const response = await axios.get(`${baseURL}/api/security/csrf-token`, {
           withCredentials: true,
         });
-        const newToken = response.data.data.csrfToken;
-        localStorage.setItem("csrf_token", newToken);
 
+        const newToken = response.data.data.csrfToken;
+        const expiresIn = response.data.data.expiresIn || 3600;
+
+        localStorage.setItem("csrf_token", newToken);
+        localStorage.setItem(
+          "csrf_token_expiry",
+          Date.now() + (expiresIn - 30) * 1000
+        );
+
+        // Update request headers
         originalRequest.headers["X-CSRF-Token"] = newToken;
+
+        // console.log("[CSRF] Token refreshed, retrying request");
+
+        // Retry the original request
         return api(originalRequest);
       } catch (csrfError) {
-        console.error("CSRF token refresh failed:", csrfError);
+        console.error( csrfError);
+        localStorage.removeItem("csrf_token");
+        localStorage.removeItem("csrf_token_expiry");
         return Promise.reject(error);
       }
     }
@@ -161,7 +245,7 @@ api.interceptors.response.use(
   (response) => {
     if (response.config.url?.includes("/auth/")) {
       if (!response.data) {
-        console.error("Invalid response structure - no data:", response);
+        console.error(response);
         throw new Error("Invalid server response");
       }
     }
@@ -172,7 +256,7 @@ api.interceptors.response.use(
 
     // Handle network errors
     if (!error.response) {
-      console.error("Network error:", error.message);
+      console.error(error.message);
       return Promise.reject({
         message: "Network error. Please check your connection.",
         isNetworkError: true,
