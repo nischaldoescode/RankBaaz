@@ -5,6 +5,10 @@ import "react-toastify/dist/ReactToastify.css";
 import { useAuth } from "./AuthContext";
 
 const AdminContext = createContext();
+axios.defaults.baseURL =
+  import.meta.env.VITE_API_URL || "http://localhost:7000/api";
+axios.defaults.withCredentials = true;
+
 
 export const useAdmin = () => {
   const context = useContext(AdminContext);
