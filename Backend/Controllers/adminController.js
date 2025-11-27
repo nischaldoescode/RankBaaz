@@ -244,12 +244,13 @@ export const adminLogin = async (req, res) => {
     admin.lastLogin = new Date();
     await admin.save();
 
-    // Set HTTP-only cookies
-    res.cookie("adminAccessToken", accessToken, {
+    // Set HTTP-only cookies with correct names
+    res.cookie("adminToken", accessToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+      path: "/",
     });
 
     res.cookie("adminRefreshToken", refreshToken, {
@@ -257,6 +258,7 @@ export const adminLogin = async (req, res) => {
       secure: process.env.NODE_ENV === "production",
       sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
       maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
+      path: "/",
     });
 
     // Return admin data
