@@ -88,6 +88,13 @@ export const authenticateUser = async (req, res, next) => {
 export const authenticateAdmin = async (req, res, next) => {
   try {
     const token = req.cookies.adminToken;
+    
+    console.log("[ADMIN_AUTH] Cookie check:", {
+      hasAdminToken: !!token,
+      allCookies: Object.keys(req.cookies),
+      adminTokenPreview: token ? token.substring(0, 20) + "..." : null,
+    });
+    
     if (!token) {
       return res.status(401).json({
         success: false,
@@ -95,25 +102,55 @@ export const authenticateAdmin = async (req, res, next) => {
       });
     }
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    const admin = await Admin.findById(decoded.userId).select("-password"); // Changed from User to Admin
+    // IMPORTANT: Use ADMIN_JWT_SECRET, not regular JWT_SECRET
+    const decoded = jwt.verify(token, process.env.ADMIN_JWT_SECRET);
+    
+    console.log("[ADMIN_AUTH] Token decoded:", {
+      adminId: decoded.adminId,
+      role: decoded.role,
+    });
+    
+    // Use adminId from token (not userId)
+    const admin = await Admin.findById(decoded.adminId).select("-password");
 
     if (!admin) {
-      // Removed isVerified check since Admin model doesn't have it
       return res.status(401).json({
         success: false,
-        message: "Invalid admin token",
+        message: "Invalid admin token - admin not found",
       });
     }
 
-    // Admin role check is not needed since we're already in Admin collection
-    req.admin = { userId: admin._id, isAdmin: true, ...admin.toObject() };
+    console.log("[ADMIN_AUTH] Admin authenticated:", admin.email);
+
+    // Set req.admin with correct structure
+    req.admin = { 
+      userId: admin._id, // Keep as userId for compatibility with existing code
+      adminId: admin._id,
+      isAdmin: true, 
+      ...admin.toObject() 
+    };
+    
     next();
   } catch (error) {
-    console.error("Admin auth middleware error:", error);
+    console.error("[ADMIN_AUTH] Error:", error.message);
+    
+    if (error.name === "JsonWebTokenError") {
+      return res.status(401).json({
+        success: false,
+        message: "Invalid admin token - verification failed",
+      });
+    }
+    
+    if (error.name === "TokenExpiredError") {
+      return res.status(401).json({
+        success: false,
+        message: "Admin token expired",
+      });
+    }
+    
     res.status(401).json({
       success: false,
-      message: "Invalid admin token",
+      message: "Admin authentication failed",
     });
   }
 };
