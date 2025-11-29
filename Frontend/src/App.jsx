@@ -8,7 +8,6 @@ import { Toaster } from "react-hot-toast";
 import { useLocation } from "react-router-dom";
 import {
   Brain,
-  BookOpen,
   Award,
   Target,
   Trophy,
