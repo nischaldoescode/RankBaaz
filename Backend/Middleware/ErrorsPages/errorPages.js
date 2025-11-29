@@ -83,12 +83,6 @@ export const botBlockedPage = (reason = "Security verification required") => {
             letter-spacing: 1px;
         }
 
-        .content {
-            padding: 40px 30px;
-            text-align: center;
-            background: white;
-        }
-
         @keyframes pulse {
             0%, 100% {
                 transform: scale(1);
@@ -104,26 +98,6 @@ export const botBlockedPage = (reason = "Security verification required") => {
             margin-bottom: 15px;
             line-height: 1.6;
             background: black;
-        }
-
-        .reason {
-            background: black;
-            border-left: 4px solid #420faa;
-            padding: 15px;
-            margin: 20px 0;
-            text-align: left;
-            border-radius: 4px;
-        }
-
-        .reason-title {
-            font-weight: 600;
-            color: white;
-            margin-bottom: 8px;
-        }
-
-        .reason-text {
-            color: #718096;
-            font-size: 14px;
         }
 
         .footer {
@@ -156,10 +130,6 @@ export const botBlockedPage = (reason = "Security verification required") => {
             .brand {
                 font-size: 28px;
             }
-
-            .content {
-                padding: 30px 20px;
-            }
         }
     </style>
 </head>
@@ -170,16 +140,6 @@ export const botBlockedPage = (reason = "Security verification required") => {
             <div class="status-text">Access Forbidden</div>
             <div class="divider"></div>
             <div class="brand">RankBaaz</div>
-        </div>
-
-        <div class="content">
-
-            <div class="reason">
-                <div class="reason-title">Reason:</div>
-                <div class="reason-text">${reason}</div>
-            </div>
-
-
         </div>
 
     </div>

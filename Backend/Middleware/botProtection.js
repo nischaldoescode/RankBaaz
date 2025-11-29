@@ -107,23 +107,31 @@ const isBannedWithUA = async (ip, userAgent) => {
   const ipOnlyBan = await redisClient.get(ipOnlyKey);
   if (ipOnlyBan) return true;
 
-  const uaHash = crypto.createHash("md5").update(userAgent || "unknown").digest("hex").substring(0, 8);
+  const uaHash = crypto
+    .createHash("md5")
+    .update(userAgent || "unknown")
+    .digest("hex")
+    .substring(0, 8);
   const key = `bot:ban:${ip}:${uaHash}`;
   return !!(await redisClient.get(key));
 };
 
 const banIPWithUA = async (ip, userAgent, reason) => {
-  const uaHash = crypto.createHash("md5").update(userAgent || "unknown").digest("hex").substring(0, 8);
+  const uaHash = crypto
+    .createHash("md5")
+    .update(userAgent || "unknown")
+    .digest("hex")
+    .substring(0, 8);
   const key = `bot:ban:${ip}:${uaHash}`;
-  
+
   await redisClient.setex(
     key,
     BOT_BAN_TTL,
-    JSON.stringify({ 
-      reason, 
+    JSON.stringify({
+      reason,
       bannedAt: Date.now(),
       userAgent: userAgent || "unknown",
-      ip 
+      ip,
     })
   );
 
@@ -198,21 +206,24 @@ export const botProtection = async (req, res, next) => {
   try {
     const ip = req.ip || req.connection.remoteAddress;
     const ua = req.get("User-Agent") || "";
-    
+
     // DEVELOPMENT: Skip bot protection for localhost browsers
     if (process.env.NODE_ENV === "development") {
-      const isLocalhost = ip === "::1" || ip === "127.0.0.1" || ip === "::ffff:127.0.0.1";
-      const isRealBrowser = /Mozilla|Chrome|Safari|Firefox|Edge|Opera/i.test(ua) && 
-                            !/postman|insomnia|curl|wget/i.test(ua);
-      
+      const isLocalhost =
+        ip === "::1" || ip === "127.0.0.1" || ip === "::ffff:127.0.0.1";
+      const isRealBrowser =
+        /Mozilla|Chrome|Safari|Firefox|Edge|Opera/i.test(ua) &&
+        !/postman|insomnia|curl|wget/i.test(ua);
+
       if (isLocalhost && isRealBrowser) {
         // console.log(`[BOT_PROTECTION] Development mode: Allowing localhost browser`);
         return next();
       }
     }
-    
-    const isRealBrowser = /Mozilla|Chrome|Safari|Firefox|Edge|Opera/i.test(ua) && 
-                          !/postman|insomnia|curl|wget/i.test(ua);
+
+    const isRealBrowser =
+      /Mozilla|Chrome|Safari|Firefox|Edge|Opera/i.test(ua) &&
+      !/postman|insomnia|curl|wget/i.test(ua);
     const isApiRoute = req.path.startsWith("/api/");
 
     // 1. Check if banned
@@ -227,18 +238,24 @@ export const botProtection = async (req, res, next) => {
           code: "BOT_DETECTED",
         });
       }
-      
+
       // Non-API routes: HTML for browsers, JSON for bots
       if (isRealBrowser) {
-        return res.status(403).send(
-          botBlockedPage("Your access has been temporarily restricted due to suspicious activity.")
-        );
+        return res
+          .status(403)
+          .send(
+            botBlockedPage(
+              "Your access has been temporarily restricted due to suspicious activity."
+            )
+          );
       } else {
-        return res.status(403).json({
-          success: false,
-          message: "Automated access detected",
-          code: "BOT_DETECTED",
-        });
+        return res
+          .status(403)
+          .send(
+            botBlockedPage(
+              "Your access has been temporarily restricted due to suspicious activity."
+            )
+          );
       }
     }
 
@@ -270,7 +287,8 @@ export const botProtection = async (req, res, next) => {
       if (isApiRoute) {
         return res.status(403).json({
           success: false,
-          message: "Security verification required. Please complete the challenge.",
+          message:
+            "Security verification required. Please complete the challenge.",
           code: "CHALLENGE_REQUIRED",
           data: {
             seed: challenge.seed,
@@ -279,12 +297,16 @@ export const botProtection = async (req, res, next) => {
           },
         });
       }
-      
+
       // Non-API routes
       if (isRealBrowser) {
-        return res.status(403).send(
-          botBlockedPage("Security verification required. Please use a standard web browser to access this site.")
-        );
+        return res
+          .status(403)
+          .send(
+            botBlockedPage(
+              "Security verification required. Please use a standard web browser to access this site."
+            )
+          );
       } else {
         return res.status(403).json({
           success: false,
@@ -314,9 +336,13 @@ export const botProtection = async (req, res, next) => {
 
     // Non-API routes
     if (isRealBrowser) {
-      return res.status(403).send(
-        botBlockedPage("Automated access detected. Please use a standard web browser.")
-      );
+      return res
+        .status(403)
+        .send(
+          botBlockedPage(
+            "Automated access detected. Please use a standard web browser."
+          )
+        );
     } else {
       return res.status(403).json({
         success: false,
@@ -325,7 +351,7 @@ export const botProtection = async (req, res, next) => {
       });
     }
   } catch (err) {
-    console.error("[BOT_PROTECTION] Error:", err);
+    // console.error("[BOT_PROTECTION] Error:", err);
     next();
   }
 };
@@ -376,11 +402,12 @@ export const advancedRateLimit = (maxReq = 100, windowMs = 60000) => {
       if (count >= maxReq) {
         const ua = req.get("User-Agent") || "";
         await banIPWithUA(ip, ua, `Rate limit exceeded: ${count} req`);
-        
+
         const isApiRoute = req.path.startsWith("/api/");
-        const isRealBrowser = /Mozilla|Chrome|Safari|Firefox|Edge|Opera/i.test(ua) && 
-                              !/postman|insomnia|curl|wget/i.test(ua);
-        
+        const isRealBrowser =
+          /Mozilla|Chrome|Safari|Firefox|Edge|Opera/i.test(ua) &&
+          !/postman|insomnia|curl|wget/i.test(ua);
+
         if (isApiRoute) {
           return res.status(429).json({
             success: false,
@@ -388,11 +415,11 @@ export const advancedRateLimit = (maxReq = 100, windowMs = 60000) => {
             code: "RATE_LIMIT_EXCEEDED",
           });
         }
-        
+
         if (isRealBrowser) {
-          return res.status(429).send(
-            botBlockedPage("Too many requests. Access restricted.")
-          );
+          return res
+            .status(429)
+            .send(botBlockedPage("Too many requests. Access restricted."));
         } else {
           return res.status(429).json({
             success: false,
@@ -414,6 +441,7 @@ export const advancedRateLimit = (maxReq = 100, windowMs = 60000) => {
       next();
     } catch (err) {
       console.error("[RATE_LIMIT] Error:", err);
+      // console the error but allow the request
       next();
     }
   };
