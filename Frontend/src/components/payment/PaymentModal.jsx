@@ -41,6 +41,22 @@ const PaymentModal = ({ isOpen, onClose, course, onSuccess }) => {
     }
   }, [isOpen, course]);
 
+  useEffect(() => {
+    if (!isOpen) return;
+
+    // Store original Razorpay reference
+    const originalRazorpay = window.Razorpay;
+
+    // Prevent console tampering with Razorpay during payment
+    const protectPayment = setInterval(() => {
+      if (window.Razorpay !== originalRazorpay && originalRazorpay) {
+        window.Razorpay = originalRazorpay;
+      }
+    }, 100);
+
+    return () => clearInterval(protectPayment);
+  }, [isOpen]);
+
   // RESET coupon state when modal closes
   useEffect(() => {
     if (!isOpen) {

@@ -1,18 +1,18 @@
-import React from 'react'
-import ReactDOM from 'react-dom/client'
-import { BrowserRouter } from 'react-router-dom'
-import App from './App.jsx'
-import { AuthProvider } from './context/AuthContext.jsx'
-import { CourseProvider } from './context/CourseContext.jsx'
-import { TestProvider } from './context/TestContext.jsx'
-import { ThemeProvider } from './context/ThemeContext.jsx'
-import './styles/globals.css'
+import React from "react";
+import ReactDOM from "react-dom/client";
+import { BrowserRouter } from "react-router-dom";
+import App from "./App.jsx";
+import { AuthProvider } from "./context/AuthContext.jsx";
+import { CourseProvider } from "./context/CourseContext.jsx";
+import { TestProvider } from "./context/TestContext.jsx";
+import { ThemeProvider } from "./context/ThemeContext.jsx";
+import "./styles/globals.css";
 
 // Register Service Worker for image caching
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
     navigator.serviceWorker
-      .register('/sw.js')
+      .register("/sw.js")
       .then((registration) => {
         // console.log('[SW] Service Worker registered:', registration.scope);
       })
@@ -23,7 +23,7 @@ if ('serviceWorker' in navigator) {
 }
 
 // Initialize cache cleanup on app start
-import { cacheManager } from './utils/cacheManager';
+import { cacheManager } from "./utils/cacheManager";
 
 // // Clear expired cache entries on startup
 // cacheManager.clearExpired().then((cleared) => {
@@ -37,19 +37,23 @@ import { cacheManager } from './utils/cacheManager';
 //   console.log('[Cache] Statistics:', stats);
 // })
 
-
-ReactDOM.createRoot(document.getElementById('root')).render(
+ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
     <ThemeProvider>
       <AuthProvider>
         <CourseProvider>
           <TestProvider>
-            <BrowserRouter>
+            <BrowserRouter
+              future={{
+                v7_startTransition: true,
+                v7_relativeSplatPath: true,
+              }}
+            >
               <App />
             </BrowserRouter>
           </TestProvider>
         </CourseProvider>
       </AuthProvider>
     </ThemeProvider>
-  </React.StrictMode>,
-)
+  </React.StrictMode>
+);
