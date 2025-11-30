@@ -354,6 +354,10 @@ const verifyChallengeSolution = async (ip, seed, nonce) => {
  */
 export const botProtection = async (req, res, next) => {
   try {
+    // Execption: To allow the request to the "/health" endpoint
+    if (req.path === "/health") {
+      return next();
+    }
     const ip = req.ip || req.connection.remoteAddress;
     const ua = req.get("User-Agent") || "";
     const origin = req.get("Origin") || "";
