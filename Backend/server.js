@@ -278,6 +278,205 @@ app.use(
   })
 );
 
+/**
+ * PRODUCTION SECURITY: Strict Origin Enforcement
+ * Blocks direct browser access to API server
+ * Only allows requests from whitelisted frontend domains
+ *
+ * This prevents:
+ * 1. Direct browser navigation to API endpoints
+ * 2. Bookmark-based API access
+ * 3. Manual URL typing in address bar
+ * 4. Browser history-based access
+ *
+ * @behavior
+ * - Development: Allows localhost browsers for easier testing
+ * - Production: Strictly enforces Origin/Referer validation
+ */
+const strictOriginEnforcement = (req, res, next) => {
+  // List of allowed frontend domains
+  const ALLOWED_ORIGINS = [
+    "http://localhost:3000",
+    "http://localhost:3001",
+    "http://127.0.0.1:3000",
+    "http://localhost:5173", // Vite dev server
+    "http://localhost:4173", // Vite preview
+    "https://rankbaaz.com",
+    "https://www.rankbaaz.com",
+    "https://rankbaaz-frontend.onrender.com",
+    "https://admin.rankbaaz.com",
+    "https://rankbaaz-admin.onrender.com",
+  ];
+
+  const origin = req.get("Origin") || "";
+  const referer = req.get("Referer") || "";
+  const userAgent = req.get("User-Agent") || "";
+
+  // Check if request is from a real browser
+  const isRealBrowser =
+    /Mozilla|Chrome|Safari|Firefox|Edge|Opera/i.test(userAgent) &&
+    !/postman|insomnia|curl|wget|bot|crawler/i.test(userAgent);
+
+  /**
+   * DEVELOPMENT MODE: More lenient for localhost testing
+   * Allows direct browser access on localhost for development convenience
+   */
+  if (process.env.NODE_ENV === "development") {
+    const ip = req.ip || req.connection.remoteAddress;
+    const isLocalhost =
+      ip === "::1" || ip === "127.0.0.1" || ip === "::ffff:127.0.0.1";
+
+    // In development, allow localhost browsers but still validate origin if present
+    if (isLocalhost && isRealBrowser) {
+      if (origin || referer) {
+        // If origin/referer is present, validate it
+        const hasValidOrigin = ALLOWED_ORIGINS.some(
+          (allowed) =>
+            (origin &&
+              origin.toLowerCase().startsWith(allowed.toLowerCase())) ||
+            (referer && referer.toLowerCase().startsWith(allowed.toLowerCase()))
+        );
+
+        if (!hasValidOrigin) {
+          return res.status(403).send(getSimple403HTML());
+        }
+      }
+      // Allow through if no origin/referer (direct browser access in dev)
+      return next();
+    }
+  }
+
+  /**
+   * PRODUCTION MODE: Strict enforcement
+   * NO direct browser access allowed - must come from frontend
+   */
+
+  // Exception: Allow certain public endpoints without origin check
+  const publicEndpoints = ["/health"];
+
+  const isPublicEndpoint = publicEndpoints.some(
+    (endpoint) => req.path === endpoint || req.path.startsWith(endpoint)
+  );
+
+  if (isPublicEndpoint) {
+    return next();
+  }
+
+  // For all other requests, validate Origin or Referer
+  if (!origin && !referer) {
+    /**
+     * NO origin/referer = Direct browser access or API tool
+     * This catches:
+     * - Typing URL directly in browser
+     * - Browser bookmarks
+     * - Postman/Insomnia without headers
+     * - curl/wget commands
+     */
+    return res.status(403).send(getSimple403HTML());
+  }
+
+  // Validate that origin/referer is from allowed domains
+  const hasValidOrigin = ALLOWED_ORIGINS.some((allowed) => {
+    try {
+      const allowedUrl = new URL(allowed);
+
+      if (origin) {
+        const originUrl = new URL(origin);
+        if (originUrl.hostname === allowedUrl.hostname) {
+          return true;
+        }
+      }
+
+      if (referer) {
+        const refererUrl = new URL(referer);
+        if (refererUrl.hostname === allowedUrl.hostname) {
+          return true;
+        }
+      }
+
+      return false;
+    } catch (e) {
+      return false;
+    }
+  });
+
+  if (!hasValidOrigin) {
+    /**
+     * Invalid origin = Request from unauthorized domain
+     * This catches:
+     * - CORS proxy attempts
+     * - Subdomain mimicking (rankbaaz.attacker.com)
+     * - Other malicious frontend domains
+     */
+    return res.status(403).send(getSimple403HTML());
+  }
+
+  // Valid origin - allow request
+  next();
+};
+
+/**
+ * HELPER: Generate simple 403 HTML page
+ * Returns minimal HTML to prevent information disclosure
+ */
+const getSimple403HTML = () => {
+  return `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>403 Forbidden</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      margin: 0;
+      background: #f5f5f5;
+    }
+    .container {
+      text-align: center;
+      padding: 2rem;
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      max-width: 400px;
+    }
+    h1 {
+      font-size: 3rem;
+      margin: 0;
+      color: #333;
+      font-weight: bold;
+    }
+    .divider {
+      height: 1px;
+      background: #ddd;
+      margin: 1.5rem 0;
+    }
+    .brand {
+      font-style: italic;
+      color: #666;
+      font-size: 1.2rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>403 Forbidden</h1>
+    <div class="divider"></div>
+    <p class="brand">RankBaaz</p>
+  </div>
+</body>
+</html>
+  `;
+};
+
+// Apply strict origin enforcement FIRST (before bot protection)
+app.use(strictOriginEnforcement);
+
 // Apply bot protection globally (before routes)
 app.use(botProtection);
 
@@ -430,20 +629,35 @@ app.use("/api/payments", paymentRoutes);
 app.use("/api/coupons", couponLimiter, couponRoutes);
 app.use("/api/devtools", devToolsRoutes);
 // Root endpoint
+/**
+ * Root endpoint - Minimal response for security
+ * In production, API root should not expose structure
+ * Frontend apps already know the endpoints they need
+ */
 app.get("/", (req, res) => {
-  res.status(200).json({
-    success: true,
-    message: "API",
-    version: "1.0.0",
-    documentation: "/api/docs",
-    endpoints: {
-      auth: "/api/auth",
-      courses: "/api/courses",
-      questions: "/api/questions",
-      tests: "/api/tests",
-      admin: "/api/admin",
-    },
-  });
+  // In production, return minimal info
+  if (process.env.NODE_ENV === "production") {
+    res.status(200).json({
+      success: true,
+      message: "API Online",
+      version: "1.0.0",
+    });
+  } else {
+    // In development, show helpful endpoint list
+    res.status(200).json({
+      success: true,
+      message: "API",
+      version: "1.0.0",
+      documentation: "/api/docs",
+      endpoints: {
+        auth: "/api/auth",
+        courses: "/api/courses",
+        questions: "/api/questions",
+        tests: "/api/tests",
+        admin: "/api/admin",
+      },
+    });
+  }
 });
 
 // 404 handler
@@ -469,11 +683,72 @@ app.use((error, req, res, next) => {
   const isApiRoute = req.path.startsWith("/api/");
 
   // CORS error
+  // CORS error - Enhanced security for production
   if (error.message === "Not allowed by CORS") {
+    // Check if request has no origin/referer (suspicious)
+    const hasNoOrigin = !req.get("Origin") && !req.get("Referer");
+
     if (acceptsJson || isApiRoute) {
+      // PRODUCTION: For requests with no origin, send simple HTML instead of JSON
+      // This prevents information disclosure about API structure
+      if (hasNoOrigin) {
+        return res.status(403).send(`
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>403 Forbidden</title>
+          <style>
+            body {
+              font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+              display: flex;
+              justify-content: center;
+              align-items: center;
+              min-height: 100vh;
+              margin: 0;
+              background: #f5f5f5;
+            }
+            .container {
+              text-align: center;
+              padding: 2rem;
+              background: white;
+              border-radius: 8px;
+              box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+              max-width: 400px;
+            }
+            h1 {
+              font-size: 3rem;
+              margin: 0;
+              color: #333;
+              font-weight: bold;
+            }
+            .divider {
+              height: 1px;
+              background: #ddd;
+              margin: 1.5rem 0;
+            }
+            .brand {
+              font-style: italic;
+              color: #666;
+              font-size: 1.2rem;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <h1>403 Forbidden</h1>
+            <div class="divider"></div>
+            <p class="brand">RankBaaz</p>
+          </div>
+        </body>
+        </html>
+      `);
+      }
+
       return res.status(403).json({
         success: false,
-        message: "CORS policy violation - origin not allowed",
+        message: "CORS policy violation.",
       });
     } else {
       return res
@@ -481,7 +756,6 @@ app.use((error, req, res, next) => {
         .send(corsErrorPage(req.get("Origin") || "Unknown"));
     }
   }
-
   // Validation error
   if (error.name === "ValidationError") {
     const errors = Object.values(error.errors).map((err) => ({
