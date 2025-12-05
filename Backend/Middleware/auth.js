@@ -27,10 +27,27 @@ export const authenticateUser = async (req, res, next) => {
   try {
     const encryptedCookie = req.signedCookies.auth_session;
 
+    // console.log("[AUTH_MIDDLEWARE] Request to:", req.path);
+    // console.log("[AUTH_MIDDLEWARE] Session ID:", req.session?.id);
+    // console.log("[AUTH_MIDDLEWARE] Cookies present:", Object.keys(req.cookies));
+    // console.log(
+    //   "[AUTH_MIDDLEWARE] Signed cookies present:",
+    //   Object.keys(req.signedCookies)
+    // );
+    // console.log("[AUTH_MIDDLEWARE] Auth cookie exists:", !!encryptedCookie);
+
     if (!encryptedCookie) {
+      // console.error("[AUTH_MIDDLEWARE] No auth_session cookie found");
+      // console.error("[AUTH_MIDDLEWARE] Session ID:", req.session?.id);
+      // console.error("[AUTH_MIDDLEWARE] Available cookies:", req.cookies);
+      // console.error(
+      //   "[AUTH_MIDDLEWARE] Available signed cookies:",
+      //   req.signedCookies
+      // );
+
       return res.status(401).json({
         success: false,
-        message: "Credentials Error.",
+        message: "Session expired. Please login again.",
       });
     }
 
@@ -88,13 +105,13 @@ export const authenticateUser = async (req, res, next) => {
 export const authenticateAdmin = async (req, res, next) => {
   try {
     const token = req.cookies.adminToken;
-    
+
     console.log("[ADMIN_AUTH] Cookie check:", {
       hasAdminToken: !!token,
       allCookies: Object.keys(req.cookies),
       adminTokenPreview: token ? token.substring(0, 20) + "..." : null,
     });
-    
+
     if (!token) {
       return res.status(401).json({
         success: false,
@@ -104,12 +121,12 @@ export const authenticateAdmin = async (req, res, next) => {
 
     // IMPORTANT: Use ADMIN_JWT_SECRET, not regular JWT_SECRET
     const decoded = jwt.verify(token, process.env.ADMIN_JWT_SECRET);
-    
+
     console.log("[ADMIN_AUTH] Token decoded:", {
       adminId: decoded.adminId,
       role: decoded.role,
     });
-    
+
     // Use adminId from token (not userId)
     const admin = await Admin.findById(decoded.adminId).select("-password");
 
@@ -123,31 +140,31 @@ export const authenticateAdmin = async (req, res, next) => {
     console.log("[ADMIN_AUTH] Admin authenticated:", admin.email);
 
     // Set req.admin with correct structure
-    req.admin = { 
+    req.admin = {
       userId: admin._id, // Keep as userId for compatibility with existing code
       adminId: admin._id,
-      isAdmin: true, 
-      ...admin.toObject() 
+      isAdmin: true,
+      ...admin.toObject(),
     };
-    
+
     next();
   } catch (error) {
     console.error("[ADMIN_AUTH] Error:", error.message);
-    
+
     if (error.name === "JsonWebTokenError") {
       return res.status(401).json({
         success: false,
         message: "Invalid admin token - verification failed",
       });
     }
-    
+
     if (error.name === "TokenExpiredError") {
       return res.status(401).json({
         success: false,
         message: "Admin token expired",
       });
     }
-    
+
     res.status(401).json({
       success: false,
       message: "Admin authentication failed",

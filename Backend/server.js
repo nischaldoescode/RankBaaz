@@ -22,21 +22,12 @@ import paymentRoutes from "./Routes/paymentRoutes.js";
 import couponRoutes from "./Routes/couponRoutes.js";
 import User from "./Models/User.js";
 import devToolsRoutes from "./Routes/devToolsRoutes.js";
-import { generateCSRFToken, getCSRFToken } from "./Middleware/csrf.js";
 import { botProtection, verifyChallenge } from "./Middleware/botProtection.js";
 import session from "express-session";
-import { createRequire } from "module";
 import { corsErrorPage } from "./Middleware/ErrorsPages/errorPages.js";
+import securityRoutes from "./Routes/securityRoutes.js";
+import RedisStore from "connect-redis";
 
-const require = createRequire(import.meta.url);
-
-// Your module exports: { RedisStore }
-const { RedisStore } = require("connect-redis");
-
-// Create store instance
-const store = new RedisStore({
-  client: redisClient,
-});
 // Load environment variables
 dotenv.config();
 
@@ -67,6 +58,13 @@ const mongoOptions = {
 // we will await for the Data base connection
 await connectDB(mongoOptions);
 
+const store = new RedisStore({
+  client: redisClient,
+  prefix: "sess:",
+  ttl: 86400,
+});
+
+console.log("Redis session store initialized successfully");
 try {
   await connection2.asPromise();
   console.log("Content database initialized successfully");
@@ -190,9 +188,17 @@ const corsOptions = {
   },
   credentials: true,
   methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
+  // CRITICAL FIX: Add signature headers to allowed headers
+  allowedHeaders: [
+    "Content-Type",
+    "Authorization",
+    "X-Requested-With",
+    "X-Request-Signature", // NEW - Allow signature header
+    "X-Request-Timestamp", // NEW - Allow timestamp header
+    "X-Request-Nonce", // NEW - Allow nonce header
+  ],
   exposedHeaders: ["X-Total-Count", "Set-Cookie"],
-  maxAge: 86400,
+  maxAge: 86400, // Cache preflight for 24 hours
   preflightContinue: false,
   optionsSuccessStatus: 204,
 };
@@ -267,153 +273,36 @@ app.use(
     store: store,
     secret: process.env.SESSION_SECRET || process.env.JWT_SECRET,
     resave: false,
-    saveUninitialized: false,
+    saveUninitialized: true,
+    rolling: true,
+    proxy: process.env.NODE_ENV === "production",
     cookie: {
-      secure: process.env.NODE_ENV === "production",
+      secure: false,
       httpOnly: true,
-      maxAge: 24 * 60 * 60 * 1000, // 24 hours
-      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+      maxAge: 24 * 60 * 60 * 1000,
+      sameSite: "lax",
+      path: "/",
+      ...(process.env.NODE_ENV === "production" && {
+        domain: ".rankbaaz.com",
+        secure: true,
+        sameSite: "none",
+      }),
     },
     name: "sid",
   })
 );
 
-/**
- * PRODUCTION SECURITY: Strict Origin Enforcement
- * Blocks direct browser access to API server
- * Only allows requests from whitelisted frontend domains
- *
- * This prevents:
- * 1. Direct browser navigation to API endpoints
- * 2. Bookmark-based API access
- * 3. Manual URL typing in address bar
- * 4. Browser history-based access
- *
- * @behavior
- * - Development: Allows localhost browsers for easier testing
- * - Production: Strictly enforces Origin/Referer validation
- */
-const strictOriginEnforcement = (req, res, next) => {
-  // List of allowed frontend domains
-  const ALLOWED_ORIGINS = [
-    "http://localhost:3000",
-    "http://localhost:3001",
-    "http://127.0.0.1:3000",
-    "http://localhost:5173", // Vite dev server
-    "http://localhost:4173", // Vite preview
-    "https://rankbaaz.com",
-    "https://www.rankbaaz.com",
-    "https://rankbaaz-frontend.onrender.com",
-    "https://admin.rankbaaz.com",
-    "https://rankbaaz-admin.onrender.com",
-  ];
-
-  const origin = req.get("Origin") || "";
-  const referer = req.get("Referer") || "";
-  const userAgent = req.get("User-Agent") || "";
-
-  // Check if request is from a real browser
-  const isRealBrowser =
-    /Mozilla|Chrome|Safari|Firefox|Edge|Opera/i.test(userAgent) &&
-    !/postman|insomnia|curl|wget|bot|crawler/i.test(userAgent);
-
-  /**
-   * DEVELOPMENT MODE: More lenient for localhost testing
-   * Allows direct browser access on localhost for development convenience
-   */
-  if (process.env.NODE_ENV === "development") {
-    const ip = req.ip || req.connection.remoteAddress;
-    const isLocalhost =
-      ip === "::1" || ip === "127.0.0.1" || ip === "::ffff:127.0.0.1";
-
-    // In development, allow localhost browsers but still validate origin if present
-    if (isLocalhost && isRealBrowser) {
-      if (origin || referer) {
-        // If origin/referer is present, validate it
-        const hasValidOrigin = ALLOWED_ORIGINS.some(
-          (allowed) =>
-            (origin &&
-              origin.toLowerCase().startsWith(allowed.toLowerCase())) ||
-            (referer && referer.toLowerCase().startsWith(allowed.toLowerCase()))
-        );
-
-        if (!hasValidOrigin) {
-          return res.status(403).send(getSimple403HTML());
-        }
-      }
-      // Allow through if no origin/referer (direct browser access in dev)
-      return next();
-    }
-  }
-
-  /**
-   * PRODUCTION MODE: Strict enforcement
-   * NO direct browser access allowed - must come from frontend
-   */
-
-  // Exception: Allow certain public endpoints without origin check
-  const publicEndpoints = ["/health"];
-
-  const isPublicEndpoint = publicEndpoints.some(
-    (endpoint) => req.path === endpoint || req.path.startsWith(endpoint)
-  );
-
-  if (isPublicEndpoint) {
-    return next();
-  }
-
-  // For all other requests, validate Origin or Referer
-  if (!origin && !referer) {
-    /**
-     * NO origin/referer = Direct browser access or API tool
-     * This catches:
-     * - Typing URL directly in browser
-     * - Browser bookmarks
-     * - Postman/Insomnia without headers
-     * - curl/wget commands
-     */
-    return res.status(403).send(getSimple403HTML());
-  }
-
-  // Validate that origin/referer is from allowed domains
-  const hasValidOrigin = ALLOWED_ORIGINS.some((allowed) => {
-    try {
-      const allowedUrl = new URL(allowed);
-
-      if (origin) {
-        const originUrl = new URL(origin);
-        if (originUrl.hostname === allowedUrl.hostname) {
-          return true;
-        }
-      }
-
-      if (referer) {
-        const refererUrl = new URL(referer);
-        if (refererUrl.hostname === allowedUrl.hostname) {
-          return true;
-        }
-      }
-
-      return false;
-    } catch (e) {
-      return false;
-    }
+if (process.env.NODE_ENV === "development") {
+  console.log("[SESSION_CONFIG] Initialized with:", {
+    secure: false,
+    httpOnly: true,
+    sameSite: "lax",
+    maxAge: "24 hours",
+    store: "Redis",
   });
+}
 
-  if (!hasValidOrigin) {
-    /**
-     * Invalid origin = Request from unauthorized domain
-     * This catches:
-     * - CORS proxy attempts
-     * - Subdomain mimicking (rankbaaz.attacker.com)
-     * - Other malicious frontend domains
-     */
-    return res.status(403).send(getSimple403HTML());
-  }
-
-  // Valid origin - allow request
-  next();
-};
+// console.log(`✓ Session middleware configured for ${process.env.NODE_ENV}`);
 
 /**
  * HELPER: Generate simple 403 HTML page
@@ -474,17 +363,13 @@ const getSimple403HTML = () => {
   `;
 };
 
-// Apply strict origin enforcement FIRST (before bot protection)
-app.use(strictOriginEnforcement);
-
 // Apply bot protection globally (before routes)
 app.use(botProtection);
 
-// CSRF token generation for authenticated routes
-app.use(generateCSRFToken);
+// console.log(
+//   "⚠️  WARNING: Bot protection and origin enforcement DISABLED for testing"
+// );
 
-// Security endpoints (before API Routes)
-app.get("/api/security/csrf-token", getCSRFToken);
 app.post("/api/security/verify-challenge", verifyChallenge);
 
 /**
@@ -550,6 +435,30 @@ app.use((req, res, next) => {
   })(req, res, next);
 });
 
+// CRITICAL: Add request logging to debug what's happening
+if (process.env.NODE_ENV === "development") {
+  app.use((req, res, next) => {
+    console.log("\n[REQUEST_DEBUG] ===================================");
+    console.log("[REQUEST_DEBUG] Method:", req.method);
+    console.log("[REQUEST_DEBUG] Path:", req.path);
+    console.log(
+      "[REQUEST_DEBUG] Has auth cookie:",
+      !!req.signedCookies.auth_session
+    );
+    console.log(
+      "[REQUEST_DEBUG] Has signature:",
+      !!req.headers["x-request-signature"]
+    );
+    console.log("[REQUEST_DEBUG] Origin:", req.get("Origin") || "none");
+    console.log(
+      "[REQUEST_DEBUG] User-Agent:",
+      req.get("User-Agent")?.substring(0, 50) || "none"
+    );
+    console.log("[REQUEST_DEBUG] ===================================\n");
+    next();
+  });
+}
+
 // Add before error handlers
 app.get("/sitemap-profiles.xml", async (req, res) => {
   try {
@@ -608,6 +517,9 @@ app.get("/sitemap-profiles.xml", async (req, res) => {
     res.status(500).send("Error generating sitemap");
   }
 });
+app.options('*', cors(corsOptions));
+
+// console.log('✓ CORS preflight handler configured');
 
 // Health check endpoint
 app.get("/health", (req, res) => {
@@ -620,6 +532,7 @@ app.get("/health", (req, res) => {
 
 // API Routes
 app.use("/api/auth", authRoutes);
+app.use("/api/security", securityRoutes);
 app.use("/api/courses", courseRoutes);
 app.use("/api/tests", testRoutes);
 app.use("/api/admin", adminRoutes);
@@ -803,6 +716,16 @@ app.use((error, req, res, next) => {
 
   // Default error
   const statusCode = error.statusCode || 500;
+
+  // CRITICAL FIX: Check if headers were already sent
+  if (res.headersSent) {
+    console.error(
+      "[ERROR] Headers already sent, cannot send error response:",
+      error
+    );
+    return next(error);
+  }
+
   res.status(statusCode).json({
     success: false,
     message: error.message || "Internal server error",

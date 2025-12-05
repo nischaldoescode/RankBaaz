@@ -25,7 +25,7 @@ import {
   quickCheckUsername,
 } from "../Controllers/authController.js";
 import { authenticateUser } from "../Middleware/auth.js";
-import { validateCSRFToken } from "../Middleware/csrf.js";
+import { getSigningSecretEndpoint, verifyRequestSignature } from "../Middleware/requestSignature.js";
 
 const router = express.Router();
 
@@ -43,21 +43,21 @@ router.post("/verify-forgot-password-otp", verifyForgotPasswordOTP);
 router.post("/reset-password", resetPasswordValidation, resetPassword);
 
 // Semi-authenticated routes - Keep CSRF
-router.post("/refresh-token", validateCSRFToken, refreshToken);
+router.post("/refresh-token", refreshToken);
 
 // User protected routes (with CSRF protection)
 router.get("/profile", authenticateUser, getProfile);
 router.put(
   "/profile",
   authenticateUser,
-  validateCSRFToken,
+  verifyRequestSignature,
   updateProfileValidation,
   updateProfile
 );
 router.post(
   "/change-password",
   authenticateUser,
-  validateCSRFToken,
+  verifyRequestSignature,
   changePasswordValidation,
   changePassword
 );
@@ -65,14 +65,14 @@ router.post(
 router.post(
   "/initiate-email-change",
   authenticateUser,
-  validateCSRFToken,
+  verifyRequestSignature,
   initiateEmailChange
 );
 router.post(
   "/verify-email-change",
   authenticateUser,
-  validateCSRFToken,
+  verifyRequestSignature,
   verifyEmailChangeOTP
 );
-router.post("/logout", authenticateUser, validateCSRFToken, logout);
+router.post("/logout", authenticateUser, verifyRequestSignature, logout);
 export default router;
