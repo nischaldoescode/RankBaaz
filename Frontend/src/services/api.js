@@ -1,6 +1,7 @@
 import axios from "axios";
 import toast from "react-hot-toast";
-
+import crypto from "crypto-js";
+import { requestSigner } from "../utils/requestSigning.js";
 // Create axios instance with default config
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL || "http://localhost:7000",
@@ -43,18 +44,46 @@ const solveChallenge = async (seed, difficulty) => {
   }
 };
 
+const logApiError = (error, context) => {
+  if (import.meta.env.VITE_VITE_ENV !== "development") return;
+
+  console.group(`[API_ERROR] ${context}`);
+  console.error("Full error object:", error);
+
+  if (error.response) {
+    console.error("Response details:", {
+      status: error.response.status,
+      statusText: error.response.statusText,
+      data: error.response.data,
+      headers: error.response.headers,
+    });
+  } else if (error.request) {
+    console.error("Request details:", {
+      method: error.config?.method?.toUpperCase(),
+      url: error.config?.url,
+      headers: error.config?.headers,
+      hasRequest: !!error.request,
+      requestReadyState: error.request?.readyState,
+    });
+  } else {
+    console.error("Error message:", error.message);
+  }
+
+  console.groupEnd();
+};
+
 api.interceptors.request.use(
   async (config) => {
-    // Skip for GET requests
-    if (config.method === "get") return config;
-
-    // Skip CSRF token fetch endpoint
-    if (config.url?.includes("/api/security/csrf-token")) {
-      return config;
+    if (import.meta.env.VITE_VITE_ENV === "development") {
+      console.log("[API_REQUEST] Interceptor processing:", {
+        method: config.method,
+        url: config.url,
+        hasAuth: !!localStorage.getItem("user"),
+      });
     }
 
-    // CRITICAL: Skip CSRF for public auth endpoints
-    const publicAuthEndpoints = [
+    // Skip signature for public endpoints
+    const publicEndpoints = [
       "/api/auth/register",
       "/api/auth/initiate-login",
       "/api/auth/verify-login-otp",
@@ -64,161 +93,194 @@ api.interceptors.request.use(
       "/api/auth/forgot-password",
       "/api/auth/verify-forgot-password-otp",
       "/api/auth/reset-password",
+      "/api/security/signing-secret", // THIS IS CRITICAL - Must be public
+      "/api/auth/refresh-token",
     ];
 
-    const isPublicEndpoint = publicAuthEndpoints.some((endpoint) =>
+    const isPublicEndpoint = publicEndpoints.some((endpoint) =>
       config.url?.includes(endpoint)
     );
 
-    if (isPublicEndpoint) {
-      // console.log("[CSRF] Skipping CSRF for public endpoint:", config.url);
+    // Skip signature for GET requests to public content
+    const isPublicGet =
+      config.method === "get" &&
+      (config.url?.includes("/api/content/") ||
+        config.url?.includes("/api/courses/categories") ||
+        (config.url?.includes("/api/courses") &&
+          !config.url?.includes("/admin")));
+
+    if (isPublicEndpoint || isPublicGet) {
+      if (import.meta.env.VITE_VITE_ENV === "development") {
+        console.log("[API_REQUEST] Public endpoint - skipping signature");
+      }
       return config;
     }
 
-    // Get CSRF token for authenticated endpoints only
-    let csrfToken = localStorage.getItem("csrf_token");
-    let csrfExpiry = localStorage.getItem("csrf_token_expiry");
+    // CRITICAL FIX: Load signing secret from localStorage on EVERY request
+    // This ensures secret is available after page refresh/reload
+    if (!requestSigner.isSecretValid()) {
+      const loaded = requestSigner.loadSigningSecret();
 
-    const isTokenExpired = csrfExpiry
-      ? Date.now() > parseInt(csrfExpiry)
-      : true;
-
-    if (!csrfToken || isTokenExpired) {
-      try {
-        // console.log("[CSRF] Token missing or expired, fetching new one");
-
-        const baseURL = import.meta.env.VITE_API_URL || "http://localhost:7000";
-        const response = await axios.get(`${baseURL}/api/security/csrf-token`, {
-          withCredentials: true,
-        });
-
-        csrfToken = response.data.data.csrfToken;
-        const expiresIn = response.data.data.expiresIn || 3600;
-
-        localStorage.setItem("csrf_token", csrfToken);
-        localStorage.setItem(
-          "csrf_token_expiry",
-          Date.now() + (expiresIn - 30) * 1000
+      if (import.meta.env.VITE_VITE_ENV === "development") {
+        console.log(
+          "[API_REQUEST] Loaded signing secret from storage:",
+          loaded
         );
-
-        // console.log("[CSRF] New token fetched");
-      } catch (error) {
-        console.error(error);
-
-        return Promise.reject({
-          message: "Failed to obtain security token",
-          isCSRFError: true,
-          originalError: error,
-        });
       }
     }
 
-    config.headers["X-CSRF-Token"] = csrfToken;
+    // Sign the request if user is authenticated AND secret is valid
+    const isAuthenticated = !!localStorage.getItem("user");
+
+    if (isAuthenticated && requestSigner.isSecretValid()) {
+      config = requestSigner.signRequest(config);
+
+      if (import.meta.env.VITE_ENV === "development") {
+        console.log("[API_REQUEST] Request signed successfully");
+        console.log(`VITE_ENV: ${import.meta.env.VITE_ENV}`);
+      }
+    } else if (isAuthenticated && !requestSigner.isSecretValid()) {
+      // CRITICAL: Don't try to fetch secret here - causes circular dependency
+      // Instead, let the request fail and handle in response interceptor
+      console.warn(
+        "[API_REQUEST] No valid signing secret - request will fail with signature error"
+      );
+    }
 
     return config;
   },
   (error) => {
+    if (import.meta.env.VITE_ENV === "development") {
+      console.error("[API_REQUEST] Interceptor error:", error);
+    }
     return Promise.reject(error);
   }
 );
 
+// Helper function to add signature to request
+function addSignatureToRequest(config, secret) {
+  const timestamp = Date.now().toString();
+  const nonce = crypto.lib.WordArray.random(16).toString();
+
+  const method = config.method.toUpperCase();
+  const path =
+    new URL(config.url, config.baseURL || window.location.origin).pathname +
+    (new URL(config.url, config.baseURL || window.location.origin).search ||
+      "");
+  const body = config.data ? JSON.stringify(config.data) : "";
+
+  const payload = `${timestamp}:${nonce}:${method}:${path}:${body}`;
+
+  const signature = crypto.HmacSHA256(payload, secret).toString();
+
+  config.headers["x-request-signature"] = signature;
+  config.headers["x-request-timestamp"] = timestamp;
+  config.headers["x-request-nonce"] = nonce;
+
+  if (import.meta.env.VITE_ENV === "development") {
+    console.log("[API_REQUEST] Request signed:", {
+      method,
+      path,
+      signature: signature.substring(0, 16) + "...",
+    });
+  }
+
+  return config;
+}
+
+// CRITICAL: Signature error handler - Must be AFTER auth refresh interceptor
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
 
-    // CRITICAL FIX: Handle all CSRF-related errors (EXPIRED, MISSING, INVALID)
-    const csrfErrorCodes = [
-      "CSRF_TOKEN_EXPIRED",
-      "CSRF_TOKEN_MISSING",
-      "CSRF_TOKEN_INVALID",
+    // Handle signature-related errors
+    const signatureErrorCodes = [
+      "SIGNATURE_EXPIRED",
+      "SIGNATURE_MISSING",
+      "SIGNATURE_INVALID",
+      "REPLAY_ATTACK",
     ];
 
     if (
       error.response?.data?.code &&
-      csrfErrorCodes.includes(error.response.data.code)
+      signatureErrorCodes.includes(error.response.data.code)
     ) {
       // Prevent infinite retry loops
-      if (originalRequest._csrfRetry) {
-        console.error("Retry failed");
-        localStorage.removeItem("csrf_token");
-        localStorage.removeItem("csrf_token_expiry");
+      if (originalRequest._signatureRetry) {
+        console.error("[SIGNATURE] Retry failed - clearing auth");
+        requestSigner.clearSigningSecret();
+
+        // If signature keeps failing, might be auth issue
+        if (error.response.status === 401 || error.response.status === 403) {
+          localStorage.removeItem("user");
+          window.location.href = "/login";
+        }
+
         return Promise.reject(error);
       }
 
       try {
-        // console.log(
-        //   `[CSRF] Handling ${error.response.data.code}, fetching new token...`
-        // );
+        if (import.meta.env.VITE_ENV === "development") {
+          console.log(
+            `[SIGNATURE] Handling ${error.response.data.code}, fetching new secret...`
+          );
+        }
 
         // Mark this request as a retry
-        originalRequest._csrfRetry = true;
+        originalRequest._signatureRetry = true;
 
-        // Clear old token and expiry
-        localStorage.removeItem("csrf_token");
-        localStorage.removeItem("csrf_token_expiry");
+        // Clear old secret
+        requestSigner.clearSigningSecret();
 
+        // CRITICAL FIX: Use base axios instance to avoid interceptor recursion
+        // Create a new axios instance specifically for fetching signing secret
         const baseURL = import.meta.env.VITE_API_URL || "http://localhost:7000";
-        const response = await axios.get(`${baseURL}/api/security/csrf-token`, {
-          withCredentials: true,
-        });
+        const secretResponse = await axios
+          .create({
+            baseURL,
+            withCredentials: true,
+            timeout: 10000,
+          })
+          .get("/api/security/signing-secret");
 
-        const newToken = response.data.data.csrfToken;
-        const expiresIn = response.data.data.expiresIn || 3600;
+        if (!secretResponse.data.success) {
+          throw new Error("Failed to get signing secret");
+        }
 
-        localStorage.setItem("csrf_token", newToken);
-        localStorage.setItem(
-          "csrf_token_expiry",
-          Date.now() + (expiresIn - 30) * 1000
-        );
+        const newSecret = secretResponse.data.data.signingSecret;
+        const expiresIn = secretResponse.data.data.expiresIn;
 
-        // Update request headers
-        originalRequest.headers["X-CSRF-Token"] = newToken;
+        // Store new secret
+        requestSigner.setSigningSecret(newSecret, expiresIn);
 
-        // console.log("[CSRF] Token refreshed, retrying request");
+        if (import.meta.env.VITE_ENV === "development") {
+          console.log("[SIGNATURE] Secret refreshed successfully");
+        }
+
+        // CRITICAL: Remove the retry flag before re-signing
+        delete originalRequest._signatureRetry;
+
+        // Re-sign the original request with new secret
+        const signedRequest = requestSigner.signRequest(originalRequest);
+
+        if (import.meta.env.VITE_ENV === "development") {
+          console.log("[SIGNATURE] Retrying original request");
+        }
 
         // Retry the original request
-        return api(originalRequest);
-      } catch (csrfError) {
-        console.error( csrfError);
-        localStorage.removeItem("csrf_token");
-        localStorage.removeItem("csrf_token_expiry");
+        return api(signedRequest);
+      } catch (signatureError) {
+        console.error("[SIGNATURE] Refresh failed:", signatureError);
+        requestSigner.clearSigningSecret();
+
+        // If we can't get signing secret, auth is likely broken
+        if (signatureError.response?.status === 401) {
+          localStorage.removeItem("user");
+          window.location.href = "/login";
+        }
+
         return Promise.reject(error);
-      }
-    }
-
-    // Handle bot challenge requirement
-    if (error.response?.data?.code === "CHALLENGE_REQUIRED") {
-      const challengeData = error.response.data.data;
-
-      try {
-        const solvingToast = toast.loading("Verifying security...");
-
-        const nonce = await solveChallenge(
-          challengeData.seed,
-          challengeData.difficulty
-        );
-
-        // Submit solution
-        const baseURL = import.meta.env.VITE_API_URL || "http://localhost:7000";
-        await axios.post(
-          `${baseURL}/api/security/verify-challenge`,
-          {
-            seed: challengeData.seed,
-            nonce,
-          },
-          {
-            withCredentials: true,
-          }
-        );
-
-        toast.dismiss(solvingToast);
-
-        // Retry original request
-        return api(originalRequest);
-      } catch (challengeError) {
-        toast.error("Security verification failed. Please refresh the page.");
-        return Promise.reject(challengeError);
       }
     }
 
@@ -242,36 +304,71 @@ const processQueue = (error, token = null) => {
 };
 
 api.interceptors.response.use(
-  (response) => {
-    if (response.config.url?.includes("/auth/")) {
-      if (!response.data) {
-        console.error(response);
-        throw new Error("Invalid server response");
-      }
-    }
-    return response;
-  },
+  (response) => response,
   async (error) => {
     const originalRequest = error.config;
 
+    logApiError(error, originalRequest?.url || "Unknown URL");
+
     // Handle network errors
     if (!error.response) {
-      console.error(error.message);
+      const detailedMessage =
+        import.meta.env.VITE_ENV === "development"
+          ? `Network error on ${originalRequest?.method?.toUpperCase()} ${
+              originalRequest?.url
+            }. ` +
+            `Check if backend is running on ${
+              import.meta.env.VITE_API_URL || "http://localhost:7000"
+            }`
+          : "Network error. Please check your connection.";
+
+      console.error("[API] Network error details:", {
+        url: originalRequest?.url,
+        method: originalRequest?.method,
+        baseURL: import.meta.env.VITE_API_URL,
+        message: error.message,
+      });
+
       return Promise.reject({
-        message: "Network error. Please check your connection.",
+        message: detailedMessage,
         isNetworkError: true,
         originalError: error,
+        debug: {
+          url: originalRequest?.url,
+          method: originalRequest?.method,
+          timestamp: new Date().toISOString(),
+        },
       });
     }
 
     const { status, data } = error.response;
 
-    // Handle 401 Unauthorized
+    if (import.meta.env.VITE_ENV === "development") {
+      console.warn(`[API] ${status} Error:`, {
+        url: originalRequest?.url,
+        method: originalRequest?.method,
+        status,
+        message: data?.message,
+      });
+    }
     if (status === 401) {
+      // ENHANCED: Check for specific error codes
+      const errorCode = data?.code;
+
+      // If CSRF token error, try to refresh CSRF token first
+      if (errorCode && errorCode.includes("CSRF")) {
+        console.log(
+          "[API] CSRF error detected, token will be refreshed automatically"
+        );
+        // The interceptor at the top will handle fetching new CSRF token
+        return Promise.reject(error);
+      }
+
       if (
         originalRequest._retry ||
         originalRequest.url?.includes("/refresh-token") ||
-        data?.message === "Refresh token not found"
+        data?.message === "Refresh token not found" ||
+        data?.message === "Session expired"
       ) {
         localStorage.removeItem("user");
         isRefreshing = false;
@@ -281,6 +378,7 @@ api.interceptors.response.use(
           !window.location.pathname.includes("/login") &&
           !window.location.pathname.includes("/register")
         ) {
+          console.log("[API] Redirecting to login due to auth failure");
           window.location.href = "/login";
         }
 
@@ -385,6 +483,7 @@ export const apiMethods = {
     verifyRegistrationOtp: (email, otp, username = null) =>
       api.post("/api/auth/verify-otp", { email, otp, username }),
     resendOtp: (email) => api.post("/api/auth/resend-otp", { email }),
+    getSigningSecret: () => api.get("/api/security/signing-secret"),
     changePassword: (passwords) =>
       api.put("/api/auth/change-password", passwords),
     getProfile: () => api.get("/api/auth/profile"),

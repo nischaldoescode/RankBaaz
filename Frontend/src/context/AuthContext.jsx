@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useReducer, useEffect } from "react";
 import { apiMethods, handleApiError } from "../services/api";
 import toast from "react-hot-toast";
+import { requestSigner } from "../utils/requestSigning.js";
 
 // Initial state
 const initialState = {
@@ -98,6 +99,46 @@ export const AuthProvider = ({ children }) => {
       if (userData) {
         const user = JSON.parse(userData);
 
+        // CRITICAL FIX: Load signing secret BEFORE making any API calls
+        const secretLoaded = requestSigner.loadSigningSecret();
+
+        if (import.meta.env.VITE_MODE === "development") {
+          console.log(
+            "[AUTH_INIT] Signing secret loaded from localStorage:",
+            secretLoaded
+          );
+        }
+
+        // If no signing secret found, try to fetch one
+        if (!secretLoaded) {
+          try {
+            if (import.meta.env.VITE_MODE === "development") {
+              console.log(
+                "[AUTH_INIT] No secret in localStorage, fetching new one"
+              );
+            }
+
+            const secretResponse = await apiMethods.auth.getSigningSecret();
+
+            if (secretResponse.data.success) {
+              requestSigner.setSigningSecret(
+                secretResponse.data.data.signingSecret,
+                secretResponse.data.data.expiresIn
+              );
+
+              if (import.meta.env.VITE_MODE === "development") {
+                console.log("[AUTH_INIT] Fetched new signing secret");
+              }
+            }
+          } catch (secretError) {
+            console.error(
+              "[AUTH_INIT] Failed to fetch signing secret:",
+              secretError
+            );
+            // Continue anyway - getProfile will fail and trigger proper error handling
+          }
+        }
+
         try {
           const response = await apiMethods.auth.getProfile();
           const validatedUser = response.data?.data?.user;
@@ -119,11 +160,23 @@ export const AuthProvider = ({ children }) => {
           console.error("Auth initialization failed:", {
             status: error.response?.status,
             message: error.response?.data?.message || error.message,
+            code: error.response?.data?.code,
           });
 
-          // Silently clear auth - don't show toast on app initialization
-          clearAuthData();
-          dispatch({ type: AUTH_ACTIONS.LOGOUT });
+          // Only clear auth if it's a genuine auth error (not signature error)
+          // Signature errors will be handled by interceptor
+          if (
+            error.response?.status === 401 &&
+            error.response?.data?.code !== "SIGNATURE_EXPIRED" &&
+            error.response?.data?.code !== "SIGNATURE_MISSING" &&
+            error.response?.data?.code !== "SIGNATURE_INVALID"
+          ) {
+            clearAuthData();
+            dispatch({ type: AUTH_ACTIONS.LOGOUT });
+          } else {
+            // For other errors, keep user logged in but stop loading
+            dispatch({ type: AUTH_ACTIONS.SET_LOADING, payload: false });
+          }
         }
       } else {
         dispatch({ type: AUTH_ACTIONS.SET_LOADING, payload: false });
@@ -137,6 +190,7 @@ export const AuthProvider = ({ children }) => {
   const clearAuthData = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
+    requestSigner.clearSigningSecret();
   };
 
   const login = async (credentials) => {
@@ -146,9 +200,17 @@ export const AuthProvider = ({ children }) => {
 
       const response = await apiMethods.auth.login(credentials);
       const user = response.data?.data?.user;
+      const signingSecret = response.data?.data?.signingSecret;
+      const signingSecretExpiresIn =
+        response.data?.data?.signingSecretExpiresIn;
 
       if (!user) {
         throw new Error("User data not received from server");
+      }
+
+      // Store signing secret
+      if (signingSecret && signingSecretExpiresIn) {
+        requestSigner.setSigningSecret(signingSecret, signingSecretExpiresIn);
       }
 
       localStorage.setItem("user", JSON.stringify(user));
@@ -158,9 +220,8 @@ export const AuthProvider = ({ children }) => {
         payload: { user, token: null },
       });
 
-      // Use toast.promise to prevent duplicate toasts
       toast.success(`Welcome back, ${user.name}!`, {
-        id: "login-success", // Unique ID prevents duplicates
+        id: "login-success",
       });
 
       return { success: true, user };
@@ -388,6 +449,17 @@ export const AuthProvider = ({ children }) => {
         // If username was provided, user is created - log them in
         if (username && response.data.data.user) {
           const { user } = response.data.data;
+          const signingSecret = response.data.data.signingSecret;
+          const signingSecretExpiresIn =
+            response.data.data.signingSecretExpiresIn;
+
+          // Store signing secret
+          if (signingSecret && signingSecretExpiresIn) {
+            requestSigner.setSigningSecret(
+              signingSecret,
+              signingSecretExpiresIn
+            );
+          }
 
           localStorage.setItem("user", JSON.stringify(user));
 
@@ -423,6 +495,7 @@ export const AuthProvider = ({ children }) => {
       console.error(error);
     } finally {
       clearAuthData();
+      requestSigner.clearSigningSecret();
       dispatch({ type: AUTH_ACTIONS.LOGOUT });
       toast.success("Logged out successfully");
     }

@@ -225,172 +225,255 @@
   <body>
     <div id="root"></div>
 
-    <!-- Security: Console Protection (Production Only) -->
     <script>
       (function () {
         "use strict";
 
-        // Only run in production
-        if (
-          window.location.hostname === "localhost" ||
-          window.location.hostname === "127.0.0.1"
-        ) {
-          return;
+        // Skip protections for localhost
+        try {
+          if (
+            location.hostname === "localhost" ||
+            location.hostname === "127.0.0.1"
+          )
+            return;
+        } catch (e) {}
+
+        let devOpen = false;
+        let warned = false;
+        let allowPasting = false;
+
+        function showWarning() {
+          if (warned) return;
+          warned = true;
+
+          try {
+            console.log(
+              "%c⚠️ STOP! ⚠️",
+              "font-size:42px; font-weight:bold; color:#c0392b;"
+            );
+            console.log(
+              "%cThis is for developers only.",
+              "font-size:18px; font-weight:bold;"
+            );
+            console.log(
+              "%cPasting anything here can let attackers steal your account!",
+              "font-size:14px; color:#ff6b6b; font-weight:bold;"
+            );
+            console.log(
+              "%cIf anyone told you to paste code here, it's a SCAM.",
+              "font-size:14px; color:#e74c3c; font-weight:bold;"
+            );
+          } catch (e) {}
         }
 
-        // ============================================
-        // CONSOLE PASTE WARNING
-        // ============================================
-        let pasteWarningShown = false;
+        (function devtoolsChecker() {
+          const TH = 160;
 
-        // Monitor console opening
-        const showPasteWarning = () => {
-          if (pasteWarningShown) return;
-          pasteWarningShown = true;
+          setInterval(() => {
+            try {
+              const w = window.outerWidth - window.innerWidth;
+              const h = window.outerHeight - window.innerHeight;
 
-          console.log(
-            "%c⚠️ STOP! ⚠️",
-            "color: red; font-size: 50px; font-weight: bold; text-shadow: 2px 2px 4px rgba(0,0,0,0.3);"
-          );
-          console.log(
-            "%cThis is a browser feature intended for developers.",
-            "font-size: 18px; font-weight: bold;"
-          );
-          console.log(
-            "%cIf someone told you to copy-paste something here, it's a scam designed to steal your account.",
-            "font-size: 16px; color: #ff6b6b;"
-          );
-          console.log(
-            "%cPasting code here can give attackers access to your RankBaaz account.",
-            "font-size: 16px; color: #ff6b6b; font-weight: bold;"
-          );
-        };
+              if ((w > TH || h > TH) && !devOpen) {
+                devOpen = true;
+                showWarning();
+                blockPagePaste(true);
+              } else if (w <= TH && h <= TH && devOpen) {
+                devOpen = false;
+                blockPagePaste(false);
+              }
+            } catch (e) {}
+          }, 700);
+        })();
 
-        // Show warning when DevTools opens
-        let devtoolsOpen = false;
-        const checkDevTools = () => {
-          const threshold = 160;
-          const widthThreshold =
-            window.outerWidth - window.innerWidth > threshold;
-          const heightThreshold =
-            window.outerHeight - window.innerHeight > threshold;
+        (function hijackLog() {
+          const original = console.log;
+          console.log = function () {
+            showWarning();
+            console.log = original;
+            return original.apply(this, arguments);
+          };
+        })();
 
-          if ((widthThreshold || heightThreshold) && !devtoolsOpen) {
-            devtoolsOpen = true;
-            showPasteWarning();
-          }
-        };
-
-        // Check periodically
-        setInterval(checkDevTools, 1000);
-
-        // Also show on first console.log
-        const originalLog = console.log;
-        console.log = function () {
-          showPasteWarning();
-          console.log = originalLog; // Restore original after first use
-          return originalLog.apply(console, arguments);
-        };
-
-        // ============================================
-        // SECURITY: Block Malicious Console Commands
-        // ============================================
-
-        // Prevent beforeunload hijacking
-        const originalBeforeUnload = window.onbeforeunload;
-        Object.defineProperty(window, "onbeforeunload", {
+        Object.defineProperty(window, "__enablePasteViaConsole", {
           configurable: false,
           enumerable: false,
-          get: () => originalBeforeUnload,
-          set: (value) => {
-            // Only allow our own code to set this
-            const stack = new Error().stack;
-            if (stack && stack.includes("Test.jsx")) {
-              return value;
-            }
-            console.warn("Not Allowed");
-            return originalBeforeUnload;
+          value: function (token) {
+            try {
+              if (String(token).trim() === "allow-pasting") {
+                allowPasting = true;
+                console.warn("Pasting enabled (temporary)");
+                return true;
+              }
+            } catch (e) {}
+            return false;
           },
         });
 
-        // Protect console.clear
-        console.clear = () => console.warn("Not Allowed");
+        function blockPagePaste(shouldBlock) {
+          try {
+            const handler = function (e) {
+              if (allowPasting) return;
+              e.preventDefault();
+              e.stopImmediatePropagation();
+              console.warn("Pasting blocked");
+            };
 
-        // Protect location methods
-        ["assign", "replace", "reload"].forEach((method) => {
-          const original = window.location[method];
-          Object.defineProperty(window.location, method, {
+            if (blockPagePaste._attached) {
+              document.removeEventListener(
+                "paste",
+                blockPagePaste._attached,
+                true
+              );
+              blockPagePaste._attached = null;
+            }
+
+            if (shouldBlock) {
+              document.addEventListener("paste", handler, true);
+              blockPagePaste._attached = handler;
+            }
+          } catch (e) {}
+        }
+        try {
+          console.clear = function () {
+            console.warn("Not Allowed");
+          };
+        } catch (e) {}
+
+        // Detect override attempts of critical functions
+        function protectFunction(obj, fn) {
+          try {
+            const orig = obj[fn];
+            Object.defineProperty(obj, fn, {
+              configurable: false,
+              enumerable: false,
+              writable: false,
+              value: orig,
+            });
+          } catch (e) {}
+        }
+
+        protectFunction(console, "log");
+        protectFunction(console, "warn");
+        protectFunction(console, "error");
+        protectFunction(console, "clear");
+
+        (function protectLocation() {
+          ["assign", "replace", "reload"].forEach(function (m) {
+            try {
+              const orig = location[m];
+
+              Object.defineProperty(location, m, {
+                configurable: false,
+                enumerable: false,
+                value: function () {
+                  const st = new Error().stack || "";
+                  if (st.includes("react") || st.includes("core")) {
+                    return orig.apply(this, arguments);
+                  }
+                  console.warn("Navigation blocked");
+                  return false;
+                },
+              });
+            } catch (e) {}
+          });
+        })();
+
+        (function protectHistory() {
+          try {
+            const oPush = history.pushState;
+            const oReplace = history.replaceState;
+
+            history.pushState = function () {
+              const st = new Error().stack || "";
+              if (st.includes("react") || st.includes("core"))
+                return oPush.apply(this, arguments);
+              console.warn("History push blocked");
+              return false;
+            };
+
+            history.replaceState = function () {
+              const st = new Error().stack || "";
+              if (st.includes("react") || st.includes("core"))
+                return oReplace.apply(this, arguments);
+              console.warn("History replace blocked");
+              return false;
+            };
+          } catch (e) {}
+        })();
+
+        try {
+          let origErr = window.onerror;
+          Object.defineProperty(window, "onerror", {
             configurable: false,
             enumerable: false,
-            value: function () {
-              const stack = new Error().stack;
-              // Allow only from our own React Router code
-              if (
-                stack &&
-                (stack.includes("react-router") ||
-                  stack.includes("useNavigate"))
-              ) {
-                return original.apply(this, arguments);
+            get: function () {
+              return origErr;
+            },
+            set: function (v) {
+              const st = new Error().stack || "";
+              if (st.includes("react") || st.includes("core")) {
+                origErr = v;
+                return;
               }
-              console.warn("Not Allowed");
-              return false;
+              console.warn("Tampering blocked");
+              return origErr;
             },
           });
-        });
+        } catch (e) {}
 
-        // Protect history methods
-        const originalPushState = history.pushState;
-        const originalReplaceState = history.replaceState;
-
-        history.pushState = function () {
-          const stack = new Error().stack;
-          if (stack && stack.includes("react-router")) {
-            return originalPushState.apply(this, arguments);
+        try {
+          const origRz = window.Razorpay;
+          if (origRz) {
+            window.Razorpay = function () {
+              const st = new Error().stack || "";
+              if (st.includes("checkout") || st.includes("payment"))
+                return origRz.apply(this, arguments);
+              console.warn("Blocked fake Razorpay call");
+              return null;
+            };
           }
-          console.warn("Not Allowed");
-          return false;
-        };
+        } catch (e) {}
 
-        history.replaceState = function () {
-          const stack = new Error().stack;
-          if (stack && stack.includes("react-router")) {
-            return originalReplaceState.apply(this, arguments);
-          }
-          console.warn("Not Allowed");
-          return false;
-        };
-
-        // Protect window.onerror (but allow React's error handling)
-        const originalOnError = window.onerror;
-        Object.defineProperty(window, "onerror", {
-          configurable: false,
-          enumerable: false,
-          get: () => originalOnError,
-          set: (value) => {
-            const stack = new Error().stack;
-            if (
-              stack &&
-              (stack.includes("react") || stack.includes("ErrorBoundary"))
-            ) {
-              return value;
-            }
-            console.warn("Not Allowed");
-            return originalOnError;
-          },
-        });
-
-        // Prevent Razorpay modal hijacking
-        const originalRazorpay = window.Razorpay;
-        if (originalRazorpay) {
-          window.Razorpay = function () {
-            const stack = new Error().stack;
-            if (stack && stack.includes("PaymentModal")) {
-              return originalRazorpay.apply(this, arguments);
-            }
-            console.warn("Not Allowed");
-            return null;
-          };
+        if (navigator.webdriver) {
+          console.warn("Bot detected");
+          blockPagePaste(true);
         }
+
+        try {
+          if (navigator.plugins.length === 0) {
+            console.warn("Bot detected");
+          }
+        } catch (e) {}
+
+        try {
+          const ua = navigator.userAgent;
+          if (/HeadlessChrome|PhantomJS|Puppeteer|node\.js|jsdom/i.test(ua)) {
+            console.warn("Bot detected");
+          }
+        } catch (e) {}
+
+        (function botSpeedCheck() {
+          let last = Date.now();
+          let count = 0;
+
+          function detect() {
+            const now = Date.now();
+            if (now - last < 5) count++;
+            if (count > 20) {
+              console.warn("Bot detected (automation)");
+            }
+            last = now;
+          }
+
+          ["mousemove", "keydown", "click"].forEach((ev) => {
+            window.addEventListener(ev, detect, true);
+          });
+        })();
+
+        console.info(
+          'To enable pasting manually: window.__enablePasteViaConsole("allow-pasting")'
+        );
       })();
     </script>
 

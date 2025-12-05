@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from "react";
-import { Link, useLocation } from "react-router-dom";
+import React, { useState, useEffect, useContext } from "react";
+import { Link, useLocation, UNSAFE_NavigationContext } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import {
@@ -43,6 +43,7 @@ import { LeaderboardInfoModal } from "@/components/Leaderboard/LeaderboardInfoMo
 import { apiMethods } from "../services/api";
 import { useSEO } from "../hooks/useSEO";
 import { useContent } from "../context/ContentContext";
+
 
 const GlobalLeaderboard = ({ userId }) => {
   const [leaderboard, setLeaderboard] = useState([]);
@@ -291,24 +292,27 @@ const Profile = () => {
   const [leaderboardData, setLeaderboardData] = useState(null);
   const [leaderboardLoading, setLeaderboardLoading] = useState(false);
 
-    useSEO({
-    title: 'My Profile',
-    description: `Manage your ${contentSettings?.siteName || 'RankBaaz Pro'} profile, view test history, track progress, and check leaderboard rankings.`,
-    keywords: 'profile, dashboard, test history, progress tracking, leaderboard, user profile',
-    type: 'website',
+  useSEO({
+    title: "My Profile",
+    description: `Manage your ${
+      contentSettings?.siteName || "RankBaaz Pro"
+    } profile, view test history, track progress, and check leaderboard rankings.`,
+    keywords:
+      "profile, dashboard, test history, progress tracking, leaderboard, user profile",
+    type: "website",
     noindex: true, // Private profile pages should not be indexed
     structuredData: {
-      '@context': 'https://schema.org',
-      '@type': 'ProfilePage',
-      name: user?.name || 'User Profile',
-      description: 'User profile dashboard',
+      "@context": "https://schema.org",
+      "@type": "ProfilePage",
+      name: user?.name || "User Profile",
+      description: "User profile dashboard",
       url: window.location.href,
       mainEntity: {
-        '@type': 'Person',
+        "@type": "Person",
         name: user?.name,
-        identifier: user?.username
-      }
-    }
+        identifier: user?.username,
+      },
+    },
   });
 
   useEffect(() => {
@@ -392,17 +396,6 @@ const Profile = () => {
 
     return `${day}/${month}/${year}`;
   };
-
-  // const handleEditClick = (field) => {
-  //   setEditMode(field);
-  //   setEditData({
-  //     ...editData,
-  //     [field]:
-  //       field === "dateOfBirth" ? formatDate(user[field]) : user[field] || "",
-  //     password: "",
-  //   });
-  //   setShowPasswordModal(true);
-  // };
 
   const handleSave = async () => {
     if (!editData.password) {
