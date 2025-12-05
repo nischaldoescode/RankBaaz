@@ -35,7 +35,7 @@
     "cloudinary": "^1.41.0",
     "cloudinary-core": "^2.14.0",
     "compression": "^1.8.1",
-    "connect-redis": "^9.0.0",
+    "connect-redis": "^7.1.1",
     "cookie-parser": "^1.4.6",
     "cors": "^2.8.5",
     "crypto-js": "^4.2.0",
@@ -57,7 +57,7 @@
     "node-cache": "^5.1.2",
     "rate-limit-redis": "^4.2.3",
     "razorpay": "^2.9.6",
-    "redis": "^5.8.3",
+    "redis": "^5.10.0",
     "resend": "^6.2.2",
     "uuid": "^13.0.0"
   },

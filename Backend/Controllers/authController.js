@@ -7,6 +7,7 @@ import redisClient from "../Config/redis.js";
 import PendingRegistration from "../Models/PendingRegistration.js";
 import ContentSettings from "../Models/ContentSettings.js";
 import { invalidateCache } from "../Config/redis.js";
+import { generateSigningSecret } from "../Middleware/requestSignature.js";
 
 import {
   generateOtp,
@@ -656,8 +657,8 @@ export const verifyOTP = async (req, res) => {
     // SAME cookieOptions configuration as above
     const cookieOptions = {
       httpOnly: true,
-      secure: true,
-      sameSite: "none",
+      secure: process.env.NODE_ENV === "development",
+      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
       maxAge: 7 * 24 * 60 * 60 * 1000,
       signed: true,
       path: "/",
@@ -667,6 +668,16 @@ export const verifyOTP = async (req, res) => {
       cookieOptions.domain = ".rankbaaz.com"; // Your domain
     }
 
+    if (process.env.NODE_ENV === "development") {
+      console.log("[COOKIE_SET] Setting auth_session cookie:", {
+        path: cookieOptions.path,
+        httpOnly: cookieOptions.httpOnly,
+        secure: cookieOptions.secure,
+        sameSite: cookieOptions.sameSite,
+        maxAge: cookieOptions.maxAge,
+        userId: user._id.toString(),
+      });
+    }
     res.cookie("auth_session", authCookieData, cookieOptions);
 
     const refreshCookieData = encryptCookieData({
@@ -678,8 +689,8 @@ export const verifyOTP = async (req, res) => {
 
     const refreshCookieOptions = {
       httpOnly: true,
-      secure: true,
-      sameSite: "none",
+      secure: process.env.NODE_ENV === "development",
+      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
       maxAge: 30 * 24 * 60 * 60 * 1000,
       signed: true,
       path: "/",
@@ -689,7 +700,20 @@ export const verifyOTP = async (req, res) => {
       refreshCookieOptions.domain = ".rankbaaz.com";
     }
 
+    if (process.env.NODE_ENV === "development") {
+      console.log("[COOKIE_SET] Setting auth_session cookie:", {
+        path: cookieOptions.path,
+        httpOnly: cookieOptions.httpOnly,
+        secure: cookieOptions.secure,
+        sameSite: cookieOptions.sameSite,
+        maxAge: cookieOptions.maxAge,
+        userId: user._id.toString(),
+      });
+    }
+
     res.cookie("refresh_session", refreshCookieData, refreshCookieOptions);
+    
+    const signingSecret = await generateSigningSecret(user._id.toString());
 
     res.status(200).json({
       success: true,
@@ -704,6 +728,8 @@ export const verifyOTP = async (req, res) => {
           gender: user.gender,
           isVerified: user.isVerified,
         },
+        signingSecret,
+        signingSecretExpiresIn: 7 * 24 * 60 * 60
       },
     });
   } catch (error) {
@@ -792,6 +818,7 @@ export const initiateLogin = async (req, res) => {
     const logoUrl = contentSettings?.logo?.url || null;
 
     await sendOtpEmail(email, otp, siteName, logoUrl);
+    const signingSecret = await generateSigningSecret(user._id.toString());
 
     res.status(200).json({
       success: true,
@@ -802,6 +829,8 @@ export const initiateLogin = async (req, res) => {
         requiresOtp: true,
         isRegistered: true,
         isVerified: true,
+        signingSecret,
+        signingSecretExpiresIn: 7 * 24 * 60 * 60
       },
     });
   } catch (error) {
@@ -877,6 +906,7 @@ export const verifyLoginOTP = async (req, res) => {
       expiresAt: null,
     };
     await user.save();
+    const signingSecret = await generateSigningSecret(user._id.toString());
 
     res.status(200).json({
       success: true,
@@ -884,6 +914,8 @@ export const verifyLoginOTP = async (req, res) => {
       data: {
         email,
         otpVerified: true,
+        signingSecret,
+        signingSecretExpiresIn: 7 * 24 * 60 * 60
       },
     });
   } catch (error) {
@@ -1018,11 +1050,11 @@ export const login = async (req, res) => {
     // CHANGE: Add domain and path explicitly for production
     const cookieOptions = {
       httpOnly: true,
-      secure: true, // ALWAYS true for production HTTPS
-      sameSite: "none",
+      secure: process.env.NODE_ENV === "development",
+      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
       maxAge: 7 * 24 * 60 * 60 * 1000,
       signed: true,
-      path: "/", // Explicitly set path
+      path: "/",
     };
 
     // Add domain only in production
@@ -1030,6 +1062,16 @@ export const login = async (req, res) => {
       cookieOptions.domain = ".rankbaaz.com"; // CHANGE: Add your actual domain
     }
 
+    if (process.env.NODE_ENV === "development") {
+      console.log("[COOKIE_SET] Setting auth_session cookie:", {
+        path: cookieOptions.path,
+        httpOnly: cookieOptions.httpOnly,
+        secure: cookieOptions.secure,
+        sameSite: cookieOptions.sameSite,
+        maxAge: cookieOptions.maxAge,
+        userId: user._id.toString(),
+      });
+    }
     res.cookie("auth_session", authCookieData, cookieOptions);
 
     const refreshCookieData = encryptCookieData({
@@ -1041,8 +1083,8 @@ export const login = async (req, res) => {
 
     const refreshCookieOptions = {
       httpOnly: true,
-      secure: true,
-      sameSite: "none",
+      secure: process.env.NODE_ENV === "development", // CRITICAL FIX
+      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
       maxAge: 30 * 24 * 60 * 60 * 1000,
       signed: true,
       path: "/",
@@ -1056,11 +1098,12 @@ export const login = async (req, res) => {
 
     // Build user response (remove password)
     const { password: _, otp, ...userResponse } = user;
+    const signingSecret = await generateSigningSecret(user._id.toString());
 
     res.status(200).json({
       success: true,
       message: "Login successful",
-      data: { user: userResponse },
+      data: { user: userResponse, signingSecret,signingSecretExpiresIn: 7 * 24 * 60 * 60 },
     });
   } catch (error) {
     console.error(error);
@@ -1134,10 +1177,8 @@ export const refreshToken = async (req, res) => {
 
     res.cookie("auth_session", newCookieData, {
       httpOnly: true,
-      secure:
-        process.env.NODE_ENV === "production" ||
-        process.env.NODE_ENV === "development",
-      sameSite: "none",
+      secure: process.env.NODE_ENV === "development",
+      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
       maxAge: 7 * 24 * 60 * 60 * 1000,
       signed: true,
     });
@@ -1151,17 +1192,30 @@ export const refreshToken = async (req, res) => {
 
     res.cookie("refresh_session", newRefreshCookieData, {
       httpOnly: true,
-      secure:
-        process.env.NODE_ENV === "production" ||
-        process.env.NODE_ENV === "development",
-      sameSite: "none",
+      secure: process.env.NODE_ENV === "development",
+      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
       maxAge: 30 * 24 * 60 * 60 * 1000,
       signed: true,
     });
 
+    if (process.env.NODE_ENV === "development") {
+      console.log("[COOKIE_SET] Setting auth_session cookie:", {
+        path: cookieOptions.path,
+        httpOnly: cookieOptions.httpOnly,
+        secure: cookieOptions.secure,
+        sameSite: cookieOptions.sameSite,
+        maxAge: cookieOptions.maxAge,
+        userId: user._id.toString(),
+      });
+    }
+    const signingSecret = await generateSigningSecret(user._id.toString());
     res.status(200).json({
       success: true,
       message: "Token refreshed successfully",
+      data: {
+        signingSecret,
+        signingSecretExpiresIn: 7 * 24 * 60 * 60
+      },
     });
   } catch (error) {
     console.error(error);
