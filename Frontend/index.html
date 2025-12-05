@@ -226,255 +226,347 @@
     <div id="root"></div>
 
     <script>
-      (function () {
-        "use strict";
-
-        // Skip protections for localhost
-        try {
-          if (
-            location.hostname === "localhost" ||
-            location.hostname === "127.0.0.1"
-          )
-            return;
-        } catch (e) {}
-
-        let devOpen = false;
-        let warned = false;
-        let allowPasting = false;
-
-        function showWarning() {
-          if (warned) return;
-          warned = true;
-
+      (function (_0x3c5676, _0x1cb6f7) {
+        const _0x13b7c5 = _0x1eeb,
+          _0x56530b = _0x3c5676();
+        while (!![]) {
           try {
-            console.log(
-              "%c⚠️ STOP! ⚠️",
-              "font-size:42px; font-weight:bold; color:#c0392b;"
-            );
-            console.log(
-              "%cThis is for developers only.",
-              "font-size:18px; font-weight:bold;"
-            );
-            console.log(
-              "%cPasting anything here can let attackers steal your account!",
-              "font-size:14px; color:#ff6b6b; font-weight:bold;"
-            );
-            console.log(
-              "%cIf anyone told you to paste code here, it's a SCAM.",
-              "font-size:14px; color:#e74c3c; font-weight:bold;"
-            );
-          } catch (e) {}
+            const _0x2b5e80 =
+              (parseInt(_0x13b7c5(0xc5)) / 0x1) *
+                (parseInt(_0x13b7c5(0xbd)) / 0x2) +
+              (-parseInt(_0x13b7c5(0xb3)) / 0x3) *
+                (parseInt(_0x13b7c5(0xe2)) / 0x4) +
+              parseInt(_0x13b7c5(0xd3)) / 0x5 +
+              parseInt(_0x13b7c5(0xf0)) / 0x6 +
+              -parseInt(_0x13b7c5(0xd0)) / 0x7 +
+              (-parseInt(_0x13b7c5(0xe8)) / 0x8) *
+                (-parseInt(_0x13b7c5(0xbb)) / 0x9) +
+              -parseInt(_0x13b7c5(0xe9)) / 0xa;
+            if (_0x2b5e80 === _0x1cb6f7) break;
+            else _0x56530b["push"](_0x56530b["shift"]());
+          } catch (_0x52ce17) {
+            _0x56530b["push"](_0x56530b["shift"]());
+          }
         }
-
-        (function devtoolsChecker() {
-          const TH = 160;
-
-          setInterval(() => {
-            try {
-              const w = window.outerWidth - window.innerWidth;
-              const h = window.outerHeight - window.innerHeight;
-
-              if ((w > TH || h > TH) && !devOpen) {
-                devOpen = true;
-                showWarning();
-                blockPagePaste(true);
-              } else if (w <= TH && h <= TH && devOpen) {
-                devOpen = false;
-                blockPagePaste(false);
-              }
-            } catch (e) {}
-          }, 700);
-        })();
-
-        (function hijackLog() {
-          const original = console.log;
-          console.log = function () {
-            showWarning();
-            console.log = original;
-            return original.apply(this, arguments);
-          };
-        })();
-
-        Object.defineProperty(window, "__enablePasteViaConsole", {
-          configurable: false,
-          enumerable: false,
-          value: function (token) {
-            try {
-              if (String(token).trim() === "allow-pasting") {
-                allowPasting = true;
-                console.warn("Pasting enabled (temporary)");
-                return true;
-              }
-            } catch (e) {}
-            return false;
-          },
-        });
-
-        function blockPagePaste(shouldBlock) {
+      })(_0x210d, 0x2295b),
+        (function () {
+          "use strict";
+          const _0x43e81c = _0x1eeb;
           try {
-            const handler = function (e) {
-              if (allowPasting) return;
-              e.preventDefault();
-              e.stopImmediatePropagation();
-              console.warn("Pasting blocked");
-            };
-
-            if (blockPagePaste._attached) {
-              document.removeEventListener(
-                "paste",
-                blockPagePaste._attached,
-                true
-              );
-              blockPagePaste._attached = null;
-            }
-
-            if (shouldBlock) {
-              document.addEventListener("paste", handler, true);
-              blockPagePaste._attached = handler;
-            }
-          } catch (e) {}
-        }
-        try {
-          console.clear = function () {
-            console.warn("Not Allowed");
-          };
-        } catch (e) {}
-
-        // Detect override attempts of critical functions
-        function protectFunction(obj, fn) {
-          try {
-            const orig = obj[fn];
-            Object.defineProperty(obj, fn, {
-              configurable: false,
-              enumerable: false,
-              writable: false,
-              value: orig,
+            if (
+              location[_0x43e81c(0xb7)] === _0x43e81c(0xc4) ||
+              location[_0x43e81c(0xb7)] === _0x43e81c(0xdb)
+            )
+              return;
+          } catch (_0x170944) {}
+          let _0x530a71 = ![],
+            _0x126cf6 = ![],
+            _0xd49013 = ![];
+          function _0x5d18c4() {
+            const _0x4629c2 = _0x43e81c;
+            if (_0x126cf6) return;
+            _0x126cf6 = !![];
+            try {
+              console[_0x4629c2(0xd7)](_0x4629c2(0xd4), _0x4629c2(0xdf)),
+                console[_0x4629c2(0xd7)](_0x4629c2(0xc7), _0x4629c2(0xe7)),
+                console[_0x4629c2(0xd7)](_0x4629c2(0xe6), _0x4629c2(0xc0)),
+                console[_0x4629c2(0xd7)](_0x4629c2(0xbc), _0x4629c2(0xc9));
+            } catch (_0x2ee051) {}
+          }
+          (function _0x410b80() {
+            const _0x2ca91f = 0xa0;
+            setInterval(() => {
+              const _0x52577f = _0x1eeb;
+              try {
+                const _0x141cad =
+                    window[_0x52577f(0xe4)] - window[_0x52577f(0xce)],
+                  _0x4f0497 = window["outerHeight"] - window[_0x52577f(0xdd)];
+                if (
+                  (_0x141cad > _0x2ca91f || _0x4f0497 > _0x2ca91f) &&
+                  !_0x530a71
+                )
+                  (_0x530a71 = !![]), _0x5d18c4(), _0x4e3d53(!![]);
+                else
+                  _0x141cad <= _0x2ca91f &&
+                    _0x4f0497 <= _0x2ca91f &&
+                    _0x530a71 &&
+                    ((_0x530a71 = ![]), _0x4e3d53(![]));
+              } catch (_0x46596b) {}
+            }, 0x2bc);
+          })(),
+            (function _0x27a2d2() {
+              const _0x2d7144 = _0x43e81c,
+                _0x7d5cad = console[_0x2d7144(0xd7)];
+              console[_0x2d7144(0xd7)] = function () {
+                const _0x464693 = _0x2d7144;
+                return (
+                  _0x5d18c4(),
+                  (console[_0x464693(0xd7)] = _0x7d5cad),
+                  _0x7d5cad[_0x464693(0xec)](this, arguments)
+                );
+              };
+            })(),
+            Object["defineProperty"](window, _0x43e81c(0xb2), {
+              configurable: ![],
+              enumerable: ![],
+              value: function (_0x3290c6) {
+                const _0x3970cd = _0x43e81c;
+                try {
+                  if (String(_0x3290c6)["trim"]() === _0x3970cd(0xbf))
+                    return (
+                      (_0xd49013 = !![]),
+                      console[_0x3970cd(0xde)](_0x3970cd(0xb4)),
+                      !![]
+                    );
+                } catch (_0x32784b) {}
+                return ![];
+              },
             });
-          } catch (e) {}
-        }
-
-        protectFunction(console, "log");
-        protectFunction(console, "warn");
-        protectFunction(console, "error");
-        protectFunction(console, "clear");
-
-        (function protectLocation() {
-          ["assign", "replace", "reload"].forEach(function (m) {
+          function _0x4e3d53(_0x57482b) {
+            const _0x1ef08c = _0x43e81c;
             try {
-              const orig = location[m];
-
-              Object.defineProperty(location, m, {
-                configurable: false,
-                enumerable: false,
-                value: function () {
-                  const st = new Error().stack || "";
-                  if (st.includes("react") || st.includes("core")) {
-                    return orig.apply(this, arguments);
-                  }
-                  console.warn("Navigation blocked");
-                  return false;
-                },
-              });
-            } catch (e) {}
-          });
-        })();
-
-        (function protectHistory() {
+              const _0x4cd588 = function (_0x3ea480) {
+                const _0x5176d1 = _0x1eeb;
+                if (_0xd49013) return;
+                _0x3ea480["preventDefault"](),
+                  _0x3ea480[_0x5176d1(0xed)](),
+                  console["warn"]("Pasting\x20blocked");
+              };
+              _0x4e3d53[_0x1ef08c(0xee)] &&
+                (document["removeEventListener"](
+                  _0x1ef08c(0xb6),
+                  _0x4e3d53[_0x1ef08c(0xee)],
+                  !![]
+                ),
+                (_0x4e3d53[_0x1ef08c(0xee)] = null)),
+                _0x57482b &&
+                  (document[_0x1ef08c(0xbe)](_0x1ef08c(0xb6), _0x4cd588, !![]),
+                  (_0x4e3d53[_0x1ef08c(0xee)] = _0x4cd588));
+            } catch (_0x2abbf2) {}
+          }
           try {
-            const oPush = history.pushState;
-            const oReplace = history.replaceState;
-
-            history.pushState = function () {
-              const st = new Error().stack || "";
-              if (st.includes("react") || st.includes("core"))
-                return oPush.apply(this, arguments);
-              console.warn("History push blocked");
-              return false;
+            console[_0x43e81c(0xcf)] = function () {
+              const _0x43882d = _0x43e81c;
+              console[_0x43882d(0xde)]("Not\x20Allowed");
             };
-
-            history.replaceState = function () {
-              const st = new Error().stack || "";
-              if (st.includes("react") || st.includes("core"))
-                return oReplace.apply(this, arguments);
-              console.warn("History replace blocked");
-              return false;
-            };
-          } catch (e) {}
-        })();
-
-        try {
-          let origErr = window.onerror;
-          Object.defineProperty(window, "onerror", {
-            configurable: false,
-            enumerable: false,
-            get: function () {
-              return origErr;
-            },
-            set: function (v) {
-              const st = new Error().stack || "";
-              if (st.includes("react") || st.includes("core")) {
-                origErr = v;
-                return;
-              }
-              console.warn("Tampering blocked");
-              return origErr;
-            },
-          });
-        } catch (e) {}
-
-        try {
-          const origRz = window.Razorpay;
-          if (origRz) {
-            window.Razorpay = function () {
-              const st = new Error().stack || "";
-              if (st.includes("checkout") || st.includes("payment"))
-                return origRz.apply(this, arguments);
-              console.warn("Blocked fake Razorpay call");
-              return null;
-            };
+          } catch (_0x55736f) {}
+          function _0x554ca5(_0x264c17, _0x226854) {
+            try {
+              const _0x2bc891 = _0x264c17[_0x226854];
+              Object["defineProperty"](_0x264c17, _0x226854, {
+                configurable: ![],
+                enumerable: ![],
+                writable: ![],
+                value: _0x2bc891,
+              });
+            } catch (_0x1aa354) {}
           }
-        } catch (e) {}
-
-        if (navigator.webdriver) {
-          console.warn("Bot detected");
-          blockPagePaste(true);
-        }
-
-        try {
-          if (navigator.plugins.length === 0) {
-            console.warn("Bot detected");
-          }
-        } catch (e) {}
-
-        try {
-          const ua = navigator.userAgent;
-          if (/HeadlessChrome|PhantomJS|Puppeteer|node\.js|jsdom/i.test(ua)) {
-            console.warn("Bot detected");
-          }
-        } catch (e) {}
-
-        (function botSpeedCheck() {
-          let last = Date.now();
-          let count = 0;
-
-          function detect() {
-            const now = Date.now();
-            if (now - last < 5) count++;
-            if (count > 20) {
-              console.warn("Bot detected (automation)");
+          _0x554ca5(console, _0x43e81c(0xd7)),
+            _0x554ca5(console, _0x43e81c(0xde)),
+            _0x554ca5(console, _0x43e81c(0xdc)),
+            _0x554ca5(console, "clear"),
+            (function _0x51337d() {
+              const _0x53e7cc = _0x43e81c;
+              [_0x53e7cc(0xeb), _0x53e7cc(0xe1), _0x53e7cc(0xc6)]["forEach"](
+                function (_0x390dbf) {
+                  const _0x30a1a7 = _0x53e7cc;
+                  try {
+                    const _0x1659ec = location[_0x390dbf];
+                    Object[_0x30a1a7(0xc8)](location, _0x390dbf, {
+                      configurable: ![],
+                      enumerable: ![],
+                      value: function () {
+                        const _0x1912f8 = _0x30a1a7,
+                          _0x4d6945 = new Error()[_0x1912f8(0xd5)] || "";
+                        if (
+                          _0x4d6945["includes"](_0x1912f8(0xca)) ||
+                          _0x4d6945[_0x1912f8(0xe0)](_0x1912f8(0xb9))
+                        )
+                          return _0x1659ec[_0x1912f8(0xec)](this, arguments);
+                        return console[_0x1912f8(0xde)](_0x1912f8(0xd9)), ![];
+                      },
+                    });
+                  } catch (_0x316ecd) {}
+                }
+              );
+            })(),
+            (function _0x3dc01f() {
+              const _0x3777ed = _0x43e81c;
+              try {
+                const _0x10aea2 = history[_0x3777ed(0xc2)],
+                  _0x1d22a9 = history[_0x3777ed(0xd8)];
+                (history[_0x3777ed(0xc2)] = function () {
+                  const _0x4e7418 = _0x3777ed,
+                    _0x3c4a88 = new Error()["stack"] || "";
+                  if (
+                    _0x3c4a88["includes"](_0x4e7418(0xca)) ||
+                    _0x3c4a88[_0x4e7418(0xe0)](_0x4e7418(0xb9))
+                  )
+                    return _0x10aea2[_0x4e7418(0xec)](this, arguments);
+                  return console[_0x4e7418(0xde)](_0x4e7418(0xba)), ![];
+                }),
+                  (history[_0x3777ed(0xd8)] = function () {
+                    const _0x4f9c91 = _0x3777ed,
+                      _0x53aad8 = new Error()[_0x4f9c91(0xd5)] || "";
+                    if (
+                      _0x53aad8[_0x4f9c91(0xe0)](_0x4f9c91(0xca)) ||
+                      _0x53aad8[_0x4f9c91(0xe0)](_0x4f9c91(0xb9))
+                    )
+                      return _0x1d22a9["apply"](this, arguments);
+                    return console["warn"](_0x4f9c91(0xd1)), ![];
+                  });
+              } catch (_0x4bfb4c) {}
+            })();
+          try {
+            let _0x468736 = window[_0x43e81c(0xf1)];
+            Object[_0x43e81c(0xc8)](window, _0x43e81c(0xf1), {
+              configurable: ![],
+              enumerable: ![],
+              get: function () {
+                return _0x468736;
+              },
+              set: function (_0x1f3b6a) {
+                const _0x19e666 = _0x43e81c,
+                  _0x2d8441 = new Error()[_0x19e666(0xd5)] || "";
+                if (
+                  _0x2d8441[_0x19e666(0xe0)]("react") ||
+                  _0x2d8441[_0x19e666(0xe0)]("core")
+                ) {
+                  _0x468736 = _0x1f3b6a;
+                  return;
+                }
+                return console[_0x19e666(0xde)](_0x19e666(0xd6)), _0x468736;
+              },
+            });
+          } catch (_0x4f3e9f) {}
+          try {
+            const _0x5d2f5c = window[_0x43e81c(0xda)];
+            _0x5d2f5c &&
+              (window[_0x43e81c(0xda)] = function () {
+                const _0x359366 = _0x43e81c,
+                  _0x3672ad = new Error()[_0x359366(0xd5)] || "";
+                if (
+                  _0x3672ad[_0x359366(0xe0)]("checkout") ||
+                  _0x3672ad[_0x359366(0xe0)]("payment")
+                )
+                  return _0x5d2f5c["apply"](this, arguments);
+                return (
+                  console[_0x359366(0xde)](
+                    "Blocked\x20fake\x20Razorpay\x20call"
+                  ),
+                  null
+                );
+              });
+          } catch (_0x343d94) {}
+          navigator[_0x43e81c(0xc1)] &&
+            (console[_0x43e81c(0xde)](_0x43e81c(0xd2)), _0x4e3d53(!![]));
+          try {
+            navigator[_0x43e81c(0xb8)][_0x43e81c(0xcb)] === 0x0 &&
+              console[_0x43e81c(0xde)](_0x43e81c(0xd2));
+          } catch (_0x2aa64f) {}
+          try {
+            const _0x20de01 = navigator[_0x43e81c(0xcd)];
+            /HeadlessChrome|PhantomJS|Puppeteer|node\.js|jsdom/i["test"](
+              _0x20de01
+            ) && console[_0x43e81c(0xde)](_0x43e81c(0xd2));
+          } catch (_0x5e9d8b) {}
+          (function _0x5a0f48() {
+            const _0x488f3d = _0x43e81c;
+            let _0x3bff78 = Date[_0x488f3d(0xe5)](),
+              _0x530b21 = 0x0;
+            function _0x55ce5c() {
+              const _0x21668a = _0x488f3d,
+                _0xf838ec = Date["now"]();
+              if (_0xf838ec - _0x3bff78 < 0x5) _0x530b21++;
+              _0x530b21 > 0x14 && console["warn"](_0x21668a(0xc3)),
+                (_0x3bff78 = _0xf838ec);
             }
-            last = now;
-          }
-
-          ["mousemove", "keydown", "click"].forEach((ev) => {
-            window.addEventListener(ev, detect, true);
-          });
+            ["mousemove", _0x488f3d(0xe3), _0x488f3d(0xea)][_0x488f3d(0xb5)](
+              (_0x1e468f) => {
+                window["addEventListener"](_0x1e468f, _0x55ce5c, !![]);
+              }
+            );
+          })(),
+            console[_0x43e81c(0xef)](_0x43e81c(0xcc));
         })();
-
-        console.info(
-          'To enable pasting manually: window.__enablePasteViaConsole("allow-pasting")'
-        );
-      })();
+      function _0x1eeb(_0x356abe, _0x56b43c) {
+        _0x356abe = _0x356abe - 0xb2;
+        const _0x210d9f = _0x210d();
+        let _0x1eeb17 = _0x210d9f[_0x356abe];
+        return _0x1eeb17;
+      }
+      function _0x210d() {
+        const _0x3446ec = [
+          "stopImmediatePropagation",
+          "_attached",
+          "info",
+          "1072488CqHlzB",
+          "onerror",
+          "__enablePasteViaConsole",
+          "9oQQALo",
+          "Pasting\x20enabled\x20(temporary)",
+          "forEach",
+          "paste",
+          "hostname",
+          "plugins",
+          "core",
+          "History\x20push\x20blocked",
+          "2291643ewLaQv",
+          "%cIf\x20anyone\x20told\x20you\x20to\x20paste\x20code\x20here,\x20it\x27s\x20a\x20SCAM.",
+          "34ardSFV",
+          "addEventListener",
+          "allow-pasting",
+          "font-size:14px;\x20color:#ff6b6b;\x20font-weight:bold;",
+          "webdriver",
+          "pushState",
+          "Bot\x20detected\x20(automation)",
+          "localhost",
+          "397fJJHrH",
+          "reload",
+          "%cThis\x20is\x20for\x20developers\x20only.",
+          "defineProperty",
+          "font-size:14px;\x20color:#e74c3c;\x20font-weight:bold;",
+          "react",
+          "length",
+          "To\x20enable\x20pasting\x20manually:\x20window.__enablePasteViaConsole(\x22allow-pasting\x22)",
+          "userAgent",
+          "innerWidth",
+          "clear",
+          "277487pkgIRS",
+          "History\x20replace\x20blocked",
+          "Bot\x20detected",
+          "183845DnPzrm",
+          "%c⚠️\x20STOP!\x20⚠️",
+          "stack",
+          "Tampering\x20blocked",
+          "log",
+          "replaceState",
+          "Navigation\x20blocked",
+          "Razorpay",
+          "127.0.0.1",
+          "error",
+          "innerHeight",
+          "warn",
+          "font-size:42px;\x20font-weight:bold;\x20color:#c0392b;",
+          "includes",
+          "replace",
+          "266864CDArpo",
+          "keydown",
+          "outerWidth",
+          "now",
+          "%cPasting\x20anything\x20here\x20can\x20let\x20attackers\x20steal\x20your\x20account!",
+          "font-size:18px;\x20font-weight:bold;",
+          "8WDnrKj",
+          "954450DtrpdS",
+          "click",
+          "assign",
+          "apply",
+        ];
+        _0x210d = function () {
+          return _0x3446ec;
+        };
+        return _0x210d();
+      }
     </script>
 
     <script type="module" src="/src/main.jsx"></script>
