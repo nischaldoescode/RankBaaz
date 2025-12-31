@@ -1,5 +1,6 @@
 import crypto from "crypto-js";
 
+// Utility for signing API requests
 class RequestSigner {
   constructor() {
     this.signingSecret = null;

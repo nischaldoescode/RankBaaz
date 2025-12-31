@@ -99,7 +99,7 @@ export const AuthProvider = ({ children }) => {
       if (userData) {
         const user = JSON.parse(userData);
 
-        // CRITICAL FIX: Load signing secret BEFORE making any API calls
+        // Load signing secret from localStorage
         const secretLoaded = requestSigner.loadSigningSecret();
 
         if (import.meta.env.VITE_MODE === "development") {
@@ -109,37 +109,10 @@ export const AuthProvider = ({ children }) => {
           );
         }
 
-        // If no signing secret found, try to fetch one
-        if (!secretLoaded) {
-          try {
-            if (import.meta.env.VITE_MODE === "development") {
-              console.log(
-                "[AUTH_INIT] No secret in localStorage, fetching new one"
-              );
-            }
-
-            const secretResponse = await apiMethods.auth.getSigningSecret();
-
-            if (secretResponse.data.success) {
-              requestSigner.setSigningSecret(
-                secretResponse.data.data.signingSecret,
-                secretResponse.data.data.expiresIn
-              );
-
-              if (import.meta.env.VITE_MODE === "development") {
-                console.log("[AUTH_INIT] Fetched new signing secret");
-              }
-            }
-          } catch (secretError) {
-            console.error(
-              "[AUTH_INIT] Failed to fetch signing secret:",
-              secretError
-            );
-            // Continue anyway - getProfile will fail and trigger proper error handling
-          }
-        }
-
+        // If no signing secret found, we need to get profile WITHOUT signature first
+        // then fetch signing secret after authentication is confirmed
         try {
+          // Try to get profile (this will fail if session is invalid)
           const response = await apiMethods.auth.getProfile();
           const validatedUser = response.data?.data?.user;
 
@@ -149,6 +122,37 @@ export const AuthProvider = ({ children }) => {
             return;
           }
 
+          // If we got user but no signing secret, fetch it now
+          if (!secretLoaded) {
+            try {
+              if (import.meta.env.VITE_MODE === "development") {
+                console.log("[AUTH_INIT] Fetching signing secret after auth");
+              }
+
+              const secretResponse = await apiMethods.auth.getSigningSecret();
+
+              if (secretResponse.data.success) {
+                requestSigner.setSigningSecret(
+                  secretResponse.data.data.signingSecret,
+                  secretResponse.data.data.expiresIn
+                );
+
+                if (import.meta.env.VITE_MODE === "development") {
+                  console.log(
+                    "[AUTH_INIT] Signing secret fetched successfully"
+                  );
+                }
+              }
+            } catch (secretError) {
+              console.error(
+                "[AUTH_INIT] Failed to fetch signing secret:",
+                secretError
+              );
+              // Don't fail auth if secret fetch fails - user is still authenticated
+            }
+          }
+
+          // Successfully authenticated
           dispatch({
             type: AUTH_ACTIONS.LOGIN_SUCCESS,
             payload: {
@@ -163,14 +167,8 @@ export const AuthProvider = ({ children }) => {
             code: error.response?.data?.code,
           });
 
-          // Only clear auth if it's a genuine auth error (not signature error)
-          // Signature errors will be handled by interceptor
-          if (
-            error.response?.status === 401 &&
-            error.response?.data?.code !== "SIGNATURE_EXPIRED" &&
-            error.response?.data?.code !== "SIGNATURE_MISSING" &&
-            error.response?.data?.code !== "SIGNATURE_INVALID"
-          ) {
+          // Clear auth on 401 errors
+          if (error.response?.status === 401) {
             clearAuthData();
             dispatch({ type: AUTH_ACTIONS.LOGOUT });
           } else {
