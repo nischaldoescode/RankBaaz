@@ -453,13 +453,20 @@ const TestQuestion = ({
 
   return (
     <div className="w-full max-w-4xl mx-auto">
-      <Card className="mx-4 md:mx-auto overflow-hidden bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm">
-        <div className="p-6">
+      <Card className="mx-4 md:mx-auto overflow-hidden bg-white dark:bg-gray-900 border-2 border-gray-200 dark:border-gray-700 shadow-xl">
+        <div className="p-4 sm:p-6 md:p-8">
+          {/* Question Number Badge */}
+          <div className="mb-3 inline-flex items-center px-3 py-1 rounded-full bg-blue-100 dark:bg-blue-900/30 border border-blue-300 dark:border-blue-700">
+            <span className="text-sm font-medium text-blue-700 dark:text-blue-300">
+              Question
+            </span>
+          </div>
+
           {/* Question Title */}
-          <div className="mb-4">
+          <div className="mb-6">
             <RichTextRenderer
               content={question.question || "Question text not available"}
-              className="text-xl font-semibold"
+              className="text-lg sm:text-xl md:text-2xl font-semibold leading-relaxed"
             />
           </div>
 
@@ -473,7 +480,7 @@ const TestQuestion = ({
                 onClick={() => setShowImageModal(true)}
               >
                 <div className="w-full max-w-2xl group">
-                  <div className="relative overflow-hidden rounded-lg border-2 border-gray-200 dark:border-gray-600 transition-all duration-200 group-hover:border-blue-400 group-hover:shadow-lg">
+                  <div className="relative overflow-hidden rounded-xl border-2 border-gray-300 dark:border-gray-600 shadow-md transition-all duration-300 group-hover:border-blue-500 group-hover:shadow-2xl group-hover:scale-[1.02]">
                     <img
                       src={question.image.url || question.image}
                       alt="Question illustration"

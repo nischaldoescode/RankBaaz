@@ -495,17 +495,49 @@ const Login = () => {
                                     const newOtp = formData.otp.split("");
 
                                     if (value) {
-                                      newOtp[index] = value;
-                                      setFormData({
-                                        ...formData,
-                                        otp: newOtp.join(""),
-                                      });
+                                      // Handle multiple digits (from paste on mobile keyboards)
+                                      if (value.length > 1) {
+                                        const digits = value
+                                          .split("")
+                                          .slice(0, 6 - index);
+                                        digits.forEach((digit, offset) => {
+                                          if (index + offset < 6) {
+                                            newOtp[index + offset] = digit;
+                                          }
+                                        });
+                                        setFormData({
+                                          ...formData,
+                                          otp: newOtp.join(""),
+                                        });
 
-                                      // Auto-focus next input
-                                      if (index < 5) {
-                                        document
-                                          .getElementById(`otp-${index + 1}`)
-                                          ?.focus();
+                                        // Focus the next empty box
+                                        const nextIndex = Math.min(
+                                          index + digits.length,
+                                          5
+                                        );
+                                        setTimeout(() => {
+                                          document
+                                            .getElementById(`otp-${nextIndex}`)
+                                            ?.focus();
+                                        }, 0);
+                                      } else {
+                                        // Single digit
+                                        newOtp[index] = value;
+                                        setFormData({
+                                          ...formData,
+                                          otp: newOtp.join(""),
+                                        });
+
+                                        // Auto-focus next input
+                                        if (index < 5) {
+                                          setTimeout(() => {
+                                            document
+                                              .getElementById(
+                                                `otp-${index + 1}`
+                                              )
+                                              ?.focus();
+                                          }, 0);
+                                        }
                                       }
 
                                       if (errors.otp)
@@ -518,9 +550,11 @@ const Login = () => {
                                         otp: newOtp.join(""),
                                       });
                                       if (index > 0) {
-                                        document
-                                          .getElementById(`otp-${index - 1}`)
-                                          ?.focus();
+                                        setTimeout(() => {
+                                          document
+                                            .getElementById(`otp-${index - 1}`)
+                                            ?.focus();
+                                        }, 0);
                                       }
                                     }
                                   }}
@@ -534,9 +568,11 @@ const Login = () => {
                                           ...formData,
                                           otp: newOtp.join(""),
                                         });
-                                        document
-                                          .getElementById(`otp-${index - 1}`)
-                                          ?.focus();
+                                        setTimeout(() => {
+                                          document
+                                            .getElementById(`otp-${index - 1}`)
+                                            ?.focus();
+                                        }, 0);
                                       } else {
                                         newOtp[index] = "";
                                         setFormData({
@@ -544,18 +580,7 @@ const Login = () => {
                                           otp: newOtp.join(""),
                                         });
                                       }
-                                    }
-                                  }}
-                                  onKeyUp={(e) => {
-                                    // Extra handling for mobile keyboard backspace (Android/iOS)
-                                    if (
-                                      e.key === "Backspace" &&
-                                      index > 0 &&
-                                      !formData.otp[index]
-                                    ) {
-                                      document
-                                        .getElementById(`otp-${index - 1}`)
-                                        ?.focus();
+                                      e.preventDefault();
                                     }
                                   }}
                                   onPaste={(e) => {
@@ -564,19 +589,22 @@ const Login = () => {
                                       .getData("text")
                                       .replace(/\D/g, "")
                                       .slice(0, 6);
+
                                     setFormData({
                                       ...formData,
                                       otp: pastedData,
                                     });
 
-                                    // Focus the next empty box or last box
+                                    // Focus the appropriate box after paste
                                     const nextIndex = Math.min(
                                       pastedData.length,
                                       5
                                     );
-                                    document
-                                      .getElementById(`otp-${nextIndex}`)
-                                      ?.focus();
+                                    setTimeout(() => {
+                                      document
+                                        .getElementById(`otp-${nextIndex}`)
+                                        ?.focus();
+                                    }, 0);
                                   }}
                                   disabled={isLoading}
                                 />
