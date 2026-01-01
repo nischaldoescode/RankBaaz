@@ -724,6 +724,7 @@ export const verifyOTP = async (req, res) => {
 
     const signingSecret = await generateSigningSecret(user._id.toString());
 
+    // Response of Verify OTP with username
     res.status(200).json({
       success: true,
       message: "Registration completed successfully",
