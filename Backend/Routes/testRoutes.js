@@ -12,26 +12,88 @@ import {
   getLeaderboardInfo,
 } from "../Controllers/testController.js";
 
-import { checkCourseAccess} from "../helpers/CheckCourseAccess.js";
+import { checkCourseAccess } from "../helpers/CheckCourseAccess.js";
 import { authenticateUser } from "../Middleware/auth.js";
-import { advancedCache } from '../Middleware/advancedCache.js';
-import { getSigningSecretEndpoint, verifyRequestSignature } from "../Middleware/requestSignature.js";
+import { advancedCache } from "../Middleware/advancedCache.js";
+import {
+  getSigningSecretEndpoint,
+  verifyRequestSignature,
+} from "../Middleware/requestSignature.js";
 
 const router = express.Router();
 
-// authenticates every request (tomporary disabled for testing)
+/**
+ * All test routes require authentication
+ */
 router.use(authenticateUser);
 
-// Test operations
-router.get("/start/:courseId/:difficulty", verifyRequestSignature, checkCourseAccess, startTest);
-router.post("/submit", testSubmissionValidation, submitTest);
-router.get("/result/:testId", getTestResult);
-router.get("/history", getTestHistory);
-router.get("/performance", getPerformanceStats);
-router.get("/leaderboard/info", getLeaderboardInfo);
-router.get("/leaderboard/:courseId", advancedCache({ ttl: 60 }), getLeaderboard);
-router.post("/check-answer", checkAnswer);
+/**
+ * GET /start/:courseId/:difficulty - Start a new test
+ * Auth: Cookie + Request signature
+ */
+router.get(
+  "/start/:courseId/:difficulty",
+  verifyRequestSignature,
+  checkCourseAccess,
+  startTest
+);
 
-router.post("/abandon", authenticateUser, verifyRequestSignature, abandonTest);
+/**
+ * POST /submit - Submit test results
+ * Auth: Cookie + Request signature
+ */
+router.post(
+  "/submit",
+  verifyRequestSignature,
+  testSubmissionValidation,
+  submitTest
+);
+
+/**
+ * GET /result/:testId - Retrieve test result
+ * Auth: Cookie only
+ */
+router.get("/result/:testId", getTestResult);
+
+/**
+ * GET /history - Get user's test history
+ * Auth: Cookie only
+ */
+router.get("/history", getTestHistory);
+
+/**
+ * GET /performance - Get performance statistics
+ * Auth: Cookie only
+ */
+router.get("/performance", getPerformanceStats);
+
+/**
+ * GET /leaderboard/info - Get leaderboard information
+ * Auth: Cookie only
+ */
+router.get("/leaderboard/info", getLeaderboardInfo);
+
+/**
+ * GET /leaderboard/:courseId - Get course leaderboard
+ * Auth: Cookie only
+ * Cache: 60 seconds
+ */
+router.get(
+  "/leaderboard/:courseId",
+  advancedCache({ ttl: 60 }),
+  getLeaderboard
+);
+
+/**
+ * POST /check-answer - Validate answer during test
+ * Auth: Cookie + Request signature
+ */
+router.post("/check-answer", verifyRequestSignature, checkAnswer);
+
+/**
+ * POST /abandon - Record abandoned test
+ * Auth: Cookie + Request signature
+ */
+router.post("/abandon", verifyRequestSignature, abandonTest);
 
 export default router;
