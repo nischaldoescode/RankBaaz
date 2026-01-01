@@ -72,17 +72,14 @@ const logApiError = (error, context) => {
   console.groupEnd();
 };
 
+/**
+ * Request interceptor
+ * - Adds request signatures to authenticated endpoints
+ * - Skips signature for public endpoints
+ * - Loads signing secret from localStorage if available
+ */
 api.interceptors.request.use(
   async (config) => {
-    if (import.meta.env.VITE_VITE_ENV === "development") {
-      console.log("[API_REQUEST] Interceptor processing:", {
-        method: config.method,
-        url: config.url,
-        hasAuth: !!localStorage.getItem("user"),
-      });
-    }
-
-    // Skip signature for public endpoints
     const publicEndpoints = [
       "/api/auth/register",
       "/api/auth/initiate-login",
@@ -93,15 +90,19 @@ api.interceptors.request.use(
       "/api/auth/forgot-password",
       "/api/auth/verify-forgot-password-otp",
       "/api/auth/reset-password",
-      "/api/security/signing-secret", // THIS IS CRITICAL - Must be public
+      "/api/security/signing-secret",
       "/api/auth/refresh-token",
+      "/api/auth/profile",
+      "/api/tests/history",
+      "/api/tests/performance",
+      "/api/tests/result",
+      "/api/tests/leaderboard",
     ];
 
     const isPublicEndpoint = publicEndpoints.some((endpoint) =>
       config.url?.includes(endpoint)
     );
 
-    // Skip signature for GET requests to public content
     const isPublicGet =
       config.method === "get" &&
       (config.url?.includes("/api/content/") ||
@@ -110,49 +111,22 @@ api.interceptors.request.use(
           !config.url?.includes("/admin")));
 
     if (isPublicEndpoint || isPublicGet) {
-      if (import.meta.env.VITE_VITE_ENV === "development") {
-        console.log("[API_REQUEST] Public endpoint - skipping signature");
-      }
       return config;
     }
 
-    // CRITICAL FIX: Load signing secret from localStorage on EVERY request
-    // This ensures secret is available after page refresh/reload
     if (!requestSigner.isSecretValid()) {
-      const loaded = requestSigner.loadSigningSecret();
-
-      if (import.meta.env.VITE_VITE_ENV === "development") {
-        console.log(
-          "[API_REQUEST] Loaded signing secret from storage:",
-          loaded
-        );
-      }
+      requestSigner.loadSigningSecret();
     }
 
-    // Sign the request if user is authenticated AND secret is valid
     const isAuthenticated = !!localStorage.getItem("user");
 
     if (isAuthenticated && requestSigner.isSecretValid()) {
       config = requestSigner.signRequest(config);
-
-      if (import.meta.env.VITE_ENV === "development") {
-        console.log("[API_REQUEST] Request signed successfully");
-        console.log(`VITE_ENV: ${import.meta.env.VITE_ENV}`);
-      }
-    } else if (isAuthenticated && !requestSigner.isSecretValid()) {
-      // CRITICAL: Don't try to fetch secret here - causes circular dependency
-      // Instead, let the request fail and handle in response interceptor
-      console.warn(
-        "[API_REQUEST] No valid signing secret - request will fail with signature error"
-      );
     }
 
     return config;
   },
   (error) => {
-    if (import.meta.env.VITE_ENV === "development") {
-      console.error("[API_REQUEST] Interceptor error:", error);
-    }
     return Promise.reject(error);
   }
 );
