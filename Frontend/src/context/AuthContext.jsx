@@ -92,6 +92,14 @@ export const AuthProvider = ({ children }) => {
     initializeAuth();
   }, []);
 
+  /**
+   * Initialize authentication state on app load
+   * Flow:
+   * 1. Load signing secret from localStorage
+   * 2. Verify session with backend (GET /profile)
+   * 3. If secret missing, fetch new one
+   * 4. Update Redux state with user data
+   */
   const initializeAuth = async () => {
     try {
       const userData = localStorage.getItem("user");
@@ -99,20 +107,9 @@ export const AuthProvider = ({ children }) => {
       if (userData) {
         const user = JSON.parse(userData);
 
-        // Load signing secret from localStorage
-        const secretLoaded = requestSigner.loadSigningSecret();
+        requestSigner.loadSigningSecret();
 
-        if (import.meta.env.VITE_MODE === "development") {
-          console.log(
-            "[AUTH_INIT] Signing secret loaded from localStorage:",
-            secretLoaded
-          );
-        }
-
-        // If no signing secret found, we need to get profile WITHOUT signature first
-        // then fetch signing secret after authentication is confirmed
         try {
-          // Try to get profile (this will fail if session is invalid)
           const response = await apiMethods.auth.getProfile();
           const validatedUser = response.data?.data?.user;
 
@@ -122,13 +119,8 @@ export const AuthProvider = ({ children }) => {
             return;
           }
 
-          // If we got user but no signing secret, fetch it now
-          if (!secretLoaded) {
+          if (!requestSigner.isSecretValid()) {
             try {
-              if (import.meta.env.VITE_MODE === "development") {
-                console.log("[AUTH_INIT] Fetching signing secret after auth");
-              }
-
               const secretResponse = await apiMethods.auth.getSigningSecret();
 
               if (secretResponse.data.success) {
@@ -136,23 +128,12 @@ export const AuthProvider = ({ children }) => {
                   secretResponse.data.data.signingSecret,
                   secretResponse.data.data.expiresIn
                 );
-
-                if (import.meta.env.VITE_MODE === "development") {
-                  console.log(
-                    "[AUTH_INIT] Signing secret fetched successfully"
-                  );
-                }
               }
             } catch (secretError) {
-              console.error(
-                "[AUTH_INIT] Failed to fetch signing secret:",
-                secretError
-              );
-              // Don't fail auth if secret fetch fails - user is still authenticated
+              console.error("Failed to fetch signing secret:", secretError);
             }
           }
 
-          // Successfully authenticated
           dispatch({
             type: AUTH_ACTIONS.LOGIN_SUCCESS,
             payload: {
@@ -161,18 +142,10 @@ export const AuthProvider = ({ children }) => {
             },
           });
         } catch (error) {
-          console.error("Auth initialization failed:", {
-            status: error.response?.status,
-            message: error.response?.data?.message || error.message,
-            code: error.response?.data?.code,
-          });
-
-          // Clear auth on 401 errors
           if (error.response?.status === 401) {
             clearAuthData();
             dispatch({ type: AUTH_ACTIONS.LOGOUT });
           } else {
-            // For other errors, keep user logged in but stop loading
             dispatch({ type: AUTH_ACTIONS.SET_LOADING, payload: false });
           }
         }
@@ -180,7 +153,7 @@ export const AuthProvider = ({ children }) => {
         dispatch({ type: AUTH_ACTIONS.SET_LOADING, payload: false });
       }
     } catch (error) {
-      console.error("InitializeAuth error:", error);
+      console.error("Auth initialization error:", error);
       dispatch({ type: AUTH_ACTIONS.SET_LOADING, payload: false });
     }
   };
