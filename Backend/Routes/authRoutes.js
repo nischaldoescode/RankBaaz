@@ -25,7 +25,10 @@ import {
   quickCheckUsername,
 } from "../Controllers/authController.js";
 import { authenticateUser } from "../Middleware/auth.js";
-import { getSigningSecretEndpoint, verifyRequestSignature } from "../Middleware/requestSignature.js";
+import {
+  getSigningSecretEndpoint,
+  verifyRequestSignature,
+} from "../Middleware/requestSignature.js";
 
 const router = express.Router();
 
@@ -45,8 +48,17 @@ router.post("/reset-password", resetPasswordValidation, resetPassword);
 // Semi-authenticated routes - Keep CSRF
 router.post("/refresh-token", refreshToken);
 
-// User protected routes (with CSRF protection)
+/**
+ * GET /profile - Retrieve user profile
+ * Auth: Cookie-based authentication only (no signature required)
+ * Note: Signature not required on GET to prevent chicken-egg problem during auth init
+ */
 router.get("/profile", authenticateUser, getProfile);
+
+/**
+ * PUT /profile - Update user profile
+ * Auth: Cookie + Request signature required
+ */
 router.put(
   "/profile",
   authenticateUser,
@@ -54,6 +66,7 @@ router.put(
   updateProfileValidation,
   updateProfile
 );
+
 router.post(
   "/change-password",
   authenticateUser,

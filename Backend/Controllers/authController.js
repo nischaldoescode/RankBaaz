@@ -657,7 +657,7 @@ export const verifyOTP = async (req, res) => {
     // SAME cookieOptions configuration as above
     const cookieOptions = {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "development",
+      secure: process.env.NODE_ENV === "production",
       sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
       maxAge: 7 * 24 * 60 * 60 * 1000,
       signed: true,
@@ -665,7 +665,7 @@ export const verifyOTP = async (req, res) => {
     };
 
     if (process.env.NODE_ENV === "production") {
-      cookieOptions.domain = ".rankbaaz.com"; // Your domain
+      cookieOptions.domain = ".rankbaaz.com";
     }
 
     if (process.env.NODE_ENV === "development") {
@@ -689,7 +689,7 @@ export const verifyOTP = async (req, res) => {
 
     const refreshCookieOptions = {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "development",
+      secure: process.env.NODE_ENV === "production",
       sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
       maxAge: 30 * 24 * 60 * 60 * 1000,
       signed: true,
@@ -712,7 +712,7 @@ export const verifyOTP = async (req, res) => {
     }
 
     res.cookie("refresh_session", refreshCookieData, refreshCookieOptions);
-    
+
     const signingSecret = await generateSigningSecret(user._id.toString());
 
     res.status(200).json({
@@ -729,7 +729,7 @@ export const verifyOTP = async (req, res) => {
           isVerified: user.isVerified,
         },
         signingSecret,
-        signingSecretExpiresIn: 7 * 24 * 60 * 60
+        signingSecretExpiresIn: 7 * 24 * 60 * 60,
       },
     });
   } catch (error) {
@@ -830,7 +830,7 @@ export const initiateLogin = async (req, res) => {
         isRegistered: true,
         isVerified: true,
         signingSecret,
-        signingSecretExpiresIn: 7 * 24 * 60 * 60
+        signingSecretExpiresIn: 7 * 24 * 60 * 60,
       },
     });
   } catch (error) {
@@ -915,7 +915,7 @@ export const verifyLoginOTP = async (req, res) => {
         email,
         otpVerified: true,
         signingSecret,
-        signingSecretExpiresIn: 7 * 24 * 60 * 60
+        signingSecretExpiresIn: 7 * 24 * 60 * 60,
       },
     });
   } catch (error) {
@@ -1047,10 +1047,10 @@ export const login = async (req, res) => {
       issuedAt: Date.now(),
     });
 
-    // CHANGE: Add domain and path explicitly for production
+    // Add domain and path explicitly for production
     const cookieOptions = {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "development",
+      secure: process.env.NODE_ENV === "production",
       sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
       maxAge: 7 * 24 * 60 * 60 * 1000,
       signed: true,
@@ -1083,7 +1083,7 @@ export const login = async (req, res) => {
 
     const refreshCookieOptions = {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "development", // CRITICAL FIX
+      secure: process.env.NODE_ENV === "production",
       sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
       maxAge: 30 * 24 * 60 * 60 * 1000,
       signed: true,
@@ -1103,7 +1103,11 @@ export const login = async (req, res) => {
     res.status(200).json({
       success: true,
       message: "Login successful",
-      data: { user: userResponse, signingSecret,signingSecretExpiresIn: 7 * 24 * 60 * 60 },
+      data: {
+        user: userResponse,
+        signingSecret,
+        signingSecretExpiresIn: 7 * 24 * 60 * 60,
+      },
     });
   } catch (error) {
     console.error(error);
@@ -1177,7 +1181,7 @@ export const refreshToken = async (req, res) => {
 
     res.cookie("auth_session", newCookieData, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "development",
+      secure: process.env.NODE_ENV === "production",
       sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
       maxAge: 7 * 24 * 60 * 60 * 1000,
       signed: true,
@@ -1192,7 +1196,7 @@ export const refreshToken = async (req, res) => {
 
     res.cookie("refresh_session", newRefreshCookieData, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "development",
+      secure: process.env.NODE_ENV === "production",
       sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
       maxAge: 30 * 24 * 60 * 60 * 1000,
       signed: true,
@@ -1214,7 +1218,7 @@ export const refreshToken = async (req, res) => {
       message: "Token refreshed successfully",
       data: {
         signingSecret,
-        signingSecretExpiresIn: 7 * 24 * 60 * 60
+        signingSecretExpiresIn: 7 * 24 * 60 * 60,
       },
     });
   } catch (error) {

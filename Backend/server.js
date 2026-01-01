@@ -193,9 +193,10 @@ const corsOptions = {
     "Content-Type",
     "Authorization",
     "X-Requested-With",
-    "X-Request-Signature", // NEW - Allow signature header
-    "X-Request-Timestamp", // NEW - Allow timestamp header
-    "X-Request-Nonce", // NEW - Allow nonce header
+    "X-Request-Signature",
+    "X-Request-Timestamp",
+    "X-Request-Nonce",
+    "Cookie",
   ],
   exposedHeaders: ["X-Total-Count", "Set-Cookie"],
   maxAge: 86400, // Cache preflight for 24 hours
