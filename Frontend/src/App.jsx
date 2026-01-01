@@ -698,7 +698,7 @@ function App() {
               position="bottom-center"
               limit={1}
               toastOptions={{
-                duration: 4000,
+                duration: 3000,
                 style: {
                   background: "rgba(15, 23, 42, 0.9)",
                   color: "#fff",
@@ -712,14 +712,14 @@ function App() {
                     primary: "#10b981",
                     secondary: "#fff",
                   },
-                  duration: 3000, // Shorter for success
+                  duration: 2000, // Shorter for success
                 },
                 error: {
                   iconTheme: {
                     primary: "#ef4444",
                     secondary: "#fff",
                   },
-                  duration: 5000, // Longer for errors
+                  duration: 4000, // Longer for errors
                 },
                 // Prevent duplicate toasts
                 id: "unique-toast",
@@ -728,8 +728,7 @@ function App() {
               containerStyle={{
                 bottom: 20,
               }}
-              // Add this to prevent duplicates
-              containerClassName="toast-container"
+
               reverseOrder={false}
             />
           </div>
