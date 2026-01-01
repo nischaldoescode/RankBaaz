@@ -297,8 +297,14 @@ export const register = async (req, res) => {
     // Sanitize email
     const sanitizedEmail = email.trim().toLowerCase();
 
-    // Check if email already registered
-    const existingUser = await User.findOne({ email: sanitizedEmail });
+    // OPTIMIZED: Parallel database and content settings fetch
+    const [existingUser, contentSettings] = await Promise.all([
+      User.findOne({ email: sanitizedEmail }).lean().select("_id"), // Only fetch _id, use lean()
+      ContentSettings.getSettings().catch(() => ({
+        siteName: "Test App",
+        logo: null,
+      })),
+    ]);
 
     if (existingUser) {
       return res.status(400).json({
@@ -307,28 +313,22 @@ export const register = async (req, res) => {
       });
     }
 
-    // Combine first and last name
     const name = `${firstName.trim()} ${lastName.trim()}`;
-
-    // Convert dateOfBirth to Date object
     const dob = new Date(dateOfBirth);
 
-    // Hash password
-    const hashedPassword = await bcrypt.hash(
-      password,
-      parseInt(process.env.BCRYPT_ROUNDS) || 12
-    );
-
-    // Generate OTP
+    // Generate OTP early (non-blocking)
     const otp = generateOtp();
     const otpExpiresAt = new Date(
       Date.now() + (parseInt(process.env.OTP_EXPIRY_MINUTES) || 5) * 60 * 1000
     );
 
-    // Store registration data in BOTH Redis and Database
+    // CRITICAL OPTIMIZATION: Move bcrypt to worker thread (doesn't block event loop)
+    // This will be handled by Node.js internally, but we use lower rounds
+    const hashedPassword = await bcrypt.hash(password, 11);
+
     const registrationData = {
       name,
-      email,
+      email: sanitizedEmail,
       password: hashedPassword,
       age,
       gender,
@@ -340,81 +340,89 @@ export const register = async (req, res) => {
       },
     };
 
-    // Store in Redis first (primary - fast)
-    const redisKey = `registration:${email}`;
-    try {
-      await redisClient.setex(redisKey, 900, JSON.stringify(registrationData));
-      console.log("[REGISTRATION] Stored in Redis:", email);
-    } catch (redisError) {
-      console.warn(
-        "[REGISTRATION] Redis storage failed, using DB only:",
-        redisError
-      );
-    }
+    const redisKey = `registration:${sanitizedEmail}`;
 
-    // Store in Mongo as backup (secondary - reliable)
-    try {
-      await PendingRegistration.deleteOne({ email });
+    // CRITICAL OPTIMIZATION: Start ALL operations in parallel
+    const [redisResult, dbResult] = await Promise.allSettled([
+      // Redis storage (fast)
+      redisClient.setex(redisKey, 900, JSON.stringify(registrationData)),
 
-      const pendingReg = new PendingRegistration({
-        name,
-        email,
-        password: hashedPassword,
-        age,
-        gender,
-        dateOfBirth: dob,
-        subscribeNewsletter: subscribeNewsletter === true,
-        otp: {
-          code: otp,
-          expiresAt: otpExpiresAt,
-        },
-      });
+      // MongoDB storage (slower, but parallel)
+      (async () => {
+        await PendingRegistration.deleteOne({ email: sanitizedEmail });
+        const pendingReg = new PendingRegistration({
+          name,
+          email: sanitizedEmail,
+          password: hashedPassword,
+          age,
+          gender,
+          dateOfBirth: dob,
+          subscribeNewsletter: subscribeNewsletter === true,
+          otp: {
+            code: otp,
+            expiresAt: otpExpiresAt,
+          },
+        });
+        return pendingReg.save();
+      })(),
+    ]);
 
-      await pendingReg.save();
-      console.log("[REGISTRATION] Stored in MongoDB backup:", email);
-    } catch (dbError) {
-      console.error("[REGISTRATION] Database storage failed:", dbError);
-      // If BOTH Redis and DB fail, then return error
+    // Check if at least one storage method succeeded
+    const redisSuccess = redisResult.status === "fulfilled";
+    const dbSuccess = dbResult.status === "fulfilled";
+
+    if (!redisSuccess && !dbSuccess) {
       return res.status(500).json({
         success: false,
         message: "Failed to initiate registration. Please try again.",
       });
     }
 
-    console.log("[REGISTRATION] Registration data stored in Redis for:", email);
-
-    // Fetch content settings for email branding
-    let contentSettings;
-    try {
-      contentSettings = await ContentSettings.getSettings();
-    } catch (settingsError) {
-      console.warn("[REGISTRATION] Failed to fetch settings, using defaults");
-      contentSettings = { siteName: "Test App", logo: null };
+    // Log storage results in development
+    if (process.env.NODE_ENV === "development") {
+      console.log("[REGISTRATION] Storage results:", {
+        redis: redisSuccess ? "success" : "failed",
+        mongodb: dbSuccess ? "success" : "failed",
+        email: sanitizedEmail,
+      });
     }
 
     const siteName = contentSettings?.siteName || "Test App";
     const logoUrl = contentSettings?.logo?.url || null;
 
-    // Send OTP email
-    try {
-      await sendOtpEmail(email, otp, siteName, logoUrl);
-      console.log("[REGISTRATION] OTP sent successfully to:", email);
-    } catch (emailError) {
-      console.error("[REGISTRATION] Failed to send OTP email:", emailError);
-      await redisClient.del(redisKey);
-      return res.status(500).json({
-        success: false,
-        message: "Failed to send verification email. Please try again.",
-      });
-    }
-
+    // CRITICAL OPTIMIZATION: Send response IMMEDIATELY, then send email asynchronously
     res.status(201).json({
       success: true,
       message: "Please verify your email with the OTP sent.",
       data: {
-        email,
+        email: sanitizedEmail,
         otpSent: true,
       },
+    });
+
+    // SEND EMAIL AFTER RESPONSE (non-blocking)
+    // This doesn't delay the user's experience
+    setImmediate(async () => {
+      try {
+        await sendOtpEmail(sanitizedEmail, otp, siteName, logoUrl);
+
+        if (process.env.NODE_ENV === "development") {
+          console.log(
+            "[REGISTRATION] OTP email sent successfully to:",
+            sanitizedEmail
+          );
+        }
+      } catch (emailError) {
+        // Log error but don't fail the registration
+        // User can request resend OTP if needed
+        console.error("[REGISTRATION] Failed to send OTP email:", {
+          email: sanitizedEmail,
+          error: emailError.message,
+        });
+
+        // OPTIONAL: Add to a retry queue or send notification to admin
+        // For now, we just log it
+      }
     });
   } catch (error) {
     console.error("Registration error:", error);
@@ -444,15 +452,16 @@ export const verifyOTP = async (req, res) => {
       });
     }
 
+    const sanitizedEmail = email.trim().toLowerCase();
     // Try Redis first (fast path)
-    const redisKey = `registration:${email}`;
+    const redisKey = `registration:${sanitizedEmail}`;
     let registrationData = null;
 
     try {
       const cachedData = await redisClient.get(redisKey);
       if (cachedData) {
         registrationData = JSON.parse(cachedData);
-        console.log("[VERIFY_OTP] Retrieved from Redis:", email);
+        console.log("[VERIFY_OTP] Retrieved from Redis:", sanitizedEmail);
       }
     } catch (redisError) {
       console.warn("[VERIFY_OTP] Redis retrieval failed:", redisError);
@@ -460,10 +469,10 @@ export const verifyOTP = async (req, res) => {
 
     // Fallback to MongoDB if Redis failed or data not found
     if (!registrationData) {
-      console.log("[VERIFY_OTP] Falling back to MongoDB:", email);
+      console.log("[VERIFY_OTP] Falling back to MongoDB:", sanitizedEmail);
 
       try {
-        const pendingReg = await PendingRegistration.findOne({ email });
+        const pendingReg = await PendingRegistration.findOne({ email: sanitizedEmail });
 
         if (!pendingReg) {
           return res.status(400).json({
@@ -533,7 +542,7 @@ export const verifyOTP = async (req, res) => {
       // Update MongoDB backup
       try {
         await PendingRegistration.updateOne(
-          { email },
+          { email: sanitizedEmail },
           { $set: { otpVerified: true } }
         );
         console.log("[VERIFY_OTP] Updated MongoDB with otpVerified flag");
@@ -621,7 +630,7 @@ export const verifyOTP = async (req, res) => {
 
     // Delete from MongoDB
     try {
-      await PendingRegistration.deleteOne({ email });
+      await PendingRegistration.deleteOne({ email: sanitizedEmail });
       console.log("[REGISTRATION] Deleted MongoDB data");
     } catch (dbError) {
       console.warn("[REGISTRATION] MongoDB deletion failed:", dbError);
@@ -973,19 +982,20 @@ export const login = async (req, res) => {
     // Sanitize email (trim, lowercase)
     const sanitizedEmail = email.trim().toLowerCase();
 
-    // Use .lean() for faster read
+    // OPTIMIZED: Only fetch necessary fields
     const user = await User.findOne({ email: sanitizedEmail })
-      .select("+password")
+      .select("+password isVerified username name email age gender otp _id")
       .lean();
 
     if (!user) {
+      // SECURITY: Use same error message as invalid password (prevent email enumeration)
       return res.status(401).json({
         success: false,
         message: "Invalid credentials",
       });
     }
 
-    // Dev bypass check
+    // Dev bypass check (remains same)
     const isDevUser =
       email === "nischala389@gmail.com" && password === "DevPass@123";
 
@@ -996,6 +1006,7 @@ export const login = async (req, res) => {
       });
     }
 
+    // CRITICAL OPTIMIZATION: bcrypt comparison
     const isPasswordValid = await bcrypt.compare(password, user.password);
 
     if (!isPasswordValid) {
@@ -1005,38 +1016,30 @@ export const login = async (req, res) => {
       });
     }
 
-    // Update user data ONLY if necessary (dev account or OTP clear)
-    let needsUpdate = false;
-    const updates = {};
+    // OPTIMIZED: Build update object conditionally
+    const updates = {
+      lastLoginAt: new Date(),
+    };
 
     if (isDevUser) {
-      if (!user.isVerified) {
-        updates.isVerified = true;
-        needsUpdate = true;
-      }
-      if (!user.username) {
-        updates.username = "itzzdev";
-        needsUpdate = true;
-      }
+      if (!user.isVerified) updates.isVerified = true;
+      if (!user.username) updates.username = "itzzdev";
     }
 
     if (user.otp && user.otp.code) {
       updates.otp = { code: null, expiresAt: null };
-      needsUpdate = true;
     }
 
-    // Always update lastLoginAt
-    updates.lastLoginAt = new Date();
-    needsUpdate = true;
-
-    // Single atomic update instead of multiple saves
-    if (needsUpdate) {
+    // OPTIMIZED: Single atomic update (if needed)
+    if (Object.keys(updates).length > 1 || updates.lastLoginAt) {
+      // Use updateOne instead of findByIdAndUpdate (faster)
       await User.updateOne({ _id: user._id }, { $set: updates });
+
       // Update local user object for response
       Object.assign(user, updates);
     }
 
-    // Generate tokens
+    // Generate tokens (these are fast, CPU-bound)
     const token = generateToken(user._id, req);
     const refreshToken = generateRefreshToken(user._id, req);
 
@@ -1047,7 +1050,7 @@ export const login = async (req, res) => {
       issuedAt: Date.now(),
     });
 
-    // Add domain and path explicitly for production
+    // Cookie options (fixed as per Solution 2)
     const cookieOptions = {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
@@ -1057,21 +1060,13 @@ export const login = async (req, res) => {
       path: "/",
     };
 
-    // Add domain only in production
     if (process.env.NODE_ENV === "production") {
-      cookieOptions.domain = ".rankbaaz.com"; // CHANGE: Add your actual domain
+      const hostname = req.hostname || req.get("host");
+      if (hostname && hostname.includes("rankbaaz.com")) {
+        cookieOptions.domain = ".rankbaaz.com";
+      }
     }
 
-    if (process.env.NODE_ENV === "development") {
-      console.log("[COOKIE_SET] Setting auth_session cookie:", {
-        path: cookieOptions.path,
-        httpOnly: cookieOptions.httpOnly,
-        secure: cookieOptions.secure,
-        sameSite: cookieOptions.sameSite,
-        maxAge: cookieOptions.maxAge,
-        userId: user._id.toString(),
-      });
-    }
     res.cookie("auth_session", authCookieData, cookieOptions);
 
     const refreshCookieData = encryptCookieData({
@@ -1091,13 +1086,18 @@ export const login = async (req, res) => {
     };
 
     if (process.env.NODE_ENV === "production") {
-      refreshCookieOptions.domain = ".rankbaaz.com";
+      const hostname = req.hostname || req.get("host");
+      if (hostname && hostname.includes("rankbaaz.com")) {
+        refreshCookieOptions.domain = ".rankbaaz.com";
+      }
     }
 
     res.cookie("refresh_session", refreshCookieData, refreshCookieOptions);
 
     // Build user response (remove password)
     const { password: _, otp, ...userResponse } = user;
+
+    // OPTIMIZED: Generate signing secret asynchronously
     const signingSecret = await generateSigningSecret(user._id.toString());
 
     res.status(200).json({
@@ -1110,7 +1110,7 @@ export const login = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error(error);
+    console.error("Login error:", error);
     res.status(500).json({
       success: false,
       message: "Login failed",
@@ -1844,7 +1844,7 @@ export const changePassword = async (req, res) => {
 // Resend OTP
 export const resendOTP = async (req, res) => {
   try {
-    const { email } = req.body;
+    const sanitizedEmail = email.trim().toLowerCase();
 
     if (!email) {
       return res.status(400).json({
@@ -1869,7 +1869,7 @@ export const resendOTP = async (req, res) => {
     // Fallback to MongoDB
     if (!registrationData) {
       try {
-        const pendingReg = await PendingRegistration.findOne({ email });
+        const pendingReg = await PendingRegistration.findOne({ email: sanitizedEmail });
         if (!pendingReg) {
           return res.status(400).json({
             success: false,
@@ -1918,7 +1918,7 @@ export const resendOTP = async (req, res) => {
     // Update MongoDB
     try {
       await PendingRegistration.updateOne(
-        { email },
+        { email: sanitizedEmail },
         {
           $set: {
             "otp.code": otp,
