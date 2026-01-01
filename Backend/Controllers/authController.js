@@ -451,8 +451,8 @@ export const verifyOTP = async (req, res) => {
         message: "Invalid OTP format",
       });
     }
-
     const sanitizedEmail = email.trim().toLowerCase();
+
     // Try Redis first (fast path)
     const redisKey = `registration:${sanitizedEmail}`;
     let registrationData = null;
@@ -981,12 +981,11 @@ export const login = async (req, res) => {
     }
 
     // Sanitize email (trim, lowercase)
-    const sanitizedEmail = email.trim().toLowerCase();
+    const sanitizedEmail = String(email).trim().toLowerCase();
 
     // OPTIMIZED: Only fetch necessary fields
     const user = await User.findOne({ email: sanitizedEmail })
-      .select("+password isVerified username name email age gender otp _id")
-      .lean();
+      .select("password isVerified username name email age gender otp _id");
 
     if (!user) {
       // SECURITY: Use same error message as invalid password (prevent email enumeration)
