@@ -16,6 +16,7 @@ import {
   PlayCircleIcon,
   ChevronDownIcon,
   ChevronUpIcon,
+  ArrowDownTrayIcon,
 } from "@heroicons/react/24/outline";
 import { Button } from "../ui/Button";
 import { Card } from "../ui/Card";
@@ -36,6 +37,8 @@ const TestResult = ({ isPaid }) => {
   const [showVideoSection, setShowVideoSection] = useState(false);
   const [expandedVideoSections, setExpandedVideoSections] = useState({});
   const [courseData, setCourseData] = useState(null);
+  const [downloadingPDF, setDownloadingPDF] = useState(false);
+  const [pdfError, setPdfError] = useState(null);
 
   useEffect(() => {
     const loadTestData = async () => {
@@ -188,6 +191,72 @@ const TestResult = ({ isPaid }) => {
       navigator.clipboard.writeText(`${shareData.text} ${shareData.url}`);
     }
   }, [testResult]);
+
+  // Handle PDF download
+  const handleDownloadPDF = async () => {
+    if (!testResult?._id) {
+      toast.error("Test result not available");
+      return;
+    }
+
+    // Check if course has PDF export enabled
+    if (!courseData?.hasPdfExport) {
+      toast.error("PDF export is not available for this course");
+      return;
+    }
+
+    setDownloadingPDF(true);
+    setPdfError(null);
+
+    try {
+      const response = await fetch(
+        `${import.meta.env.VITE_API_URL}/tests/download-pdf/${testResult._id}`,
+        {
+          method: "GET",
+          credentials: "include",
+          headers: {
+            Accept: "application/pdf",
+          },
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Failed to download PDF");
+      }
+
+      // Get filename from header or create default
+      const contentDisposition = response.headers.get("Content-Disposition");
+      let filename = `RankBaaz_${courseData.name.replace(/[^a-z0-9]/gi, "_")}_${
+        new Date().toISOString().split("T")[0]
+      }.pdf`;
+
+      if (contentDisposition) {
+        const filenameMatch = contentDisposition.match(/filename="?(.+)"?/);
+        if (filenameMatch) filename = filenameMatch[1];
+      }
+
+      // Create blob and download
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+
+      toast.success("PDF downloaded successfully!");
+    } catch (error) {
+      console.error("PDF download error:", error);
+      const errorMessage = error.message || "Failed to download PDF";
+      setPdfError(errorMessage);
+      toast.error(errorMessage);
+    } finally {
+      setDownloadingPDF(false);
+    }
+  };
 
   // Handle save result
   const handleSaveResult = useCallback(() => {
@@ -931,6 +1000,19 @@ const TestResult = ({ isPaid }) => {
           variants={animations && !reducedMotion ? itemVariants : {}}
           className="flex flex-wrap gap-4 justify-center"
         >
+          {/* PDF Download button - Only show if course has PDF export enabled */}
+          {courseData?.hasPdfExport && (
+            <Button
+              variant="primary"
+              onClick={handleDownloadPDF}
+              disabled={downloadingPDF}
+              leftIcon={<ArrowDownTrayIcon className="w-4 h-4" />}
+              className="cursor-pointer"
+            >
+              {downloadingPDF ? "Downloading..." : "Download PDF"}
+            </Button>
+          )}
+
           {/* Retake button only for FREE courses */}
           {!isPaid && (
             <Button
@@ -972,6 +1054,29 @@ const TestResult = ({ isPaid }) => {
             View Test History
           </Button>
         </motion.div>
+
+        {/* PDF Download Error Alert */}
+        {pdfError && (
+          <motion.div
+            variants={animations && !reducedMotion ? itemVariants : {}}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+          >
+            <Card className="p-4 bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800">
+              <div className="flex items-start space-x-3">
+                <XCircleIcon className="w-5 h-5 text-red-600 dark:text-red-400 mt-0.5" />
+                <div>
+                  <p className="text-sm font-medium text-red-900 dark:text-red-100">
+                    PDF Download Error
+                  </p>
+                  <p className="text-sm text-red-700 dark:text-red-300 mt-1">
+                    {pdfError}
+                  </p>
+                </div>
+              </div>
+            </Card>
+          </motion.div>
+        )}
 
         {/* Achievement Badges */}
         {testResult.achievements && testResult.achievements.length > 0 && (
