@@ -101,6 +101,7 @@ const createRateLimiter = (options) => {
   };
 };
 
+
 // Helper to detect if request is from browser
 const isBrowserRequest = (req) => {
   const userAgent = req.get("User-Agent") || "";
@@ -518,7 +519,7 @@ app.get("/sitemap-profiles.xml", async (req, res) => {
     res.status(500).send("Error generating sitemap");
   }
 });
-app.options('*', cors(corsOptions));
+app.options("*", cors(corsOptions));
 
 // console.log('✓ CORS preflight handler configured');
 
@@ -820,5 +821,4 @@ process.on("uncaughtException", (err) => {
 // Handle termination signals
 process.on("SIGTERM", () => gracefulShutdown("SIGTERM"));
 process.on("SIGINT", () => gracefulShutdown("SIGINT"));
-
 export default app;

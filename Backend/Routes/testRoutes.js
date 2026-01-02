@@ -10,6 +10,7 @@ import {
   checkAnswer,
   abandonTest,
   getLeaderboardInfo,
+  downloadTestPDF,
 } from "../Controllers/testController.js";
 
 import { checkCourseAccess } from "../helpers/CheckCourseAccess.js";
@@ -19,8 +20,10 @@ import {
   getSigningSecretEndpoint,
   verifyRequestSignature,
 } from "../Middleware/requestSignature.js";
+import { pdfDownloadLimiter } from "../helpers/pdfRatelimiter.js";
 
 const router = express.Router();
+
 
 /**
  * All test routes require authentication
@@ -95,5 +98,15 @@ router.post("/check-answer", verifyRequestSignature, checkAnswer);
  * Auth: Cookie + Request signature
  */
 router.post("/abandon", verifyRequestSignature, abandonTest);
+
+/**
+ * GET /download-pdf/:testId - Download test result as PDF
+ * Auth: Cookie required
+ * Security: 
+ * - Users: One-time download only
+ * - Admins: Unlimited downloads
+ */
+router.get('/download-pdf/:testId', pdfDownloadLimiter, downloadTestPDF);
+
 
 export default router;
