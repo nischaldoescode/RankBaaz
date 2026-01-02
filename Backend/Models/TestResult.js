@@ -153,6 +153,15 @@ const testResultSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    pdfDownloaded: {
+      type: Boolean,
+      default: false,
+    },
+    pdfDownloadedAt: {
+      type: Date,
+      default: null,
+    },
+
     abandonedAtDifficulty: {
       type: String,
       enum: ["Easy", "Medium", "Hard", null],

@@ -174,6 +174,12 @@ const courseSchema = new mongoose.Schema(
         },
       ],
     },
+    hasPdfExport: {
+      type: Boolean,
+      default: false,
+      required: true,
+    },
+
     activeCouponsCount: {
       type: Number,
       default: 0,

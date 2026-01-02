@@ -105,6 +105,11 @@ export const courseValidation = [
     return true;
   }),
 
+  body("hasPdfExport")
+    .optional()
+    .isBoolean()
+    .withMessage("hasPdfExport must be a boolean value"),
+
   body("currency").optional().isIn(["INR"]).withMessage("Currency must be INR"),
 ];
 
@@ -614,6 +619,12 @@ export const createCourse = async (req, res) => {
       courseData.price = parseFloat(price) || 0;
     }
 
+    // Handle PDF export toggle
+    if (req.body.hasPdfExport !== undefined) {
+      courseData.hasPdfExport =
+        req.body.hasPdfExport === "true" || req.body.hasPdfExport === true;
+    }
+
     const newCourse = new Course(courseData);
     await newCourse.save();
 
@@ -902,12 +913,18 @@ export const updateCourse = async (req, res) => {
       }
     }
 
+    // Handle PDF export toggle update
+    if (req.body.hasPdfExport !== undefined) {
+      updateData.hasPdfExport =
+        req.body.hasPdfExport === "true" || req.body.hasPdfExport === true;
+    }
+
     const updatedCourse = await Course.findByIdAndUpdate(courseId, updateData, {
       new: true,
       runValidators: true,
     }).populate("category", "name description");
 
-        await invalidateCache.course(courseId);
+    await invalidateCache.course(courseId);
     await invalidateCache.allCourses();
     res.status(200).json({
       success: true,
@@ -1138,9 +1155,8 @@ export const deleteCourse = async (req, res) => {
     }
 
     await Course.findByIdAndDelete(courseId);
-        await invalidateCache.course(courseId);
+    await invalidateCache.course(courseId);
     await invalidateCache.allCourses();
-
 
     res.status(200).json({
       success: true,
@@ -1187,9 +1203,8 @@ export const getAllCourses = async (req, res) => {
 
     // Add category filter
     if (category) {
-      filterQuery.category = mongoose.Types.ObjectId.createFromHexString(
-        category
-      );
+      filterQuery.category =
+        mongoose.Types.ObjectId.createFromHexString(category);
     }
 
     // Add difficulty filter
@@ -1419,7 +1434,7 @@ export const addQuestionToCourse = async (req, res) => {
       .reduce((total, q) => total + (q.marksPerQuestion || 0), 0);
 
     await course.save();
-await invalidateCache.course(courseId);
+    await invalidateCache.course(courseId);
     res.status(201).json({
       success: true,
       message: "Question added successfully",
@@ -2392,7 +2407,7 @@ export const createCategory = async (req, res) => {
     });
 
     await newCategory.save();
-await invalidateCache.allCourses();
+    await invalidateCache.allCourses();
     res.status(201).json({
       success: true,
       message: "Category created successfully",
@@ -2521,7 +2536,7 @@ export const updateCategory = async (req, res) => {
       },
       { new: true, runValidators: true }
     );
-await invalidateCache.allCourses();
+    await invalidateCache.allCourses();
     res.status(200).json({
       success: true,
       message: "Category updated successfully",

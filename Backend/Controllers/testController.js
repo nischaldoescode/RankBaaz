@@ -750,6 +750,131 @@ export const getTestResult = async (req, res) => {
   }
 };
 
+/**
+ * Download test result as PDF
+ * @route GET /api/tests/download-pdf/:testId
+ * @access Private (User who took test OR Admin)
+ * @param {string} testId - Test result ID
+ * @returns {Buffer} PDF file
+ * 
+ * Security:
+ * - Users can only download PDF once
+ * - Admins can download unlimited times
+ * - Requires authentication
+ * - Validates test ownership
+ */
+export const downloadTestPDF = async (req, res) => {
+  try {
+    const { testId } = req.params;
+    const userId = req.user?.userId;
+    const isAdmin = req.admin?.isAdmin === true;
+
+    console.log(`=== PDF DOWNLOAD REQUEST ===`);
+    console.log(`Test ID: ${testId}`);
+    console.log(`User ID: ${userId}`);
+    console.log(`Is Admin: ${isAdmin}`);
+
+    // Validate testId format
+    if (!mongoose.Types.ObjectId.isValid(testId)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid test ID format',
+      });
+    }
+
+    // Fetch test result with populated data
+    const testResult = await TestResult.findById(testId)
+      .populate({
+        path: 'course',
+        select: 'name description hasPdfExport questions difficulties',
+      })
+      .populate({
+        path: 'user',
+        select: 'name email',
+      })
+      .lean();
+
+    if (!testResult) {
+      return res.status(404).json({
+        success: false,
+        message: 'Test result not found',
+      });
+    }
+
+    // Security Check 1: Verify ownership (unless admin)
+    if (!isAdmin && testResult.user._id.toString() !== userId) {
+      console.log(`[SECURITY] Unauthorized PDF access attempt by user ${userId}`);
+      return res.status(403).json({
+        success: false,
+        message: 'You can only download your own test results',
+      });
+    }
+
+    // Security Check 2: Check if course has PDF export enabled (skip for admin)
+    if (!isAdmin && !testResult.course.hasPdfExport) {
+      return res.status(403).json({
+        success: false,
+        message: 'PDF export is not available for this course',
+      });
+    }
+
+    // Security Check 3: Check if user has already downloaded (skip for admin)
+    if (!isAdmin && testResult.pdfDownloaded) {
+      return res.status(403).json({
+        success: false,
+        message: 'You have already downloaded this test result. Each test can only be downloaded once.',
+        downloadedAt: testResult.pdfDownloadedAt,
+      });
+    }
+
+    // Import PDF service
+    const pdfService = (await import('../services/pdfService.js')).default;
+
+    // Generate PDF
+    console.log(`Generating PDF for test ${testId}...`);
+    const pdfBuffer = await pdfService.generateTestResultPDF(
+      testResult,
+      testResult.course,
+      testResult.user,
+      isAdmin
+    );
+
+    // Update download status (only for non-admin users)
+    if (!isAdmin) {
+      await TestResult.findByIdAndUpdate(testId, {
+        pdfDownloaded: true,
+        pdfDownloadedAt: new Date(),
+      });
+      console.log(`PDF download recorded for test ${testId}`);
+    } else {
+      console.log(`Admin download - no download limit applied`);
+    }
+
+    // Set response headers
+    const filename = `RankBaaz_${testResult.course.name.replace(/[^a-z0-9]/gi, '_')}_${new Date().toISOString().split('T')[0]}.pdf`;
+    
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.setHeader('Content-Length', pdfBuffer.length);
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+
+    // Send PDF
+    res.send(pdfBuffer);
+
+    console.log(`PDF sent successfully: ${filename}`);
+
+  } catch (error) {
+    console.error('Download PDF error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to generate PDF',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined,
+    });
+  }
+};
+
 export const abandonTest = async (req, res) => {
   try {
     const { courseId, difficulty, completedDifficulties } = req.body;
