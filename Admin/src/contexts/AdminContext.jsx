@@ -9,7 +9,6 @@ axios.defaults.baseURL =
   import.meta.env.VITE_API_URL || "http://localhost:7000/api";
 axios.defaults.withCredentials = true;
 
-
 export const useAdmin = () => {
   const context = useContext(AdminContext);
   if (!context) {
@@ -31,6 +30,8 @@ export const AdminProvider = ({ children }) => {
     totalUsers: 0,
     totalTests: 0,
   });
+
+  const [pdfGenerating, setPdfGenerating] = useState(false);
 
   // Get authentication status
   const { isAuthenticated, user } = useAuth();
@@ -226,6 +227,56 @@ export const AdminProvider = ({ children }) => {
       console.error("Error fetching courses:", error);
     } finally {
       if (force) setLoading(false);
+    }
+  };
+  /**
+   * Download test result PDF for admin
+   * @param {string} testId - Test result ID
+   * @returns {Promise<{success: boolean, message?: string}>}
+   */
+  const downloadTestPDF = async (testId) => {
+    try {
+      setPdfGenerating(true);
+
+      const response = await axios.get(`/tests/download-pdf/${testId}`, {
+        responseType: "blob", // Important for file download
+      });
+
+      // Create blob link to download
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement("a");
+      link.href = url;
+
+      // Extract filename from Content-Disposition header
+      const contentDisposition = response.headers["content-disposition"];
+      let filename = `RankBaaz_Test_Result_${
+        new Date().toISOString().split("T")[0]
+      }.pdf`;
+
+      if (contentDisposition) {
+        const filenameMatch = contentDisposition.match(/filename="?(.+)"?/);
+        if (filenameMatch && filenameMatch[1]) {
+          filename = filenameMatch[1];
+        }
+      }
+
+      link.setAttribute("download", filename);
+      document.body.appendChild(link);
+      link.click();
+
+      // Cleanup
+      link.parentNode.removeChild(link);
+      window.URL.revokeObjectURL(url);
+
+      toast.success("PDF downloaded successfully!");
+      return { success: true };
+    } catch (error) {
+      console.error("Download PDF error:", error);
+      const message = error.response?.data?.message || "Failed to download PDF";
+      toast.error(message);
+      return { success: false, message };
+    } finally {
+      setPdfGenerating(false);
     }
   };
 
@@ -1463,6 +1514,9 @@ export const AdminProvider = ({ children }) => {
     updateCoupon,
     // Loading
     loading,
+
+    downloadTestPDF,
+    pdfGenerating,
   };
 
   return (

@@ -28,6 +28,7 @@ import {
   X,
   CheckSquare,
   Square,
+  Save,
 } from "lucide-react";
 
 import RichTextRenderer from "../components/plugins/RichTextRenderer";
@@ -597,6 +598,8 @@ const Courses = () => {
     fetchCourseCoupons,
     updateCouponStatus,
     deleteCoupon,
+    downloadTestPDF,
+    pdfGenerating,
   } = useAdmin();
 
   // State management
@@ -642,6 +645,7 @@ const Courses = () => {
   const [imageEditMode, setImageEditMode] = useState(false);
   const [selectedQuestions, setSelectedQuestions] = useState({});
   const [selectAllStates, setSelectAllStates] = useState({});
+  const [difficultyErrors, setDifficultyErrors] = useState({});
   const [newQuestionData, setNewQuestionData] = useState({
     question: "",
     questionType: "single", // single, multiple, truefalse
@@ -652,6 +656,14 @@ const Courses = () => {
     explanation: "",
     image: null,
   });
+  const [editingDifficulty, setEditingDifficulty] = useState(null);
+  const [difficultyFormData, setDifficultyFormData] = useState({
+    marksPerQuestion: "",
+    maxQuestions: "",
+    minTime: "",
+    maxTime: "",
+  });
+
   useEffect(() => {
     const initializeData = async () => {
       await Promise.all([fetchCourses(), fetchCategories()]);
@@ -1029,6 +1041,7 @@ const Courses = () => {
       category: course.category?._id || course.categoryId || null,
       isPaid: course.isPaid || false,
       price: course.price || 0,
+      hasPdfExport: course.hasPdfExport || false,
     });
     setErrors({});
     // Update URL without page reload
@@ -1105,6 +1118,248 @@ const Courses = () => {
     const url = new URL(window.location);
     url.searchParams.delete("edit");
     window.history.pushState({}, "", url);
+  };
+
+  /**
+   * Validate difficulty settings form
+   * @param {Object} formData - Difficulty settings data
+   * @param {number} courseMaxMarks - Course maximum marks
+   * @param {Array} allDifficulties - All course difficulties for total marks calculation
+   * @param {string} currentDifficulty - Current difficulty being edited
+   * @returns {Object} Validation errors object
+   */
+  const validateDifficultyForm = (
+    formData,
+    courseMaxMarks,
+    allDifficulties,
+    currentDifficulty
+  ) => {
+    const newErrors = {};
+
+    // Validate marksPerQuestion
+    if (!formData.marksPerQuestion || formData.marksPerQuestion === "") {
+      newErrors.marksPerQuestion = "Marks per question is required";
+    } else if (parseInt(formData.marksPerQuestion) < 1) {
+      newErrors.marksPerQuestion = "Marks per question must be at least 1";
+    } else if (parseInt(formData.marksPerQuestion) > 100) {
+      newErrors.marksPerQuestion = "Marks per question cannot exceed 100";
+    }
+
+    // Validate maxQuestions
+    if (!formData.maxQuestions || formData.maxQuestions === "") {
+      newErrors.maxQuestions = "Max questions is required";
+    } else if (parseInt(formData.maxQuestions) < 1) {
+      newErrors.maxQuestions = "Max questions must be at least 1";
+    }
+
+    // Validate minTime
+    if (!formData.minTime || formData.minTime === "") {
+      newErrors.minTime = "Min time is required";
+    } else if (parseInt(formData.minTime) < 1) {
+      newErrors.minTime = "Min time must be at least 1 second";
+    }
+
+    // Validate maxTime
+    if (!formData.maxTime || formData.maxTime === "") {
+      newErrors.maxTime = "Max time is required";
+    } else if (parseInt(formData.maxTime) < 1) {
+      newErrors.maxTime = "Max time must be at least 1 second";
+    } else if (parseInt(formData.maxTime) <= parseInt(formData.minTime)) {
+      newErrors.maxTime = "Max time must be greater than min time";
+    }
+
+    // Validate total marks calculation
+    if (
+      Object.keys(newErrors).length === 0 &&
+      courseMaxMarks &&
+      allDifficulties
+    ) {
+      let totalMarks = 0;
+
+      allDifficulties.forEach((diff) => {
+        if (diff.name === currentDifficulty) {
+          // Use new values for current difficulty
+          totalMarks +=
+            parseInt(formData.marksPerQuestion) *
+            parseInt(formData.maxQuestions);
+        } else {
+          // Use existing values for other difficulties
+          totalMarks += diff.marksPerQuestion * diff.maxQuestions;
+        }
+      });
+
+      if (totalMarks !== courseMaxMarks) {
+        newErrors.totalMarks = `Total marks (${totalMarks}) must equal course maximum marks (${courseMaxMarks}). Current calculation: ${allDifficulties
+          .map((d) => {
+            if (d.name === currentDifficulty) {
+              return `${currentDifficulty}: ${formData.marksPerQuestion} × ${
+                formData.maxQuestions
+              } = ${
+                parseInt(formData.marksPerQuestion) *
+                parseInt(formData.maxQuestions)
+              }`;
+            }
+            return `${d.name}: ${d.marksPerQuestion} × ${d.maxQuestions} = ${
+              d.marksPerQuestion * d.maxQuestions
+            }`;
+          })
+          .join(", ")}`;
+      }
+    }
+
+    return newErrors;
+  };
+
+  /**
+   * Open difficulty edit modal
+   * @param {Object} course - Course object
+   * @param {string} difficultyName - Difficulty name (Easy, Medium, Hard)
+   */
+  const handleEditDifficulty = (course, difficultyName) => {
+    const difficulty = course.difficulties.find(
+      (d) => d.name === difficultyName
+    );
+
+    if (!difficulty) {
+      toast.error("Difficulty settings not found");
+      return;
+    }
+
+    setEditingDifficulty({
+      courseId: course._id,
+      courseName: getCourseName(course),
+      difficulty: difficultyName,
+      courseMaxMarks: course.maxMarks || calculateCourseMaxMarks(course),
+      allDifficulties: course.difficulties,
+    });
+
+    setDifficultyFormData({
+      marksPerQuestion: difficulty.marksPerQuestion || "",
+      maxQuestions: difficulty.maxQuestions || "",
+      minTime: difficulty.timerSettings?.minTime || "",
+      maxTime: difficulty.timerSettings?.maxTime || "",
+    });
+
+    setDifficultyErrors({});
+  };
+
+  /**
+   * Calculate course maximum marks from all difficulties
+   * @param {Object} course - Course object
+   * @returns {number} Total maximum marks
+   */
+  const calculateCourseMaxMarks = (course) => {
+    if (!course.difficulties || course.difficulties.length === 0) return 0;
+
+    return course.difficulties.reduce((total, diff) => {
+      return total + diff.marksPerQuestion * diff.maxQuestions;
+    }, 0);
+  };
+
+  /**
+   * Handle difficulty form field changes
+   * @param {string} field - Field name
+   * @param {string|number} value - Field value
+   */
+  const handleDifficultyFieldChange = (field, value) => {
+    setDifficultyFormData((prev) => ({
+      ...prev,
+      [field]: value,
+    }));
+
+    // Clear error for this field when user starts typing
+    if (difficultyErrors[field]) {
+      setDifficultyErrors((prev) => {
+        const newErrors = { ...prev };
+        delete newErrors[field];
+        return newErrors;
+      });
+    }
+  };
+
+  /**
+   * Save difficulty settings
+   */
+  const handleSaveDifficulty = async () => {
+    if (!editingDifficulty) return;
+
+    // Validate form
+    const validationErrors = validateDifficultyForm(
+      difficultyFormData,
+      editingDifficulty.courseMaxMarks,
+      editingDifficulty.allDifficulties,
+      editingDifficulty.difficulty
+    );
+
+    if (Object.keys(validationErrors).length > 0) {
+      setDifficultyErrors(validationErrors);
+
+      // Show first error as toast
+      const firstError = Object.values(validationErrors)[0];
+      toast.error(firstError);
+      return;
+    }
+
+    // Prepare update data
+    const updatedDifficulties = editingDifficulty.allDifficulties.map(
+      (diff) => {
+        if (diff.name === editingDifficulty.difficulty) {
+          return {
+            name: diff.name,
+            marksPerQuestion: parseInt(difficultyFormData.marksPerQuestion),
+            maxQuestions: parseInt(difficultyFormData.maxQuestions),
+            totalMarks:
+              parseInt(difficultyFormData.marksPerQuestion) *
+              parseInt(difficultyFormData.maxQuestions),
+            timerSettings: {
+              minTime: parseInt(difficultyFormData.minTime),
+              maxTime: parseInt(difficultyFormData.maxTime),
+            },
+          };
+        }
+        return diff;
+      }
+    );
+
+    const updateData = {
+      difficulties: updatedDifficulties,
+    };
+
+    // Call update API
+    const result = await updateCourse(editingDifficulty.courseId, updateData);
+
+    if (result.success) {
+      toast.success(
+        `${editingDifficulty.difficulty} difficulty updated successfully!`
+      );
+      setEditingDifficulty(null);
+      setDifficultyFormData({
+        marksPerQuestion: "",
+        maxQuestions: "",
+        minTime: "",
+        maxTime: "",
+      });
+      setDifficultyErrors({});
+
+      // Refresh courses
+      await fetchCourses();
+    } else {
+      toast.error(result.message || "Failed to update difficulty settings");
+    }
+  };
+
+  /**
+   * Cancel difficulty editing
+   */
+  const handleCancelDifficultyEdit = () => {
+    setEditingDifficulty(null);
+    setDifficultyFormData({
+      marksPerQuestion: "",
+      maxQuestions: "",
+      minTime: "",
+      maxTime: "",
+    });
+    setDifficultyErrors({});
   };
 
   const handleConfirmDelete = async () => {
@@ -1946,22 +2201,110 @@ const Courses = () => {
                             </div>
                           </div>
 
-                          {/* Difficulty Levels */}
                           {course.difficulties &&
                             course.difficulties.length > 0 && (
-                              <div className="mt-4 flex flex-wrap gap-2">
-                                {course.difficulties.map((level) => (
-                                  <span
-                                    key={level.name}
-                                    className={`px-3 py-1 text-xs font-medium rounded-full ${getDifficultyColor(
-                                      level.name
-                                    )}`}
-                                  >
-                                    {level.name} ({course.maxQuestionsPerTest}{" "}
-                                    max questions, {level.marksPerQuestion}{" "}
-                                    marks each)
-                                  </span>
-                                ))}
+                              <div>
+                                <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center space-x-2">
+                                  <Settings className="h-5 w-5 text-blue-500" />
+                                  <span>Course Configuration</span>
+                                </h4>
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-4 md:gap-6">
+                                  {course.difficulties.map((level) => (
+                                    <div
+                                      key={level.name}
+                                      className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl p-4 sm:p-6 border border-gray-200 hover:shadow-md transition-all duration-200 relative group"
+                                    >
+                                      {/* EDIT BUTTON - NEW */}
+                                      <button
+                                        onClick={() =>
+                                          handleEditDifficulty(
+                                            course,
+                                            level.name
+                                          )
+                                        }
+                                        className="absolute top-3 right-3 p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all duration-200 opacity-0 group-hover:opacity-100 cursor-pointer"
+                                        title="Edit difficulty settings"
+                                      >
+                                        <Edit2 className="h-4 w-4" />
+                                      </button>
+
+                                      <div className="flex items-center justify-between mb-4">
+                                        <span
+                                          className={`px-3 py-1 text-sm font-semibold rounded-full ${getDifficultyColor(
+                                            level.name
+                                          )}`}
+                                        >
+                                          {level.name}
+                                        </span>
+                                      </div>
+                                      <div className="space-y-2 sm:space-y-3 text-xs sm:text-sm">
+                                        <div className="flex justify-between items-center gap-2">
+                                          <span className="text-gray-600 text-left flex-1">
+                                            Max Questions:
+                                          </span>
+                                          <span className="font-semibold text-gray-900 text-right">
+                                            {course.maxQuestionsPerTest ||
+                                              level.maxQuestions}
+                                          </span>
+                                        </div>
+                                        <div className="flex justify-between items-center">
+                                          <span className="text-gray-600">
+                                            Marks Each:
+                                          </span>
+                                          <span className="font-semibold text-gray-900">
+                                            {level.marksPerQuestion}
+                                          </span>
+                                        </div>
+                                        <div className="flex justify-between items-center">
+                                          <span className="text-gray-600">
+                                            Time Limit:
+                                          </span>
+                                          <span className="font-semibold text-gray-900">
+                                            {level.timerSettings?.minTime}-
+                                            {level.timerSettings?.maxTime}s
+                                          </span>
+                                        </div>
+                                        <div className="pt-2 border-t border-gray-300">
+                                          <div className="flex justify-between items-center">
+                                            <span className="text-gray-600">
+                                              Questions:
+                                            </span>
+                                            <span className="font-semibold text-gray-900">
+                                              {getQuestionsByDifficulty(
+                                                course._id
+                                              )[level.name]?.length || 0}
+                                            </span>
+                                          </div>
+                                          <div className="flex justify-between items-center">
+                                            <span className="text-gray-600">
+                                              Total Marks:
+                                            </span>
+                                            <span className="font-bold text-blue-600">
+                                              {(getQuestionsByDifficulty(
+                                                course._id
+                                              )[level.name]?.length || 0) *
+                                                level.marksPerQuestion}
+                                            </span>
+                                          </div>
+                                          <div className="flex justify-between items-center">
+                                            <span className="text-gray-600">
+                                              Max Test Marks:
+                                            </span>
+                                            <span className="font-semibold text-gray-500">
+                                              {Math.min(
+                                                course.maxQuestionsPerTest ||
+                                                  level.maxQuestions,
+                                                getQuestionsByDifficulty(
+                                                  course._id
+                                                )[level.name]?.length || 0
+                                              ) * level.marksPerQuestion}
+                                            </span>
+                                          </div>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
                               </div>
                             )}
                         </div>
@@ -2020,6 +2363,56 @@ const Courses = () => {
                   {/* Expanded Course Details */}
                   {isExpanded && (
                     <div className="mt-8 pt-8 border-t border-gray-200 space-y-8 animate-in slide-in-from-top-4 duration-300">
+                      {/* PDF Export Status */}
+                      {/* PDF Export Status - Shows if enabled */}
+                      {course.hasPdfExport && (
+                        <div className="mb-6 bg-gradient-to-r from-purple-50 to-blue-50 border border-purple-200 rounded-xl p-4">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center space-x-3">
+                              <div className="flex-shrink-0">
+                                <svg
+                                  className="h-8 w-8 text-purple-600 animate-pulse"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"
+                                  />
+                                </svg>
+                              </div>
+                              <div className="flex-1">
+                                <h4 className="text-sm font-semibold text-purple-900">
+                                  PDF Export Enabled
+                                </h4>
+                                <p className="text-xs text-purple-700">
+                                  Students can download their test results as
+                                  PDF after completing tests
+                                </p>
+                              </div>
+                            </div>
+                            <div className="flex-shrink-0">
+                              <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                                <svg
+                                  className="h-3 w-3 mr-1"
+                                  fill="currentColor"
+                                  viewBox="0 0 20 20"
+                                >
+                                  <path
+                                    fillRule="evenodd"
+                                    d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                                    clipRule="evenodd"
+                                  />
+                                </svg>
+                                Active
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      )}
                       {/* Course Configuration */}
                       {course.difficulties &&
                         course.difficulties.length > 0 && (
@@ -2042,7 +2435,6 @@ const Courses = () => {
                                     >
                                       {level.name}
                                     </span>
-                                    <Target className="h-5 w-5 text-gray-400" />
                                   </div>
                                   <div className="space-y-3 text-sm">
                                     <div className="flex justify-between items-center">
@@ -3215,6 +3607,37 @@ const Courses = () => {
                 )}
               </div>
 
+              {/* PDF Export Toggle */}
+              <div className="mb-4">
+                <label className="block text-gray-700 text-sm font-bold mb-2">
+                  PDF Export
+                </label>
+                <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                  <div className="flex-1">
+                    <p className="text-sm text-gray-700 font-medium">
+                      Enable PDF Download
+                    </p>
+                    <p className="text-xs text-gray-500 mt-1">
+                      Students can download test results as PDF
+                    </p>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={editFormData.hasPdfExport || false}
+                      onChange={(e) =>
+                        setEditFormData({
+                          ...editFormData,
+                          hasPdfExport: e.target.checked,
+                        })
+                      }
+                      className="sr-only peer"
+                    />
+                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
+                  </label>
+                </div>
+              </div>
+
               <div className="flex items-center">
                 <input
                   type="checkbox"
@@ -4019,6 +4442,278 @@ const Courses = () => {
                   className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors cursor-pointer"
                 >
                   Delete
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Difficulty Edit Modal */}
+      {editingDifficulty && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            {/* Modal Header */}
+            <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 rounded-t-xl z-10">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-xl font-semibold text-gray-900">
+                    Edit {editingDifficulty.difficulty} Difficulty
+                  </h3>
+                  <p className="text-sm text-gray-600 mt-1">
+                    {editingDifficulty.courseName}
+                  </p>
+                </div>
+                <button
+                  onClick={handleCancelDifficultyEdit}
+                  className="p-2 hover:bg-gray-100 rounded-full transition-colors cursor-pointer"
+                >
+                  <X className="h-5 w-5 text-gray-500" />
+                </button>
+              </div>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6 space-y-6">
+              {/* Course Max Marks Info */}
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <div className="flex items-center space-x-2 mb-2">
+                  <AlertCircle className="h-5 w-5 text-blue-600" />
+                  <span className="font-semibold text-blue-900">Important</span>
+                </div>
+                <p className="text-sm text-blue-800">
+                  Course maximum marks:{" "}
+                  <strong>{editingDifficulty.courseMaxMarks}</strong>
+                </p>
+                <p className="text-xs text-blue-700 mt-1">
+                  Total marks from all difficulties must equal this value.
+                </p>
+              </div>
+
+              {/* Form Grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                {/* Marks Per Question */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Marks Per Question *
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    max="100"
+                    value={difficultyFormData.marksPerQuestion}
+                    onChange={(e) =>
+                      handleDifficultyFieldChange(
+                        "marksPerQuestion",
+                        e.target.value
+                      )
+                    }
+                    className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 ${
+                      difficultyErrors.marksPerQuestion
+                        ? "border-red-300 focus:ring-red-500"
+                        : "border-gray-300 focus:ring-blue-500"
+                    }`}
+                    placeholder="e.g., 2"
+                  />
+                  {difficultyErrors.marksPerQuestion && (
+                    <p className="mt-1 text-sm text-red-600">
+                      {difficultyErrors.marksPerQuestion}
+                    </p>
+                  )}
+                </div>
+
+                {/* Max Questions */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Max Questions *
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={difficultyFormData.maxQuestions}
+                    onChange={(e) =>
+                      handleDifficultyFieldChange(
+                        "maxQuestions",
+                        e.target.value
+                      )
+                    }
+                    className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 ${
+                      difficultyErrors.maxQuestions
+                        ? "border-red-300 focus:ring-red-500"
+                        : "border-gray-300 focus:ring-blue-500"
+                    }`}
+                    placeholder="e.g., 10"
+                  />
+                  {difficultyErrors.maxQuestions && (
+                    <p className="mt-1 text-sm text-red-600">
+                      {difficultyErrors.maxQuestions}
+                    </p>
+                  )}
+                </div>
+
+                {/* Min Time */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Min Time (seconds) *
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={difficultyFormData.minTime}
+                    onChange={(e) =>
+                      handleDifficultyFieldChange("minTime", e.target.value)
+                    }
+                    className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 ${
+                      difficultyErrors.minTime
+                        ? "border-red-300 focus:ring-red-500"
+                        : "border-gray-300 focus:ring-blue-500"
+                    }`}
+                    placeholder="e.g., 30"
+                  />
+                  {difficultyErrors.minTime && (
+                    <p className="mt-1 text-sm text-red-600">
+                      {difficultyErrors.minTime}
+                    </p>
+                  )}
+                </div>
+
+                {/* Max Time */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Max Time (seconds) *
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={difficultyFormData.maxTime}
+                    onChange={(e) =>
+                      handleDifficultyFieldChange("maxTime", e.target.value)
+                    }
+                    className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 ${
+                      difficultyErrors.maxTime
+                        ? "border-red-300 focus:ring-red-500"
+                        : "border-gray-300 focus:ring-blue-500"
+                    }`}
+                    placeholder="e.g., 60"
+                  />
+                  {difficultyErrors.maxTime && (
+                    <p className="mt-1 text-sm text-red-600">
+                      {difficultyErrors.maxTime}
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              {/* Calculated Totals */}
+              <div className="bg-gray-50 rounded-lg p-4 space-y-2">
+                <h4 className="font-semibold text-gray-900 mb-2">
+                  Calculated Values
+                </h4>
+
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-600">
+                    Total Marks for this difficulty:
+                  </span>
+                  <span className="font-semibold text-gray-900">
+                    {(parseInt(difficultyFormData.marksPerQuestion) || 0) *
+                      (parseInt(difficultyFormData.maxQuestions) || 0)}
+                  </span>
+                </div>
+
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-600">
+                    Time range per question:
+                  </span>
+                  <span className="font-semibold text-gray-900">
+                    {difficultyFormData.minTime || 0}s -{" "}
+                    {difficultyFormData.maxTime || 0}s
+                  </span>
+                </div>
+
+                <div className="pt-2 border-t border-gray-300">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-600">
+                      Course Total (All Difficulties):
+                    </span>
+                    <span
+                      className={`font-bold ${
+                        editingDifficulty.allDifficulties.reduce(
+                          (total, diff) => {
+                            if (diff.name === editingDifficulty.difficulty) {
+                              return (
+                                total +
+                                (parseInt(
+                                  difficultyFormData.marksPerQuestion
+                                ) || 0) *
+                                  (parseInt(difficultyFormData.maxQuestions) ||
+                                    0)
+                              );
+                            }
+                            return (
+                              total + diff.marksPerQuestion * diff.maxQuestions
+                            );
+                          },
+                          0
+                        ) === editingDifficulty.courseMaxMarks
+                          ? "text-green-600"
+                          : "text-red-600"
+                      }`}
+                    >
+                      {editingDifficulty.allDifficulties.reduce(
+                        (total, diff) => {
+                          if (diff.name === editingDifficulty.difficulty) {
+                            return (
+                              total +
+                              (parseInt(difficultyFormData.marksPerQuestion) ||
+                                0) *
+                                (parseInt(difficultyFormData.maxQuestions) || 0)
+                            );
+                          }
+                          return (
+                            total + diff.marksPerQuestion * diff.maxQuestions
+                          );
+                        },
+                        0
+                      )}{" "}
+                      / {editingDifficulty.courseMaxMarks}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Total Marks Error */}
+              {difficultyErrors.totalMarks && (
+                <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                  <div className="flex items-start space-x-2">
+                    <AlertCircle className="h-5 w-5 text-red-600 mt-0.5 flex-shrink-0" />
+                    <div className="flex-1">
+                      <p className="text-sm font-semibold text-red-900 mb-1">
+                        Total Marks Mismatch
+                      </p>
+                      <p className="text-sm text-red-800">
+                        {difficultyErrors.totalMarks}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="sticky bottom-0 bg-gray-50 border-t border-gray-200 px-6 py-4 rounded-b-xl">
+              <div className="flex justify-end space-x-3">
+                <button
+                  onClick={handleCancelDifficultyEdit}
+                  className="px-6 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSaveDifficulty}
+                  disabled={Object.keys(difficultyErrors).length > 0}
+                  className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer flex items-center space-x-2"
+                >
+                  <Save className="h-4 w-4" />
+                  <span>Save Changes</span>
                 </button>
               </div>
             </div>
