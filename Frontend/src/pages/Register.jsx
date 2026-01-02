@@ -1068,21 +1068,32 @@ const Register = () => {
                           </p>
                         </div>
 
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setRegisterStep(1);
-                            setOtpValue("");
-                            setUsername("");
-                            setUsernameAvailable(null);
-                            setErrors({});
-                            setOtpTimer(0);
-                            setCanResendOtp(false);
-                          }}
-                          className="text-xs text-primary hover:text-primary/80 transition-colors"
-                        >
-                          Not you? Change details
-                        </button>
+                        {/* FIXED: Only show "Change details" when timer expires */}
+                        {otpTimer === 0 && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setRegisterStep(1);
+                              setOtpValue("");
+                              setUsername("");
+                              setUsernameAvailable(null);
+                              setErrors({});
+                              setOtpTimer(0);
+                              setCanResendOtp(false);
+                            }}
+                            className="text-xs text-primary hover:text-primary/80 transition-colors"
+                          >
+                            Change your details?
+                          </button>
+                        )}
+
+                        {/* ADDED: Show countdown when timer is active */}
+                        {otpTimer > 0 && (
+                          <p className="text-xs text-muted-foreground">
+                            You can change details in {otpTimer}s
+                          </p>
+                        )}
+
                         <div className="space-y-2">
                           <label className="text-sm font-medium text-foreground block text-center">
                             Enter OTP
