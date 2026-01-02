@@ -724,7 +724,7 @@ Generate complete .txt file which contains, content for all sections above.`;
     return result;
   };
 
-  // ✅ Detect platform from URL
+  // Detect platform from URL
   const detectPlatform = (url) => {
     if (!url) return "Unknown";
 
@@ -1063,6 +1063,7 @@ Generate complete .txt file which contains, content for all sections above.`;
     isPaid: false,
     price: 0,
     currency: "INR",
+    hasPdfExport: false,
   });
   const [questionForm, setQuestionForm] = useState({
     question: "",
@@ -1072,7 +1073,7 @@ Generate complete .txt file which contains, content for all sections above.`;
     explanation: "",
     questionType: "multiple", // "multiple", "single", "truefalse"
     singleAnswer: "",
-    maxOptions: 2, // customizable max options
+    maxOptions: 4, // customizable max options
     hasImage: false,
     questionImage: null,
     imagePreview: null,
