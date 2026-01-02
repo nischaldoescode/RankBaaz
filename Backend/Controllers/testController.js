@@ -643,7 +643,7 @@ export const submitTest = async (req, res) => {
     // Invalidate leaderboard and user caches after test submission
     await invalidateCache.leaderboard(courseId);
     await invalidateCache.test(userId, testId);
-    
+
     res.status(201).json({
       success: true,
       message: "Test submitted successfully",
@@ -756,7 +756,7 @@ export const getTestResult = async (req, res) => {
  * @access Private (User who took test OR Admin)
  * @param {string} testId - Test result ID
  * @returns {Buffer} PDF file
- * 
+ *
  * Security:
  * - Users can only download PDF once
  * - Admins can download unlimited times
@@ -778,43 +778,64 @@ export const downloadTestPDF = async (req, res) => {
     if (!mongoose.Types.ObjectId.isValid(testId)) {
       return res.status(400).json({
         success: false,
-        message: 'Invalid test ID format',
+        message: "Invalid test ID format",
       });
     }
 
     // Fetch test result with populated data
     const testResult = await TestResult.findById(testId)
       .populate({
-        path: 'course',
-        select: 'name description hasPdfExport questions difficulties',
+        path: "course",
+        select: "name description hasPdfExport questions difficulties",
       })
       .populate({
-        path: 'user',
-        select: 'name email',
+        path: "user",
+        select: "name email",
       })
       .lean();
 
     if (!testResult) {
       return res.status(404).json({
         success: false,
-        message: 'Test result not found',
+        message: "Test result not found",
       });
     }
 
     // Security Check 1: Verify ownership (unless admin)
     if (!isAdmin && testResult.user._id.toString() !== userId) {
-      console.log(`[SECURITY] Unauthorized PDF access attempt by user ${userId}`);
+      console.log(
+        `[SECURITY] Unauthorized PDF access attempt by user ${userId}`
+      );
       return res.status(403).json({
         success: false,
-        message: 'You can only download your own test results',
+        message: "You can only download your own test results",
       });
+    }
+
+    // Security Check 1.5: Check if user is banned from this course
+    if (!isAdmin) {
+      const User = (await import("../Models/User.js")).default;
+      const user = await User.findById(userId);
+
+      const isBanned = user?.bannedCourses?.some(
+        (ban) =>
+          ban.courseId.toString() === testResult.course._id.toString() &&
+          (ban.permanent || (ban.unbanAt && ban.unbanAt > new Date()))
+      );
+
+      if (isBanned) {
+        return res.status(403).json({
+          success: false,
+          message: "You are banned from accessing content for this course",
+        });
+      }
     }
 
     // Security Check 2: Check if course has PDF export enabled (skip for admin)
     if (!isAdmin && !testResult.course.hasPdfExport) {
       return res.status(403).json({
         success: false,
-        message: 'PDF export is not available for this course',
+        message: "PDF export is not available for this course",
       });
     }
 
@@ -822,13 +843,14 @@ export const downloadTestPDF = async (req, res) => {
     if (!isAdmin && testResult.pdfDownloaded) {
       return res.status(403).json({
         success: false,
-        message: 'You have already downloaded this test result. Each test can only be downloaded once.',
+        message:
+          "You have already downloaded this test result. Each test can only be downloaded once.",
         downloadedAt: testResult.pdfDownloadedAt,
       });
     }
 
     // Import PDF service
-    const pdfService = (await import('../services/pdfService.js')).default;
+    const pdfService = (await import("../services/pdfService.js")).default;
 
     // Generate PDF
     console.log(`Generating PDF for test ${testId}...`);
@@ -851,26 +873,25 @@ export const downloadTestPDF = async (req, res) => {
     }
 
     // Set response headers
-    const filename = `RankBaaz_${testResult.course.name.replace(/[^a-z0-9]/gi, '_')}_${new Date().toISOString().split('T')[0]}.pdf`;
-    
-    res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
-    res.setHeader('Content-Length', pdfBuffer.length);
-    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
-    res.setHeader('Pragma', 'no-cache');
-    res.setHeader('Expires', '0');
+    const filename = `RankBaaz_${testResult.course.name.replace(/[^a-z0-9]/gi, "_")}_${new Date().toISOString().split("T")[0]}.pdf`;
+
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+    res.setHeader("Content-Length", pdfBuffer.length);
+    res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+    res.setHeader("Pragma", "no-cache");
+    res.setHeader("Expires", "0");
 
     // Send PDF
     res.send(pdfBuffer);
 
     console.log(`PDF sent successfully: ${filename}`);
-
   } catch (error) {
-    console.error('Download PDF error:', error);
+    console.error("Download PDF error:", error);
     res.status(500).json({
       success: false,
-      message: 'Failed to generate PDF',
-      error: process.env.NODE_ENV === 'development' ? error.message : undefined,
+      message: "Failed to generate PDF",
+      error: process.env.NODE_ENV === "development" ? error.message : undefined,
     });
   }
 };
