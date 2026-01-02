@@ -446,7 +446,6 @@ const Login = () => {
                         </motion.div>
                       )}
 
-                      {/* Step 2: OTP */}
                       {loginStep === 2 && (
                         <motion.div
                           initial={{ opacity: 0, x: -20 }}
@@ -461,13 +460,24 @@ const Login = () => {
                             <p className="text-sm font-medium text-foreground">
                               {formData.email}
                             </p>
-                            <button
-                              type="button"
-                              onClick={handleChangeEmail}
-                              className="text-xs text-primary hover:text-primary/80 transition-colors"
-                            >
-                              Not your email?
-                            </button>
+
+                            {/* FIXED: Only show "Change Email" button when timer expires */}
+                            {otpTimer === 0 && (
+                              <button
+                                type="button"
+                                onClick={handleChangeEmail}
+                                className="text-xs text-primary hover:text-primary/80 transition-colors"
+                              >
+                                Change email?
+                              </button>
+                            )}
+
+                            {/* ADDED: Show timer countdown when active */}
+                            {otpTimer > 0 && (
+                              <p className="text-xs text-muted-foreground">
+                                Please wait {otpTimer}s before changing email
+                              </p>
+                            )}
                           </div>
 
                           <div className="space-y-2">
