@@ -2214,7 +2214,6 @@ const Courses = () => {
                                       key={level.name}
                                       className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl p-4 sm:p-6 border border-gray-200 hover:shadow-md transition-all duration-200 relative group"
                                     >
-                                      {/* EDIT BUTTON - NEW */}
                                       <button
                                         onClick={() =>
                                           handleEditDifficulty(
@@ -2504,6 +2503,54 @@ const Courses = () => {
                             </div>
                           </div>
                         )}
+
+                      {/* Test Results Section for PDF Download */}
+                      <div className="mt-8 pt-8 border-t border-gray-200">
+                        <div className="flex items-center justify-between mb-4">
+                          <h4 className="text-lg font-semibold text-gray-900 flex items-center space-x-2">
+                            <svg
+                              className="h-5 w-5 text-blue-500"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                              />
+                            </svg>
+                            <span>Test Results</span>
+                          </h4>
+
+                          {course.hasPdfExport && (
+                            <span className="inline-flex items-center px-2.5 py-1 rounded-full bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 text-xs font-medium">
+                              <svg
+                                className="w-3 h-3 mr-1"
+                                fill="currentColor"
+                                viewBox="0 0 20 20"
+                              >
+                                <path
+                                  fillRule="evenodd"
+                                  d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                                  clipRule="evenodd"
+                                />
+                              </svg>
+                              PDF Export Enabled
+                            </span>
+                          )}
+                        </div>
+
+                        <div className="bg-gray-50 rounded-lg p-4">
+                          <p className="text-sm text-gray-600 mb-4">
+                            View and download test results for this course.{" "}
+                            {course.hasPdfExport
+                              ? "PDF export is enabled for this course."
+                              : "Note: PDF export is disabled for this course."}
+                          </p>
+                        </div>
+                      </div>
 
                       {/* Questions Section */}
                       <div>
