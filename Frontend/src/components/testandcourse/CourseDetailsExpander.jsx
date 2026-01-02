@@ -202,6 +202,27 @@ const CourseDetailsExpander = ({
                 </p>
               </div>
 
+              {course.hasPdfExport && (
+                <div className="mt-3 flex items-center space-x-2 px-3 py-2 bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-lg">
+                  <svg
+                    className="w-4 h-4 text-purple-600 dark:text-purple-400"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"
+                    />
+                  </svg>
+                  <span className="text-xs text-purple-700 dark:text-purple-300 font-medium">
+                    PDF export available after test completion
+                  </span>
+                </div>
+              )}
+
               <Button
                 onClick={handleStartTest}
                 disabled={checkingPurchase}
