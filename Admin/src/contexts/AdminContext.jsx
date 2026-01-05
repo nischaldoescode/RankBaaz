@@ -490,13 +490,18 @@ export const AdminProvider = ({ children }) => {
         formData.append(
           "difficulties",
           JSON.stringify(courseData.difficulties)
-        ); // ← Use JSON.stringify like in create
+        );
       }
 
       if (courseData.maxQuestionsPerTest)
         formData.append("maxQuestionsPerTest", courseData.maxQuestionsPerTest);
       if (courseData.isActive !== undefined)
         formData.append("isActive", courseData.isActive);
+
+      // ADDED: PDF Export toggle
+      if (courseData.hasPdfExport !== undefined) {
+        formData.append("hasPdfExport", courseData.hasPdfExport);
+      }
 
       // Add these lines:
       if (courseData.isPaid !== undefined) {
