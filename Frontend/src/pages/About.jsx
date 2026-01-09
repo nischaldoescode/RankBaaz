@@ -26,17 +26,21 @@ const iconMap = {
   TrendingUp,
   Shield,
 };
-import { useHead } from '@unhead/react';
+import { useHead } from "@unhead/react";
 
 const About = () => {
   const { animations, reducedMotion } = useTheme();
   const { contentSettings, loading } = useContent();
 
   useSEO({
-    title: 'About Us',
-    description: contentSettings?.siteDescription || "Learn about our mission to transform education through intelligent testing and personalized learning experiences.",
-    keywords: 'about us, mission, values, education platform, online learning',
-    type: 'website',
+    title: "About Us",
+    description: `Learn more about ${
+      contentSettings?.siteName || "RankBaaz"
+    }, our mission, and our vision for online learning.`,
+    keywords: "about, company, mission, online learning",
+    type: "website",
+
+    canonicalUrl: `${contentSettings?.siteUrl || window.location.origin}/about`,
   });
 
   const containerVariants = {
@@ -52,7 +56,7 @@ const About = () => {
     visible: { opacity: 1, y: 0 },
   };
 
-if (loading || !contentSettings) {
+  if (loading || !contentSettings) {
     return <Loading variant="page" />;
   }
   // Fallback values if content not loaded
@@ -94,7 +98,9 @@ if (loading || !contentSettings) {
                   <div className="text-3xl sm:text-4xl font-bold text-primary mb-2">
                     {stat.value}
                   </div>
-                  <div className="text-sm text-muted-foreground">{stat.label}</div>
+                  <div className="text-sm text-muted-foreground">
+                    {stat.label}
+                  </div>
                 </div>
               ))}
             </motion.div>
@@ -108,8 +114,8 @@ if (loading || !contentSettings) {
                   What Drives Us
                 </h2>
                 <p className="text-muted-foreground max-w-2xl mx-auto">
-                  Our core values shape every decision we make and every feature we
-                  build
+                  Our core values shape every decision we make and every feature
+                  we build
                 </p>
               </div>
 
@@ -182,8 +188,8 @@ if (loading || !contentSettings) {
               Ready to Start Your Journey?
             </h2>
             <p className="text-muted-foreground mb-8 max-w-2xl mx-auto">
-              Join our community of learners and experience personalized education
-              like never before
+              Join our community of learners and experience personalized
+              education like never before
             </p>
             <div className="flex flex-wrap justify-center gap-4">
               <Link

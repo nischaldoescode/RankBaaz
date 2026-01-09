@@ -92,7 +92,8 @@ const Register = () => {
     keywords:
       "register, sign up, create account, student registration, free account, join now, new user",
     type: "website",
-    noindex: true, // Registration pages should not be indexed
+    noindex: false,
+    canonicalUrl: `${contentSettings?.siteUrl || window.location.origin}/login`,
     structuredData: {
       "@context": "https://schema.org",
       "@type": "WebPage",

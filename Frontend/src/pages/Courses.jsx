@@ -207,15 +207,26 @@ const Courses = () => {
 
   const { contentSettings } = useContent();
 
+  const searchParams = new URLSearchParams(window.location.search);
+  const hasSearchQuery = searchParams.has("search");
+
   useSEO({
     title: "Courses",
-    description: `Explore ${
-      pagination.totalCourses || "our"
-    } courses designed to test and improve your skills. Find courses from beginner to advanced levels.`,
-    keywords:
-      "courses, online courses, learning, test preparation, skills development, education",
+    description: hasSearchQuery
+      ? "Browse our courses"
+      : `Explore ${
+          pagination.totalCourses || "our"
+        } courses designed to test and improve your skills.`,
+    keywords: "courses, online courses, learning, education",
     type: "website",
+
+    noindex: hasSearchQuery,
+
+    canonicalUrl: `${
+      contentSettings?.siteUrl || window.location.origin
+    }/courses`,
   });
+
   // const navigate = useNavigate();
   const { animations, reducedMotion } = useTheme();
 

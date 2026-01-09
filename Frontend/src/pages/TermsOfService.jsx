@@ -27,36 +27,44 @@ const TermsOfService = () => {
 
   // SEO Configuration - only runs when page is loaded
   useSEO({
-    title: page?.title || 'Terms of Service',
-    description: `Read ${contentSettings?.siteName || 'RankBaazro'}'s Terms of Service to understand the rules and regulations for using our platform.`,
-    keywords: 'terms of service, terms and conditions, user agreement, terms of use, legal agreement, service rules',
-    type: 'article',
-    author: contentSettings?.siteName || 'RankBaazro',
+    title: page?.title || "Terms of Service",
+    description: `Read ${
+      contentSettings?.siteName || "RankBaazro"
+    }'s Terms of Service to understand the rules and regulations for using our platform.`,
+    keywords:
+      "terms of service, terms and conditions, user agreement, terms of use, legal agreement, service rules",
+    type: "article",
+    author: contentSettings?.siteName || "RankBaazro",
     publishedTime: page?.metadata?.effectiveDate,
     modifiedTime: page?.lastUpdated,
+    canonicalUrl: `${contentSettings?.siteUrl || window.location.origin}/terms`,
     structuredData: {
-      '@context': 'https://schema.org',
-      '@type': 'WebPage',
-      name: page?.title || 'Terms of Service',
-      description: `Terms of Service for ${contentSettings?.siteName || 'RankBaaz Pro'}`,
+      "@context": "https://schema.org",
+      "@type": "WebPage",
+      name: page?.title || "Terms of Service",
+      description: `Terms of Service for ${
+        contentSettings?.siteName || "RankBaaz Pro"
+      }`,
       url: window.location.href,
       datePublished: page?.metadata?.effectiveDate,
       dateModified: page?.lastUpdated,
-      inLanguage: 'en-US',
+      inLanguage: "en-US",
       isPartOf: {
-        '@type': 'WebSite',
-        name: contentSettings?.siteName || 'RankBaaz Pro',
-        url: contentSettings?.siteUrl || window.location.origin
+        "@type": "WebSite",
+        name: contentSettings?.siteName || "RankBaaz Pro",
+        url: contentSettings?.siteUrl || window.location.origin,
       },
       publisher: {
-        '@type': 'Organization',
-        name: contentSettings?.siteName || 'RankBaaz Pro',
+        "@type": "Organization",
+        name: contentSettings?.siteName || "RankBaaz Pro",
         logo: {
-          '@type': 'ImageObject',
-          url: contentSettings?.logo?.url || `${contentSettings?.siteUrl || window.location.origin}/logo.png`
-        }
-      }
-    }
+          "@type": "ImageObject",
+          url:
+            contentSettings?.logo?.url ||
+            `${contentSettings?.siteUrl || window.location.origin}/logo.png`,
+        },
+      },
+    },
   });
 
   const containerVariants = {

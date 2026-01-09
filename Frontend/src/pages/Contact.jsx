@@ -10,14 +10,17 @@ import { useSEO } from "@/hooks/useSEO";
 const Contact = () => {
   const { contactInfo, loading, contentSettings } = useContent();
   const { animations, reducedMotion } = useTheme();
-  
+
   useSEO({
     title: "Contact Us",
     description: `Get in touch with ${
       contentSettings?.siteName || "RankBaaz"
     }. We're here to help with your questions and support needs.`,
-    keywords: "contact, support, help, email, telegram, customer service",
+    keywords: "contact, support, help, customer service",
     type: "website",
+    canonicalUrl: `${
+      contentSettings?.siteUrl || window.location.origin
+    }/contact`,
   });
 
   const handleEmailClick = () => {

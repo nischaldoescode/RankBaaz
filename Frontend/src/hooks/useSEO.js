@@ -34,7 +34,8 @@ export const useSEO = ({
   const fullTitle = title ? `${title} - ${siteName}` : siteName;
   const finalDescription = description || defaultDescription;
   const finalImage = image || defaultImage;
-  const finalUrl = canonicalUrl || url || window.location.href;
+  const cleanPath = window.location.pathname;
+  const finalUrl = canonicalUrl || `${siteUrl}${cleanPath}`;
 
   // Prepare meta tags array
   const metaTags = [
@@ -108,7 +109,7 @@ export const useSEO = ({
 
   // Prepare link tags array
   const linkTags = [
-    { rel: "canonical", href: finalUrl },
+    ...(!noindex ? [{ rel: "canonical", href: finalUrl }] : []),
     { rel: "icon", type: "image/png", href: siteLogo },
     { rel: "apple-touch-icon", href: siteLogo },
   ];
