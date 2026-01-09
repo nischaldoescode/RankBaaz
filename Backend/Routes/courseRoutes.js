@@ -25,6 +25,7 @@ import {
   bulkDeleteQuestions,
   getDifficultyBreakdown,
   validateVideoLinks,
+  downloadCoursePDF,
 } from "../Controllers/CourseController.js";
 import { authenticateAdmin, authenticateUser } from "../Middleware/auth.js";
 import { uploadCourseImage, handleUploadError } from "../Middleware/Upload.js";
@@ -100,6 +101,12 @@ router.get(
   cacheStats("admin:difficulty-breakdown", 120),
   getDifficultyBreakdown
 );
+/**
+ * GET /:courseId/download-pdf - Download course data as PDF
+ * Auth: Admin only
+ * Access: Private
+ */
+router.get("/:courseId/download-pdf", authenticateAdmin, downloadCoursePDF);
 
 router.post(
   "/",

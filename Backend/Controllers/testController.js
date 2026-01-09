@@ -762,17 +762,20 @@ export const getTestResult = async (req, res) => {
  * - Admins can download unlimited times
  * - Requires authentication
  * - Validates test ownership
+ * - One-time download token for users
  */
 export const downloadTestPDF = async (req, res) => {
   try {
     const { testId } = req.params;
     const userId = req.user?.userId;
     const isAdmin = req.admin?.isAdmin === true;
+    const downloadToken = req.query.token; // One-time token for users
 
     console.log(`=== PDF DOWNLOAD REQUEST ===`);
     console.log(`Test ID: ${testId}`);
     console.log(`User ID: ${userId}`);
     console.log(`Is Admin: ${isAdmin}`);
+    console.log(`Token: ${downloadToken ? "Present" : "None"}`);
 
     // Validate testId format
     if (!mongoose.Types.ObjectId.isValid(testId)) {
@@ -812,7 +815,7 @@ export const downloadTestPDF = async (req, res) => {
       });
     }
 
-    // Security Check 1.5: Check if user is banned from this course
+    // Security Check 2: Check if user is banned from this course (non-admin only)
     if (!isAdmin) {
       const User = (await import("../Models/User.js")).default;
       const user = await User.findById(userId);
@@ -831,7 +834,7 @@ export const downloadTestPDF = async (req, res) => {
       }
     }
 
-    // Security Check 2: Check if course has PDF export enabled (skip for admin)
+    // Security Check 3: Check if course has PDF export enabled (skip for admin)
     if (!isAdmin && !testResult.course.hasPdfExport) {
       return res.status(403).json({
         success: false,
@@ -839,14 +842,40 @@ export const downloadTestPDF = async (req, res) => {
       });
     }
 
-    // Security Check 3: Check if user has already downloaded (skip for admin)
-    if (!isAdmin && testResult.pdfDownloaded) {
-      return res.status(403).json({
-        success: false,
-        message:
-          "You have already downloaded this test result. Each test can only be downloaded once.",
-        downloadedAt: testResult.pdfDownloadedAt,
-      });
+    // Security Check 4: Validate one-time download token (non-admin only)
+    if (!isAdmin) {
+      if (!downloadToken) {
+        return res.status(403).json({
+          success: false,
+          message: "Download token required",
+        });
+      }
+
+      // Verify token hasn't been used
+      const crypto = await import("crypto");
+      const expectedToken = crypto
+        .createHash("sha256")
+        .update(
+          `${testResult._id}-${testResult.user._id}-${testResult.createdAt}`
+        )
+        .digest("hex");
+
+      if (downloadToken !== expectedToken) {
+        return res.status(403).json({
+          success: false,
+          message: "Invalid or expired download token",
+        });
+      }
+
+      // Check if already downloaded
+      if (testResult.pdfDownloaded) {
+        return res.status(403).json({
+          success: false,
+          message:
+            "You have already downloaded this test result. Each test can only be downloaded once.",
+          downloadedAt: testResult.pdfDownloadedAt,
+        });
+      }
     }
 
     // Import PDF service
@@ -873,7 +902,9 @@ export const downloadTestPDF = async (req, res) => {
     }
 
     // Set response headers
-    const filename = `RankBaaz_${testResult.course.name.replace(/[^a-z0-9]/gi, "_")}_${new Date().toISOString().split("T")[0]}.pdf`;
+    const filename = `RankBaaz_${testResult.course.name.replace(/[^a-z0-9]/gi, "_")}_${
+      new Date().toISOString().split("T")[0]
+    }.pdf`;
 
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
@@ -892,6 +923,89 @@ export const downloadTestPDF = async (req, res) => {
       success: false,
       message: "Failed to generate PDF",
       error: process.env.NODE_ENV === "development" ? error.message : undefined,
+    });
+  }
+};
+
+/**
+ * Generate one-time download token for PDF
+ * @route GET /api/tests/generate-pdf-token/:testId
+ * @access Private (User only)
+ * @param {string} testId - Test result ID
+ * @returns {Object} Download token
+ */
+export const generatePDFDownloadToken = async (req, res) => {
+  try {
+    const { testId } = req.params;
+    const userId = req.user?.userId;
+
+    // Validate testId
+    if (!mongoose.Types.ObjectId.isValid(testId)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid test ID format",
+      });
+    }
+
+    // Fetch test result
+    const testResult = await TestResult.findById(testId)
+      .populate({
+        path: "course",
+        select: "hasPdfExport",
+      })
+      .select("user pdfDownloaded course createdAt")
+      .lean();
+
+    if (!testResult) {
+      return res.status(404).json({
+        success: false,
+        message: "Test result not found",
+      });
+    }
+
+    // Verify ownership
+    if (testResult.user.toString() !== userId) {
+      return res.status(403).json({
+        success: false,
+        message: "You can only access your own test results",
+      });
+    }
+
+    // Check if course has PDF export enabled
+    if (!testResult.course.hasPdfExport) {
+      return res.status(403).json({
+        success: false,
+        message: "PDF export is not available for this course",
+      });
+    }
+
+    // Check if already downloaded
+    if (testResult.pdfDownloaded) {
+      return res.status(403).json({
+        success: false,
+        message: "This test result has already been downloaded",
+      });
+    }
+
+    // Generate one-time token
+    const crypto = await import("crypto");
+    const token = crypto
+      .createHash("sha256")
+      .update(`${testResult._id}-${testResult.user}-${testResult.createdAt}`)
+      .digest("hex");
+
+    res.status(200).json({
+      success: true,
+      data: {
+        token,
+        expiresIn: 300000, // 5 minutes in milliseconds
+      },
+    });
+  } catch (error) {
+    console.error("Generate PDF token error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to generate download token",
     });
   }
 };

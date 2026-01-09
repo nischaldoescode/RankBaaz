@@ -178,8 +178,10 @@ export const updateCourseValidation = [
     .isBoolean()
     .withMessage("isActive must be a boolean"),
   body("isPaid")
+    .optional() // Make it optional for updates
     .custom((value) => {
       // Accept both boolean and string representations
+      if (value === undefined || value === null) return true;
       return (
         value === true ||
         value === false ||
@@ -654,7 +656,6 @@ export const updateCourse = async (req, res) => {
     if (!errors.isEmpty()) {
       console.log("Validation errors:", errors.array());
 
-      // Cleanup uploaded file on validation failure
       if (req.file) {
         try {
           await cloudinary.uploader.destroy(req.file.filename);
@@ -843,10 +844,8 @@ export const updateCourse = async (req, res) => {
         req.body.category === "" ||
         req.body.category === "null"
       ) {
-        // Remove category
         categoryUpdate.category = null;
       } else {
-        // Validate and set new category
         if (!mongoose.Types.ObjectId.isValid(req.body.category)) {
           return res.status(400).json({
             success: false,
@@ -862,7 +861,7 @@ export const updateCourse = async (req, res) => {
           });
         }
 
-        categoryUpdate.category = req.body.category; // Changed from categoryId to req.body.category
+        categoryUpdate.category = req.body.category;
       }
     }
 
@@ -879,6 +878,7 @@ export const updateCourse = async (req, res) => {
         });
       }
     }
+
     const updateData = {
       ...(name && { name: name.trim() }),
       ...(description !== undefined && { description: description?.trim() }),
@@ -890,46 +890,66 @@ export const updateCourse = async (req, res) => {
       ...(videoContentUpdate && { videoContent: videoContentUpdate }),
     };
 
-    // Handle isPaid and price logic
+    // CRITICAL FIX: Handle isPaid and price logic
     if (req.body.isPaid !== undefined) {
       const isPaidBoolean =
         req.body.isPaid === "true" || req.body.isPaid === true;
       updateData.isPaid = isPaidBoolean;
 
-      // When changing from paid to free, just clear video content (no deletion needed for links)
-      if (!isPaidBoolean) {
+      if (!isPaidBoolean && course.isPaid) {
         videoContentUpdate = {
           type: "none",
           courseVideo: { links: [] },
           difficultyVideos: [],
         };
+        updateData.price = 0;
       }
 
       if (isPaidBoolean && req.body.price !== undefined) {
         updateData.price = parseFloat(req.body.price);
-      } else if (!isPaidBoolean) {
-        // If changing from paid to free, set price to 0
-        updateData.price = 0;
       }
     }
 
-    // Handle PDF export toggle update
+    // CRITICAL FIX: Handle PDF export toggle update
     if (req.body.hasPdfExport !== undefined) {
-      updateData.hasPdfExport =
-        req.body.hasPdfExport === "true" || req.body.hasPdfExport === true;
+      const hasPdfExportBoolean =
+        req.body.hasPdfExport === "true" ||
+        req.body.hasPdfExport === true ||
+        req.body.hasPdfExport === 1 ||
+        req.body.hasPdfExport === "1";
+
+      updateData.hasPdfExport = hasPdfExportBoolean;
+
+      console.log(`[UPDATE] Setting hasPdfExport:`, {
+        original: req.body.hasPdfExport,
+        converted: hasPdfExportBoolean,
+        type: typeof hasPdfExportBoolean,
+      });
     }
 
+    // CRITICAL FIX: Use findByIdAndUpdate with explicit fields
     const updatedCourse = await Course.findByIdAndUpdate(courseId, updateData, {
       new: true,
       runValidators: true,
     }).populate("category", "name description");
 
+    console.log(`[UPDATE] Course updated:`, {
+      courseId,
+      hasPdfExport: updatedCourse.hasPdfExport,
+      isPaid: updatedCourse.isPaid,
+      isActive: updatedCourse.isActive,
+    });
+
     await invalidateCache.course(courseId);
     await invalidateCache.allCourses();
-    res.status(200).json({
+
+    // CRITICAL FIX: Return proper response structure
+    return res.status(200).json({
       success: true,
       message: "Course updated successfully",
-      data: { course: updatedCourse },
+      data: {
+        course: updatedCourse.toObject(), // Convert Mongoose doc to plain object
+      },
     });
   } catch (error) {
     console.error("Update course error:", error);
@@ -939,9 +959,11 @@ export const updateCourse = async (req, res) => {
       "Update data:",
       JSON.stringify(req.body, null, 2)
     );
-    res.status(500).json({
+
+    return res.status(500).json({
       success: false,
       message: "Failed to update course",
+      error: process.env.NODE_ENV === "development" ? error.message : undefined,
     });
   }
 };
@@ -1274,6 +1296,7 @@ export const getAllCourses = async (req, res) => {
           difficulties: 1,
           maxQuestionsPerTest: 1,
           videoContent: 1,
+          hasPdfExport: 1,
         },
       },
       { $sort: sortCriteria },
@@ -2601,6 +2624,78 @@ export const deleteCategory = async (req, res) => {
     res.status(500).json({
       success: false,
       message: "Failed to delete category",
+    });
+  }
+};
+
+/**
+ * Download course data as PDF (Admin only)
+ * @route GET /api/courses/:courseId/download-pdf
+ * @access Private (Admin only)
+ * @param {string} courseId - Course ID
+ * @returns {Buffer} PDF file containing course data
+ *
+ * Security:
+ * - Admin authentication required
+ * - No download limits for admins
+ * - Includes all course questions and configuration
+ */
+export const downloadCoursePDF = async (req, res) => {
+  try {
+    const { courseId } = req.params;
+
+    console.log(`=== COURSE PDF DOWNLOAD REQUEST (Admin) ===`);
+    console.log(`Course ID: ${courseId}`);
+
+    // Validate courseId format
+    if (!mongoose.Types.ObjectId.isValid(courseId)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid course ID format",
+      });
+    }
+
+    // Fetch course with populated category
+    const course = await Course.findById(courseId)
+      .populate("category", "name description")
+      .lean();
+
+    if (!course) {
+      return res.status(404).json({
+        success: false,
+        message: "Course not found",
+      });
+    }
+
+    // Import PDF service
+    const pdfService = (await import("../services/pdfService.js")).default;
+
+    // Generate course PDF (admin version - no test results)
+    console.log(`Generating course PDF for ${courseId}...`);
+    const pdfBuffer = await pdfService.generateCoursePDF(course);
+
+    // Set response headers
+    const filename = `RankBaaz_Course_${course.name.replace(/[^a-z0-9]/gi, "_")}_${
+      new Date().toISOString().split("T")[0]
+    }.pdf`;
+
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+    res.setHeader("Content-Length", pdfBuffer.length);
+    res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+    res.setHeader("Pragma", "no-cache");
+    res.setHeader("Expires", "0");
+
+    // Send PDF
+    res.send(pdfBuffer);
+
+    console.log(`Course PDF sent successfully: ${filename}`);
+  } catch (error) {
+    console.error("Download course PDF error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to generate course PDF",
+      error: process.env.NODE_ENV === "development" ? error.message : undefined,
     });
   }
 };
