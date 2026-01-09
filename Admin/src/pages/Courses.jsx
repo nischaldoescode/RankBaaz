@@ -29,6 +29,7 @@ import {
   CheckSquare,
   Square,
   Save,
+  Download,
 } from "lucide-react";
 
 import RichTextRenderer from "../components/plugins/RichTextRenderer";
@@ -593,13 +594,10 @@ const Courses = () => {
     createQuestion,
     bulkDeleteQuestions,
     toggleCourseStatus,
-    createCoupon,
-    fetchCoupons,
     fetchCourseCoupons,
-    updateCouponStatus,
-    deleteCoupon,
-    downloadTestPDF,
+    downloadCoursePDF,
     pdfGenerating,
+    togglePdfExport,
   } = useAdmin();
 
   // State management
@@ -632,7 +630,7 @@ const Courses = () => {
     maxUsage: "",
     validUntil: "",
   });
-  const [videoPlayerModal, setVideoPlayerModal] = useState(null); // { url, title, platform }
+  const [videoPlayerModal, setVideoPlayerModal] = useState(null);
   const [showEditPreview, setShowEditPreview] = useState(false);
   const [editingCourse, setEditingCourse] = useState(null);
   const [deleteConfirmCourse, setDeleteConfirmCourse] = useState(null);
@@ -640,7 +638,7 @@ const Courses = () => {
   const [editFormData, setEditFormData] = useState({});
   const [editingQuestion, setEditingQuestion] = useState(null);
   const [questionFormData, setQuestionFormData] = useState({});
-  const [addingQuestion, setAddingQuestion] = useState(null); // { courseId, difficulty }
+  const [addingQuestion, setAddingQuestion] = useState(null);
   const [deleteConfirmation, setDeleteConfirmation] = useState(null);
   const [imageEditMode, setImageEditMode] = useState(false);
   const [selectedQuestions, setSelectedQuestions] = useState({});
@@ -1031,22 +1029,29 @@ const Courses = () => {
     setSortBy("newest");
   };
 
-  // ADD THESE HANDLER FUNCTIONS
+  /**
+   * Handle course edit - Initialize edit form with latest course data
+   * @param {Object} course - Course object to edit
+   */
   const handleEditCourse = (course) => {
-    setEditingCourse(course);
+    const latestCourse = courses.find((c) => c._id === course._id) || course;
+
+    setEditingCourse(latestCourse);
     setEditFormData({
-      name: course.name,
-      description: course.description || "",
-      isActive: course.isActive,
-      category: course.category?._id || course.categoryId || null,
-      isPaid: course.isPaid || false,
-      price: course.price || 0,
-      hasPdfExport: course.hasPdfExport || false,
+      name: latestCourse.name,
+      description: latestCourse.description || "",
+      isActive:
+        latestCourse.isActive !== undefined ? latestCourse.isActive : true,
+      category: latestCourse.category?._id || latestCourse.categoryId || null,
+      isPaid: latestCourse.isPaid || false,
+      price: latestCourse.price || 0,
+      hasPdfExport: latestCourse.hasPdfExport || false, // This will now have the correct value
     });
     setErrors({});
+
     // Update URL without page reload
     const url = new URL(window.location);
-    url.searchParams.set("edit", course._id);
+    url.searchParams.set("edit", latestCourse._id);
     window.history.pushState({}, "", url);
   };
 
@@ -1091,21 +1096,47 @@ const Courses = () => {
 
     if (Object.keys(validationErrors).length > 0) {
       setErrors(validationErrors);
-      return; // Don't proceed with update
+      return;
     }
 
-    setErrors({}); // Clear errors if validation passes
+    setErrors({});
+
+    // Preserve expansion state
+    const currentExpandedCourse = expandedCourse;
+
+    console.log("[UPDATE] Sending data:", {
+      courseId: editingCourse._id,
+      hasPdfExport: editFormData.hasPdfExport,
+      isPaid: editFormData.isPaid,
+      isActive: editFormData.isActive,
+    });
+
     const result = await updateCourse(editingCourse._id, editFormData);
+
     if (result.success) {
+      console.log("[UPDATE] Received response:", {
+        hasPdfExport: result.updatedCourse?.hasPdfExport,
+        isPaid: result.updatedCourse?.isPaid,
+      });
+
+      // Close edit modal first
       setEditingCourse(null);
       setEditFormData({});
+
       // Clear URL parameters
       const url = new URL(window.location);
       url.searchParams.delete("edit");
       window.history.pushState({}, "", url);
 
-      // Refresh courses list
-      await fetchCourses();
+      // Let fetchCourses handle the state update through AdminContext
+      await fetchCourses(false); // false = don't show loading spinner
+
+      // Restore expansion state
+      if (currentExpandedCourse) {
+        setExpandedCourse(currentExpandedCourse);
+      }
+
+      toast.success("Course updated successfully!");
     }
   };
 
@@ -2200,112 +2231,6 @@ const Courses = () => {
                               <span>{courseStats.difficulties}</span>
                             </div>
                           </div>
-
-                          {course.difficulties &&
-                            course.difficulties.length > 0 && (
-                              <div>
-                                <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center space-x-2">
-                                  <Settings className="h-5 w-5 text-blue-500" />
-                                  <span>Course Configuration</span>
-                                </h4>
-                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-4 md:gap-6">
-                                  {course.difficulties.map((level) => (
-                                    <div
-                                      key={level.name}
-                                      className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl p-4 sm:p-6 border border-gray-200 hover:shadow-md transition-all duration-200 relative group"
-                                    >
-                                      <button
-                                        onClick={() =>
-                                          handleEditDifficulty(
-                                            course,
-                                            level.name
-                                          )
-                                        }
-                                        className="absolute top-3 right-3 p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all duration-200 opacity-0 group-hover:opacity-100 cursor-pointer"
-                                        title="Edit difficulty settings"
-                                      >
-                                        <Edit2 className="h-4 w-4" />
-                                      </button>
-
-                                      <div className="flex items-center justify-between mb-4">
-                                        <span
-                                          className={`px-3 py-1 text-sm font-semibold rounded-full ${getDifficultyColor(
-                                            level.name
-                                          )}`}
-                                        >
-                                          {level.name}
-                                        </span>
-                                      </div>
-                                      <div className="space-y-2 sm:space-y-3 text-xs sm:text-sm">
-                                        <div className="flex justify-between items-center gap-2">
-                                          <span className="text-gray-600 text-left flex-1">
-                                            Max Questions:
-                                          </span>
-                                          <span className="font-semibold text-gray-900 text-right">
-                                            {course.maxQuestionsPerTest ||
-                                              level.maxQuestions}
-                                          </span>
-                                        </div>
-                                        <div className="flex justify-between items-center">
-                                          <span className="text-gray-600">
-                                            Marks Each:
-                                          </span>
-                                          <span className="font-semibold text-gray-900">
-                                            {level.marksPerQuestion}
-                                          </span>
-                                        </div>
-                                        <div className="flex justify-between items-center">
-                                          <span className="text-gray-600">
-                                            Time Limit:
-                                          </span>
-                                          <span className="font-semibold text-gray-900">
-                                            {level.timerSettings?.minTime}-
-                                            {level.timerSettings?.maxTime}s
-                                          </span>
-                                        </div>
-                                        <div className="pt-2 border-t border-gray-300">
-                                          <div className="flex justify-between items-center">
-                                            <span className="text-gray-600">
-                                              Questions:
-                                            </span>
-                                            <span className="font-semibold text-gray-900">
-                                              {getQuestionsByDifficulty(
-                                                course._id
-                                              )[level.name]?.length || 0}
-                                            </span>
-                                          </div>
-                                          <div className="flex justify-between items-center">
-                                            <span className="text-gray-600">
-                                              Total Marks:
-                                            </span>
-                                            <span className="font-bold text-blue-600">
-                                              {(getQuestionsByDifficulty(
-                                                course._id
-                                              )[level.name]?.length || 0) *
-                                                level.marksPerQuestion}
-                                            </span>
-                                          </div>
-                                          <div className="flex justify-between items-center">
-                                            <span className="text-gray-600">
-                                              Max Test Marks:
-                                            </span>
-                                            <span className="font-semibold text-gray-500">
-                                              {Math.min(
-                                                course.maxQuestionsPerTest ||
-                                                  level.maxQuestions,
-                                                getQuestionsByDifficulty(
-                                                  course._id
-                                                )[level.name]?.length || 0
-                                              ) * level.marksPerQuestion}
-                                            </span>
-                                          </div>
-                                        </div>
-                                      </div>
-                                    </div>
-                                  ))}
-                                </div>
-                              </div>
-                            )}
                         </div>
 
                         {/* Action Buttons */}
@@ -2359,60 +2284,10 @@ const Courses = () => {
                     </div>
                   </div>
 
-                  {/* Expanded Course Details */}
+                  {/* Expanded Course Details - KEEP THIS ONE */}
                   {isExpanded && (
                     <div className="mt-8 pt-8 border-t border-gray-200 space-y-8 animate-in slide-in-from-top-4 duration-300">
-                      {/* PDF Export Status */}
-                      {/* PDF Export Status - Shows if enabled */}
-                      {course.hasPdfExport && (
-                        <div className="mb-6 bg-gradient-to-r from-purple-50 to-blue-50 border border-purple-200 rounded-xl p-4">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center space-x-3">
-                              <div className="flex-shrink-0">
-                                <svg
-                                  className="h-8 w-8 text-purple-600 animate-pulse"
-                                  fill="none"
-                                  stroke="currentColor"
-                                  viewBox="0 0 24 24"
-                                >
-                                  <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth={2}
-                                    d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"
-                                  />
-                                </svg>
-                              </div>
-                              <div className="flex-1">
-                                <h4 className="text-sm font-semibold text-purple-900">
-                                  PDF Export Enabled
-                                </h4>
-                                <p className="text-xs text-purple-700">
-                                  Students can download their test results as
-                                  PDF after completing tests
-                                </p>
-                              </div>
-                            </div>
-                            <div className="flex-shrink-0">
-                              <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
-                                <svg
-                                  className="h-3 w-3 mr-1"
-                                  fill="currentColor"
-                                  viewBox="0 0 20 20"
-                                >
-                                  <path
-                                    fillRule="evenodd"
-                                    d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                                    clipRule="evenodd"
-                                  />
-                                </svg>
-                                Active
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-                      )}
-                      {/* Course Configuration */}
+                      {/* Course Configuration - KEEP AND MODIFY */}
                       {course.difficulties &&
                         course.difficulties.length > 0 && (
                           <div>
@@ -2424,8 +2299,20 @@ const Courses = () => {
                               {course.difficulties.map((level) => (
                                 <div
                                   key={level.name}
-                                  className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl p-6 border border-gray-200 hover:shadow-md transition-all duration-200"
+                                  className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl p-4 sm:p-6 border border-gray-200 hover:shadow-md transition-all duration-200 relative group"
                                 >
+                                  {/* ADD EDIT BUTTON */}
+                                  <button
+                                    onClick={() =>
+                                      handleEditDifficulty(course, level.name)
+                                    }
+                                    className="absolute top-3 right-3 p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all duration-200 opacity-0 group-hover:opacity-100 cursor-pointer"
+                                    title="Edit difficulty settings"
+                                  >
+                                    <Edit2 className="h-4 w-4" />
+                                  </button>
+
+                                  {/* Rest of the card content remains same */}
                                   <div className="flex items-center justify-between mb-4">
                                     <span
                                       className={`px-3 py-1 text-sm font-semibold rounded-full ${getDifficultyColor(
@@ -2458,7 +2345,7 @@ const Courses = () => {
                                       </span>
                                       <span className="font-semibold text-gray-900">
                                         {level.timerSettings?.minTime}-
-                                        {level.timerSettings?.maxTime}min
+                                        {level.timerSettings?.maxTime} Sec
                                       </span>
                                     </div>
                                     <div className="pt-2 border-t border-gray-300">
@@ -2503,8 +2390,7 @@ const Courses = () => {
                             </div>
                           </div>
                         )}
-
-                      {/* Test Results Section for PDF Download */}
+                      {/* Test Results / PDF Download Section */}
                       <div className="mt-8 pt-8 border-t border-gray-200">
                         <div className="flex items-center justify-between mb-4">
                           <h4 className="text-lg font-semibold text-gray-900 flex items-center space-x-2">
@@ -2521,35 +2407,116 @@ const Courses = () => {
                                 d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
                               />
                             </svg>
-                            <span>Test Results</span>
+                            <span>Course Data Export</span>
                           </h4>
 
-                          {course.hasPdfExport && (
-                            <span className="inline-flex items-center px-2.5 py-1 rounded-full bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 text-xs font-medium">
+                          {/* Toggle PDF Export Button */}
+                          <button
+                            onClick={() => togglePdfExport(course._id)}
+                            className={`inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium transition-all cursor-pointer ${
+                              course.hasPdfExport
+                                ? "bg-purple-100 text-purple-700 hover:bg-purple-200"
+                                : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                            }`}
+                          >
+                            {course.hasPdfExport ? (
+                              <>
+                                <svg
+                                  className="w-4 h-4 mr-1.5"
+                                  fill="currentColor"
+                                  viewBox="0 0 20 20"
+                                >
+                                  <path
+                                    fillRule="evenodd"
+                                    d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                                    clipRule="evenodd"
+                                  />
+                                </svg>
+                                PDF Export Enabled
+                              </>
+                            ) : (
+                              <>
+                                <svg
+                                  className="w-4 h-4 mr-1.5"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"
+                                  />
+                                </svg>
+                                PDF Export Disabled
+                              </>
+                            )}
+                          </button>
+                        </div>
+
+                        {/* Conditional Content */}
+                        {course.hasPdfExport ? (
+                          <div className="bg-gray-50 rounded-lg p-4">
+                            <p className="text-sm text-gray-600 mb-4">
+                              Download complete course data including all
+                              questions, difficulty settings, and configuration.
+                              Users can also download their test results.
+                            </p>
+
+                            {/* Admin Download Button */}
+                            <div className="flex items-center space-x-4">
+                              <button
+                                onClick={() => downloadCoursePDF(course._id)}
+                                disabled={pdfGenerating}
+                                className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                              >
+                                {pdfGenerating ? (
+                                  <>
+                                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                    <span>Generating...</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <Download className="h-4 w-4 mr-2" />
+                                    <span>Download Course PDF</span>
+                                  </>
+                                )}
+                              </button>
+
+                              <span className="text-xs text-gray-500">
+                                Admins can download unlimited times
+                              </span>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+                            <div className="flex items-start space-x-3">
                               <svg
-                                className="w-3 h-3 mr-1"
+                                className="h-5 w-5 text-amber-600 mt-0.5 flex-shrink-0"
                                 fill="currentColor"
                                 viewBox="0 0 20 20"
                               >
                                 <path
                                   fillRule="evenodd"
-                                  d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                                  d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
                                   clipRule="evenodd"
                                 />
                               </svg>
-                              PDF Export Enabled
-                            </span>
-                          )}
-                        </div>
-
-                        <div className="bg-gray-50 rounded-lg p-4">
-                          <p className="text-sm text-gray-600 mb-4">
-                            View and download test results for this course.{" "}
-                            {course.hasPdfExport
-                              ? "PDF export is enabled for this course."
-                              : "Note: PDF export is disabled for this course."}
-                          </p>
-                        </div>
+                              <div className="flex-1">
+                                <p className="text-sm font-medium text-amber-900 mb-1">
+                                  PDF Export Disabled
+                                </p>
+                                <p className="text-sm text-amber-800">
+                                  This course does not have PDF export enabled.
+                                  Students cannot download test results. Click
+                                  "PDF Export Disabled" above to enable this
+                                  feature.
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        )}
                       </div>
 
                       {/* Questions Section */}
@@ -3672,12 +3639,14 @@ const Courses = () => {
                     <input
                       type="checkbox"
                       checked={editFormData.hasPdfExport || false}
-                      onChange={(e) =>
+                      onChange={(e) => {
+                        console.log("PDF Export Toggle:", e.target.checked);
+
                         setEditFormData({
                           ...editFormData,
                           hasPdfExport: e.target.checked,
-                        })
-                      }
+                        });
+                      }}
                       className="sr-only peer"
                     />
                     <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>

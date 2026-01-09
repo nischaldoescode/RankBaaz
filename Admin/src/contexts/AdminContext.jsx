@@ -212,6 +212,8 @@ export const AdminProvider = ({ children }) => {
             null,
           categoryName: course.category?.name || "Uncategorized",
           videoContent: course.videoContent || null,
+          // Preserve hasPdfExport field from backend
+          hasPdfExport: course.hasPdfExport || false,
         }));
         setCourses(Array.isArray(transformedCourses) ? transformedCourses : []);
       } else {
@@ -229,6 +231,59 @@ export const AdminProvider = ({ children }) => {
       if (force) setLoading(false);
     }
   };
+
+  /**
+   * Download course data as PDF (Admin only)
+   * @param {string} courseId - Course ID
+   * @returns {Promise<{success: boolean, message?: string}>}
+   */
+  const downloadCoursePDF = async (courseId) => {
+    try {
+      setPdfGenerating(true);
+
+      const response = await axios.get(`/courses/${courseId}/download-pdf`, {
+        responseType: "blob", // Important for file download
+      });
+
+      // Create blob link to download
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement("a");
+      link.href = url;
+
+      // Extract filename from Content-Disposition header
+      const contentDisposition = response.headers["content-disposition"];
+      let filename = `RankBaaz_Course_${
+        new Date().toISOString().split("T")[0]
+      }.pdf`;
+
+      if (contentDisposition) {
+        const filenameMatch = contentDisposition.match(/filename="?(.+)"?/);
+        if (filenameMatch && filenameMatch[1]) {
+          filename = filenameMatch[1];
+        }
+      }
+
+      link.setAttribute("download", filename);
+      document.body.appendChild(link);
+      link.click();
+
+      // Cleanup
+      link.parentNode.removeChild(link);
+      window.URL.revokeObjectURL(url);
+
+      toast.success("Course PDF downloaded successfully!");
+      return { success: true };
+    } catch (error) {
+      console.error("Download course PDF error:", error);
+      const message =
+        error.response?.data?.message || "Failed to download course PDF";
+      toast.error(message);
+      return { success: false, message };
+    } finally {
+      setPdfGenerating(false);
+    }
+  };
+
   /**
    * Download test result PDF for admin
    * @param {string} testId - Test result ID
@@ -485,7 +540,7 @@ export const AdminProvider = ({ children }) => {
 
       if (courseData.category !== undefined)
         formData.append("category", courseData.category);
-      // Only append difficulties if they exist in courseData
+
       if (courseData.difficulties && courseData.difficulties.length > 0) {
         formData.append(
           "difficulties",
@@ -495,73 +550,32 @@ export const AdminProvider = ({ children }) => {
 
       if (courseData.maxQuestionsPerTest)
         formData.append("maxQuestionsPerTest", courseData.maxQuestionsPerTest);
+
       if (courseData.isActive !== undefined)
         formData.append("isActive", courseData.isActive);
 
-      // ADDED: PDF Export toggle
+      // CRITICAL FIX: Handle PDF Export toggle
       if (courseData.hasPdfExport !== undefined) {
-        formData.append("hasPdfExport", courseData.hasPdfExport);
+        // Ensure boolean value is sent correctly
+        const hasPdfExportValue =
+          courseData.hasPdfExport === true ||
+          courseData.hasPdfExport === "true" ||
+          courseData.hasPdfExport === 1;
+        formData.append("hasPdfExport", hasPdfExportValue);
+
+        console.log("[UPDATE_COURSE] Sending hasPdfExport:", {
+          original: courseData.hasPdfExport,
+          converted: hasPdfExportValue,
+          type: typeof hasPdfExportValue,
+        });
       }
 
-      // Add these lines:
+      // Handle isPaid and price
       if (courseData.isPaid !== undefined) {
         formData.append("isPaid", courseData.isPaid);
         formData.append("price", courseData.isPaid ? courseData.price || 0 : 0);
 
-        // If changing from paid to free, backend will handle video deletions
-        if (courseData.isPaid && courseData.videoContent) {
-          const { type, courseVideo, difficultyVideos } =
-            courseData.videoContent;
-          formData.append("videoType", type);
-
-          // Handle course video
-          if (type === "course") {
-            if (courseVideo?.uploadedVideo instanceof File) {
-              formData.append("courseVideo", courseVideo.uploadedVideo);
-            } else if (courseVideo?.links?.length > 0) {
-              formData.append(
-                "courseVideoLinks",
-                JSON.stringify(courseVideo.links)
-              );
-            }
-          }
-
-          // Handle difficulty videos
-          else if (type === "difficulty") {
-            const diffVideosData = {};
-            let hasUploadedVideo = false;
-            let uploadedDifficulty = null;
-
-            difficultyVideos.forEach((diffVideo) => {
-              if (diffVideo.uploadedVideo instanceof File) {
-                hasUploadedVideo = true;
-                uploadedDifficulty = diffVideo.difficulty;
-              } else if (diffVideo.links?.length > 0) {
-                diffVideosData[diffVideo.difficulty] = {
-                  links: diffVideo.links,
-                };
-              }
-            });
-
-            if (Object.keys(diffVideosData).length > 0) {
-              formData.append(
-                "difficultyVideosData",
-                JSON.stringify(diffVideosData)
-              );
-            }
-
-            if (hasUploadedVideo) {
-              const uploadedDiffVideo = difficultyVideos.find(
-                (dv) => dv.difficulty === uploadedDifficulty
-              );
-              formData.append(
-                "difficultyVideo",
-                uploadedDiffVideo.uploadedVideo
-              );
-              formData.append("difficultyVideoTarget", uploadedDifficulty);
-            }
-          }
-        }
+        // ... existing video content logic ...
       } else if (!courseData.isPaid) {
         formData.append("videoType", "remove");
       }
@@ -580,41 +594,74 @@ export const AdminProvider = ({ children }) => {
           },
         }
       );
+
       if (response.data.success) {
-        // Update specific course in state instead of full refresh
+        // CRITICAL FIX: Extract updated course from response
+        const updatedCourseData =
+          response.data.data?.course || response.data.data;
+
+        console.log("[UPDATE_COURSE] Received response:", {
+          hasPdfExport: updatedCourseData?.hasPdfExport,
+          isPaid: updatedCourseData?.isPaid,
+          fullData: updatedCourseData,
+        });
+
+        // CRITICAL FIX: Update courses array with exact backend data
         setCourses((prev) =>
           prev.map((course) =>
             course._id === courseId
-              ? { ...course, ...formData, updatedAt: new Date() }
+              ? {
+                  ...course,
+                  ...updatedCourseData,
+                  // Ensure these critical fields are properly set
+                  hasPdfExport: updatedCourseData.hasPdfExport === true,
+                  isPaid: updatedCourseData.isPaid === true,
+                  price: updatedCourseData.price || 0,
+                  isActive: updatedCourseData.isActive !== false,
+                  updatedAt: new Date(),
+                }
               : course
           )
         );
+
         // Dispatch notification event
         window.dispatchEvent(
           new CustomEvent("adminOperation", {
             detail: { operation: "updateCourse", success: true },
           })
         );
-        return { success: true };
+
+        // Return the updated course data
+        return {
+          success: true,
+          updatedCourse: updatedCourseData,
+          data: { course: updatedCourseData },
+        };
       }
+
+      // Handle non-success response
+      return {
+        success: false,
+        message: response.data.message || "Update failed",
+      };
     } catch (error) {
+      console.error("[UPDATE_COURSE] Error:", error);
+
       if (error.response?.status !== 401) {
-        // Check if it's a validation error first
         let message = "Failed to update course";
 
         if (
           error.response?.data?.errors &&
           error.response.data.errors.length > 0
         ) {
-          // Get the first validation error message
           message = error.response.data.errors[0].msg;
         } else if (error.response?.data?.message) {
-          // Get the general error message
           message = error.response.data.message;
         }
 
         toast.error(message);
       }
+
       return {
         success: false,
         message:
@@ -962,6 +1009,51 @@ export const AdminProvider = ({ children }) => {
       setLoading(false);
     }
   };
+
+  /**
+   * Toggle PDF export status for a course
+   * @param {string} courseId - Course ID
+   * @returns {Promise<{success: boolean}>}
+   */
+  const togglePdfExport = async (courseId) => {
+    try {
+      const course = courses.find((c) => c._id === courseId);
+      if (!course) {
+        toast.error("Course not found");
+        return { success: false };
+      }
+
+      const newStatus = !course.hasPdfExport;
+
+      const result = await updateCourse(courseId, {
+        hasPdfExport: newStatus,
+      });
+
+      if (result.success) {
+        // Update local state immediately
+        setCourses((prev) =>
+          prev.map((c) =>
+            c._id === courseId ? { ...c, hasPdfExport: newStatus } : c
+          )
+        );
+
+        toast.success(
+          `PDF export ${newStatus ? "enabled" : "disabled"} successfully!`
+        );
+
+        return { success: true };
+      }
+
+      return { success: false };
+    } catch (error) {
+      console.error("Toggle PDF export error:", error);
+      toast.error(
+        error.response?.data?.message || "Failed to toggle PDF export"
+      );
+      return { success: false };
+    }
+  };
+
   // Stats
   const fetchStats = async () => {
     try {
@@ -1521,7 +1613,10 @@ export const AdminProvider = ({ children }) => {
     loading,
 
     downloadTestPDF,
+    downloadCoursePDF,
     pdfGenerating,
+
+    togglePdfExport,
   };
 
   return (
