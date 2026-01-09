@@ -235,6 +235,7 @@ class PointsService {
       return higherRanked + 1;
     }
   }
+
 }
 
 export default new PointsService();

@@ -11,6 +11,7 @@ import {
   abandonTest,
   getLeaderboardInfo,
   downloadTestPDF,
+  generatePDFDownloadToken,
 } from "../Controllers/testController.js";
 
 import { checkCourseAccess } from "../helpers/CheckCourseAccess.js";
@@ -23,7 +24,6 @@ import {
 import { pdfDownloadLimiter } from "../helpers/pdfRatelimiter.js";
 
 const router = express.Router();
-
 
 /**
  * All test routes require authentication
@@ -100,13 +100,19 @@ router.post("/check-answer", verifyRequestSignature, checkAnswer);
 router.post("/abandon", verifyRequestSignature, abandonTest);
 
 /**
+ * GET /generate-pdf-token/:testId - Generate one-time download token
+ * Auth: Cookie required (user only)
+ * Returns: One-time use token valid for 5 minutes
+ */
+router.get("/generate-pdf-token/:testId", generatePDFDownloadToken);
+
+/**
  * GET /download-pdf/:testId - Download test result as PDF
  * Auth: Cookie required
- * Security: 
+ * Security:
  * - Users: One-time download only
  * - Admins: Unlimited downloads
  */
-router.get('/download-pdf/:testId', pdfDownloadLimiter, downloadTestPDF);
-
+router.get("/download-pdf/:testId", pdfDownloadLimiter, downloadTestPDF);
 
 export default router;
