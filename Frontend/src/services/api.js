@@ -533,6 +533,13 @@ export const apiMethods = {
     },
     abandonTest: (data) => api.post(`/api/tests/abandon`, data),
     getLeaderboardInfo: () => api.get(`/api/tests/leaderboard/info`),
+    generatePDFToken: (testId) =>
+      api.get(`/api/tests/generate-pdf-token/${testId}`),
+
+    downloadPDF: (testId, token) =>
+      api.get(`/api/tests/download-pdf/${testId}?token=${token}`, {
+        responseType: "blob",
+      }),
   },
 };
 

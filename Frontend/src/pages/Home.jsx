@@ -40,7 +40,8 @@ import {
   CartesianGrid,
 } from "recharts";
 
-import { useHead } from '@unhead/react';
+import { useHead } from "@unhead/react";
+import { useSEO } from "@/hooks/useSEO";
 import { useAuth } from "../context/AuthContext";
 import { useTheme } from "../context/ThemeContext";
 import { useContent } from "../context/ContentContext";
@@ -66,6 +67,19 @@ const Home = () => {
   const { isAuthenticated } = useAuth();
   const { animations, reducedMotion } = useTheme();
   const { contentSettings, faqs, fetchFAQs, loading } = useContent();
+
+  useSEO({
+    title:
+      contentSettings?.seoTitle || "Advanced Online Learning & Test Platform",
+    description:
+      contentSettings?.seoDescription ||
+      "Master your skills with RankBaaz's interactive courses, personalized assessments, and real-time progress tracking.",
+    keywords:
+      "rankbaaz, online learning, test preparation, courses, exams, practice tests",
+    type: "website",
+
+    canonicalUrl: `${contentSettings?.siteUrl || window.location.origin}/`,
+  });
 
   useEffect(() => {
     // Fetch first 5 FAQs for home page

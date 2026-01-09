@@ -28,7 +28,7 @@ const TestResult = ({ isPaid }) => {
   const { testId } = useParams();
   const navigate = useNavigate();
   const { theme, animations, reducedMotion } = useTheme();
-  const { getTestResult, testResult, loading, error } = useTests();
+  const { getTestResult, testResult, loading, error, downloadTestPDF } = useTests();
 
   const [showDetails, setShowDetails] = useState(false);
   const [celebrationComplete, setCelebrationComplete] = useState(false);
@@ -192,14 +192,16 @@ const TestResult = ({ isPaid }) => {
     }
   }, [testResult]);
 
-  // Handle PDF download
+  /**
+   * Handle PDF download using context method
+   * Downloads test result PDF with automatic token handling
+   */
   const handleDownloadPDF = async () => {
     if (!testResult?._id) {
       toast.error("Test result not available");
       return;
     }
 
-    // Check if course has PDF export enabled
     if (!courseData?.hasPdfExport) {
       toast.error("PDF export is not available for this course");
       return;
@@ -209,45 +211,33 @@ const TestResult = ({ isPaid }) => {
     setPdfError(null);
 
     try {
-      const response = await fetch(
-        `${import.meta.env.VITE_API_URL}/tests/download-pdf/${testResult._id}`,
-        {
-          method: "GET",
-          credentials: "include",
-          headers: {
-            Accept: "application/pdf",
-          },
-        }
-      );
+      // Use context method for download
+      const result = await downloadTestPDF(testResult._id);
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || "Failed to download PDF");
+      if (!result.success) {
+        throw new Error(result.error || "Failed to download PDF");
       }
 
-      // Get filename from header or create default
-      const contentDisposition = response.headers.get("Content-Disposition");
-      let filename = `RankBaaz_${courseData.name.replace(/[^a-z0-9]/gi, "_")}_${
-        new Date().toISOString().split("T")[0]
-      }.pdf`;
-
-      if (contentDisposition) {
-        const filenameMatch = contentDisposition.match(/filename="?(.+)"?/);
-        if (filenameMatch) filename = filenameMatch[1];
-      }
-
-      // Create blob and download
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
+      // Create download link
+      const url = window.URL.createObjectURL(result.blob);
       const link = document.createElement("a");
       link.href = url;
-      link.download = filename;
+      link.download = result.filename;
       document.body.appendChild(link);
       link.click();
       link.remove();
       window.URL.revokeObjectURL(url);
 
-      toast.success("PDF downloaded successfully!");
+      toast.success(
+        "PDF downloaded successfully! This was your one-time download."
+      );
+
+      // Update local state
+      setTestResult((prev) => ({
+        ...prev,
+        pdfDownloaded: true,
+        pdfDownloadedAt: new Date(),
+      }));
     } catch (error) {
       console.error("PDF download error:", error);
       const errorMessage = error.message || "Failed to download PDF";

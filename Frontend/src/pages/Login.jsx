@@ -58,7 +58,9 @@ const Login = () => {
     keywords:
       "login, sign in, user login, account access, student login, online learning login",
     type: "website",
-    noindex: true, // Login pages should not be indexed
+    noindex: false,
+    canonicalUrl: `${contentSettings?.siteUrl || window.location.origin}/login`,
+
     structuredData: {
       "@context": "https://schema.org",
       "@type": "WebPage",

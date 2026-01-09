@@ -9,7 +9,7 @@ const PrivacyPolicy = () => {
   const { legalPages, fetchLegalPage, loading, contentSettings } = useContent();
   const { animations, reducedMotion } = useTheme();
   const [page, setPage] = useState(null);
-  
+
   useEffect(() => {
     const loadPage = async () => {
       if (legalPages.privacy) {
@@ -25,36 +25,47 @@ const PrivacyPolicy = () => {
 
   // SEO Configuration - only runs when page is loaded
   useSEO({
-    title: page?.title || 'Privacy Policy',
-    description: `Read ${contentSettings?.siteName || 'RankBaaz Pro'}'s Privacy Policy to understand how we collect, use, and protect your personal information.`,
-    keywords: 'privacy policy, data protection, personal information, privacy rights, GDPR, user privacy',
-    type: 'article',
-    author: contentSettings?.siteName || 'RankBaaz Pro',
+    title: page?.title || "Privacy Policy",
+    description: `Read ${
+      contentSettings?.siteName || "RankBaaz Pro"
+    }'s Privacy Policy to understand how we collect, use, and protect your personal information.`,
+    keywords:
+      "privacy policy, data protection, personal information, privacy rights, GDPR, user privacy",
+    type: "article",
+    author: contentSettings?.siteName || "RankBaaz Pro",
     publishedTime: page?.metadata?.effectiveDate,
     modifiedTime: page?.lastUpdated,
+    canonicalUrl: `${
+      contentSettings?.siteUrl || window.location.origin
+    }/privacy`,
+
     structuredData: {
-      '@context': 'https://schema.org',
-      '@type': 'WebPage',
-      name: page?.title || 'Privacy Policy',
-      description: `Privacy Policy for ${contentSettings?.siteName || 'RankBaaz Pro'}`,
+      "@context": "https://schema.org",
+      "@type": "WebPage",
+      name: page?.title || "Privacy Policy",
+      description: `Privacy Policy for ${
+        contentSettings?.siteName || "RankBaaz Pro"
+      }`,
       url: window.location.href,
       datePublished: page?.metadata?.effectiveDate,
       dateModified: page?.lastUpdated,
-      inLanguage: 'en-US',
+      inLanguage: "en-US",
       isPartOf: {
-        '@type': 'WebSite',
-        name: contentSettings?.siteName || 'RankBaaz Pro',
-        url: contentSettings?.siteUrl || window.location.origin
+        "@type": "WebSite",
+        name: contentSettings?.siteName || "RankBaaz Pro",
+        url: contentSettings?.siteUrl || window.location.origin,
       },
       publisher: {
-        '@type': 'Organization',
-        name: contentSettings?.siteName || 'RankBaaz Pro',
+        "@type": "Organization",
+        name: contentSettings?.siteName || "RankBaaz Pro",
         logo: {
-          '@type': 'ImageObject',
-          url: contentSettings?.logo?.url || `${contentSettings?.siteUrl || window.location.origin}/logo.png`
-        }
-      }
-    }
+          "@type": "ImageObject",
+          url:
+            contentSettings?.logo?.url ||
+            `${contentSettings?.siteUrl || window.location.origin}/logo.png`,
+        },
+      },
+    },
   });
 
   const containerVariants = {
@@ -102,7 +113,6 @@ const PrivacyPolicy = () => {
               </div>
             </div>
           </motion.div>
-
 
           {page.sections && page.sections.length > 0 && (
             <motion.div

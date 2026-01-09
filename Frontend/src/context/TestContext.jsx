@@ -649,6 +649,49 @@ export const TestProvider = ({ children }) => {
     }
   };
 
+  /**
+   * Download test result PDF with one-time token
+   * @param {string} testId - Test result ID
+   * @returns {Promise<{success: boolean, error?: string, blob?: Blob, filename?: string}>}
+   */
+  const downloadTestPDF = async (testId) => {
+    try {
+      // Step 1: Generate one-time token
+      const tokenResponse = await apiMethods.tests.generatePDFToken(testId);
+
+      if (!tokenResponse.data.success || !tokenResponse.data.data.token) {
+        throw new Error("Failed to generate download token");
+      }
+
+      const token = tokenResponse.data.data.token;
+
+      // Step 2: Download PDF with token
+      const pdfResponse = await apiMethods.tests.downloadPDF(testId, token);
+
+      // Extract filename from Content-Disposition header
+      const contentDisposition = pdfResponse.headers["content-disposition"];
+      let filename = `RankBaaz_Test_${
+        new Date().toISOString().split("T")[0]
+      }.pdf`;
+
+      if (contentDisposition) {
+        const match = contentDisposition.match(/filename="?(.+)"?/);
+        if (match && match[1]) {
+          filename = match[1].replace(/"/g, "");
+        }
+      }
+
+      return {
+        success: true,
+        blob: pdfResponse.data,
+        filename,
+      };
+    } catch (err) {
+      const msg = handleApiError(err, "Failed to download PDF");
+      return { success: false, error: msg };
+    }
+  };
+
   const getUserStats = async () => {
     try {
       const response = await apiMethods.tests.getStats();
@@ -728,6 +771,7 @@ export const TestProvider = ({ children }) => {
     answeredQuestions,
     unansweredQuestions,
     progressPercentage,
+    downloadTestPDF,
     timeRemainingFormatted,
     isCurrentQuestionAnswered,
     canCompleteDifficulty,
