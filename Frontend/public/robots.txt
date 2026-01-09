@@ -27,8 +27,6 @@ Disallow: /assets/
 Disallow: /config/
 Disallow: /src/
 
-# Crawl-delay for polite bots
-Crawl-delay: 10
 
 # Bing-specific rules
 User-agent: Bingbot
@@ -36,7 +34,6 @@ Allow: /
 Disallow: /admin/
 Disallow: /api/
 Disallow: /profile
-Crawl-delay: 20
 
 # Block aggressive crawlers
 User-agent: AhrefsBot
@@ -72,5 +69,3 @@ Disallow: /
 
 User-agent: Claude-Web
 Disallow: /
-
-Host: rankbaaz.com
