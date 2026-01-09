@@ -3052,24 +3052,45 @@ Generate complete .txt file which contains, content for all sections above.`;
                         </div>
                       )}
 
-                      {/* Explanation */}
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Explanation
+                          Explanation *
                         </label>
-                        <textarea
-                          value={questionForm.explanation}
-                          onChange={(e) =>
-                            setQuestionForm((prev) => ({
-                              ...prev,
-                              explanation: e.target.value,
-                            }))
-                          }
-                          rows={2}
-                          className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-gray-900 placeholder-gray-400 transition-all duration-200 resize-none"
-                          placeholder="Explain why this is the correct answer..."
-                          draggable={false}
-                        />
+                        <div>
+                          <textarea
+                            value={questionForm.explanation}
+                            onChange={(e) =>
+                              setQuestionForm((prev) => ({
+                                ...prev,
+                                explanation: e.target.value,
+                              }))
+                            }
+                            placeholder="Provide an explanation for the answer (minimum 10 characters)..."
+                            className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:border-transparent resize-none ${
+                              questionForm.explanation.length > 0 &&
+                              questionForm.explanation.length < 10
+                                ? "border-red-300 focus:ring-red-500"
+                                : "border-gray-300 focus:ring-blue-500"
+                            }`}
+                            rows="3"
+                          />
+                          <div className="text-xs mt-1">
+                            <span
+                              className={`${
+                                questionForm.explanation.length < 10 &&
+                                questionForm.explanation.length > 0
+                                  ? "text-red-500"
+                                  : "text-gray-500"
+                              }`}
+                            >
+                              {questionForm.explanation.length < 10
+                                ? `Minimum 10 characters (${
+                                    10 - questionForm.explanation.length
+                                  } more needed)`
+                                : "Minimum requirement met"}
+                            </span>
+                          </div>
+                        </div>
                       </div>
 
                       {/* Add Question Button */}
@@ -3714,6 +3735,41 @@ Generate complete .txt file which contains, content for all sections above.`;
                         </p>
                       </div>
                     )}
+
+                    <div className="pt-4 border-t border-gray-200">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <label className="text-sm font-medium text-gray-700">
+                            PDF Export
+                          </label>
+                          <p className="text-xs text-gray-500 mt-1">
+                            Allow students to download test results as PDF
+                          </p>
+                        </div>
+                        <label className="relative inline-flex items-center cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={courseData.hasPdfExport || false}
+                            onChange={(e) =>
+                              setCourseData((prev) => ({
+                                ...prev,
+                                hasPdfExport: e.target.checked,
+                              }))
+                            }
+                            className="sr-only peer"
+                          />
+                          <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
+                        </label>
+                      </div>
+                      {courseData.hasPdfExport && (
+                        <div className="mt-2 p-3 bg-purple-50 rounded-lg">
+                          <p className="text-xs text-purple-800">
+                            ✓ Students will be able to download their test
+                            results once
+                          </p>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
 
