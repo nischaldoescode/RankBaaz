@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect } from "react";
 import axios from "axios";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import { adminRequestSigner } from "../utils/adminRequestSigner.js";
 
 const AuthContext = createContext();
 
@@ -14,42 +15,153 @@ export const useAuth = () => {
 };
 
 // Configure axios defaults
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:7000";
 axios.defaults.baseURL = API_URL;
-axios.defaults.withCredentials = true; // This ensures cookies are sent
+axios.defaults.withCredentials = true;
 
-// Add response interceptor for handling auth errors
+/**
+ * Request interceptor - Add signatures to admin requests
+ * Runs before every axios request
+ */
+axios.interceptors.request.use(
+  async (config) => {
+    // Public endpoints that don't need signatures
+    const publicEndpoints = [
+      "/admin/login",
+      "/admin/check-exists",
+      "/security/signing-secret",
+    ];
+
+    const isPublicEndpoint = publicEndpoints.some((endpoint) =>
+      config.url?.includes(endpoint)
+    );
+
+    if (isPublicEndpoint) {
+      return config;
+    }
+
+    // Load secret if not in memory
+    if (!adminRequestSigner.isSecretValid()) {
+      adminRequestSigner.loadSigningSecret();
+    }
+
+    // Sign request if authenticated
+    const isAuthenticated = !!localStorage.getItem("currentUser");
+
+    if (isAuthenticated && adminRequestSigner.isSecretValid()) {
+      config = adminRequestSigner.signRequest(config);
+    }
+
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
+
+/**
+ * Response interceptor - Handle signature errors and auth errors
+ */
 axios.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
 
-    // Prevent infinite loops
-    if (originalRequest._retry) {
-      return Promise.reject(error);
+    // a constant to define signature related error codes based on backend
+    const signatureErrorCodes = [
+      "SIGNATURE_EXPIRED",
+      "SIGNATURE_MISSING",
+      "SIGNATURE_INVALID",
+      "REPLAY_ATTACK",
+    ];
+
+    if (
+      error.response?.data?.code &&
+      signatureErrorCodes.includes(error.response.data.code)
+    ) {
+      // Try to block the inifite refreshing loop
+      if (originalRequest._signatureRetry) {
+        console.error("[ADMIN_AUTH] Signature retry failed - clearing auth");
+        adminRequestSigner.clearSigningSecret();
+        localStorage.removeItem("currentUser");
+        window.location.href = "/login";
+        return Promise.reject(error);
+      }
+
+      try {
+        console.log("[ADMIN_AUTH] Refreshing signing secret...");
+
+        originalRequest._signatureRetry = true;
+
+        // Clear old secret
+        adminRequestSigner.clearSigningSecret();
+
+        // Fetch new secret using base axios instance (avoid interceptor recursion)
+        const secretResponse = await axios.get("/security/signing-secret", {
+          _skipInterceptor: true, // Custom flag to skip signing
+        });
+
+        if (!secretResponse.data.success) {
+          throw new Error("Failed to get signing secret");
+        }
+
+        const { signingSecret, expiresIn } = secretResponse.data.data;
+        adminRequestSigner.setSigningSecret(signingSecret, expiresIn);
+
+        console.log("[ADMIN_AUTH] Signing secret refreshed successfully");
+
+        // Remove retry flag before re-signing
+        delete originalRequest._signatureRetry;
+
+        // Re-sign and retry
+        const signedRequest = adminRequestSigner.signRequest(originalRequest);
+        return axios(signedRequest);
+      } catch (signatureError) {
+        console.error("[ADMIN_AUTH] Signature refresh failed:", signatureError);
+        adminRequestSigner.clearSigningSecret();
+
+        if (signatureError.response?.status === 401) {
+          localStorage.removeItem("currentUser");
+          window.location.href = "/login";
+        }
+
+        return Promise.reject(error);
+      }
     }
 
-    // Only redirect on 401 if we're not already on login page and not during initial auth check
-    if (
-      error.response?.status === 401 &&
-      !window.location.pathname.includes("/login") &&
-      !originalRequest.url.includes("/admin/profile")
-    ) {
-      originalRequest._retry = true;
+    // Handle 401 Unauthorized errors (existing auth error handling)
+    if (error.response?.status === 401) {
+      const originalRequest = error.config;
 
-      // For admin, clear state and redirect
-      if (localStorage.getItem("currentUser")) {
-        const userData = JSON.parse(localStorage.getItem("currentUser"));
-        if (userData.role === "admin") {
-          localStorage.removeItem("currentUser");
-          // Delay redirect to allow current request to complete
-          setTimeout(() => {
-            window.location.href = "/login";
-          }, 100);
-          return Promise.reject(error);
+      // Prevent infinite loops
+      if (originalRequest._retry) {
+        return Promise.reject(error);
+      }
+
+      // Only redirect on 401 if not already on login page
+      if (
+        !window.location.pathname.includes("/login") &&
+        !originalRequest.url.includes("/admin/profile")
+      ) {
+        originalRequest._retry = true;
+
+        // For admin, clear state and redirect
+        if (localStorage.getItem("currentUser")) {
+          const userData = JSON.parse(localStorage.getItem("currentUser"));
+          if (userData.role === "admin") {
+            localStorage.removeItem("currentUser");
+            adminRequestSigner.clearSigningSecret(); // Also clear signing secret
+
+            // Delay redirect to allow current request to complete
+            setTimeout(() => {
+              window.location.href = "/login";
+            }, 100);
+            return Promise.reject(error);
+          }
         }
       }
     }
+
     return Promise.reject(error);
   }
 );
@@ -145,22 +257,16 @@ export const AuthProvider = ({ children }) => {
     try {
       setLoading(true);
 
-      // First attempt - might trigger captcha
       let response;
       try {
         response = await axios.post("/admin/login", credentials);
       } catch (error) {
-        // Check if captcha is required
+        // captcha handling (same as before)...
         if (error.response?.data?.code === "CAPTCHA_REQUIRED") {
           const captchaData = error.response.data.data;
-
-          // Show solving toast
-          const solvingToast = toast.loading(
-            "Solving security challenge... (this may take 10-30 seconds)"
-          );
+          const solvingToast = toast.loading("Solving security challenge...");
 
           try {
-            // Solve captcha
             const nonce = await solveAdminCaptcha(
               captchaData.seed,
               captchaData.difficulty
@@ -168,7 +274,6 @@ export const AuthProvider = ({ children }) => {
 
             toast.dismiss(solvingToast);
 
-            // Retry login with captcha solution
             response = await axios.post("/admin/login", {
               ...credentials,
               captchaSeed: captchaData.seed,
@@ -180,17 +285,54 @@ export const AuthProvider = ({ children }) => {
             return { success: false, message: "Captcha solving failed" };
           }
         } else {
-          throw error; // Re-throw other errors
+          throw error;
         }
       }
 
       if (response.data.success) {
         const userData = response.data.data.admin;
 
+        // Store user data first
         setUser(userData);
         setIsAuthenticated(true);
-
         localStorage.setItem("currentUser", JSON.stringify(userData));
+
+        // Wait for next tick to ensure cookie is set
+        await new Promise((resolve) => setTimeout(resolve, 100));
+
+        // CRITICAL: Fetch admin signing secret AFTER cookie is set
+        try {
+          console.log("[ADMIN_AUTH] Fetching signing secret...");
+
+          const secretResponse = await axios.get(
+            "/security/signing-secret",
+            {
+              withCredentials: true,
+            }
+          );
+
+          if (secretResponse.data.success) {
+            const { signingSecret, expiresIn } = secretResponse.data.data;
+            adminRequestSigner.setSigningSecret(signingSecret, expiresIn);
+
+            console.log("[ADMIN_AUTH] Signing secret acquired successfully");
+          } else {
+            throw new Error("Failed to get signing secret");
+          }
+        } catch (secretError) {
+          console.error(
+            "[ADMIN_AUTH] Failed to get signing secret:",
+            secretError
+          );
+
+          // If we can't get signing secret, clear everything and don't proceed
+          setUser(null);
+          setIsAuthenticated(false);
+          localStorage.removeItem("currentUser");
+
+          toast.error("Authentication setup failed. Please try again.");
+          return { success: false, message: "Failed to initialize session" };
+        }
 
         toast.success("Login successful!");
 
@@ -218,7 +360,9 @@ export const AuthProvider = ({ children }) => {
     } catch (error) {
       console.error("Logout error:", error);
     } finally {
-      // Clear local state regardless of API call result
+      // Clear admin signing secret
+      adminRequestSigner.clearSigningSecret();
+
       setUser(null);
       setIsAuthenticated(false);
       localStorage.removeItem("currentUser");

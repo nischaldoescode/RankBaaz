@@ -292,8 +292,8 @@ const UniversalCoupons = () => {
       <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-100">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-4">
-            <div className="p-3 bg-gradient-to-r from-purple-500 to-pink-600 rounded-xl shadow-lg">
-              <Tag className="h-8 w-8 text-white" />
+            <div className="p-3 bg-white border border-slate-200 rounded-xl shadow-lg">
+              <Tag className="h-8 w-8 text-slate-700 hover:text-sky-500 cursor-pointer" />
             </div>
             <div>
               <h1 className="text-3xl font-bold text-gray-900">
@@ -317,7 +317,7 @@ const UniversalCoupons = () => {
 
           <button
             onClick={() => setShowAddModal(true)}
-            className="bg-gradient-to-r from-purple-600 to-pink-600 text-white px-6 py-3 rounded-lg hover:from-purple-700 hover:to-pink-700 transition-all duration-200 flex items-center space-x-2 shadow-lg hover:shadow-xl cursor-pointer"
+            className=" bg-white text-slate-700 border border-slate-200 hover:text-sky-500 p-1 rounded-xl transition-all duration-200 flex items-center space-x-2 shadow-lg hover:shadow-xl cursor-pointer"
           >
             <Plus className="h-5 w-5" />
             <span>Create Coupon</span>
@@ -453,7 +453,7 @@ const UniversalCoupons = () => {
 
       {/* ADD MODAL */}
       {showAddModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+        <div className="fixed inset-0 bg-gradient-to-br from-muted/30 to-background flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-y-auto">
             <div className="p-6">
               <div className="flex items-center justify-between mb-6">
@@ -601,7 +601,7 @@ const UniversalCoupons = () => {
 
       {/* EDIT MODAL */}
       {editingCoupon && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+        <div className="fixed inset-0 bg-gradient-to-br from-muted/30 to-background flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-y-auto">
             <div className="p-6">
               <div className="flex items-center justify-between mb-6">

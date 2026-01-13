@@ -16,6 +16,7 @@
     "@tailwindcss/vite": "^4.1.11",
     "axios": "^1.10.0",
     "cors": "^2.8.5",
+    "crypto-js": "^3.1.9-1",
     "dotenv": "^17.0.0",
     "express": "^5.1.0",
     "framer-motion": "^12.23.24",
