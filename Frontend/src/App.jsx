@@ -303,6 +303,22 @@ const BackgroundElements = ({ animations, reducedMotion }) => {
             </motion.div>
 
             <motion.div
+              className="absolute top-[380px] right-[55%] w-8 h-8 sm:w-9 sm:h-9 lg:w-10 lg:h-10 text-teal-500"
+              animate={{
+                y: [0, -22, 0],
+                rotate: [0, 120, -120, 0],
+              }}
+              transition={{
+                duration: 5.5,
+                repeat: Infinity,
+                ease: "easeInOut",
+                delay: 1.8,
+              }}
+            >
+              <Zap className="w-full h-full drop-shadow-lg" />
+            </motion.div>
+
+            <motion.div
               className="absolute bottom-28 left-[90%] w-6 h-6 sm:w-7 sm:h-7 lg:w-8 lg:h-8 text-pink-500"
               animate={{
                 rotate: [0, 270, 360],
@@ -728,7 +744,6 @@ function App() {
               containerStyle={{
                 bottom: 20,
               }}
-
               reverseOrder={false}
             />
           </div>
