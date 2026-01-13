@@ -32,7 +32,6 @@
     "clsx": "^2.1.1",
     "crypto-js": "^3.1.9-1",
     "date-fns": "^3.6.0",
-    "express": "^5.1.0",
     "framer-motion": "^11.18.2",
     "hls.js": "^1.6.13",
     "lodash": "^4.17.21",

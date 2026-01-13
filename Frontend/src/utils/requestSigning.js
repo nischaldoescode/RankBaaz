@@ -9,8 +9,8 @@ class RequestSigner {
 
   setSigningSecret(secret, expiresIn) {
     this.signingSecret = secret;
-    this.secretExpiry = Date.now() + (expiresIn * 1000);
-    
+    this.secretExpiry = Date.now() + expiresIn * 1000;
+
     localStorage.setItem("signing_secret", secret);
     localStorage.setItem("signing_secret_expiry", this.secretExpiry.toString());
   }
@@ -18,13 +18,13 @@ class RequestSigner {
   loadSigningSecret() {
     const secret = localStorage.getItem("signing_secret");
     const expiry = localStorage.getItem("signing_secret_expiry");
-    
+
     if (secret && expiry && Date.now() < parseInt(expiry)) {
       this.signingSecret = secret;
       this.secretExpiry = parseInt(expiry);
       return true;
     }
-    
+
     return false;
   }
 
@@ -40,7 +40,14 @@ class RequestSigner {
   }
 
   generateNonce() {
-    return crypto.lib.WordArray.random(16).toString();
+    // Use Web Crypto API for cryptographically strong randomness
+    const array = new Uint8Array(16);
+    window.crypto.getRandomValues(array);
+
+    // Convert to hex string (32 characters)
+    return Array.from(array, (byte) => byte.toString(16).padStart(2, "0")).join(
+      ""
+    );
   }
 
   generateSignature(method, path, body, timestamp, nonce) {
@@ -48,12 +55,11 @@ class RequestSigner {
       throw new Error("Signing secret not available");
     }
 
-    const bodyString = body && Object.keys(body).length > 0 
-      ? JSON.stringify(body) 
-      : "";
-    
+    const bodyString =
+      body && Object.keys(body).length > 0 ? JSON.stringify(body) : "";
+
     const payload = `${timestamp}:${nonce}:${method}:${path}:${bodyString}`;
-    
+
     return crypto.HmacSHA256(payload, this.signingSecret).toString();
   }
 
@@ -70,7 +76,13 @@ class RequestSigner {
     const body = config.data || {};
 
     try {
-      const signature = this.generateSignature(method, path, body, timestamp, nonce);
+      const signature = this.generateSignature(
+        method,
+        path,
+        body,
+        timestamp,
+        nonce
+      );
 
       config.headers = config.headers || {};
       config.headers["X-Request-Signature"] = signature;

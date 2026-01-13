@@ -92,23 +92,26 @@ api.interceptors.request.use(
       "/api/auth/reset-password",
       "/api/security/signing-secret",
       "/api/auth/refresh-token",
-      "/api/auth/profile",
-      "/api/tests/history",
-      "/api/tests/performance",
-      "/api/tests/result",
-      "/api/tests/leaderboard",
     ];
 
     const isPublicEndpoint = publicEndpoints.some((endpoint) =>
       config.url?.includes(endpoint)
     );
 
+    // Public GET endpoints (no auth required)
+    const publicGetEndpoints = [
+      "/api/content/settings",
+      "/api/content/contact",
+      "/api/content/legal",
+      "/api/content/faqs",
+      "/api/courses/categories",
+      "/api/courses",
+    ];
+
     const isPublicGet =
       config.method === "get" &&
-      (config.url?.includes("/api/content/") ||
-        config.url?.includes("/api/courses/categories") ||
-        (config.url?.includes("/api/courses") &&
-          !config.url?.includes("/admin")));
+      publicGetEndpoints.some((endpoint) => config.url?.startsWith(endpoint)) &&
+      !config.url?.includes("/admin");
 
     if (isPublicEndpoint || isPublicGet) {
       return config;
@@ -182,7 +185,7 @@ api.interceptors.response.use(
     ) {
       // Prevent infinite retry loops
       if (originalRequest._signatureRetry) {
-        console.error("[SIGNATURE] Retry failed - clearing auth");
+        // console.error("[SIGNATURE] Retry failed - clearing auth");
         requestSigner.clearSigningSecret();
 
         // If signature keeps failing, might be auth issue
@@ -245,7 +248,7 @@ api.interceptors.response.use(
         // Retry the original request
         return api(signedRequest);
       } catch (signatureError) {
-        console.error("[SIGNATURE] Refresh failed:", signatureError);
+        // console.error("[SIGNATURE] Refresh failed:", signatureError);
         requestSigner.clearSigningSecret();
 
         // If we can't get signing secret, auth is likely broken
