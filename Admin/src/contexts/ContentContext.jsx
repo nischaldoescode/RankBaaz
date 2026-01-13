@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState } from "react";
 import axios from "axios";
 import { toast } from "react-toastify";
+import { adminRequestSigner } from "../utils/adminRequestSigner.js";
 
 const ContentContext = createContext();
 
@@ -19,11 +20,144 @@ export const ContentProvider = ({ children }) => {
   const [contactInfo, setContactInfo] = useState(null);
   const [legalPages, setLegalPages] = useState({});
 
-  // Create axios instance with credentials
+  // Create axios instance with credentials and signing
   const api = axios.create({
-    baseURL: import.meta.env.VITE_API_URL || "http://localhost:5000",
+    baseURL: import.meta.env.VITE_API_URL || "http://localhost:7000/api",
     withCredentials: true,
   });
+
+  // Add request interceptor to sign requests
+  api.interceptors.request.use(
+    (config) => {
+      // Load secret if not in memory
+      if (!adminRequestSigner.isSecretValid()) {
+        adminRequestSigner.loadSigningSecret();
+      }
+
+      // we will only need to sign requests if the admin is authenticated
+      const isAuthenticated = !!localStorage.getItem("currentUser");
+
+      if (isAuthenticated && adminRequestSigner.isSecretValid()) {
+        config = adminRequestSigner.signRequest(config);
+      }
+
+      return config;
+    },
+    (error) => {
+      return Promise.reject(error);
+    }
+  );
+
+  // ADD THIS ENTIRE RESPONSE INTERCEPTOR
+  /**
+   * Response interceptor - Handle signature errors
+   * Same as AuthContext but for ContentContext axios instance
+   */
+  api.interceptors.response.use(
+    (response) => response,
+    async (error) => {
+      const originalRequest = error.config;
+
+      // Signature error codes from backend
+      const signatureErrorCodes = [
+        "SIGNATURE_EXPIRED",
+        "SIGNATURE_MISSING",
+        "SIGNATURE_INVALID",
+        "REPLAY_ATTACK",
+      ];
+
+      if (
+        error.response?.data?.code &&
+        signatureErrorCodes.includes(error.response.data.code)
+      ) {
+        // Prevent infinite retry loop
+        if (originalRequest._signatureRetry) {
+          console.error(
+            "[CONTENT_CONTEXT] Signature retry failed - clearing auth"
+          );
+          adminRequestSigner.clearSigningSecret();
+          localStorage.removeItem("currentUser");
+          window.location.href = "/login";
+          return Promise.reject(error);
+        }
+
+        try {
+          console.log("[CONTENT_CONTEXT] Refreshing signing secret...");
+
+          originalRequest._signatureRetry = true;
+
+          // Clear old secret
+          adminRequestSigner.clearSigningSecret();
+
+          // Fetch new secret
+          const secretResponse = await axios.get(
+            `${
+              import.meta.env.VITE_API_URL || "http://localhost:7000/api"
+            }/security/signing-secret`,
+            {
+              withCredentials: true,
+            }
+          );
+
+          if (!secretResponse.data.success) {
+            throw new Error("Failed to get signing secret");
+          }
+
+          const { signingSecret, expiresIn } = secretResponse.data.data;
+          adminRequestSigner.setSigningSecret(signingSecret, expiresIn);
+
+          console.log(
+            "[CONTENT_CONTEXT] Signing secret refreshed successfully"
+          );
+
+          // Remove retry flag
+          delete originalRequest._signatureRetry;
+
+          // Re-sign and retry with the CONTENT api instance
+          const signedRequest = adminRequestSigner.signRequest(originalRequest);
+          return api(signedRequest);
+        } catch (signatureError) {
+          console.error(
+            "[CONTENT_CONTEXT] Signature refresh failed:",
+            signatureError
+          );
+          adminRequestSigner.clearSigningSecret();
+
+          if (signatureError.response?.status === 401) {
+            localStorage.removeItem("currentUser");
+            window.location.href = "/login";
+          }
+
+          return Promise.reject(error);
+        }
+      }
+
+      // Handle 401 errors
+      if (error.response?.status === 401) {
+        if (!originalRequest._retry) {
+          originalRequest._retry = true;
+
+          if (
+            !window.location.pathname.includes("/login") &&
+            localStorage.getItem("currentUser")
+          ) {
+            const userData = JSON.parse(localStorage.getItem("currentUser"));
+            if (userData.role === "admin") {
+              localStorage.removeItem("currentUser");
+              adminRequestSigner.clearSigningSecret();
+
+              // setTimeout(() => {
+              //   window.location.href = "/login";
+              // }, 100);
+            }
+          }
+        }
+      }
+
+      return Promise.reject(error);
+    }
+  );
+
 
   // Fetch Content Settings
   const fetchContentSettings = async () => {
