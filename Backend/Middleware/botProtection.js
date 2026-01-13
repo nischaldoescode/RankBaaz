@@ -344,88 +344,77 @@ const verifyChallengeSolution = async (ip, seed, nonce) => {
 };
 
 /**
- * MAIN BOT PROTECTION MIDDLEWARE
- * Implements multi-layer security checks:
- * 1. Ban list check
- * 2. Origin/Referer validation
- * 3. Bot score calculation
- * 4. Proof-of-work challenges
- * 5. Automatic banning
+ * Main bot protection middleware
+ * Implements multi-layer security checks for all non-health API routes
+ *
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ * @param {Function} next - Express next middleware function
+ *
+ * Security Layers:
+ * 1. Health endpoint bypass
+ * 2. Authenticated request bypass (has valid auth cookie + signature)
+ * 3. Origin/Referer validation
+ * 4. Ban list check
+ * 5. Bot score calculation
+ * 6. Challenge/Ban enforcement
  */
 export const botProtection = async (req, res, next) => {
   try {
-    // Execption: To allow the request to the "/health" endpoint
-    if (req.path === "/health") {
-      return next();
-    }
     const ip = req.ip || req.connection.remoteAddress;
     const ua = req.get("User-Agent") || "";
     const origin = req.get("Origin") || "";
     const referer = req.get("Referer") || "";
 
-    // PRODUCTION: Check if request has no valid origin/referer
-    // This must be defined INSIDE the function scope to access req object
+    // LAYER 1: Allow health check endpoint
+    if (req.path === "/health") {
+      return next();
+    }
+
+    // LAYER 2: Bypass protection for authenticated requests with valid signatures
+    // These are legitimate frontend requests from logged-in users
+    const hasAuthCookie = !!req.signedCookies.auth_session;
+    const hasValidSignature = !!req.headers["x-request-signature"];
+
+    if (hasAuthCookie && hasValidSignature) {
+      // This is a legitimate authenticated request from our frontend
+      return next();
+    }
+
+    // LAYER 3: For unauthenticated API routes, validate origin/referer
     const hasNoOrigin = !origin && !referer;
     const hasInvalidOrigin = !isLegitimateOrigin(origin, referer);
 
-    // DEVELOPMENT: Skip bot protection for localhost browsers
-    if (process.env.NODE_ENV === "development") {
-      const isLocalhost =
-        ip === "::1" || ip === "127.0.0.1" || ip === "::ffff:127.0.0.1";
-      const isRealBrowser =
-        /Mozilla|Chrome|Safari|Firefox|Edge|Opera/i.test(ua) &&
-        !/postman|insomnia|curl|wget/i.test(ua);
+    // PRODUCTION SECURITY: Block requests with no valid origin
+    // This catches Postman, Insomnia, curl, and direct browser visits
+    if (hasNoOrigin || hasInvalidOrigin) {
+      console.warn("[BOT_PROTECTION] Blocked request - Invalid origin:", {
+        ip,
+        ua: ua.substring(0, 50),
+        origin: origin || "none",
+        referer: referer || "none",
+        path: req.path,
+      });
 
-      if (isLocalhost && isRealBrowser) {
-        return next();
-      }
-    }
-
-    // Determine if this looks like a real browser
-    const isRealBrowser =
-      /Mozilla|Chrome|Safari|Firefox|Edge|Opera/i.test(ua) &&
-      !/postman|insomnia|curl|wget/i.test(ua);
-    const isApiRoute = req.path.startsWith("/api/");
-
-    // SECURITY LAYER 1: Check if IP is banned
-    if (await isBannedWithUA(ip, ua)) {
-      // API routes return appropriate response based on origin
-      if (isApiRoute) {
-        if (hasNoOrigin || hasInvalidOrigin) {
-          return res.status(403).send(SIMPLE_403_HTML);
-        }
-        return res.status(403).json({
-          success: false,
-          message: "Access temporarily restricted due to suspicious activity",
-          code: "BOT_DETECTED",
-        });
-      }
-
-      // Non-API routes
-      if (isRealBrowser) {
-        if (hasNoOrigin || hasInvalidOrigin) {
-          return res.status(403).send(SIMPLE_403_HTML);
-        }
-        return res
-          .status(403)
-          .send(
-            botBlockedPage(
-              "Your access has been temporarily restricted due to suspicious activity."
-            )
-          );
+      // Return simple 403 HTML for browsers, JSON for API clients
+      if (req.path.startsWith("/api/")) {
+        return res.status(403).send(SIMPLE_403_HTML);
       } else {
-        if (hasNoOrigin || hasInvalidOrigin) {
-          return res.status(403).send(SIMPLE_403_HTML);
-        }
-        return res.status(403).json({
-          success: false,
-          message: "Automated access detected",
-          code: "BOT_DETECTED",
-        });
+        return res.status(403).send(SIMPLE_403_HTML);
       }
     }
 
-    // SECURITY LAYER 2: Check if challenge already passed
+    // LAYER 4: Check if IP is banned
+    if (await isBannedWithUA(ip, ua)) {
+      if (req.path.startsWith("/api/")) {
+        return res.status(403).send(SIMPLE_403_HTML);
+      }
+      return res
+        .status(403)
+        .send(botBlockedPage("Access temporarily restricted."));
+    }
+
+    // LAYER 5: Check if challenge already passed
     const passedKey = `bot:challenge:passed:${ip}`;
     const hasPassed = await redisClient.get(passedKey);
 
@@ -433,7 +422,7 @@ export const botProtection = async (req, res, next) => {
       return next();
     }
 
-    // SECURITY LAYER 3: Calculate bot probability score
+    // LAYER 6: Calculate bot probability score
     const score = calculateBotScore(req);
 
     // Low score (< 30) = likely human, allow through
@@ -441,95 +430,46 @@ export const botProtection = async (req, res, next) => {
       return next();
     }
 
-    // SECURITY LAYER 4: Medium score (30-59) = challenge required
+    // LAYER 7: Medium score (30-59) = challenge required
     if (score < BOT_SCORE_THRESHOLD) {
       const challenge = await generateChallenge(ip);
 
-      if (isApiRoute) {
-        if (hasNoOrigin || hasInvalidOrigin) {
-          return res.status(403).send(SIMPLE_403_HTML);
-        }
-        return res.status(403).json({
-          success: false,
-          message:
-            "Security verification required. Please complete the challenge.",
-          code: "CHALLENGE_REQUIRED",
-          data: {
-            seed: challenge.seed,
-            difficulty: challenge.difficulty,
-            instruction: `Find a nonce such that SHA-256(seed + nonce) starts with ${CHALLENGE_DIFFICULTY} zeros`,
-          },
-        });
-      }
-
-      // Non-API routes
-      if (isRealBrowser) {
-        if (hasNoOrigin || hasInvalidOrigin) {
-          return res.status(403).send(SIMPLE_403_HTML);
-        }
-        return res
-          .status(403)
-          .send(
-            botBlockedPage(
-              "Security verification required. Please use a standard web browser to access this site."
-            )
-          );
-      } else {
-        if (hasNoOrigin || hasInvalidOrigin) {
-          return res.status(403).send(SIMPLE_403_HTML);
-        }
-        return res.status(403).json({
-          success: false,
-          message: "Security verification required",
-          code: "CHALLENGE_REQUIRED",
-          data: {
-            seed: challenge.seed,
-            difficulty: challenge.difficulty,
-          },
-        });
-      }
-    }
-
-    // SECURITY LAYER 5: High score (60+) = instant ban
-    await banIPWithUA(ip, ua, `High bot score: ${score}`);
-
-    if (isApiRoute) {
-      if (hasNoOrigin || hasInvalidOrigin) {
-        return res.status(403).send(SIMPLE_403_HTML);
-      }
-      return res.status(403).json({
-        success: false,
-        message: "Automated access detected",
-        code: "BOT_DETECTED",
+      console.warn("[BOT_PROTECTION] Challenge required:", {
+        ip,
+        score,
+        path: req.path,
       });
-    }
 
-    // Non-API routes
-    if (isRealBrowser) {
-      if (hasNoOrigin || hasInvalidOrigin) {
+      if (req.path.startsWith("/api/")) {
         return res.status(403).send(SIMPLE_403_HTML);
       }
+
       return res
         .status(403)
         .send(
           botBlockedPage(
-            "Automated access detected. Please use a standard web browser."
+            "Security verification required. Please use a standard web browser."
           )
         );
-    } else {
-      if (hasNoOrigin || hasInvalidOrigin) {
-        return res.status(403).send(SIMPLE_403_HTML);
-      }
-      return res.status(403).json({
-        success: false,
-        message: "Automated access detected",
-        code: "BOT_DETECTED",
-      });
     }
+
+    // LAYER 8: High score (60+) = instant ban
+    await banIPWithUA(ip, ua, `High bot score: ${score}`);
+
+    console.warn("[BOT_PROTECTION] Auto-banned:", {
+      ip,
+      score,
+      path: req.path,
+    });
+
+    if (req.path.startsWith("/api/")) {
+      return res.status(403).send(SIMPLE_403_HTML);
+    }
+
+    return res.status(403).send(botBlockedPage("Automated access detected."));
   } catch (err) {
-    // PRODUCTION: Never expose internal errors
-    // Log error for monitoring but don't block legitimate traffic
     console.error("[BOT_PROTECTION] Error:", err);
+    // Allow request on error to prevent blocking legitimate traffic
     next();
   }
 };
