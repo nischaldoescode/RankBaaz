@@ -71,38 +71,39 @@ const setCachedUser = async (userId, userData) => {
 // Add pending auth requests tracking
 const pendingAuthRequests = new Map();
 
+/**
+ * Authenticate user with JWT token validation
+ *
+ * Security layers:
+ * 1. Check encrypted auth session cookie
+ * 2. Decrypt and verify JWT token
+ * 3. Check user exists and is verified
+ *
+ * @middleware
+ * @param {Object} req - Express request
+ * @param {Object} res - Express response
+ * @param {Function} next - Next middleware
+ */
 export const authenticateUser = async (req, res, next) => {
   try {
     const encryptedCookie = req.signedCookies.auth_session;
 
-    // CHANGE: Add detailed logging for debugging
-    console.log("[AUTH_MIDDLEWARE] Request to:", req.path);
-    console.log("[AUTH_MIDDLEWARE] Cookies present:", Object.keys(req.cookies));
-    console.log(
-      "[AUTH_MIDDLEWARE] Signed cookies present:",
-      Object.keys(req.signedCookies)
-    );
-    console.log("[AUTH_MIDDLEWARE] Auth cookie exists:", !!encryptedCookie);
+    // REMOVED: Debug logging that exposes cookie information
+    // Only log in development console, never send to client
 
     if (!encryptedCookie) {
-      console.error("[AUTH_MIDDLEWARE] No auth_session cookie found");
-      console.error("[AUTH_MIDDLEWARE] Available cookies:", req.cookies);
-      console.error(
-        "[AUTH_MIDDLEWARE] Available signed cookies:",
-        req.signedCookies
-      );
+      // Development-only console logging
+      if (process.env.NODE_ENV === "development") {
+        console.error("[AUTH_MIDDLEWARE] No auth_session cookie found");
+        console.error("[AUTH_MIDDLEWARE] Path:", req.path);
+        console.error("[AUTH_MIDDLEWARE] Cookies:", Object.keys(req.cookies));
+      }
 
+      // CRITICAL: Never send cookie information to client
       return res.status(401).json({
         success: false,
-        message: "Credentials Error.",
-        debug:
-          process.env.NODE_ENV === "development"
-            ? {
-                cookiesReceived: Object.keys(req.cookies),
-                signedCookiesReceived: Object.keys(req.signedCookies),
-                path: req.path,
-              }
-            : undefined,
+        message: "Authentication required. Please log in.",
+        code: "AUTH_REQUIRED",
       });
     }
 
@@ -191,13 +192,15 @@ export const authenticateAdmin = async (req, res, next) => {
       });
     }
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    // FIXED: Use ADMIN_JWT_SECRET instead of JWT_SECRET
+    const decoded = jwt.verify(token, process.env.ADMIN_JWT_SECRET);
 
     // Try cache first
-    let admin = await getCachedUser(`admin:${decoded.userId}`);
+    let admin = await getCachedUser(`admin:${decoded.adminId}`); // Use adminId
 
     if (!admin) {
-      admin = await Admin.findById(decoded.userId).select("-password").lean();
+      // Use adminId from decoded token
+      admin = await Admin.findById(decoded.adminId).select("-password").lean();
 
       if (!admin) {
         return res.status(401).json({
@@ -206,7 +209,8 @@ export const authenticateAdmin = async (req, res, next) => {
         });
       }
 
-      await setCachedUser(`admin:${decoded.userId}`, admin);
+      //  Cache with adminId
+      await setCachedUser(`admin:${decoded.adminId}`, admin);
     }
 
     req.admin = { userId: admin._id, isAdmin: true, ...admin };
@@ -228,11 +232,14 @@ export const authenticateAny = async (req, res, next) => {
     // Handle admin token
     if (adminToken) {
       try {
-        const decoded = jwt.verify(adminToken, process.env.JWT_SECRET);
+        // Use ADMIN_JWT_SECRET
+        const decoded = jwt.verify(adminToken, process.env.ADMIN_JWT_SECRET);
 
-        let admin = await getCachedUser(`admin:${decoded.userId}`);
+        // Use adminId
+        let admin = await getCachedUser(`admin:${decoded.adminId}`);
         if (!admin) {
-          admin = await Admin.findById(decoded.userId)
+          // Use adminId
+          admin = await Admin.findById(decoded.adminId)
             .select("-password")
             .lean();
           if (!admin) {

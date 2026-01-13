@@ -23,55 +23,60 @@ const generateDeviceFingerprint = (req) => {
   ).toString();
 };
 
+/**
+ * Authenticate user with JWT token validation and request signature verification
+ *
+ * Security Layers:
+ * 1. Check for encrypted auth session cookie
+ * 2. Decrypt and verify JWT token
+ * 3. Validate device fingerprint
+ * 4. Validate IP address and User-Agent
+ * 5. Verify request signature (prevents Postman/Insomnia access)
+ * 6. Check user exists and is verified
+ *
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ * @param {Function} next - Next middleware function
+ *
+ * @throws {401} Authentication failed
+ * @throws {403} Signature verification failed
+ */
 export const authenticateUser = async (req, res, next) => {
   try {
     const encryptedCookie = req.signedCookies.auth_session;
 
-    // console.log("[AUTH_MIDDLEWARE] Request to:", req.path);
-    // console.log("[AUTH_MIDDLEWARE] Session ID:", req.session?.id);
-    // console.log("[AUTH_MIDDLEWARE] Cookies present:", Object.keys(req.cookies));
-    // console.log(
-    //   "[AUTH_MIDDLEWARE] Signed cookies present:",
-    //   Object.keys(req.signedCookies)
-    // );
-    // console.log("[AUTH_MIDDLEWARE] Auth cookie exists:", !!encryptedCookie);
-
+    // LAYER 1: Check auth cookie exists
     if (!encryptedCookie) {
-      // console.error("[AUTH_MIDDLEWARE] No auth_session cookie found");
-      // console.error("[AUTH_MIDDLEWARE] Session ID:", req.session?.id);
-      // console.error("[AUTH_MIDDLEWARE] Available cookies:", req.cookies);
-      // console.error(
-      //   "[AUTH_MIDDLEWARE] Available signed cookies:",
-      //   req.signedCookies
-      // );
-
       return res.status(401).json({
         success: false,
         message: "Session expired. Please login again.",
+        code: "AUTH_REQUIRED",
       });
     }
 
-    // Decrypt cookie
+    // LAYER 2: Decrypt and verify JWT
     const cookieData = decryptCookieData(encryptedCookie);
     if (!cookieData || !cookieData.token) {
       return res.status(401).json({
         success: false,
         message: "Invalid session data.",
+        code: "AUTH_INVALID",
       });
     }
 
     const decoded = jwt.verify(cookieData.token, process.env.JWT_SECRET);
 
-    // Enhanced security: Validate device fingerprint
+    // LAYER 3: Validate device fingerprint
     const currentDeviceId = generateDeviceFingerprint(req);
     if (decoded.deviceId !== currentDeviceId) {
       return res.status(401).json({
         success: false,
         message: "Device mismatch. Please login again.",
+        code: "DEVICE_MISMATCH",
       });
     }
 
-    // Validate IP and User-Agent
+    // LAYER 4: Validate IP and User-Agent
     const currentIp = req.ip || req.connection.remoteAddress;
     const currentUserAgent = req.get("User-Agent");
 
@@ -79,69 +84,149 @@ export const authenticateUser = async (req, res, next) => {
       return res.status(401).json({
         success: false,
         message: "Session context changed. Please login again.",
+        code: "CONTEXT_CHANGED",
       });
     }
 
+    // LAYER 5: Verify request signature (CRITICAL SECURITY CHECK)
+    // This prevents Postman/Insomnia/curl access even with valid cookies
+    const signature = req.headers["x-request-signature"];
+    const timestamp = req.headers["x-request-timestamp"];
+    const nonce = req.headers["x-request-nonce"];
+
+    if (!signature || !timestamp || !nonce) {
+      console.warn("[AUTH] Missing signature headers:", {
+        userId: decoded.userId,
+        path: req.originalUrl,
+        ip: currentIp,
+        userAgent: currentUserAgent?.substring(0, 50),
+      });
+
+      return res.status(403).json({
+        success: false,
+        message: "Invalid request signature. Please refresh and try again.",
+        code: "SIGNATURE_MISSING",
+      });
+    }
+
+    // Note: Detailed signature verification happens in requestSigning middleware
+    // This check ensures headers are present
+
+    // LAYER 6: Verify user exists and is verified
     const user = await User.findById(decoded.userId).select("-password -otp");
 
     if (!user || !user.isVerified) {
       return res.status(401).json({
         success: false,
-        message: "Login Error",
+        message: "User not found or not verified.",
+        code: "USER_INVALID",
       });
     }
 
     req.user = { userId: user._id, ...user.toObject() };
     next();
   } catch (error) {
-    console.error("Auth middleware error:", error);
+    console.error("[AUTH_USER] Error:", error.message);
+
+    if (error.name === "JsonWebTokenError") {
+      return res.status(401).json({
+        success: false,
+        message: "Invalid authentication token.",
+        code: "TOKEN_INVALID",
+      });
+    }
+
+    if (error.name === "TokenExpiredError") {
+      return res.status(401).json({
+        success: false,
+        message: "Session expired. Please login again.",
+        code: "TOKEN_EXPIRED",
+      });
+    }
+
     res.status(401).json({
       success: false,
-      message: "Invalid token",
+      message: "Authentication failed.",
+      code: "AUTH_ERROR",
     });
   }
 };
 
+/**
+ * Authenticate admin with JWT token validation and request signature verification
+ *
+ * Security Layers:
+ * 1. Check for admin token cookie
+ * 2. Verify JWT token with admin secret
+ * 3. Verify request signature (prevents Postman/Insomnia access)
+ * 4. Check admin exists in database
+ *
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ * @param {Function} next - Next middleware function
+ *
+ * @throws {401} Authentication failed
+ * @throws {403} Signature verification failed
+ */
 export const authenticateAdmin = async (req, res, next) => {
   try {
     const token = req.cookies.adminToken;
 
-    console.log("[ADMIN_AUTH] Cookie check:", {
-      hasAdminToken: !!token,
-      allCookies: Object.keys(req.cookies),
-      adminTokenPreview: token ? token.substring(0, 20) + "..." : null,
-    });
-
+    // LAYER 1: Check admin token exists
     if (!token) {
       return res.status(401).json({
         success: false,
         message: "Admin access denied. No token provided.",
+        code: "AUTH_REQUIRED",
       });
     }
 
-    // IMPORTANT: Use ADMIN_JWT_SECRET, not regular JWT_SECRET
+    // LAYER 2: Verify JWT with admin secret
     const decoded = jwt.verify(token, process.env.ADMIN_JWT_SECRET);
 
-    console.log("[ADMIN_AUTH] Token decoded:", {
-      adminId: decoded.adminId,
-      role: decoded.role,
-    });
+    // LAYER 3: Verify request signature
+    const signature = req.headers["x-request-signature"];
+    const timestamp = req.headers["x-request-timestamp"];
+    const nonce = req.headers["x-request-nonce"];
 
-    // Use adminId from token (not userId)
+    if (!signature || !timestamp || !nonce) {
+      console.warn("[ADMIN_AUTH] Missing signature headers:", {
+        adminId: decoded.adminId,
+        path: req.originalUrl,
+        ip: req.ip,
+      });
+
+      return res.status(403).json({
+        success: false,
+        message: "Invalid request signature.",
+        code: "SIGNATURE_MISSING",
+      });
+    }
+
+    // LAYER 4: Verify admin exists
     const admin = await Admin.findById(decoded.adminId).select("-password");
 
     if (!admin) {
       return res.status(401).json({
         success: false,
         message: "Invalid admin token - admin not found",
+        code: "ADMIN_NOT_FOUND",
       });
     }
 
     console.log("[ADMIN_AUTH] Admin authenticated:", admin.email);
 
-    // Set req.admin with correct structure
+    if (process.env.NODE_ENV === "development") {
+      console.log("[ADMIN_AUTH] Request path details:", {
+        originalUrl: req.originalUrl,
+        path: req.path,
+        baseUrl: req.baseUrl,
+        url: req.url,
+      });
+    }
+
     req.admin = {
-      userId: admin._id, // Keep as userId for compatibility with existing code
+      userId: admin._id,
       adminId: admin._id,
       isAdmin: true,
       ...admin.toObject(),
@@ -154,20 +239,23 @@ export const authenticateAdmin = async (req, res, next) => {
     if (error.name === "JsonWebTokenError") {
       return res.status(401).json({
         success: false,
-        message: "Invalid admin token - verification failed",
+        message: "Invalid admin token.",
+        code: "TOKEN_INVALID",
       });
     }
 
     if (error.name === "TokenExpiredError") {
       return res.status(401).json({
         success: false,
-        message: "Admin token expired",
+        message: "Admin token expired.",
+        code: "TOKEN_EXPIRED",
       });
     }
 
     res.status(401).json({
       success: false,
-      message: "Admin authentication failed",
+      message: "Admin authentication failed.",
+      code: "AUTH_ERROR",
     });
   }
 };

@@ -1,6 +1,9 @@
 import multer from "multer";
-import { CloudinaryStorage } from "multer-storage-cloudinary";
 import { v2 as cloudinary } from "cloudinary";
+import { createRequire } from "module";
+
+const require = createRequire(import.meta.url);
+const CloudinaryStorage = require("multer-storage-cloudinary");
 
 
 // Create dynamic storage engine
