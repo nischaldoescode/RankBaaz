@@ -213,8 +213,7 @@ app.use(
         defaultSrc: ["'self'"],
         scriptSrc: [
           "'self'",
-          "'unsafe-inline'",
-          "'unsafe-eval'",
+          "'unsafe-inline'",         
           "https://cdn.vidstack.io",
           "https://www.youtube.com",
           "https://player.vimeo.com",
@@ -259,7 +258,7 @@ app.use(
         workerSrc: ["'self'", "blob:"],
       },
     },
-    crossOriginResourcePolicy: { policy: "cross-origin" },
+    crossOriginResourcePolicy: { policy: "same-site" },
     frameguard: { action: "sameorigin" },
   })
 );
@@ -294,7 +293,7 @@ app.use(
       ...(process.env.NODE_ENV === "production" && {
         domain: ".rankbaaz.com",
         secure: true,
-        sameSite: "none",
+        sameSite: "lax",
       }),
     },
     name: "sid",

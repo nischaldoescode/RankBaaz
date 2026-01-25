@@ -667,7 +667,7 @@ export const verifyOTP = async (req, res) => {
     const cookieOptions = {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
-      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+      sameSite: "lax",
       maxAge: 7 * 24 * 60 * 60 * 1000,
       signed: true,
       path: "/",
@@ -699,7 +699,7 @@ export const verifyOTP = async (req, res) => {
     const refreshCookieOptions = {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
-      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+      sameSite: "lax",
       maxAge: 30 * 24 * 60 * 60 * 1000,
       signed: true,
       path: "/",
@@ -1054,7 +1054,7 @@ export const login = async (req, res) => {
     const cookieOptions = {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
-      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+      sameSite: "lax",
       maxAge: 7 * 24 * 60 * 60 * 1000,
       signed: true,
       path: "/",
@@ -1079,7 +1079,7 @@ export const login = async (req, res) => {
     const refreshCookieOptions = {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
-      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+      sameSite: "lax",
       maxAge: 30 * 24 * 60 * 60 * 1000,
       signed: true,
       path: "/",
@@ -1182,7 +1182,7 @@ export const refreshToken = async (req, res) => {
     res.cookie("auth_session", newCookieData, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
-      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+      sameSite: "lax",
       maxAge: 7 * 24 * 60 * 60 * 1000,
       signed: true,
     });
@@ -1197,7 +1197,7 @@ export const refreshToken = async (req, res) => {
     res.cookie("refresh_session", newRefreshCookieData, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
-      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+      sameSite: "lax",
       maxAge: 30 * 24 * 60 * 60 * 1000,
       signed: true,
     });
