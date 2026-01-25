@@ -260,6 +260,14 @@ app.use(
       },
     },
     crossOriginResourcePolicy: { policy: "cross-origin" },
+    frameguard: { action: "sameorigin" },
+  })
+);
+
+app.use(
+  helmet.hsts({
+    maxAge: 31536000,
+    includeSubDomains: true,
   })
 );
 
