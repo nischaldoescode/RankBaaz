@@ -564,6 +564,7 @@ const Header = () => {
                               </div>
                               <SheetTitle className="text-lg">
                                 {contentSettings?.siteName || "Vidhgrow"}
+                                
                               </SheetTitle>
                             </div>
                           </SheetHeader>
