@@ -105,7 +105,7 @@ const SortableLegalSection = ({
     setLegalForm((prev) => ({
       ...prev,
       sections: prev.sections.map((s, i) =>
-        i === sectionIndex ? { ...s, ...updates } : s
+        i === sectionIndex ? { ...s, ...updates } : s,
       ),
     }));
   };
@@ -120,7 +120,7 @@ const SortableLegalSection = ({
           sections: prev.sections.filter((_, i) => i !== sectionIndex),
         }));
       },
-      "danger"
+      "danger",
     );
   };
 
@@ -138,23 +138,23 @@ const SortableLegalSection = ({
 
   const updateSubheader = (subIndex, updates) => {
     const newSubheaders = section.subheaders.map((sub, i) =>
-      i === subIndex ? { ...sub, ...updates } : sub
+      i === subIndex ? { ...sub, ...updates } : sub,
     );
     updateSection({ subheaders: newSubheaders });
   };
 
-const deleteSubheader = (subIndex) => {
-  showConfirmModal(
-    "Delete Subheader",
-    "Are you sure you want to delete this subheader?",
-    () => {
-      updateSection({
-        subheaders: section.subheaders.filter((_, i) => i !== subIndex),
-      });
-    },
-    "warning"
-  );
-};
+  const deleteSubheader = (subIndex) => {
+    showConfirmModal(
+      "Delete Subheader",
+      "Are you sure you want to delete this subheader?",
+      () => {
+        updateSection({
+          subheaders: section.subheaders.filter((_, i) => i !== subIndex),
+        });
+      },
+      "warning",
+    );
+  };
 
   const addPoint = (subIndex) => {
     const newSubheaders = section.subheaders.map((sub, i) => {
@@ -545,6 +545,8 @@ const ContentManagement = () => {
   } = useContent();
   const [activeTab, setActiveTab] = useState("settings");
   const [settingsForm, setSettingsForm] = useState({});
+  // tracks whether settings form has unsaved changes
+  const [isSettingsDirty, setIsSettingsDirty] = useState(false);
   const [faqForm, setFaqForm] = useState({
     question: "",
     answer: "",
@@ -592,6 +594,14 @@ const ContentManagement = () => {
   const [previewData, setPreviewData] = useState(null);
   const [previewType, setPreviewType] = useState("home");
 
+  /**
+   * wrapper around setSettingsForm that marks the form as dirty on every change
+   */
+  const updateSettingsForm = (updater) => {
+    setIsSettingsDirty(true);
+    setSettingsForm(updater);
+  };
+
   useEffect(() => {
     fetchContentSettings();
     fetchFAQs();
@@ -614,6 +624,8 @@ const ContentManagement = () => {
           enabled: true,
         },
       });
+      // reset dirty flag whenever server data is loaded
+      setIsSettingsDirty(false);
     }
   }, [contentSettings]);
 
@@ -644,9 +656,11 @@ const ContentManagement = () => {
 
   const handleSettingsSubmit = async (e) => {
     e.preventDefault();
-    await updateContentSettings(settingsForm);
+    const result = await updateContentSettings(settingsForm);
+    if (result?.success) {
+      setIsSettingsDirty(false);
+    }
   };
-
   const handleFAQSubmit = async (e) => {
     e.preventDefault();
     if (editingFAQ) {
@@ -688,7 +702,7 @@ const ContentManagement = () => {
     ) {
       if (
         !window.confirm(
-          "You still have old markdown content. Do you want to save anyway? It's recommended to migrate to the new section-based structure."
+          "You still have old markdown content. Do you want to save anyway? It's recommended to migrate to the new section-based structure.",
         )
       ) {
         return;
@@ -712,7 +726,7 @@ const ContentManagement = () => {
       "Delete FAQ",
       "Are you sure you want to delete this FAQ? This action cannot be undone.",
       () => deleteFAQ(id),
-      "danger"
+      "danger",
     );
   };
 
@@ -773,12 +787,12 @@ const ContentManagement = () => {
     useSensor(PointerSensor),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
-    })
+    }),
   );
   const handleFileChange = (e, field) => {
     const file = e.target.files[0];
     if (file) {
-      setSettingsForm((prev) => ({
+      updateSettingsForm((prev) => ({
         ...prev,
         [field]: file,
       }));
@@ -818,24 +832,24 @@ const ContentManagement = () => {
 
   // Dynamic array management helpers
   const addToArray = (field, defaultItem) => {
-    setSettingsForm((prev) => ({
+    updateSettingsForm((prev) => ({
       ...prev,
       [field]: [...(prev[field] || []), defaultItem],
     }));
   };
 
   const removeFromArray = (field, index) => {
-    setSettingsForm((prev) => ({
+    updateSettingsForm((prev) => ({
       ...prev,
       [field]: prev[field].filter((_, i) => i !== index),
     }));
   };
 
   const updateArrayItem = (field, index, updates) => {
-    setSettingsForm((prev) => ({
+    updateSettingsForm((prev) => ({
       ...prev,
       [field]: prev[field].map((item, i) =>
-        i === index ? { ...item, ...updates } : item
+        i === index ? { ...item, ...updates } : item,
       ),
     }));
   };
@@ -932,9 +946,12 @@ const ContentManagement = () => {
                         type="text"
                         value={settingsForm.siteName || ""}
                         onChange={(e) =>
-                          setSettingsForm((prev) => ({
+                          updateSettingsForm((prev) => ({
                             ...prev,
-                            siteName: e.target.value,
+                            chartConfig: {
+                              ...prev.chartConfig,
+                              type: e.target.value,
+                            },
                           }))
                         }
                         className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -949,7 +966,7 @@ const ContentManagement = () => {
                         type="text"
                         value={settingsForm.siteTagline || ""}
                         onChange={(e) =>
-                          setSettingsForm((prev) => ({
+                          updateSettingsForm((prev) => ({
                             ...prev,
                             siteTagline: e.target.value,
                           }))
@@ -965,7 +982,7 @@ const ContentManagement = () => {
                       <textarea
                         value={settingsForm.siteDescription || ""}
                         onChange={(e) =>
-                          setSettingsForm((prev) => ({
+                          updateSettingsForm((prev) => ({
                             ...prev,
                             siteDescription: e.target.value,
                           }))
@@ -1002,7 +1019,7 @@ const ContentManagement = () => {
                                       }));
                                     }
                                   },
-                                  "danger"
+                                  "danger",
                                 );
                               }}
                               className="flex items-center gap-2 px-3 py-1.5 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors text-sm"
@@ -1064,7 +1081,7 @@ const ContentManagement = () => {
                         type="text"
                         value={settingsForm.heroTitle || ""}
                         onChange={(e) =>
-                          setSettingsForm((prev) => ({
+                          updateSettingsForm((prev) => ({
                             ...prev,
                             heroTitle: e.target.value,
                           }))
@@ -1081,7 +1098,7 @@ const ContentManagement = () => {
                         type="text"
                         value={settingsForm.heroHighlight || ""}
                         onChange={(e) =>
-                          setSettingsForm((prev) => ({
+                          updateSettingsForm((prev) => ({
                             ...prev,
                             heroHighlight: e.target.value,
                           }))
@@ -1097,7 +1114,7 @@ const ContentManagement = () => {
                       <textarea
                         value={settingsForm.heroDescription || ""}
                         onChange={(e) =>
-                          setSettingsForm((prev) => ({
+                          updateSettingsForm((prev) => ({
                             ...prev,
                             heroDescription: e.target.value,
                           }))
@@ -1350,7 +1367,7 @@ const ContentManagement = () => {
                       <select
                         value={settingsForm.chartConfig?.position || "right"}
                         onChange={(e) =>
-                          setSettingsForm((prev) => ({
+                          updateSettingsForm((prev) => ({
                             ...prev,
                             chartConfig: {
                               ...prev.chartConfig,
@@ -1378,7 +1395,7 @@ const ContentManagement = () => {
                               settingsForm.chartConfig?.enabled !== false
                             }
                             onChange={(e) =>
-                              setSettingsForm((prev) => ({
+                              updateSettingsForm((prev) => ({
                                 ...prev,
                                 chartConfig: {
                                   ...prev.chartConfig,
@@ -1480,7 +1497,7 @@ const ContentManagement = () => {
                         type="text"
                         value={settingsForm.featuresTitle || ""}
                         onChange={(e) =>
-                          setSettingsForm((prev) => ({
+                          updateSettingsForm((prev) => ({
                             ...prev,
                             featuresTitle: e.target.value,
                           }))
@@ -1495,7 +1512,7 @@ const ContentManagement = () => {
                       <textarea
                         value={settingsForm.featuresDescription || ""}
                         onChange={(e) =>
-                          setSettingsForm((prev) => ({
+                          updateSettingsForm((prev) => ({
                             ...prev,
                             featuresDescription: e.target.value,
                           }))
@@ -1647,7 +1664,7 @@ const ContentManagement = () => {
                         type="text"
                         value={settingsForm.ctaTitle || ""}
                         onChange={(e) =>
-                          setSettingsForm((prev) => ({
+                          updateSettingsForm((prev) => ({
                             ...prev,
                             ctaTitle: e.target.value,
                           }))
@@ -1663,7 +1680,7 @@ const ContentManagement = () => {
                       <textarea
                         value={settingsForm.ctaDescription || ""}
                         onChange={(e) =>
-                          setSettingsForm((prev) => ({
+                          updateSettingsForm((prev) => ({
                             ...prev,
                             ctaDescription: e.target.value,
                           }))
@@ -1772,7 +1789,7 @@ const ContentManagement = () => {
                                   <div
                                     className={`w-6 h-6 rounded-full ${value.color.replace(
                                       "text-",
-                                      "bg-"
+                                      "bg-",
                                     )}`}
                                   ></div>
                                 </div>
@@ -2073,8 +2090,12 @@ const ContentManagement = () => {
                 <div className="flex justify-end pt-6 border-t">
                   <button
                     type="submit"
-                    disabled={loading}
-                    className="flex items-center space-x-2 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 cursor-pointer"
+                    disabled={loading || !isSettingsDirty}
+                    className={`flex items-center space-x-2 px-6 py-2 rounded-lg transition-colors ${
+                      isSettingsDirty && !loading
+                        ? "bg-blue-600 text-white hover:bg-blue-700 cursor-pointer"
+                        : "bg-gray-300 text-gray-500 cursor-not-allowed"
+                    }`}
                   >
                     <Save className="w-5 h-5" />
                     <span>{loading ? "Saving..." : "Save All Settings"}</span>
@@ -2154,8 +2175,8 @@ const ContentManagement = () => {
                         {loading
                           ? "Saving..."
                           : editingFAQ
-                          ? "Update FAQ"
-                          : "Add FAQ"}
+                            ? "Update FAQ"
+                            : "Add FAQ"}
                       </span>
                     </button>
                   </div>
@@ -2302,7 +2323,7 @@ const ContentManagement = () => {
                       Object.entries(contactForm.socialMedia).map(
                         ([key, value]) => {
                           const platform = socialPlatforms.find(
-                            (p) => p.name === key
+                            (p) => p.name === key,
                           );
                           if (!platform) return null;
 
@@ -2341,7 +2362,7 @@ const ContentManagement = () => {
                               </button>
                             </div>
                           );
-                        }
+                        },
                       )}
 
                     {(!contactForm.socialMedia ||
@@ -2538,7 +2559,7 @@ const ContentManagement = () => {
                     </div>
                   </div>
 
-                  {/* Quick Links Section - ADD THIS ENTIRE BLOCK */}
+                  {/* Quick Links Section  */}
                   <div className="bg-gray-50 p-6 rounded-lg">
                     <div className="flex items-center justify-between mb-4">
                       <h3 className="text-lg font-semibold text-gray-900">
@@ -2695,7 +2716,7 @@ const ContentManagement = () => {
                                   onClick={() => {
                                     const newQuickLinks =
                                       contactForm.quickLinks.filter(
-                                        (_, i) => i !== index
+                                        (_, i) => i !== index,
                                       );
                                     // Update order values
                                     newQuickLinks.forEach((link, i) => {
@@ -2799,27 +2820,27 @@ const ContentManagement = () => {
                           <div className="flex gap-3">
                             <button
                               type="button"
-onClick={() => {
-  showConfirmModal(
-    "Clear Old Content",
-    "This will clear the old content and start fresh with the new section-based structure. Continue?",
-    () => {
-      setLegalForm((prev) => ({
-        ...prev,
-        content: "",
-        sections: [
-          {
-            id: `section-${Date.now()}`,
-            header: "1. Introduction",
-            subheaders: [],
-            order: 0,
-          },
-        ],
-      }));
-    },
-    "warning"
-  );
-}}
+                              onClick={() => {
+                                showConfirmModal(
+                                  "Clear Old Content",
+                                  "This will clear the old content and start fresh with the new section-based structure. Continue?",
+                                  () => {
+                                    setLegalForm((prev) => ({
+                                      ...prev,
+                                      content: "",
+                                      sections: [
+                                        {
+                                          id: `section-${Date.now()}`,
+                                          header: "1. Introduction",
+                                          subheaders: [],
+                                          order: 0,
+                                        },
+                                      ],
+                                    }));
+                                  },
+                                  "warning",
+                                );
+                              }}
                               className="px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 cursor-pointer text-sm font-medium"
                             >
                               Start Fresh (Clear Old Content)
@@ -3007,47 +3028,47 @@ onClick={() => {
                   {legalForm.content && (
                     <button
                       type="button"
-onClick={() => {
-  showConfirmModal(
-    "Clear All Content",
-    `Are you sure you want to completely delete this ${legalForm.type} page? This action cannot be undone.`,
-    async () => {
-      try {
-        setLoading(true);
-        await updateLegalPage(legalForm.type, {
-          ...legalForm,
-          content: "",
-          sections: [],
-          title:
-            legalForm.type === "privacy"
-              ? "Privacy Policy"
-              : "Terms of Service",
-        });
+                      onClick={() => {
+                        showConfirmModal(
+                          "Clear All Content",
+                          `Are you sure you want to completely delete this ${legalForm.type} page? This action cannot be undone.`,
+                          async () => {
+                            try {
+                              setLoading(true);
+                              await updateLegalPage(legalForm.type, {
+                                ...legalForm,
+                                content: "",
+                                sections: [],
+                                title:
+                                  legalForm.type === "privacy"
+                                    ? "Privacy Policy"
+                                    : "Terms of Service",
+                              });
 
-        setLegalForm({
-          type: legalForm.type,
-          title:
-            legalForm.type === "privacy"
-              ? "Privacy Policy"
-              : "Terms of Service",
-          sections: [],
-          content: "",
-          metadata: {
-            effectiveDate: null,
-            lastReviewedDate: null,
-          },
-        });
+                              setLegalForm({
+                                type: legalForm.type,
+                                title:
+                                  legalForm.type === "privacy"
+                                    ? "Privacy Policy"
+                                    : "Terms of Service",
+                                sections: [],
+                                content: "",
+                                metadata: {
+                                  effectiveDate: null,
+                                  lastReviewedDate: null,
+                                },
+                              });
 
-        toast.success("Legal page cleared successfully");
-      } catch (error) {
-        toast.error("Failed to clear legal page");
-      } finally {
-        setLoading(false);
-      }
-    },
-    "danger"
-  );
-}}
+                              toast.success("Legal page cleared successfully");
+                            } catch (error) {
+                              toast.error("Failed to clear legal page");
+                            } finally {
+                              setLoading(false);
+                            }
+                          },
+                          "danger",
+                        );
+                      }}
                       disabled={loading}
                       className="flex items-center space-x-2 px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 cursor-pointer"
                     >
@@ -3197,14 +3218,14 @@ onClick={() => {
           </div>
         </div>
       </div>
-          <ConfirmModal
-      isOpen={confirmModal.isOpen}
-      onClose={closeConfirmModal}
-      onConfirm={confirmModal.onConfirm}
-      title={confirmModal.title}
-      message={confirmModal.message}
-      type={confirmModal.type}
-    />
+      <ConfirmModal
+        isOpen={confirmModal.isOpen}
+        onClose={closeConfirmModal}
+        onConfirm={confirmModal.onConfirm}
+        title={confirmModal.title}
+        message={confirmModal.message}
+        type={confirmModal.type}
+      />
     </div>
   );
 };
