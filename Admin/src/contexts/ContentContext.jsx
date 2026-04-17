@@ -45,7 +45,7 @@ export const ContentProvider = ({ children }) => {
     },
     (error) => {
       return Promise.reject(error);
-    }
+    },
   );
 
   // ADD THIS ENTIRE RESPONSE INTERCEPTOR
@@ -73,7 +73,7 @@ export const ContentProvider = ({ children }) => {
         // Prevent infinite retry loop
         if (originalRequest._signatureRetry) {
           console.error(
-            "[CONTENT_CONTEXT] Signature retry failed - clearing auth"
+            "[CONTENT_CONTEXT] Signature retry failed - clearing auth",
           );
           adminRequestSigner.clearSigningSecret();
           localStorage.removeItem("currentUser");
@@ -96,7 +96,7 @@ export const ContentProvider = ({ children }) => {
             }/security/signing-secret`,
             {
               withCredentials: true,
-            }
+            },
           );
 
           if (!secretResponse.data.success) {
@@ -107,7 +107,7 @@ export const ContentProvider = ({ children }) => {
           adminRequestSigner.setSigningSecret(signingSecret, expiresIn);
 
           console.log(
-            "[CONTENT_CONTEXT] Signing secret refreshed successfully"
+            "[CONTENT_CONTEXT] Signing secret refreshed successfully",
           );
 
           // Remove retry flag
@@ -119,7 +119,7 @@ export const ContentProvider = ({ children }) => {
         } catch (signatureError) {
           console.error(
             "[CONTENT_CONTEXT] Signature refresh failed:",
-            signatureError
+            signatureError,
           );
           adminRequestSigner.clearSigningSecret();
 
@@ -155,9 +155,8 @@ export const ContentProvider = ({ children }) => {
       }
 
       return Promise.reject(error);
-    }
+    },
   );
-
 
   // Fetch Content Settings
   const fetchContentSettings = async () => {
@@ -182,12 +181,13 @@ export const ContentProvider = ({ children }) => {
     try {
       setLoading(true);
       const formData = new FormData();
-
       Object.keys(data).forEach((key) => {
         if (key === "logo" || key === "favicon") {
+          // only append if it is an actual file — skip object/null values
           if (data[key] instanceof File) {
             formData.append(key, data[key]);
           }
+          // do not send logo object as json; backend manages it via req.files
         } else if (typeof data[key] === "object" && data[key] !== null) {
           formData.append(key, JSON.stringify(data[key]));
         } else if (data[key] !== null && data[key] !== undefined) {
@@ -326,7 +326,7 @@ export const ContentProvider = ({ children }) => {
     } catch (error) {
       console.error("Error updating FAQ order:", error);
       toast.error(
-        error.response?.data?.message || "Failed to update FAQ order"
+        error.response?.data?.message || "Failed to update FAQ order",
       );
       return { success: false };
     } finally {
@@ -366,7 +366,7 @@ export const ContentProvider = ({ children }) => {
     } catch (error) {
       console.error("Error updating contact info:", error);
       toast.error(
-        error.response?.data?.message || "Failed to update contact info"
+        error.response?.data?.message || "Failed to update contact info",
       );
       return { success: false };
     } finally {
@@ -413,7 +413,7 @@ export const ContentProvider = ({ children }) => {
     } catch (error) {
       console.error("Error updating section order:", error);
       toast.error(
-        error.response?.data?.message || "Failed to update section order"
+        error.response?.data?.message || "Failed to update section order",
       );
       return { success: false };
     } finally {
@@ -444,7 +444,7 @@ export const ContentProvider = ({ children }) => {
     } catch (error) {
       console.error("Error updating legal page:", error);
       toast.error(
-        error.response?.data?.message || "Failed to update legal page"
+        error.response?.data?.message || "Failed to update legal page",
       );
       return { success: false };
     } finally {
