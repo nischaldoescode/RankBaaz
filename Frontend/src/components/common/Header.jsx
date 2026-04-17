@@ -309,7 +309,7 @@ const Header = () => {
             )}
             <div className="hidden sm:block">
               <h1 className="text-lg font-bold text-foreground">
-                {contentSettings?.siteName || "RankBaaz Pro"}
+                {contentSettings?.siteName || "Vidhgrow"}
               </h1>
             </div>
           </Link>
@@ -396,7 +396,7 @@ const Header = () => {
                                 </div>
                               )}
                               <SheetTitle className="text-lg">
-                                {contentSettings?.siteName || "RankBaaz"}
+                                {contentSettings?.siteName || "Vidhgrow"}
                               </SheetTitle>
                             </div>
                           </SheetHeader>
@@ -563,7 +563,7 @@ const Header = () => {
                                 />
                               </div>
                               <SheetTitle className="text-lg">
-                                {contentSettings?.siteName || "RankBaaz"}
+                                {contentSettings?.siteName || "Vidhgrow"}
                               </SheetTitle>
                             </div>
                           </SheetHeader>

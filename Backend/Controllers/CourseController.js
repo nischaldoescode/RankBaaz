@@ -2675,7 +2675,7 @@ export const downloadCoursePDF = async (req, res) => {
     const pdfBuffer = await pdfService.generateCoursePDF(course);
 
     // Set response headers
-    const filename = `RankBaaz_Course_${course.name.replace(/[^a-z0-9]/gi, "_")}_${
+    const filename = `Vidhgrow_Course_${course.name.replace(/[^a-z0-9]/gi, "_")}_${
       new Date().toISOString().split("T")[0]
     }.pdf`;
 

@@ -5,7 +5,7 @@ const contentSettingsSchema = new mongoose.Schema({
   // Site Identity
   siteName: {
     type: String,
-    default: 'RankBaaz Pro',
+    default: 'Vidhgrow',
     required: true,
   },
   siteTagline: {
@@ -82,7 +82,7 @@ const contentSettingsSchema = new mongoose.Schema({
   // Features Section for Home Page
   featuresTitle: {
     type: String,
-    default: 'Why Choose RankBaaz Pro',
+    default: 'Why Choose Vidhgrow',
   },
   featuresDescription: {
     type: String,

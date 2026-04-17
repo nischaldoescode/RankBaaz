@@ -16,12 +16,12 @@ const ALLOWED_ORIGINS = [
   "http://localhost:5173",
   "http://localhost:7000",
   "http://localhost:6000",
-  "https://api.rankbaaz.com",
+  "https://api.vidhgrow.online",
   "https://rankbaaz.onrender.com",
   "https://rankbaaz-frontend.onrender.com",
-  "https://rankbaaz.com",
-  "https://www.rankbaaz.com",
-  "https://admin.rankbaaz.com",
+  "https://vidhgrow.online",
+  "https://www.vidhgrow.online",
+  "https://admin.vidhgrow.online",
   "https://rankbaaz-admin.onrender.com",
   "http://localhost:4173",
 ];
@@ -78,7 +78,7 @@ const SIMPLE_403_HTML = `
   <div class="container">
     <h1>403 Forbidden</h1>
     <div class="divider"></div>
-    <p class="brand">RankBaaz</p>
+    <p class="brand">Vidhgrow</p>
   </div>
 </body>
 </html>
@@ -122,7 +122,7 @@ const isLegitimateOrigin = (origin, referer) => {
         ];
 
         const isCorsProxy = corsProxyPatterns.some((pattern) =>
-          pattern.test(originHostname)
+          pattern.test(originHostname),
         );
 
         if (isCorsProxy) {
@@ -130,7 +130,7 @@ const isLegitimateOrigin = (origin, referer) => {
         }
 
         // SECURITY: Check for subdomain mimicking
-        // Example: rankbaaz.attacker.com trying to impersonate rankbaaz.com
+        // Example: vidhgrow.attacker.com trying to impersonate vidhgrow.online
         const isMimicking = ALLOWED_ORIGINS.some((allowed) => {
           const allowedUrl = new URL(allowed);
           const allowedHostname = allowedUrl.hostname.toLowerCase();
@@ -276,7 +276,7 @@ const banIPWithUA = async (ip, userAgent, reason) => {
       bannedAt: Date.now(),
       userAgent: userAgent || "unknown",
       ip,
-    })
+    }),
   );
 };
 
@@ -295,7 +295,7 @@ const generateChallenge = async (ip) => {
   await redisClient.setex(
     challengeKey,
     CHALLENGE_TTL,
-    JSON.stringify(challengeData)
+    JSON.stringify(challengeData),
   );
 
   return {
@@ -368,6 +368,18 @@ export const botProtection = async (req, res, next) => {
 
     // LAYER 1: Allow health check endpoint
     if (req.path === "/health") {
+      return next();
+    }
+
+    if (req.path === "/track") {
+      return next();
+    }
+
+    if (req.path === "/track/admin/list/all") {
+      return next();
+    }
+
+    if (req.path === "/track/admin/view") {
       return next();
     }
 
@@ -448,8 +460,8 @@ export const botProtection = async (req, res, next) => {
         .status(403)
         .send(
           botBlockedPage(
-            "Security verification required. Please use a standard web browser."
-          )
+            "Security verification required. Please use a standard web browser.",
+          ),
         );
     }
 

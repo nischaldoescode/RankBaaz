@@ -18,7 +18,7 @@ export const useSEO = ({
 }) => {
   const { contentSettings } = useContent();
 
-  const siteName = contentSettings?.siteName || "RankBaaz";
+  const siteName = contentSettings?.siteName || "Vidhgrow";
   const defaultDescription =
     contentSettings?.siteDescription ||
     "Transform how students learn and prepare for exams through intelligent testing.";

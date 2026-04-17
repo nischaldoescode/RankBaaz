@@ -395,7 +395,7 @@ export const AuthProvider = ({ children }) => {
         payload: { user, token: null },
       });
 
-      toast.success(`Welcome to RankBaaz, ${user.name}!`);
+      toast.success(`Welcome to Vidhgrow, ${user.name}!`);
       return { success: true, user };
     } catch (error) {
       const errorMessage = handleApiError(error, "Registration failed");
@@ -439,7 +439,7 @@ export const AuthProvider = ({ children }) => {
             payload: { user, token: null },
           });
 
-          toast.success(`Welcome to RankBaaz Pro, ${user.name}!`);
+          toast.success(`Welcome to Vidhgrow, ${user.name}!`);
           return { success: true, user };
         }
 

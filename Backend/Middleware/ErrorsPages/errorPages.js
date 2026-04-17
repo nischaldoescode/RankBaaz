@@ -13,7 +13,7 @@ export const botBlockedPage = (reason = "Security verification required") => {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Access Restricted - RankBaaz</title>
+    <title>Access Restricted - Vidhgrow</title>
     <style>
         * {
             margin: 0;
@@ -139,7 +139,7 @@ export const botBlockedPage = (reason = "Security verification required") => {
             <div class="status-code">403</div>
             <div class="status-text">Access Forbidden</div>
             <div class="divider"></div>
-            <div class="brand">RankBaaz</div>
+            <div class="brand">Vidhgrow</div>
         </div>
 
     </div>

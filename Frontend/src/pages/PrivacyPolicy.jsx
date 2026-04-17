@@ -27,12 +27,12 @@ const PrivacyPolicy = () => {
   useSEO({
     title: page?.title || "Privacy Policy",
     description: `Read ${
-      contentSettings?.siteName || "RankBaaz Pro"
+      contentSettings?.siteName || "Vidhgrow"
     }'s Privacy Policy to understand how we collect, use, and protect your personal information.`,
     keywords:
       "privacy policy, data protection, personal information, privacy rights, GDPR, user privacy",
     type: "article",
-    author: contentSettings?.siteName || "RankBaaz Pro",
+    author: contentSettings?.siteName || "Vidhgrow",
     publishedTime: page?.metadata?.effectiveDate,
     modifiedTime: page?.lastUpdated,
     canonicalUrl: `${
@@ -44,7 +44,7 @@ const PrivacyPolicy = () => {
       "@type": "WebPage",
       name: page?.title || "Privacy Policy",
       description: `Privacy Policy for ${
-        contentSettings?.siteName || "RankBaaz Pro"
+        contentSettings?.siteName || "Vidhgrow"
       }`,
       url: window.location.href,
       datePublished: page?.metadata?.effectiveDate,
@@ -52,12 +52,12 @@ const PrivacyPolicy = () => {
       inLanguage: "en-US",
       isPartOf: {
         "@type": "WebSite",
-        name: contentSettings?.siteName || "RankBaaz Pro",
+        name: contentSettings?.siteName || "Vidhgrow",
         url: contentSettings?.siteUrl || window.location.origin,
       },
       publisher: {
         "@type": "Organization",
-        name: contentSettings?.siteName || "RankBaaz Pro",
+        name: contentSettings?.siteName || "Vidhgrow",
         logo: {
           "@type": "ImageObject",
           url:

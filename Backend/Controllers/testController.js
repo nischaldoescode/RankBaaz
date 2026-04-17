@@ -902,7 +902,7 @@ export const downloadTestPDF = async (req, res) => {
     }
 
     // Set response headers
-    const filename = `RankBaaz_${testResult.course.name.replace(/[^a-z0-9]/gi, "_")}_${
+    const filename = `Vidhgrow_${testResult.course.name.replace(/[^a-z0-9]/gi, "_")}_${
       new Date().toISOString().split("T")[0]
     }.pdf`;
 

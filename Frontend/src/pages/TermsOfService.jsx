@@ -29,12 +29,12 @@ const TermsOfService = () => {
   useSEO({
     title: page?.title || "Terms of Service",
     description: `Read ${
-      contentSettings?.siteName || "RankBaazro"
+      contentSettings?.siteName || "Vidhgrow"
     }'s Terms of Service to understand the rules and regulations for using our platform.`,
     keywords:
       "terms of service, terms and conditions, user agreement, terms of use, legal agreement, service rules",
     type: "article",
-    author: contentSettings?.siteName || "RankBaazro",
+    author: contentSettings?.siteName || "Vidhgrow",
     publishedTime: page?.metadata?.effectiveDate,
     modifiedTime: page?.lastUpdated,
     canonicalUrl: `${contentSettings?.siteUrl || window.location.origin}/terms`,
@@ -43,7 +43,7 @@ const TermsOfService = () => {
       "@type": "WebPage",
       name: page?.title || "Terms of Service",
       description: `Terms of Service for ${
-        contentSettings?.siteName || "RankBaaz Pro"
+        contentSettings?.siteName || "Vidhgrow"
       }`,
       url: window.location.href,
       datePublished: page?.metadata?.effectiveDate,
@@ -51,12 +51,12 @@ const TermsOfService = () => {
       inLanguage: "en-US",
       isPartOf: {
         "@type": "WebSite",
-        name: contentSettings?.siteName || "RankBaaz Pro",
+        name: contentSettings?.siteName || "Vidhgrow",
         url: contentSettings?.siteUrl || window.location.origin,
       },
       publisher: {
         "@type": "Organization",
-        name: contentSettings?.siteName || "RankBaaz Pro",
+        name: contentSettings?.siteName || "Vidhgrow",
         logo: {
           "@type": "ImageObject",
           url:
