@@ -446,6 +446,24 @@ app.get("/sitemap-profiles.xml", async (req, res) => {
   }
 });
 
+// Apply express-fileupload ONLY to routes that need it
+app.use((req, res, next) => {
+  // Skip express-fileupload for course routes (they use multer)
+  if (req.path.startsWith("/api/courses")) {
+    return next();
+  }
+
+  // Apply express-fileupload to all other routes
+  fileUpload({
+    useTempFiles: true,
+    tempFileDir: "/tmp/",
+    // 10 MB file size limit
+    limits: { fileSize: 10 * 1024 * 1024 },
+
+    abortOnLimit: true,
+    createParentPath: true,
+  })(req, res, next);
+});
 /**
  * CORS preflight handler
  */
@@ -499,9 +517,8 @@ app.get("/", (req, res) => {
   }
 });
 
-// =============================================================================
+
 // 404 HANDLER
-// =============================================================================
 app.use("*", (req, res) => {
   res.status(404).json({
     success: false,
@@ -517,7 +534,7 @@ app.use("*", (req, res) => {
 });
 
 /**
- * CRITICAL: Public routes that bypass signature validation
+ * Public routes that bypass signature validation
  *
  * Two categories:
  * 1. Unauthenticated public routes (login, register, etc.)
@@ -561,7 +578,7 @@ app.use((req, res, next) => {
   // EXEMPTION 1: Check if route is in public routes list
   if (publicRoutes.includes(req.path)) {
     console.log(
-      "[SIGNATURE] Bypassing signature check for public route:",
+      "Bypassing signature check for public route:",
       req.path,
     );
     return next();
@@ -596,7 +613,7 @@ app.use((req, res, next) => {
 
     // Validate nonce format (must be exactly 32 hex characters)
     if (!/^[0-9a-f]{32}$/i.test(nonce)) {
-      console.warn("[SIGNATURE] Invalid nonce format:", {
+      console.warn("Invalid nonce format:", {
         nonce: nonce.substring(0, 10) + "...",
         path: req.path,
       });
@@ -607,7 +624,7 @@ app.use((req, res, next) => {
     // Validate timestamp format
     const requestTime = parseInt(timestamp);
     if (isNaN(requestTime)) {
-      console.warn("[SIGNATURE] Invalid timestamp format:", {
+      console.warn("Invalid timestamp format:", {
         timestamp,
         path: req.path,
       });
@@ -620,7 +637,7 @@ app.use((req, res, next) => {
     const timeDiff = Math.abs(now - requestTime);
 
     if (timeDiff > 5 * 60 * 1000) {
-      console.warn("[SIGNATURE] Timestamp expired:", {
+      console.warn("Timestamp expired:", {
         diffSeconds: Math.floor(timeDiff / 1000),
         path: req.path,
       });
@@ -711,7 +728,7 @@ app.use((req, res, next) => {
     const hasSignature = !!req.headers["x-request-signature"];
 
     if (!origin && !referer) {
-      console.warn("[SECURITY] Blocked direct public GET access:", {
+      console.warn("Blocked direct public GET access:", {
         path: req.path,
         ip: req.ip,
       });
@@ -799,7 +816,7 @@ app.use((req, res, next) => {
     return next();
   }
 
-  // CRITICAL: From this point, ALL routes require valid origin + signature
+  // From this point, ALL routes require valid origin + signature
 
   const origin = req.get("Origin");
   const referer = req.get("Referer");
@@ -932,29 +949,10 @@ app.use((req, res, next) => {
   next();
 });
 
-// Apply express-fileupload ONLY to routes that need it
-app.use((req, res, next) => {
-  // Skip express-fileupload for course routes (they use multer)
-  if (req.path.startsWith("/api/courses")) {
-    return next();
-  }
 
-  // Apply express-fileupload to all other routes
-  fileUpload({
-    useTempFiles: true,
-    tempFileDir: "/tmp/",
-    // 10 MB file size limit
-    limits: { fileSize: 10 * 1024 * 1024 },
-
-    abortOnLimit: true,
-    createParentPath: true,
-  })(req, res, next);
-});
-
-// CRITICAL: Add request logging to debug what's happening
+// From this point, ALL routes require valid origin + signature
 if (process.env.NODE_ENV === "development") {
   app.use((req, res, next) => {
-    console.log("\n[REQUEST_DEBUG] ===================================");
     console.log("[REQUEST_DEBUG] Method:", req.method);
     console.log("[REQUEST_DEBUG] Path:", req.path);
     console.log(
@@ -970,7 +968,6 @@ if (process.env.NODE_ENV === "development") {
       "[REQUEST_DEBUG] User-Agent:",
       req.get("User-Agent")?.substring(0, 50) || "none",
     );
-    console.log("[REQUEST_DEBUG] ===================================\n");
     next();
   });
 }
@@ -982,7 +979,6 @@ app.use((error, req, res, next) => {
   const acceptsJson = req.get("Accept")?.includes("application/json");
   const isApiRoute = req.path.startsWith("/api/");
 
-  // CORS error
   // CORS error - Enhanced security for production
   if (error.message === "Not allowed by CORS") {
     // Check if request has no origin/referer (suspicious)
