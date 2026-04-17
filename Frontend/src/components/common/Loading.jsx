@@ -12,6 +12,7 @@ const Loading = ({
 
   // Button spinner for small loading states
   if (variant === 'button') {
+    
     return (
       <motion.div
         animate={animations && !reducedMotion ? { rotate: 360 } : {}}
