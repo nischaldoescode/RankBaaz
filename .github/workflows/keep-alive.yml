@@ -13,4 +13,4 @@ jobs:
       - name: Keep Backend Awake
         run: |
           echo "Pinging Render backend to prevent sleep..."
-          curl -s -o /dev/null -w "%{http_code}\n" https://api.rankbaaz.com || true
+          curl -s -o /dev/null -w "%{http_code}\n" https://api.vidhgrow.online || true

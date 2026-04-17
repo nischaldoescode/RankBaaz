@@ -165,7 +165,7 @@ const PaymentModal = ({ isOpen, onClose, course, onSuccess }) => {
       amount: orderData.amount,
       currency: orderData.currency,
       order_id: orderData.orderId,
-      name: "RankBaaz",
+      name: "Vidhgrow",
       description: `Purchase ${orderData.courseName}`,
       image: orderData.courseImage || "/logo.png",
 

@@ -24,12 +24,12 @@ const Footer = () => {
   const currentYear = new Date().getFullYear();
 
   // Get dynamic data
-  const siteName = contentSettings?.siteName || "RankBaaz Pro";
+  const siteName = contentSettings?.siteName || "Vidhgrow";
   const footerDescription =
     contactInfo?.footerDescription ||
     "Empowering students with comprehensive test preparation and learning management tools. Master your exams with confidence.";
   const copyrightText = (
-    contactInfo?.copyrightText || "© {year} RankBaaz Pro. All rights reserved."
+    contactInfo?.copyrightText || "© {year} Vidhgrow. All rights reserved."
   ).replace("{year}", currentYear);
 
   const quickLinks =

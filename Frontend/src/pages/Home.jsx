@@ -73,9 +73,9 @@ const Home = () => {
       contentSettings?.seoTitle || "Advanced Online Learning & Test Platform",
     description:
       contentSettings?.seoDescription ||
-      "Master your skills with RankBaaz's interactive courses, personalized assessments, and real-time progress tracking.",
+      "Master your skills with Vidhgrow's interactive courses, personalized assessments, and real-time progress tracking.",
     keywords:
-      "rankbaaz, online learning, test preparation, courses, exams, practice tests",
+      "vidhgrow, online learning, test preparation, courses, exams, practice tests",
     type: "website",
 
     canonicalUrl: `${contentSettings?.siteUrl || window.location.origin}/`,
@@ -396,7 +396,7 @@ const Home = () => {
             <h2 className="text-3xl lg:text-4xl font-bold mb-4">
               {contentSettings?.featuresTitle || "Why Choose"}{" "}
               <span className="text-primary">
-                {contentSettings?.siteName || "RankBaaz"}
+                {contentSettings?.siteName || "Vidhgrow"}
               </span>
             </h2>
             <p className="text-xl text-muted-foreground max-w-3xl mx-auto">

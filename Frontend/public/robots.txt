@@ -1,6 +1,6 @@
-Sitemap: https://rankbaaz.com/sitemap.xml
+Sitemap: https://vidhgrow.online/sitemap.xml
 Sitemap: https://rankbaaz.onrender.com/sitemap-profiles.xml
-Sitemap: https://rankbaaz.com/sitemap-static.xml
+Sitemap: https://vidhgrow.online/sitemap-static.xml
 
 # Allow all good bots
 User-agent: *

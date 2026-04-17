@@ -670,7 +670,7 @@ export const TestProvider = ({ children }) => {
 
       // Extract filename from Content-Disposition header
       const contentDisposition = pdfResponse.headers["content-disposition"];
-      let filename = `RankBaaz_Test_${
+      let filename = `Vidhgrow_Test_${
         new Date().toISOString().split("T")[0]
       }.pdf`;
 

@@ -130,7 +130,7 @@ const Sidebar = ({ isOpen, onClose }) => {
                 {/* Logo Image */}
                 <img
                   src="/logo.png"
-                  alt="RankBaaz Logo"
+                  alt="Vidhgrow Logo"
                   className="w-full h-full object-contain p-3 rounded-3xl"
                   onError={(e) => {
                     // Fallback to icon if image fails to load
@@ -140,7 +140,7 @@ const Sidebar = ({ isOpen, onClose }) => {
                 />
                 <div className="ml-3 min-w-0 flex-1 break-words">
                   <h2 className="text-lg sm:text-xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">
-                    RankBaaz
+                    Vidhgrow
                   </h2>
                   <p className="text-xs text-gray-500 font-medium truncate">
                     Admin Panel

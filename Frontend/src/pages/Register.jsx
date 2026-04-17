@@ -87,7 +87,7 @@ const Register = () => {
   useSEO({
     title: "Register",
     description: `Create your free ${
-      contentSettings?.siteName || "RankBaaz Pro"
+      contentSettings?.siteName || "Vidhgrow"
     } account and start your learning journey today. Access courses, take tests, and track your progress.`,
     keywords:
       "register, sign up, create account, student registration, free account, join now, new user",
@@ -99,12 +99,12 @@ const Register = () => {
       "@type": "WebPage",
       name: "Register",
       description: `Create a free account on ${
-        contentSettings?.siteName || "RankBaaz Pro"
+        contentSettings?.siteName || "Vidhgrow"
       }`,
       url: window.location.href,
       isPartOf: {
         "@type": "WebSite",
-        name: contentSettings?.siteName || "RankBaaz Pro",
+        name: contentSettings?.siteName || "Vidhgrow",
         url: contentSettings?.siteUrl || window.location.origin,
       },
       potentialAction: {

@@ -14,7 +14,7 @@ const Contact = () => {
   useSEO({
     title: "Contact Us",
     description: `Get in touch with ${
-      contentSettings?.siteName || "RankBaaz"
+      contentSettings?.siteName || "Vidhgrow"
     }. We're here to help with your questions and support needs.`,
     keywords: "contact, support, help, customer service",
     type: "website",

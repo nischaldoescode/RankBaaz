@@ -674,7 +674,7 @@ export const verifyOTP = async (req, res) => {
     };
 
     if (process.env.NODE_ENV === "production") {
-      cookieOptions.domain = ".rankbaaz.com";
+      cookieOptions.domain = ".vidhgrow.online";
     }
 
     if (process.env.NODE_ENV === "development") {
@@ -706,7 +706,7 @@ export const verifyOTP = async (req, res) => {
     };
 
     if (process.env.NODE_ENV === "production") {
-      refreshCookieOptions.domain = ".rankbaaz.com";
+      refreshCookieOptions.domain = ".vidhgrow.online";
     }
 
     if (process.env.NODE_ENV === "development") {
@@ -1062,8 +1062,8 @@ export const login = async (req, res) => {
 
     if (process.env.NODE_ENV === "production") {
       const hostname = req.hostname || req.get("host");
-      if (hostname && hostname.includes("rankbaaz.com")) {
-        cookieOptions.domain = ".rankbaaz.com";
+      if (hostname && hostname.includes("vidhgrow.online")) {
+        cookieOptions.domain = ".vidhgrow.online";
       }
     }
 
@@ -1087,8 +1087,8 @@ export const login = async (req, res) => {
 
     if (process.env.NODE_ENV === "production") {
       const hostname = req.hostname || req.get("host");
-      if (hostname && hostname.includes("rankbaaz.com")) {
-        refreshCookieOptions.domain = ".rankbaaz.com";
+      if (hostname && hostname.includes("vidhgrow.online")) {
+        refreshCookieOptions.domain = ".vidhgrow.online";
       }
     }
 

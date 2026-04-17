@@ -894,7 +894,7 @@ class PDFService {
       const response = await fetch(imageUrl, {
         timeout: 10000, // 10 second timeout
         headers: {
-          "User-Agent": "RankBaaz-PDF-Service/1.0",
+          "User-Agent": "Vidhgrow-PDF-Service/1.0",
         },
       });
 
@@ -954,11 +954,11 @@ class PDFService {
             bufferPages: true, // Enable page buffering for better performance
             info: {
               Title: `${course.name} - Test Result`,
-              Author: "RankBaaz",
+              Author: "Vidhgrow",
               Subject: "Test Result Report",
               Keywords: "test, result, report, education",
-              Producer: "RankBaaz PDF Service v1.0",
-              Creator: "RankBaaz Platform",
+              Producer: "Vidhgrow PDF Service v1.0",
+              Creator: "Vidhgrow Platform",
             },
           });
 
@@ -972,7 +972,7 @@ class PDFService {
 
           /**
            * Add watermark to current page
-           * Semi-transparent "RankBaaz" text rotated 45 degrees
+           * Semi-transparent "Vidhgrow" text rotated 45 degrees
            */
           const addWatermark = () => {
             doc.save();
@@ -983,7 +983,7 @@ class PDFService {
               .rotate(-45, {
                 origin: [doc.page.width / 2, doc.page.height / 2],
               })
-              .text("RankBaaz", 0, doc.page.height / 2, {
+              .text("Vidhgrow", 0, doc.page.height / 2, {
                 align: "center",
                 lineBreak: false,
               });
@@ -1472,7 +1472,7 @@ class PDFService {
             .fontSize(12)
             .font("Helvetica-Oblique")
             .fillColor("#9ca3af")
-            .text("Keep learning and improving with RankBaaz!", 0, doc.y, {
+            .text("Keep learning and improving with Vidhgrow!", 0, doc.y, {
               align: "center",
               width: doc.page.width,
             });
@@ -1530,10 +1530,10 @@ class PDFService {
             bufferPages: true,
             info: {
               Title: `${course.name} - Course Information`,
-              Author: "RankBaaz Admin",
+              Author: "Vidhgrow Admin",
               Subject: "Course Data Export",
               Keywords: "course, export, admin, education",
-              Producer: "RankBaaz PDF Service v1.0",
+              Producer: "Vidhgrow PDF Service v1.0",
             },
           });
 
@@ -1556,7 +1556,7 @@ class PDFService {
               .rotate(-45, {
                 origin: [doc.page.width / 2, doc.page.height / 2],
               })
-              .text("RankBaaz Admin", 0, doc.page.height / 2, {
+              .text("Vidhgrow Admin", 0, doc.page.height / 2, {
                 align: "center",
                 lineBreak: false,
               });
@@ -1990,7 +1990,7 @@ class PDFService {
             .font("Helvetica")
             .fillColor("#6b7280")
             .text(
-              "This course data was exported by RankBaaz Admin Panel",
+              "This course data was exported by Vidhgrow Admin Panel",
               0,
               doc.y,
               {

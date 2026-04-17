@@ -27,6 +27,7 @@ import session from "express-session";
 import { corsErrorPage } from "./Middleware/ErrorsPages/errorPages.js";
 import securityRoutes from "./Routes/securityRoutes.js";
 import RedisStore from "connect-redis";
+import trackingRoutes from "./Routes/trackingRoutes.js";
 
 // Load environment variables
 dotenv.config();
@@ -84,7 +85,7 @@ const createRateLimiter = (options) => {
   });
 
   console.log(
-    `Rate limiter '${options.prefix}' initialized - Max: ${options.max} requests per ${options.windowMs / 1000}s`
+    `Rate limiter '${options.prefix}' initialized - Max: ${options.max} requests per ${options.windowMs / 1000}s`,
   );
 
   return async (req, res, next) => {
@@ -132,12 +133,12 @@ const corsOptions = {
       "http://localhost:5173",
       "http://localhost:7000",
       "http://localhost:6000",
-      "https://api.rankbaaz.com",
+      "https://api.vidhgrow.online",
       "https://rankbaaz.onrender.com",
       "https://rankbaaz-frontend.onrender.com",
-      "https://rankbaaz.com",
-      "https://www.rankbaaz.com",
-      "https://admin.rankbaaz.com",
+      "https://vidhgrow.online",
+      "https://www.vidhgrow.online",
+      "https://admin.vidhgrow.online",
       "https://rankbaaz-admin.onrender.com",
       "https://rankbaaz.onrender.com",
       "https://rankbaaz.onrender.com/",
@@ -155,7 +156,7 @@ const corsOptions = {
 
     // Check for exact match
     const isAllowed = allowedOrigins.some(
-      (allowed) => allowed.replace(/\/$/, "") === normalizedOrigin
+      (allowed) => allowed.replace(/\/$/, "") === normalizedOrigin,
     );
 
     if (isAllowed) {
@@ -213,7 +214,7 @@ app.use(
         defaultSrc: ["'self'"],
         scriptSrc: [
           "'self'",
-          "'unsafe-inline'",         
+          "'unsafe-inline'",
           "https://cdn.vidstack.io",
           "https://www.youtube.com",
           "https://player.vimeo.com",
@@ -247,27 +248,27 @@ app.use(
           "https://player.vimeo.com",
           "https://rankbaaz.onrender.com",
           "wss://rankbaaz.onrender.com",
-          "https://rankbaaz.com",
-          "wss://rankbaaz.com",
+          "https://http://vidhgrow.online/",
+          "wss://vidhgrow.online",
           "razorpay.com",
           "api.razorpay.com",
           "https://api.razorpay.com",
           "https://checkout.razorpay.com",
-          "https://rankbaaz.com/",
+          "https://vidhgrow.online/",
         ],
         workerSrc: ["'self'", "blob:"],
       },
     },
     crossOriginResourcePolicy: { policy: "same-site" },
     frameguard: { action: "sameorigin" },
-  })
+  }),
 );
 
 app.use(
   helmet.hsts({
     maxAge: 31536000,
     includeSubDomains: true,
-  })
+  }),
 );
 
 app.use(compression());
@@ -291,13 +292,13 @@ app.use(
       sameSite: "lax",
       path: "/",
       ...(process.env.NODE_ENV === "production" && {
-        domain: ".rankbaaz.com",
+        domain: ".vidhgrow.online",
         secure: true,
         sameSite: "lax",
       }),
     },
     name: "sid",
-  })
+  }),
 );
 
 if (process.env.NODE_ENV === "development") {
@@ -309,8 +310,6 @@ if (process.env.NODE_ENV === "development") {
     store: "Redis",
   });
 }
-
-// console.log(`✓ Session middleware configured for ${process.env.NODE_ENV}`);
 
 /**
  * HELPER: Generate simple 403 HTML page
@@ -364,7 +363,7 @@ const getSimple403HTML = () => {
   <div class="container">
     <h1>403 Forbidden</h1>
     <div class="divider"></div>
-    <p class="brand">RankBaaz</p>
+    <p class="brand">Vidhgrow</p>
   </div>
 </body>
 </html>
@@ -415,7 +414,7 @@ app.get("/sitemap-profiles.xml", async (req, res) => {
       .lean()
       .limit(50000);
 
-    const siteUrl = process.env.SITE_URL || "https://rankbaaz.com";
+    const siteUrl = process.env.SITE_URL || "https://vidhgrow.online";
 
     const sitemap = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
@@ -427,7 +426,7 @@ app.get("/sitemap-profiles.xml", async (req, res) => {
     <lastmod>${new Date(user.updatedAt).toISOString().split("T")[0]}</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
-  </url>`
+  </url>`,
     )
     .join("")}
 </urlset>`;
@@ -471,6 +470,7 @@ app.use("/api/content", contentRoutes);
 app.use("/api/payments", paymentRoutes);
 app.use("/api/coupons", couponLimiter, couponRoutes);
 app.use("/api/devtools", devToolsRoutes);
+app.use("/track", trackingRoutes);
 
 /**
  * Root endpoint - Minimal response for security
@@ -562,7 +562,7 @@ app.use((req, res, next) => {
   if (publicRoutes.includes(req.path)) {
     console.log(
       "[SIGNATURE] Bypassing signature check for public route:",
-      req.path
+      req.path,
     );
     return next();
   }
@@ -666,6 +666,9 @@ app.use((req, res, next) => {
 
   // EXEMPTION 3: Sitemap for SEO
   if (req.path === "/sitemap-profiles.xml") {
+    return next();
+  }
+  if (req.path.startsWith("/track/") && req.method === "GET") {
     return next();
   }
 
@@ -786,7 +789,7 @@ app.use((req, res, next) => {
           <div class="container">
             <h1>403 Forbidden</h1>
             <div class="divider"></div>
-            <p class="brand">RankBaaz</p>
+            <p class="brand">Vidhgrow </p>
           </div>
         </body>
         </html>
@@ -858,7 +861,7 @@ app.use((req, res, next) => {
         <div class="container">
           <h1>403 Forbidden</h1>
           <div class="divider"></div>
-          <p class="brand">RankBaaz</p>
+          <p class="brand">Vidhgrow</p>
         </div>
       </body>
       </html>
@@ -956,16 +959,16 @@ if (process.env.NODE_ENV === "development") {
     console.log("[REQUEST_DEBUG] Path:", req.path);
     console.log(
       "[REQUEST_DEBUG] Has auth cookie:",
-      !!req.signedCookies.auth_session
+      !!req.signedCookies.auth_session,
     );
     console.log(
       "[REQUEST_DEBUG] Has signature:",
-      !!req.headers["x-request-signature"]
+      !!req.headers["x-request-signature"],
     );
     console.log("[REQUEST_DEBUG] Origin:", req.get("Origin") || "none");
     console.log(
       "[REQUEST_DEBUG] User-Agent:",
-      req.get("User-Agent")?.substring(0, 50) || "none"
+      req.get("User-Agent")?.substring(0, 50) || "none",
     );
     console.log("[REQUEST_DEBUG] ===================================\n");
     next();
@@ -1036,7 +1039,7 @@ app.use((error, req, res, next) => {
           <div class="container">
             <h1>403 Forbidden</h1>
             <div class="divider"></div>
-            <p class="brand">RankBaaz</p>
+            <p class="brand">Vidhgrow</p>
           </div>
         </body>
         </html>
@@ -1105,7 +1108,7 @@ app.use((error, req, res, next) => {
   if (res.headersSent) {
     console.error(
       "[ERROR] Headers already sent, cannot send error response:",
-      error
+      error,
     );
     return next(error);
   }
@@ -1153,7 +1156,7 @@ const gracefulShutdown = (signal) => {
   // Force close after 30 seconds
   setTimeout(() => {
     console.error(
-      "Could not close connections in time, forcefully shutting down"
+      "Could not close connections in time, forcefully shutting down",
     );
     process.exit(1);
   }, 30000);

@@ -295,7 +295,7 @@ const Profile = () => {
   useSEO({
     title: "My Profile",
     description: `Manage your ${
-      contentSettings?.siteName || "RankBaaz Pro"
+      contentSettings?.siteName || "Vidhgrow"
     } profile, view test history, track progress, and check leaderboard rankings.`,
     keywords:
       "profile, dashboard, test history, progress tracking, leaderboard, user profile",

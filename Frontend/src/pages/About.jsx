@@ -35,7 +35,7 @@ const About = () => {
   useSEO({
     title: "About Us",
     description: `Learn more about ${
-      contentSettings?.siteName || "RankBaaz"
+      contentSettings?.siteName || "Vidhgrow"
     }, our mission, and our vision for online learning.`,
     keywords: "about, company, mission, online learning",
     type: "website",
@@ -76,7 +76,7 @@ const About = () => {
           {/* Hero Section */}
           <motion.div variants={itemVariants} className="text-center">
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-foreground mb-6">
-              About {contentSettings?.siteName || "RankBaaz"}
+              About {contentSettings?.siteName || "Vidhgrow"}
             </h1>
             <p className="text-xl text-muted-foreground max-w-3xl mx-auto leading-relaxed">
               {contentSettings?.siteDescription ||

@@ -252,7 +252,7 @@ export const AdminProvider = ({ children }) => {
 
       // Extract filename from Content-Disposition header
       const contentDisposition = response.headers["content-disposition"];
-      let filename = `RankBaaz_Course_${
+      let filename = `Vidhgrow_Course_${
         new Date().toISOString().split("T")[0]
       }.pdf`;
 
@@ -304,7 +304,7 @@ export const AdminProvider = ({ children }) => {
 
       // Extract filename from Content-Disposition header
       const contentDisposition = response.headers["content-disposition"];
-      let filename = `RankBaaz_Test_Result_${
+      let filename = `Vidhgrow_Test_Result_${
         new Date().toISOString().split("T")[0]
       }.pdf`;
 

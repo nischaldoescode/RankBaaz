@@ -132,7 +132,7 @@ const Login = () => {
             {/* Logo Container */}
             <img
               src="/logo.png"
-              alt="RankBaaz Logo"
+              alt="Vidhgrow Logo"
               className="w-full h-full object-contain p-4 sm:p-3 rounded-2xl"
               onError={(e) => {
                 // Fallback to icon if image fails to load
@@ -271,7 +271,7 @@ const Login = () => {
           {/* Footer */}
           <div className="text-center">
             <p className="text-sm text-gray-500">
-              © 2025 RankBaaz Admin Panel. All rights reserved.
+              © 2025 Vidhgrow Admin Panel. All rights reserved.
             </p>
           </div>
         </div>

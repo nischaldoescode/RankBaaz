@@ -53,7 +53,7 @@ const Login = () => {
   useSEO({
     title: "Login",
     description: `Sign in to your ${
-      contentSettings?.siteName || "RankBaaz Pro"
+      contentSettings?.siteName || "Vidhgrow"
     } account to continue your learning journey. Access your courses, track progress, and take tests.`,
     keywords:
       "login, sign in, user login, account access, student login, online learning login",
@@ -66,12 +66,12 @@ const Login = () => {
       "@type": "WebPage",
       name: "Login",
       description: `Sign in to your ${
-        contentSettings?.siteName || "RankBaaz Pro"
+        contentSettings?.siteName || "Vidhgrow"
       } account`,
       url: window.location.href,
       isPartOf: {
         "@type": "WebSite",
-        name: contentSettings?.siteName || "RankBaaz Pro",
+        name: contentSettings?.siteName || "Vidhgrow",
         url: contentSettings?.siteUrl || window.location.origin,
       },
     },
