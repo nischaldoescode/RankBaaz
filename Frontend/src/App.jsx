@@ -27,6 +27,8 @@ import ProtectedRoute from "./components/common/ProtectedRoute";
 import ErrorBoundary from "./components/common/ErrorBoundary";
 import { createHead, UnheadProvider } from "@unhead/react/client";
 import BlockedPage from "./pages/BlockedPage";
+import CookieConsent from "./components/common/CookieConsent";
+
 // Lazy loaded for better performance
 const Home = React.lazy(() => import("./pages/Home"));
 const Login = React.lazy(() => import("./pages/Login"));
@@ -35,6 +37,10 @@ const Courses = React.lazy(() => import("./pages/Courses"));
 const Test = React.lazy(() => import("./pages/Test"));
 const Profile = React.lazy(() => import("./pages/Profile"));
 const NotFound = React.lazy(() => import("./pages/NotFound"));
+const TeacherJoin = React.lazy(() => import("./pages/TeacherJoin"));
+const TeacherSignup = React.lazy(() => import("./pages/TeacherSignup"));
+const TeacherLogin = React.lazy(() => import("./pages/TeacherLogin"));
+const TeacherDashboard = React.lazy(() => import("./pages/TeacherDashboard"));
 const PublicProfile = React.lazy(() => import("./pages/PublicProfile"));
 const Contact = React.lazy(() => import("./pages/Contact"));
 const About = React.lazy(() => import("./pages/About"));
@@ -368,7 +374,6 @@ const ProfileRouteGuard = () => {
   // Strip @ and pass to PublicProfile
   return <PublicProfile />;
 };
-
 
 function App() {
   const { loading: authLoading, isAuthenticated } = useAuth();
@@ -721,8 +726,43 @@ function App() {
                       }
                     />
 
+{/* Teacher Routes */}
+                    <Route
+                      path="/teacher"
+                      element={
+                        <Suspense fallback={<Loading variant="page" />}>
+                          <TeacherJoin />
+                        </Suspense>
+                      }
+                    />
+                    <Route
+                      path="/teacher/signup"
+                      element={
+                        <Suspense fallback={<Loading variant="page" />}>
+                          <TeacherSignup />
+                        </Suspense>
+                      }
+                    />
+                    <Route
+                      path="/teacher/login"
+                      element={
+                        <Suspense fallback={<Loading variant="page" />}>
+                          <TeacherLogin />
+                        </Suspense>
+                      }
+                    />
+                    <Route
+                      path="/teacher/dashboard"
+                      element={
+                        <Suspense fallback={<Loading variant="page" />}>
+                          <TeacherDashboard />
+                        </Suspense>
+                      }
+                    />
+
                     {/* 404 Route */}
                     <Route
+
                       path="*"
                       element={
                         <Suspense
@@ -757,6 +797,7 @@ function App() {
                 !location.pathname.includes("/register") && <Footer />}
             </div>
 
+            <CookieConsent />
             <Toaster
               position="bottom-center"
               limit={1}
