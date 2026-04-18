@@ -574,6 +574,7 @@ const publicRoutes = [
   "/api/teachers/waitlist-count",
 ];
 
+
 /**
  * SECURITY LAYER 3: Request signature validation middleware
  *

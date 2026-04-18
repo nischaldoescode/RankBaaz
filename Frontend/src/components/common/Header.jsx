@@ -476,6 +476,7 @@ const Header = () => {
           </motion.nav>
         </div>
       </>
+      
 
       {/* bottom spacer for non-authenticated mobile so footer clears the hamburger area */}
       {!isAuthenticated && <div className="h-0 lg:hidden" />}
