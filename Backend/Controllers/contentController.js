@@ -48,6 +48,21 @@ export const updateContentSettings = async (req, res) => {
     if (typeof updateData.chartConfig === "string") {
       updateData.chartConfig = JSON.parse(updateData.chartConfig);
     }
+
+    // sanitize chartConfig enums so mongoose validation never fails on bad data
+    if (updateData.chartConfig) {
+      const validTypes = ["pie", "bar", "line", "doughnut"];
+      const validPositions = ["left", "right"];
+      if (!validTypes.includes(updateData.chartConfig.type)) {
+        updateData.chartConfig.type = "pie";
+      }
+      if (!validPositions.includes(updateData.chartConfig.position)) {
+        updateData.chartConfig.position = "right";
+      }
+      if (typeof updateData.chartConfig.enabled !== "boolean") {
+        updateData.chartConfig.enabled = true;
+      }
+    }
     if (typeof updateData.backgroundElements === "string") {
       updateData.backgroundElements = JSON.parse(updateData.backgroundElements);
     }
@@ -79,7 +94,7 @@ export const updateContentSettings = async (req, res) => {
           {
             folder: "content/logos",
             transformation: [{ width: 200, height: 200, crop: "fit" }],
-          }
+          },
         );
       } else {
         throw new Error("Invalid file upload format");
@@ -213,7 +228,7 @@ export const updateFAQ = async (req, res) => {
         ...req.body,
         lastModifiedBy: req.admin.userId,
       },
-      { new: true, runValidators: true }
+      { new: true, runValidators: true },
     );
 
     if (!faq) {
@@ -277,7 +292,7 @@ export const bulkUpdateFAQOrder = async (req, res) => {
 
     // Update each FAQ's order
     const updatePromises = faqs.map((faq) =>
-      FAQ.findByIdAndUpdate(faq.id, { order: faq.order }, { new: true })
+      FAQ.findByIdAndUpdate(faq.id, { order: faq.order }, { new: true }),
     );
 
     await Promise.all(updatePromises);
@@ -535,7 +550,7 @@ export const bulkUpdateSectionOrder = async (req, res) => {
         subheaders:
           section.subheaders?.map((sub) => {
             const existingSub = existingSection?.subheaders?.find(
-              (s) => s.id === sub.id
+              (s) => s.id === sub.id,
             );
             return {
               ...existingSub?._doc,
