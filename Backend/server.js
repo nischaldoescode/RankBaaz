@@ -29,6 +29,7 @@ import securityRoutes from "./Routes/securityRoutes.js";
 import RedisStore from "connect-redis";
 import trackingRoutes from "./Routes/trackingRoutes.js";
 import { checkIpBlock } from "./Middleware/ipBlockMiddleware.js";
+import teacherRoutes from "./Routes/teacherRoutes.js";
 
 // Load environment variables
 dotenv.config();
@@ -494,6 +495,7 @@ app.use("/api/payments", paymentRoutes);
 app.use("/api/coupons", couponLimiter, couponRoutes);
 app.use("/api/devtools", devToolsRoutes);
 app.use("/track", trackingRoutes);
+app.use("/api/teachers", teacherRoutes);
 
 /**
  * Root endpoint - Minimal response for security
@@ -521,7 +523,6 @@ app.get("/", (req, res) => {
     });
   }
 });
-
 
 // 404 HANDLER
 app.use("*", (req, res) => {
@@ -565,6 +566,12 @@ const publicRoutes = [
   "api/security/signing-secret/clear",
   "/api/admin/login",
   "/api/admin/check-exists",
+  "/api/teachers/apply",
+  "/api/teachers/login",
+  "/api/teachers/logout",
+  "/api/teachers/signup",
+  "/api/teachers/verify-invite",
+  "/api/teachers/waitlist-count",
 ];
 
 /**
@@ -582,10 +589,7 @@ const publicRoutes = [
 app.use((req, res, next) => {
   // EXEMPTION 1: Check if route is in public routes list
   if (publicRoutes.includes(req.path)) {
-    console.log(
-      "Bypassing signature check for public route:",
-      req.path,
-    );
+    console.log("Bypassing signature check for public route:", req.path);
     return next();
   }
 
@@ -700,6 +704,9 @@ app.use((req, res, next) => {
     "/api/content/legal",
     "/api/content/faqs",
     "/api/courses/categories",
+    "/api/teachers/waitlist-count",
+    "/api/teachers/profile",
+    "/api/teachers/verify-invite",
   ];
 
   // Check if path is EXACTLY a public endpoint or a subpath of one
@@ -953,7 +960,6 @@ app.use((req, res, next) => {
 
   next();
 });
-
 
 // From this point, ALL routes require valid origin + signature
 if (process.env.NODE_ENV === "development") {
