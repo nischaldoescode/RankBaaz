@@ -242,10 +242,40 @@ const courseSchema = new mongoose.Schema(
       type: Boolean,
       default: true,
     },
+
+    // teacher who created this course — null means admin-created
+    teacher: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Teacher",
+      default: null,
+    },
+    // approval flow for teacher-created courses
+    approvalStatus: {
+      type: String,
+      enum: ["approved", "pending", "rejected"],
+      default: "approved", // admin-created = auto-approved
+    },
+    approvalNote: { type: String, default: null },
+    approvedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Admin",
+      default: null,
+    },
+    approvedAt: { type: Date, default: null },
+    // geo restriction: null = global, "india" = india only, "nepal" = nepal only
+    geoRestriction: {
+      type: String,
+      enum: ["india", "nepal", null],
+      default: null,
+    },
+    isActive: {
+      type: Boolean,
+      default: true,
+    },
   },
   {
     timestamps: true,
-  }
+  },
 );
 
 // courseSchema.js
@@ -263,7 +293,7 @@ courseSchema.index(
   {
     name: "check_answer_optimized",
     background: true,
-  }
+  },
 );
 
 // Video validation middleware
@@ -278,15 +308,15 @@ courseSchema.pre("save", function (next) {
 
       if (linkCount > 2) {
         return next(
-          new Error("Maximum 2 video links allowed for course video")
+          new Error("Maximum 2 video links allowed for course video"),
         );
       }
 
       if (linkCount === 0) {
         return next(
           new Error(
-            "At least 1 video link required when video type is 'course'"
-          )
+            "At least 1 video link required when video type is 'course'",
+          ),
         );
       }
     }
@@ -299,16 +329,16 @@ courseSchema.pre("save", function (next) {
         if (linkCount > 2) {
           return next(
             new Error(
-              `Maximum 2 video links allowed for ${diffVideo.difficulty} difficulty`
-            )
+              `Maximum 2 video links allowed for ${diffVideo.difficulty} difficulty`,
+            ),
           );
         }
 
         if (linkCount === 0) {
           return next(
             new Error(
-              `At least 1 video link required for ${diffVideo.difficulty} difficulty`
-            )
+              `At least 1 video link required for ${diffVideo.difficulty} difficulty`,
+            ),
           );
         }
       }
@@ -318,7 +348,7 @@ courseSchema.pre("save", function (next) {
   // If changing from paid to free, remove video content
   if (!this.isPaid && this.videoContent && this.videoContent.type !== "none") {
     console.log(
-      `[SCHEMA] Course ${this._id} changed to free - removing video content`
+      `[SCHEMA] Course ${this._id} changed to free - removing video content`,
     );
     this.videoContent = {
       type: "none",
