@@ -356,87 +356,126 @@ const Header = () => {
         )}
       </AnimatePresence>
 
-      {/* ─────────────────── Mobile bottom floating nav (authenticated) ─────────────────── */}
-      {isAuthenticated && (
-        <>
-          {/* spacer so content doesn't hide behind the nav */}
-          <div className="h-20 lg:hidden" />
+      {/* ─────────────────── Mobile bottom floating nav ─────────────────── */}
+      {/* shown for all users on mobile — unauthenticated gets login/register as last item */}
+      <>
+        <div className="h-20 lg:hidden" />
 
+        <div className="lg:hidden fixed bottom-4 left-4 right-4 z-50 flex justify-center pointer-events-none">
           <motion.nav
-            className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 lg:hidden"
-            initial={animations && !reducedMotion ? { y: 100, opacity: 0 } : {}}
+            className="pointer-events-auto flex items-center gap-0.5 bg-background/95 backdrop-blur-xl border border-border rounded-2xl shadow-xl px-1.5 py-1.5"
+            initial={animations && !reducedMotion ? { y: 80, opacity: 0 } : {}}
             animate={animations && !reducedMotion ? { y: 0, opacity: 1 } : {}}
             transition={{
               type: "spring",
-              stiffness: 260,
-              damping: 20,
-              delay: 0.3,
+              stiffness: 300,
+              damping: 28,
+              delay: 0.2,
             }}
           >
-            <div className="flex items-center gap-1 px-3 py-2 bg-background/90 backdrop-blur-xl rounded-2xl border border-border shadow-lg shadow-black/10">
-              {filteredLinks.map((link) => {
-                const active = isActive(link.path);
-                return (
-                  <Link
-                    key={link.path}
-                    to={link.path}
-                    className={`relative flex flex-col items-center gap-0.5 px-3.5 py-2 rounded-xl transition-all duration-200 ${
-                      active
-                        ? "text-primary"
-                        : "text-muted-foreground hover:text-foreground"
-                    }`}
-                  >
-                    {active && (
-                      <motion.span
-                        layoutId="bottom-nav-pill"
-                        className="absolute inset-0 rounded-xl bg-primary/10"
-                        transition={{
-                          type: "spring",
-                          stiffness: 400,
-                          damping: 30,
-                        }}
-                      />
-                    )}
-                    <link.icon className="w-5 h-5 relative" />
-                    <span className="text-[10px] font-medium relative leading-none">
+            {filteredLinks.map((link) => {
+              const active = isActive(link.path);
+              return (
+                <Link
+                  key={link.path}
+                  to={link.path}
+                  className="relative flex flex-col items-center justify-center flex-1 px-3.5 py-2 rounded-xl transition-all"
+                >
+                  {active && (
+                    <motion.div
+                      layoutId="bottomNavActive"
+                      className="absolute inset-0 bg-primary/10 rounded-xl"
+                      transition={{
+                        type: "spring",
+                        stiffness: 380,
+                        damping: 30,
+                      }}
+                    />
+                  )}
+                  <div className="relative z-10 flex flex-col items-center gap-0.5">
+                    <link.icon
+                      className={`w-[18px] h-[18px] transition-colors ${
+                        active ? "text-primary" : "text-muted-foreground"
+                      }`}
+                    />
+                    <span
+                      className={`text-[9px] font-bold uppercase tracking-tight transition-colors leading-none ${
+                        active ? "text-primary" : "text-muted-foreground"
+                      }`}
+                    >
                       {link.label}
                     </span>
-                  </Link>
-                );
-              })}
+                  </div>
+                </Link>
+              );
+            })}
 
-              {/* profile link inside bottom nav */}
+            {/* user / login tab */}
+            {isAuthenticated ? (
               <Link
                 to="/profile"
-                className={`relative flex flex-col items-center gap-0.5 px-3.5 py-2 rounded-xl transition-all duration-200 ${
-                  isActive("/profile")
-                    ? "text-primary"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
+                className="relative flex flex-col items-center justify-center flex-1 px-3.5 py-2 rounded-xl transition-all"
               >
                 {isActive("/profile") && (
-                  <motion.span
-                    layoutId="bottom-nav-pill"
-                    className="absolute inset-0 rounded-xl bg-primary/10"
-                    transition={{ type: "spring", stiffness: 400, damping: 30 }}
+                  <motion.div
+                    layoutId="bottomNavActive"
+                    className="absolute inset-0 bg-primary/10 rounded-xl"
+                    transition={{ type: "spring", stiffness: 380, damping: 30 }}
                   />
                 )}
-                <Avatar className="w-5 h-5 relative">
-                  <AvatarFallback
-                    className="text-[9px] font-bold text-white"
+                <div className="relative z-10 flex flex-col items-center gap-0.5">
+                  <div
+                    className="w-[18px] h-[18px] rounded-full flex items-center justify-center text-[8px] font-bold text-white flex-shrink-0"
                     style={{ backgroundColor: avatarColor }}
                   >
                     {initial}
-                  </AvatarFallback>
-                </Avatar>
-                <span className="text-[10px] font-medium relative leading-none">
-                  {user?.name?.split(" ")[0] || "Me"}
-                </span>
+                  </div>
+                  <span
+                    className={`text-[9px] font-bold uppercase tracking-tight transition-colors leading-none ${
+                      isActive("/profile")
+                        ? "text-primary"
+                        : "text-muted-foreground"
+                    }`}
+                  >
+                    {user?.name?.split(" ")[0]?.slice(0, 5) || "Me"}
+                  </span>
+                </div>
               </Link>
-            </div>
+            ) : (
+              <Link
+                to="/login"
+                className="relative flex flex-col items-center justify-center flex-1 px-3.5 py-2 rounded-xl transition-all"
+              >
+                {isActive("/login") && (
+                  <motion.div
+                    layoutId="bottomNavActive"
+                    className="absolute inset-0 bg-primary/10 rounded-xl"
+                    transition={{ type: "spring", stiffness: 380, damping: 30 }}
+                  />
+                )}
+                <div className="relative z-10 flex flex-col items-center gap-0.5">
+                  <User
+                    className={`w-[18px] h-[18px] transition-colors ${
+                      isActive("/login")
+                        ? "text-primary"
+                        : "text-muted-foreground"
+                    }`}
+                  />
+                  <span
+                    className={`text-[9px] font-bold uppercase tracking-tight transition-colors leading-none ${
+                      isActive("/login")
+                        ? "text-primary"
+                        : "text-muted-foreground"
+                    }`}
+                  >
+                    Sign in
+                  </span>
+                </div>
+              </Link>
+            )}
           </motion.nav>
-        </>
-      )}
+        </div>
+      </>
 
       {/* bottom spacer for non-authenticated mobile so footer clears the hamburger area */}
       {!isAuthenticated && <div className="h-0 lg:hidden" />}
