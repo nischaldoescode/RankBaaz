@@ -280,9 +280,6 @@ const Home = () => {
             transition={animations && !reducedMotion ? { duration: 0.7 } : {}}
             className="space-y-7"
           >
-            <Badge>
-              {contentSettings?.siteName || "Vidhgrow"} — Learn smarter
-            </Badge>
 
             <h1 className="text-4xl sm:text-5xl lg:text-[3.75rem] font-bold tracking-tight leading-tight">
               {contentSettings?.heroTitle || "Master Your Skills with"}
