@@ -26,6 +26,7 @@ import Loading from "./components/common/Loading";
 import ProtectedRoute from "./components/common/ProtectedRoute";
 import ErrorBoundary from "./components/common/ErrorBoundary";
 import { createHead, UnheadProvider } from "@unhead/react/client";
+import BlockedPage from "./pages/BlockedPage";
 // Lazy loaded for better performance
 const Home = React.lazy(() => import("./pages/Home"));
 const Login = React.lazy(() => import("./pages/Login"));
@@ -368,8 +369,6 @@ const ProfileRouteGuard = () => {
   return <PublicProfile />;
 };
 
-import BlockedPage from "./pages/BlockedPage";
-import { useEffect, useState } from "react";
 
 function App() {
   const { loading: authLoading, isAuthenticated } = useAuth();
