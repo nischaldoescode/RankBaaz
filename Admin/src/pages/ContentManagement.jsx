@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useContent } from "../contexts/ContentContext";
 import {
   FileText,
@@ -545,8 +545,7 @@ const ContentManagement = () => {
   } = useContent();
   const [activeTab, setActiveTab] = useState("settings");
   const [settingsForm, setSettingsForm] = useState({});
-  // tracks whether settings form has unsaved changes
-  const [isSettingsDirty, setIsSettingsDirty] = useState(false);
+
   const [faqForm, setFaqForm] = useState({
     question: "",
     answer: "",
@@ -594,14 +593,15 @@ const ContentManagement = () => {
   const [previewData, setPreviewData] = useState(null);
   const [previewType, setPreviewType] = useState("home");
 
+  const [isSettingsDirty, setIsSettingsDirty] = useState(false);
+
   /**
-   * wrapper around setSettingsForm that marks the form as dirty on every change
+   * marks settings as dirty and updates form state
    */
-  const updateSettingsForm = (updater) => {
+  const updateSettingsForm = useCallback((updater) => {
     setIsSettingsDirty(true);
     setSettingsForm(updater);
-  };
-
+  }, []);
   useEffect(() => {
     fetchContentSettings();
     fetchFAQs();
@@ -611,6 +611,7 @@ const ContentManagement = () => {
 
   useEffect(() => {
     if (contentSettings) {
+      const existingChart = contentSettings.chartConfig || {};
       setSettingsForm({
         ...contentSettings,
         stats: contentSettings.stats || [],
@@ -618,13 +619,12 @@ const ContentManagement = () => {
         aboutValues: contentSettings.aboutValues || [],
         aboutFeatures: contentSettings.aboutFeatures || [],
         aboutStats: contentSettings.aboutStats || [],
-        chartConfig: contentSettings.chartConfig || {
-          type: "pie",
-          position: "right",
-          enabled: true,
+        chartConfig: {
+          type: existingChart.type || "pie",
+          position: existingChart.position || "right",
+          enabled: existingChart.enabled !== false,
         },
       });
-      // reset dirty flag whenever server data is loaded
       setIsSettingsDirty(false);
     }
   }, [contentSettings]);
@@ -948,10 +948,7 @@ const ContentManagement = () => {
                         onChange={(e) =>
                           updateSettingsForm((prev) => ({
                             ...prev,
-                            chartConfig: {
-                              ...prev.chartConfig,
-                              type: e.target.value,
-                            },
+                            siteName: e.target.value,
                           }))
                         }
                         className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
