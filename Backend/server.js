@@ -28,6 +28,7 @@ import { corsErrorPage } from "./Middleware/ErrorsPages/errorPages.js";
 import securityRoutes from "./Routes/securityRoutes.js";
 import RedisStore from "connect-redis";
 import trackingRoutes from "./Routes/trackingRoutes.js";
+import { checkIpBlock } from "./Middleware/ipBlockMiddleware.js";
 
 // Load environment variables
 dotenv.config();
@@ -370,11 +371,15 @@ const getSimple403HTML = () => {
   `;
 };
 
+// check ip block before any route
+
+app.use(checkIpBlock);
+
 // Apply bot protection globally (before routes)
 app.use(botProtection);
 
 // console.log(
-//   "⚠️  WARNING: Bot protection and origin enforcement DISABLED for testing"
+//   " Bot protection and origin enforcement DISABLED for testing"
 // );
 
 app.post("/api/security/verify-challenge", verifyChallenge);

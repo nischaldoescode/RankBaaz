@@ -46,7 +46,7 @@ export const registerValidation = [
       const domain = value.split("@")[1];
       if (!allowedDomains.includes(domain)) {
         throw new Error(
-          "Please use a valid email provider (Gmail, Yahoo, Outlook, etc.)"
+          "Please use a valid email provider (Gmail, Yahoo, Outlook, etc.)",
         );
       }
       return true;
@@ -190,7 +190,7 @@ const generateDeviceFingerprint = (req) => {
   const acceptEncoding = req.get("Accept-Encoding") || "";
 
   return CryptoJS.SHA256(
-    userAgent + acceptLanguage + acceptEncoding
+    userAgent + acceptLanguage + acceptEncoding,
   ).toString();
 };
 
@@ -319,7 +319,7 @@ export const register = async (req, res) => {
     // Generate OTP early (non-blocking)
     const otp = generateOtp();
     const otpExpiresAt = new Date(
-      Date.now() + (parseInt(process.env.OTP_EXPIRY_MINUTES) || 5) * 60 * 1000
+      Date.now() + (parseInt(process.env.OTP_EXPIRY_MINUTES) || 5) * 60 * 1000,
     );
 
     // CRITICAL OPTIMIZATION: Move bcrypt to worker thread (doesn't block event loop)
@@ -409,7 +409,7 @@ export const register = async (req, res) => {
         if (process.env.NODE_ENV === "development") {
           console.log(
             "[REGISTRATION] OTP email sent successfully to:",
-            sanitizedEmail
+            sanitizedEmail,
           );
         }
       } catch (emailError) {
@@ -472,7 +472,9 @@ export const verifyOTP = async (req, res) => {
       console.log("[VERIFY_OTP] Falling back to MongoDB:", sanitizedEmail);
 
       try {
-        const pendingReg = await PendingRegistration.findOne({ email: sanitizedEmail });
+        const pendingReg = await PendingRegistration.findOne({
+          email: sanitizedEmail,
+        });
 
         if (!pendingReg) {
           return res.status(400).json({
@@ -532,7 +534,7 @@ export const verifyOTP = async (req, res) => {
         await redisClient.setex(
           redisKey,
           900,
-          JSON.stringify(registrationData)
+          JSON.stringify(registrationData),
         );
         console.log("[VERIFY_OTP] Updated Redis with otpVerified flag");
       } catch (redisError) {
@@ -543,7 +545,7 @@ export const verifyOTP = async (req, res) => {
       try {
         await PendingRegistration.updateOne(
           { email: sanitizedEmail },
-          { $set: { otpVerified: true } }
+          { $set: { otpVerified: true } },
         );
         console.log("[VERIFY_OTP] Updated MongoDB with otpVerified flag");
       } catch (dbError) {
@@ -804,7 +806,7 @@ export const initiateLogin = async (req, res) => {
     // Generate and send OTP
     const otp = generateOtp();
     const otpExpiresAt = new Date(
-      Date.now() + (parseInt(process.env.OTP_EXPIRY_MINUTES) || 5) * 60 * 1000
+      Date.now() + (parseInt(process.env.OTP_EXPIRY_MINUTES) || 5) * 60 * 1000,
     );
 
     user.otp = {
@@ -915,6 +917,16 @@ export const verifyLoginOTP = async (req, res) => {
       code: null,
       expiresAt: null,
     };
+
+    // store last known ip for admin ip blocking feature
+    const clientIp =
+      req.headers["x-forwarded-for"]?.split(",")[0]?.trim() ||
+      req.socket?.remoteAddress ||
+      req.ip;
+    if (clientIp) {
+      user.lastIp = clientIp;
+    }
+
     await user.save();
     const signingSecret = await generateSigningSecret(user._id.toString());
 
@@ -984,8 +996,9 @@ export const login = async (req, res) => {
     const sanitizedEmail = String(email).trim().toLowerCase();
 
     // OPTIMIZED: Only fetch necessary fields
-    const user = await User.findOne({ email: sanitizedEmail })
-      .select("password isVerified username name email age gender otp _id");
+    const user = await User.findOne({ email: sanitizedEmail }).select(
+      "password isVerified username name email age gender otp _id",
+    );
 
     if (!user) {
       // SECURITY: Use same error message as invalid password (prevent email enumeration)
@@ -1020,6 +1033,15 @@ export const login = async (req, res) => {
     const updates = {
       lastLoginAt: new Date(),
     };
+
+    // store last known ip for admin ip blocking feature
+    const clientIp =
+      req.headers["x-forwarded-for"]?.split(",")[0]?.trim() ||
+      req.socket?.remoteAddress ||
+      req.ip;
+    if (clientIp) {
+      updates.lastIp = clientIp;
+    }
 
     if (isDevUser) {
       if (!user.isVerified) updates.isVerified = true;
@@ -1366,7 +1388,7 @@ export const forgotPassword = async (req, res) => {
 
     // Check if identifier is email or username
     const isEmail = /^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/.test(
-      identifier
+      identifier,
     );
 
     // Find user by email or username
@@ -1392,7 +1414,7 @@ export const forgotPassword = async (req, res) => {
     // Generate OTP (use plain text, not hashed - for consistency with other OTPs)
     const otp = generateOtp();
     const otpExpiresAt = new Date(
-      Date.now() + (parseInt(process.env.OTP_EXPIRY_MINUTES) || 10) * 60 * 1000
+      Date.now() + (parseInt(process.env.OTP_EXPIRY_MINUTES) || 10) * 60 * 1000,
     );
 
     // Store OTP in user document (plain text for easier verification)
@@ -1513,7 +1535,7 @@ export const verifyForgotPasswordOTP = async (req, res) => {
         timestamp: Date.now(),
       },
       process.env.JWT_SECRET,
-      { expiresIn: "15m" } // 15 minutes to reset password
+      { expiresIn: "15m" }, // 15 minutes to reset password
     );
 
     res.status(200).json({
@@ -1640,7 +1662,7 @@ export const resetPassword = async (req, res) => {
     // Hash new password with proper salt rounds
     const hashedPassword = await bcrypt.hash(
       newPassword,
-      parseInt(process.env.BCRYPT_ROUNDS) || 12
+      parseInt(process.env.BCRYPT_ROUNDS) || 12,
     );
     user.password = hashedPassword;
 
@@ -1806,7 +1828,7 @@ export const changePassword = async (req, res) => {
     // Verify current password
     const isCurrentPasswordValid = await bcrypt.compare(
       currentPassword,
-      user.password
+      user.password,
     );
     if (!isCurrentPasswordValid) {
       return res.status(400).json({
@@ -1818,7 +1840,7 @@ export const changePassword = async (req, res) => {
     // Hash new password
     const hashedNewPassword = await bcrypt.hash(
       newPassword,
-      parseInt(process.env.BCRYPT_ROUNDS) || 12
+      parseInt(process.env.BCRYPT_ROUNDS) || 12,
     );
 
     // Update password
@@ -1869,7 +1891,9 @@ export const resendOTP = async (req, res) => {
     // Fallback to MongoDB
     if (!registrationData) {
       try {
-        const pendingReg = await PendingRegistration.findOne({ email: sanitizedEmail });
+        const pendingReg = await PendingRegistration.findOne({
+          email: sanitizedEmail,
+        });
         if (!pendingReg) {
           return res.status(400).json({
             success: false,
@@ -1898,7 +1922,7 @@ export const resendOTP = async (req, res) => {
     // Generate new OTP
     const otp = generateOtp();
     const otpExpiresAt = new Date(
-      Date.now() + (parseInt(process.env.OTP_EXPIRY_MINUTES) || 5) * 60 * 1000
+      Date.now() + (parseInt(process.env.OTP_EXPIRY_MINUTES) || 5) * 60 * 1000,
     );
 
     // Update OTP in data
@@ -1925,7 +1949,7 @@ export const resendOTP = async (req, res) => {
             "otp.expiresAt": otpExpiresAt,
             otpVerified: false,
           },
-        }
+        },
       );
     } catch (dbError) {
       console.warn("[RESEND_OTP] MongoDB update failed:", dbError);
