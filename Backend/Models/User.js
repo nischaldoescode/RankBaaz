@@ -147,11 +147,15 @@ const userSchema = new mongoose.Schema(
         unbanAt: Date, // For temporary bans
       },
     ],
+    lastIp: {
+      type: String,
+      default: null,
+    },
   },
 
   {
     timestamps: true,
-  }
+  },
 );
 
 // userSchema.index({ username: 1 }, { unique: true });

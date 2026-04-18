@@ -10,6 +10,43 @@ import {
   generateAdminCaptcha,
 } from "../Middleware/adminCaptcha.js";
 
+import IpBlock from "../Models/IpBlock.js";
+
+/**
+ * lightweight ip geolocation using free ip-api.com (no api key needed)
+ * returns country and isp/org info
+ */
+const getIpInfo = async (ip) => {
+  // skip private/local ips
+  if (
+    !ip ||
+    ip === "::1" ||
+    ip === "127.0.0.1" ||
+    ip.startsWith("192.168.") ||
+    ip.startsWith("10.") ||
+    ip.startsWith("172.")
+  ) {
+    return { country: "Local", org: "localhost", isVpn: false };
+  }
+
+  try {
+    const res = await fetch(
+      `http://ip-api.com/json/${ip}?fields=status,country,countryCode,org,proxy,hosting`,
+      { signal: AbortSignal.timeout(3000) },
+    );
+    const data = await res.json();
+    if (data.status !== "success") return null;
+    return {
+      country: data.country || "Unknown",
+      countryCode: data.countryCode || "",
+      org: data.org || "Unknown",
+      isVpn: data.proxy || data.hosting || false,
+    };
+  } catch (_) {
+    return null;
+  }
+};
+
 // Validation rules (same as before)
 
 export const registerValidation = [
@@ -230,13 +267,13 @@ export const adminLogin = async (req, res) => {
     const accessToken = jwt.sign(
       { adminId: admin._id, role: "admin" },
       process.env.ADMIN_JWT_SECRET,
-      { expiresIn: "7d" }
+      { expiresIn: "7d" },
     );
 
     const refreshToken = jwt.sign(
       { adminId: admin._id, role: "admin" },
       process.env.ADMIN_JWT_SECRET,
-      { expiresIn: "30d" }
+      { expiresIn: "30d" },
     );
 
     // Save refresh token
@@ -394,7 +431,7 @@ export const adminChangePassword = async (req, res) => {
 
     const isCurrentPasswordValid = await bcrypt.compare(
       currentPassword,
-      admin.password
+      admin.password,
     );
     if (!isCurrentPasswordValid) {
       return res.status(400).json({
@@ -460,7 +497,7 @@ export const getAllUsers = async (req, res) => {
     const [users, totalUsers] = await Promise.all([
       User.find({})
         .select(
-          "name email username dateOfBirth gender createdAt stats points badges"
+          "name email username dateOfBirth gender createdAt stats points badges lastIp",
         )
         .sort({ [sortBy]: sortOrder })
         .skip(skip)
@@ -522,7 +559,7 @@ export const searchUsers = async (req, res) => {
       ],
     })
       .select(
-        "name email username dateOfBirth gender createdAt stats points badges"
+        "name email username dateOfBirth gender createdAt stats points badges lastIp",
       )
       .limit(50)
       .lean();
@@ -548,7 +585,6 @@ export const searchUsers = async (req, res) => {
   }
 };
 
-// Get detailed user information
 export const getUserDetails = async (req, res) => {
   try {
     const { userId } = req.params;
@@ -557,8 +593,8 @@ export const getUserDetails = async (req, res) => {
       User.findById(userId).select("-password").lean(),
 
       TestResult.find({ user: userId })
-        .populate("course", "name image") // Add image to populate
-        .sort({ completedAt: -1, createdAt: -1 }) // Sort by completedAt first
+        .populate("course", "name image")
+        .sort({ completedAt: -1, createdAt: -1 })
         .limit(10)
         .lean(),
     ]);
@@ -570,7 +606,6 @@ export const getUserDetails = async (req, res) => {
       });
     }
 
-    // Enhance test history with better data
     const enhancedTestHistory = testHistory.map((test) => ({
       ...test,
       courseName: test.course?.name || "Unknown Course",
@@ -578,6 +613,17 @@ export const getUserDetails = async (req, res) => {
       percentage: test.percentage || 0,
       completedAt: test.completedAt || test.createdAt,
     }));
+
+    // fetch ip geolocation info if ip is stored
+    let ipInfo = null;
+    if (user.lastIp) {
+      ipInfo = await getIpInfo(user.lastIp);
+    }
+
+    // check if user's ip is currently blocked
+    const ipBlock = user.lastIp
+      ? await IpBlock.findOne({ ip: user.lastIp }).lean()
+      : null;
 
     res.status(200).json({
       success: true,
@@ -587,6 +633,14 @@ export const getUserDetails = async (req, res) => {
           age: user.dateOfBirth ? calculateAge(user.dateOfBirth) : null,
         },
         recentTests: enhancedTestHistory,
+        ipInfo,
+        ipBlock: ipBlock
+          ? {
+              blocked: true,
+              expiresAt: ipBlock.expiresAt,
+              reason: ipBlock.reason,
+            }
+          : { blocked: false },
       },
     });
   } catch (error) {
@@ -617,7 +671,7 @@ export const exportUsersToCSV = async (req, res) => {
   try {
     const users = await User.find({})
       .select(
-        "name email username dateOfBirth gender createdAt stats points badges"
+        "name email username dateOfBirth gender createdAt stats points badges",
       )
       .lean();
 
@@ -664,7 +718,7 @@ export const exportUsersToCSV = async (req, res) => {
     res.setHeader("Content-Type", "text/csv; charset=utf-8");
     res.setHeader(
       "Content-Disposition",
-      `attachment; filename="users-export-${Date.now()}.csv"`
+      `attachment; filename="users-export-${Date.now()}.csv"`,
     );
     res.setHeader("Cache-Control", "no-cache");
     res.setHeader("Pragma", "no-cache");
@@ -677,5 +731,133 @@ export const exportUsersToCSV = async (req, res) => {
       success: false,
       message: "Failed to export users to CSV",
     });
+  }
+};
+
+/**
+ * block a user's ip for a given duration or permanently
+ * duration options: "permanent", "24h", "48h", "7d"
+ */
+export const blockUserIp = async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { duration = "permanent", reason = "admin action" } = req.body;
+
+    const user = await User.findById(userId).select("name email lastIp").lean();
+    if (!user) {
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found" });
+    }
+
+    // use stored ip on user or one passed explicitly
+    const ip = req.body.ip || user.lastIp;
+    if (!ip) {
+      return res
+        .status(400)
+        .json({ success: false, message: "No IP address found for this user" });
+    }
+
+    const durationMap = {
+      "24h": 24 * 60 * 60 * 1000,
+      "48h": 48 * 60 * 60 * 1000,
+      "7d": 7 * 24 * 60 * 60 * 1000,
+      permanent: null,
+    };
+
+    const ms = durationMap[duration];
+    const expiresAt = ms ? new Date(Date.now() + ms) : null;
+
+    await IpBlock.findOneAndUpdate(
+      { ip },
+      { ip, reason, blockedBy: req.admin.userId, expiresAt, userId },
+      { upsert: true, new: true },
+    );
+
+    return res.status(200).json({
+      success: true,
+      message: `IP ${ip} blocked ${duration === "permanent" ? "permanently" : `for ${duration}`}`,
+      data: { ip, expiresAt },
+    });
+  } catch (error) {
+    console.error("Block IP error:", error);
+    res.status(500).json({ success: false, message: "Failed to block IP" });
+  }
+};
+
+/**
+ * unblock a user's ip
+ */
+export const unblockUserIp = async (req, res) => {
+  try {
+    const { ip } = req.body;
+    if (!ip) {
+      return res
+        .status(400)
+        .json({ success: false, message: "IP address required" });
+    }
+
+    const result = await IpBlock.findOneAndDelete({ ip });
+    if (!result) {
+      return res
+        .status(404)
+        .json({ success: false, message: "IP not found in block list" });
+    }
+
+    return res
+      .status(200)
+      .json({ success: true, message: `IP ${ip} unblocked` });
+  } catch (error) {
+    console.error("Unblock IP error:", error);
+    res.status(500).json({ success: false, message: "Failed to unblock IP" });
+  }
+};
+
+/**
+ * get all currently blocked ips
+ */
+export const getBlockedIps = async (req, res) => {
+  try {
+    const blocked = await IpBlock.find({})
+      .populate("userId", "name email username")
+      .sort({ createdAt: -1 })
+      .lean();
+
+    return res.status(200).json({ success: true, data: { blocked } });
+  } catch (error) {
+    console.error("Get blocked IPs error:", error);
+    res
+      .status(500)
+      .json({ success: false, message: "Failed to fetch blocked IPs" });
+  }
+};
+
+/**
+ * permanently delete a user and their test results
+ */
+export const deleteUser = async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found" });
+    }
+
+    // delete all test results belonging to this user
+    await TestResult.deleteMany({ user: userId });
+
+    // delete the user
+    await User.findByIdAndDelete(userId);
+
+    return res.status(200).json({
+      success: true,
+      message: `User ${user.name} and all associated data deleted`,
+    });
+  } catch (error) {
+    console.error("Delete user error:", error);
+    res.status(500).json({ success: false, message: "Failed to delete user" });
   }
 };

@@ -11,10 +11,14 @@ import {
   updateProfileValidation,
   changePasswordValidation,
   admincheckExists,
-  getAllUsers, // NEW
-  searchUsers, // NEW
+  getAllUsers,
+  searchUsers,
   getUserDetails,
   exportUsersToCSV,
+  blockUserIp,
+  unblockUserIp,
+  getBlockedIps,
+  deleteUser,
 } from "../Controllers/adminController.js";
 
 import { authenticateAdmin } from "../Middleware/auth.js";
@@ -35,13 +39,13 @@ router.put(
   "/profile",
   authenticateAdmin,
   updateProfileValidation,
-  adminUpdateProfile
+  adminUpdateProfile,
 );
 router.post(
   "/change-password",
   authenticateAdmin,
   changePasswordValidation,
-  adminChangePassword
+  adminChangePassword,
 );
 router.post("/logout", authenticateAdmin, adminLogout);
 
@@ -49,5 +53,9 @@ router.get("/users/export", authenticateAdmin, exportUsersToCSV);
 router.get("/users", authenticateAdmin, getAllUsers);
 router.get("/users/search", authenticateAdmin, searchUsers);
 router.get("/users/:userId", authenticateAdmin, getUserDetails);
+router.delete("/users/:userId", authenticateAdmin, deleteUser);
+router.post("/users/:userId/block-ip", authenticateAdmin, blockUserIp);
+router.post("/ip/unblock", authenticateAdmin, unblockUserIp);
+router.get("/ip/blocked", authenticateAdmin, getBlockedIps);
 
 export default router;
