@@ -14,6 +14,8 @@ import {
   Zap,
   Shield,
   Lightbulb,
+  Sparkles,
+  ChevronDown,
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
@@ -40,14 +42,12 @@ import {
   CartesianGrid,
 } from "recharts";
 
-import { useHead } from "@unhead/react";
 import { useSEO } from "@/hooks/useSEO";
 import { useAuth } from "../context/AuthContext";
 import { useTheme } from "../context/ThemeContext";
 import { useContent } from "../context/ContentContext";
 import Loading from "../components/common/Loading";
 
-// Icon mapping
 const iconMap = {
   Brain,
   BookOpen,
@@ -62,8 +62,65 @@ const iconMap = {
   Lightbulb,
 };
 
+// subtle animated gradient badge
+const Badge = ({ children }) => (
+  <motion.span
+    initial={{ opacity: 0, y: -8 }}
+    animate={{ opacity: 1, y: 0 }}
+    transition={{ duration: 0.5 }}
+    className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-primary/10 text-primary border border-primary/20 mb-6"
+  >
+    <Sparkles className="w-3 h-3" />
+    {children}
+  </motion.span>
+);
+
+// floating scroll indicator
+const ScrollIndicator = () => (
+  <motion.div
+    className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-1 text-muted-foreground/50"
+    initial={{ opacity: 0 }}
+    animate={{ opacity: 1 }}
+    transition={{ delay: 1.2, duration: 0.6 }}
+  >
+    <span className="text-xs tracking-widest uppercase">Scroll</span>
+    <motion.div
+      animate={{ y: [0, 6, 0] }}
+      transition={{ repeat: Infinity, duration: 1.4, ease: "easeInOut" }}
+    >
+      <ChevronDown className="w-4 h-4" />
+    </motion.div>
+  </motion.div>
+);
+
+// thin animated divider
+const Divider = () => (
+  <div className="flex items-center justify-center py-2">
+    <motion.div
+      className="h-px bg-gradient-to-r from-transparent via-border to-transparent"
+      initial={{ width: 0 }}
+      whileInView={{ width: "100%" }}
+      viewport={{ once: true }}
+      transition={{ duration: 0.8 }}
+    />
+  </div>
+);
+
+// section label pill
+const SectionLabel = ({ children }) => (
+  <motion.p
+    initial={{ opacity: 0, y: 8 }}
+    whileInView={{ opacity: 1, y: 0 }}
+    viewport={{ once: true }}
+    className="text-xs font-semibold tracking-widest uppercase text-primary/70 mb-3"
+  >
+    {children}
+  </motion.p>
+);
+
 const Home = () => {
   const [email, setEmail] = useState("");
+  const [activeStatIndex, setActiveStatIndex] = useState(null);
   const { isAuthenticated } = useAuth();
   const { animations, reducedMotion } = useTheme();
   const { contentSettings, faqs, fetchFAQs, loading } = useContent();
@@ -77,16 +134,13 @@ const Home = () => {
     keywords:
       "vidhgrow, online learning, test preparation, courses, exams, practice tests",
     type: "website",
-
     canonicalUrl: `${contentSettings?.siteUrl || window.location.origin}/`,
   });
 
   useEffect(() => {
-    // Fetch first 5 FAQs for home page
     fetchFAQs();
   }, []);
 
-  // Convert stats data for charts
   const chartData =
     contentSettings?.stats?.map((stat) => ({
       name: stat.label,
@@ -96,18 +150,12 @@ const Home = () => {
 
   const handleEmailSubmit = (e) => {
     e.preventDefault();
-    console.log("Email submitted:", email);
     setEmail("");
   };
 
-  // Render chart based on configuration
   const renderChart = () => {
     const chartConfig = contentSettings?.chartConfig;
-
-    if (!chartConfig?.enabled || chartData.length === 0) {
-      return null;
-    }
-
+    if (!chartConfig?.enabled || chartData.length === 0) return null;
     const colors = ["#3B82F6", "#10B981", "#F59E0B", "#EF4444"];
 
     switch (chartConfig.type) {
@@ -124,7 +172,7 @@ const Home = () => {
                 paddingAngle={5}
                 dataKey="value"
               >
-                {chartData.map((entry, index) => (
+                {chartData.map((_, index) => (
                   <Cell
                     key={`cell-${index}`}
                     fill={colors[index % colors.length]}
@@ -142,7 +190,6 @@ const Home = () => {
             </PieChart>
           </ResponsiveContainer>
         );
-
       case "bar":
         return (
           <ResponsiveContainer width="100%" height="100%">
@@ -151,11 +198,10 @@ const Home = () => {
               <XAxis dataKey="name" />
               <YAxis />
               <Tooltip />
-              <Bar dataKey="value" fill="#3B82F6" />
+              <Bar dataKey="value" fill="#3B82F6" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         );
-
       case "line":
         return (
           <ResponsiveContainer width="100%" height="100%">
@@ -169,11 +215,11 @@ const Home = () => {
                 dataKey="value"
                 stroke="#3B82F6"
                 strokeWidth={2}
+                dot={{ r: 4 }}
               />
             </LineChart>
           </ResponsiveContainer>
         );
-
       case "doughnut":
         return (
           <ResponsiveContainer width="100%" height="100%">
@@ -187,7 +233,7 @@ const Home = () => {
                 paddingAngle={5}
                 dataKey="value"
               >
-                {chartData.map((entry, index) => (
+                {chartData.map((_, index) => (
                   <Cell
                     key={`cell-${index}`}
                     fill={colors[index % colors.length]}
@@ -199,7 +245,6 @@ const Home = () => {
             </PieChart>
           </ResponsiveContainer>
         );
-
       default:
         return null;
     }
@@ -210,124 +255,277 @@ const Home = () => {
   }
 
   return (
-    <div>
-      {/* Hero Section */}
-      <section className="pt-20 pb-24 px-4 sm:px-6 lg:px-8 min-h-screen flex items-center">
-        <div className="max-w-6xl mx-auto text-center w-full">
+    <div className="overflow-x-hidden">
+      {/* ── Hero ── */}
+      <section className="relative pt-24 pb-32 px-4 sm:px-6 lg:px-8 min-h-screen flex items-center">
+        {/* subtle grid overlay */}
+        <div
+          className="absolute inset-0 pointer-events-none opacity-[0.03]"
+          style={{
+            backgroundImage:
+              "linear-gradient(hsl(var(--foreground)) 1px, transparent 1px), linear-gradient(90deg, hsl(var(--foreground)) 1px, transparent 1px)",
+            backgroundSize: "48px 48px",
+          }}
+        />
+
+        {/* soft radial glow behind text */}
+        <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
+          <div className="w-[600px] h-[400px] rounded-full bg-primary/5 blur-3xl" />
+        </div>
+
+        <div className="max-w-5xl mx-auto text-center w-full relative">
           <motion.div
             initial={animations && !reducedMotion ? { opacity: 0, y: 30 } : {}}
             animate={animations && !reducedMotion ? { opacity: 1, y: 0 } : {}}
-            transition={animations && !reducedMotion ? { duration: 0.8 } : {}}
-            className="space-y-8"
+            transition={animations && !reducedMotion ? { duration: 0.7 } : {}}
+            className="space-y-7"
           >
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight">
+            <Badge>
+              {contentSettings?.siteName || "Vidhgrow"} — Learn smarter
+            </Badge>
+
+            <h1 className="text-4xl sm:text-5xl lg:text-[3.75rem] font-bold tracking-tight leading-tight">
               {contentSettings?.heroTitle || "Master Your Skills with"}
-              <span className="text-primary block">
+              <br />
+              <span className="relative inline-block text-primary">
                 {contentSettings?.heroHighlight || "Advanced Testing"}
+                {/* underline accent */}
+                <motion.span
+                  className="absolute -bottom-1 left-0 h-[3px] bg-primary/30 rounded-full"
+                  initial={{ width: 0 }}
+                  animate={{ width: "100%" }}
+                  transition={{ delay: 0.6, duration: 0.7, ease: "easeOut" }}
+                />
               </span>
             </h1>
 
-            <p className="text-xl text-muted-foreground max-w-3xl mx-auto leading-relaxed">
+            <p className="text-lg sm:text-xl text-muted-foreground max-w-2xl mx-auto leading-relaxed">
               {contentSettings?.heroDescription ||
                 "Experience personalized learning. Track your progress, identify strengths, and achieve your goals faster than ever."}
             </p>
 
-            {isAuthenticated && (
+            {isAuthenticated ? (
               <motion.div
                 initial={
-                  animations && !reducedMotion ? { opacity: 0, y: 20 } : {}
+                  animations && !reducedMotion ? { opacity: 0, y: 16 } : {}
                 }
                 animate={
                   animations && !reducedMotion ? { opacity: 1, y: 0 } : {}
                 }
-                transition={animations && !reducedMotion ? { delay: 0.6 } : {}}
-                className="flex flex-col sm:flex-row items-center justify-center gap-4"
+                transition={animations && !reducedMotion ? { delay: 0.5 } : {}}
+                className="flex flex-col sm:flex-row items-center justify-center gap-3"
               >
-                <Button asChild size="lg">
+                <Button asChild size="lg" className="gap-2 px-6">
                   <Link to="/courses">
-                    <BookOpen className="w-4 h-4 mr-2" />
+                    <BookOpen className="w-4 h-4" />
                     Explore Courses
                   </Link>
                 </Button>
-                <Button asChild variant="outline" size="lg">
+                <Button
+                  asChild
+                  variant="outline"
+                  size="lg"
+                  className="gap-2 px-6"
+                >
                   <Link to="/courses">
-                    <Award className="w-4 h-4 mr-2" />
+                    <Award className="w-4 h-4" />
                     Take a Test
                   </Link>
                 </Button>
               </motion.div>
-            )}
-
-            {!isAuthenticated && (
+            ) : (
               <motion.div
                 initial={
-                  animations && !reducedMotion ? { opacity: 0, y: 20 } : {}
+                  animations && !reducedMotion ? { opacity: 0, y: 16 } : {}
                 }
                 animate={
                   animations && !reducedMotion ? { opacity: 1, y: 0 } : {}
                 }
-                transition={animations && !reducedMotion ? { delay: 0.6 } : {}}
-                className="flex flex-col sm:flex-row items-center justify-center gap-4"
+                transition={animations && !reducedMotion ? { delay: 0.5 } : {}}
+                className="flex flex-col sm:flex-row items-center justify-center gap-3"
               >
-                <Button asChild size="lg">
+                <Button asChild size="lg" className="gap-2 px-6">
                   <Link to="/register">
                     Get Started Free
-                    <Rocket className="w-4 h-4 ml-2" />
+                    <Rocket className="w-4 h-4" />
                   </Link>
                 </Button>
-                <Button asChild variant="outline" size="lg">
+                <Button asChild variant="outline" size="lg" className="px-6">
                   <Link to="/login">Sign In</Link>
                 </Button>
               </motion.div>
             )}
+
+            {/* minimal trust line */}
+            {contentSettings?.stats && contentSettings.stats.length > 0 && (
+              <motion.p
+                initial={animations && !reducedMotion ? { opacity: 0 } : {}}
+                animate={animations && !reducedMotion ? { opacity: 1 } : {}}
+                transition={{ delay: 0.9 }}
+                className="text-xs text-muted-foreground/60 tracking-wide"
+              >
+                Trusted by{" "}
+                <span className="text-foreground font-medium">
+                  {contentSettings.stats[0]?.value || "thousands"}
+                </span>{" "}
+                learners worldwide
+              </motion.p>
+            )}
           </motion.div>
         </div>
+
+        <ScrollIndicator />
       </section>
 
-      {/* Stats Section */}
-      <section className="relative py-16 px-4 sm:px-6 lg:px-8 bg-muted/30">
-        <div className="max-w-6xl mx-auto">
-          <div
-            className={`grid ${
-              contentSettings?.chartConfig?.enabled &&
-              contentSettings?.chartConfig?.position === "left"
-                ? "grid-cols-1 lg:grid-cols-2"
-                : "grid-cols-1 lg:grid-cols-2"
-            } gap-12 items-center`}
-          >
-            {/* Chart on Left */}
-            {contentSettings?.chartConfig?.enabled &&
-              contentSettings?.chartConfig?.position === "left" && (
-                <motion.div
-                  initial={
-                    animations && !reducedMotion
-                      ? { opacity: 0, scale: 0.8 }
-                      : {}
-                  }
-                  whileInView={
-                    animations && !reducedMotion ? { opacity: 1, scale: 1 } : {}
-                  }
-                  viewport={{ once: true }}
-                  transition={
-                    animations && !reducedMotion ? { delay: 0.3 } : {}
-                  }
-                  className="h-80 order-1 lg:order-1"
-                >
-                  {renderChart()}
-                </motion.div>
-              )}
+      <Divider />
 
-            {/* Stats Grid */}
+      {/* ── Stats ── */}
+      {contentSettings?.stats && contentSettings.stats.length > 0 && (
+        <section className="relative py-20 px-4 sm:px-6 lg:px-8 bg-muted/20">
+          <div className="max-w-6xl mx-auto">
+            <div className="text-center mb-12">
+              <SectionLabel>By the numbers</SectionLabel>
+            </div>
+
             <div
-              className={`grid grid-cols-2 gap-6 ${
-                contentSettings?.chartConfig?.enabled &&
-                contentSettings?.chartConfig?.position === "left"
-                  ? "order-2 lg:order-2"
-                  : "order-1"
+              className={`grid gap-12 items-center ${
+                contentSettings?.chartConfig?.enabled
+                  ? "grid-cols-1 lg:grid-cols-2"
+                  : "grid-cols-1"
               }`}
             >
-              {contentSettings?.stats?.map((stat, index) => {
-                const IconComponent = iconMap[stat.icon] || Users;
+              {/* chart left */}
+              {contentSettings?.chartConfig?.enabled &&
+                contentSettings?.chartConfig?.position === "left" && (
+                  <motion.div
+                    initial={
+                      animations && !reducedMotion
+                        ? { opacity: 0, scale: 0.9 }
+                        : {}
+                    }
+                    whileInView={
+                      animations && !reducedMotion
+                        ? { opacity: 1, scale: 1 }
+                        : {}
+                    }
+                    viewport={{ once: true }}
+                    transition={{ delay: 0.2 }}
+                    className="h-72 order-1"
+                  >
+                    {renderChart()}
+                  </motion.div>
+                )}
+
+              {/* stats grid */}
+              <div
+                className={`grid grid-cols-2 gap-5 ${
+                  contentSettings?.chartConfig?.enabled &&
+                  contentSettings?.chartConfig?.position === "left"
+                    ? "order-2"
+                    : "order-1 lg:max-w-xl mx-auto w-full"
+                }`}
+              >
+                {contentSettings.stats.map((stat, index) => {
+                  const IconComponent = iconMap[stat.icon] || Users;
+                  return (
+                    <motion.div
+                      key={index}
+                      initial={
+                        animations && !reducedMotion
+                          ? { opacity: 0, y: 20 }
+                          : {}
+                      }
+                      whileInView={
+                        animations && !reducedMotion ? { opacity: 1, y: 0 } : {}
+                      }
+                      viewport={{ once: true }}
+                      transition={{ delay: index * 0.1 }}
+                      onHoverStart={() => setActiveStatIndex(index)}
+                      onHoverEnd={() => setActiveStatIndex(null)}
+                      className="group relative p-5 rounded-2xl border border-border/50 bg-background/60 backdrop-blur-sm hover:border-primary/30 hover:bg-primary/5 transition-all duration-300 cursor-default"
+                    >
+                      <div className="flex flex-col items-center text-center gap-2">
+                        <div className="w-10 h-10 bg-primary/10 rounded-xl flex items-center justify-center group-hover:bg-primary/20 transition-colors duration-300">
+                          <IconComponent className="w-5 h-5 text-primary" />
+                        </div>
+                        <div className="text-2xl sm:text-3xl font-bold text-foreground">
+                          {stat.value}
+                        </div>
+                        <div className="text-xs text-muted-foreground leading-tight">
+                          {stat.label}
+                        </div>
+                      </div>
+                      {/* hover glow */}
+                      {activeStatIndex === index && (
+                        <motion.div
+                          layoutId="stat-glow"
+                          className="absolute inset-0 rounded-2xl bg-primary/5 -z-10"
+                          transition={{ type: "spring", bounce: 0.2 }}
+                        />
+                      )}
+                    </motion.div>
+                  );
+                })}
+              </div>
+
+              {/* chart right */}
+              {contentSettings?.chartConfig?.enabled &&
+                contentSettings?.chartConfig?.position === "right" && (
+                  <motion.div
+                    initial={
+                      animations && !reducedMotion
+                        ? { opacity: 0, scale: 0.9 }
+                        : {}
+                    }
+                    whileInView={
+                      animations && !reducedMotion
+                        ? { opacity: 1, scale: 1 }
+                        : {}
+                    }
+                    viewport={{ once: true }}
+                    transition={{ delay: 0.2 }}
+                    className="h-72 order-2"
+                  >
+                    {renderChart()}
+                  </motion.div>
+                )}
+            </div>
+          </div>
+        </section>
+      )}
+
+      <Divider />
+
+      {/* ── Features ── */}
+      {contentSettings?.features && contentSettings.features.length > 0 && (
+        <section className="relative py-20 px-4 sm:px-6 lg:px-8">
+          <div className="max-w-6xl mx-auto">
+            <motion.div
+              initial={
+                animations && !reducedMotion ? { opacity: 0, y: 24 } : {}
+              }
+              whileInView={
+                animations && !reducedMotion ? { opacity: 1, y: 0 } : {}
+              }
+              viewport={{ once: true }}
+              className="text-center mb-14"
+            >
+              <SectionLabel>Why us</SectionLabel>
+              <h2 className="text-3xl lg:text-4xl font-bold mb-4">
+                {contentSettings?.featuresTitle || "Why Choose"}{" "}
+                <span className="text-primary">
+                  {contentSettings?.siteName || "Vidhgrow"}
+                </span>
+              </h2>
+              <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+                {contentSettings?.featuresDescription ||
+                  "Our platform combines cutting-edge technology with proven learning methodologies."}
+              </p>
+            </motion.div>
+
+            <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-6">
+              {contentSettings.features.map((feature, index) => {
+                const IconComponent = iconMap[feature.icon] || Brain;
                 return (
                   <motion.div
                     key={index}
@@ -338,208 +536,146 @@ const Home = () => {
                       animations && !reducedMotion ? { opacity: 1, y: 0 } : {}
                     }
                     viewport={{ once: true }}
-                    transition={
-                      animations && !reducedMotion ? { delay: index * 0.1 } : {}
-                    }
-                    className="text-center"
+                    transition={{ delay: index * 0.12 }}
+                    whileHover={animations && !reducedMotion ? { y: -4 } : {}}
                   >
-                    <div className="w-12 h-12 bg-primary/30 rounded-xl mx-auto mb-4 flex items-center justify-center">
-                      <IconComponent className="w-6 h-6 text-primary" />
-                    </div>
-                    <div className="text-3xl font-bold text-foreground">
-                      {stat.value}
-                    </div>
-                    <div className="text-sm text-muted-foreground">
-                      {stat.label}
-                    </div>
+                    <Card className="h-full border-border/50 hover:border-primary/25 hover:shadow-md transition-all duration-300 bg-background/70 backdrop-blur-sm">
+                      <CardContent className="p-6">
+                        <div className="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center mb-4">
+                          <IconComponent className="w-6 h-6 text-primary" />
+                        </div>
+                        <h3 className="text-base font-semibold mb-2 text-foreground">
+                          {feature.title}
+                        </h3>
+                        <p className="text-sm text-muted-foreground leading-relaxed">
+                          {feature.description}
+                        </p>
+                      </CardContent>
+                    </Card>
                   </motion.div>
                 );
               })}
             </div>
-
-            {/* Chart on Right */}
-            {contentSettings?.chartConfig?.enabled &&
-              contentSettings?.chartConfig?.position === "right" && (
-                <motion.div
-                  initial={
-                    animations && !reducedMotion
-                      ? { opacity: 0, scale: 0.8 }
-                      : {}
-                  }
-                  whileInView={
-                    animations && !reducedMotion ? { opacity: 1, scale: 1 } : {}
-                  }
-                  viewport={{ once: true }}
-                  transition={
-                    animations && !reducedMotion ? { delay: 0.3 } : {}
-                  }
-                  className="h-80 order-2"
-                >
-                  {renderChart()}
-                </motion.div>
-              )}
           </div>
+        </section>
+      )}
+
+      <Divider />
+
+      {/* ── CTA ── */}
+      <section className="relative py-24 px-4 sm:px-6 lg:px-8 overflow-hidden">
+        {/* background accent */}
+        <div className="absolute inset-0 pointer-events-none">
+          <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/20 to-transparent" />
+          <div className="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-primary/20 to-transparent" />
+          <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[300px] bg-primary/5 rounded-full blur-3xl" />
         </div>
-      </section>
 
-      {/* Features Section */}
-      <section className="relative py-20 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-6xl mx-auto">
-          <motion.div
-            initial={animations && !reducedMotion ? { opacity: 0, y: 30 } : {}}
-            whileInView={
-              animations && !reducedMotion ? { opacity: 1, y: 0 } : {}
-            }
-            viewport={{ once: true }}
-            className="text-center mb-16"
-          >
-            <h2 className="text-3xl lg:text-4xl font-bold mb-4">
-              {contentSettings?.featuresTitle || "Why Choose"}{" "}
-              <span className="text-primary">
-                {contentSettings?.siteName || "Vidhgrow"}
-              </span>
-            </h2>
-            <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
-              {contentSettings?.featuresDescription ||
-                "Our platform combines cutting-edge technology with proven learning methodologies."}
-            </p>
-          </motion.div>
-
-          <div className="grid md:grid-cols-3 gap-8">
-            {contentSettings?.features?.map((feature, index) => {
-              const IconComponent = iconMap[feature.icon] || Brain;
-              return (
-                <motion.div
-                  key={index}
-                  initial={
-                    animations && !reducedMotion ? { opacity: 0, y: 20 } : {}
-                  }
-                  whileInView={
-                    animations && !reducedMotion ? { opacity: 1, y: 0 } : {}
-                  }
-                  viewport={{ once: true }}
-                  transition={
-                    animations && !reducedMotion ? { delay: index * 0.2 } : {}
-                  }
-                >
-                  <Card className="h-full hover:shadow-lg transition-shadow duration-300">
-                    <CardContent className="p-6 text-center">
-                      <div className="w-16 h-16 bg-primary/15 rounded-2xl mx-auto mb-6 flex items-center justify-center">
-                        <IconComponent className="w-8 h-8 text-primary" />
-                      </div>
-                      <h3 className="text-xl font-semibold mb-3">
-                        {feature.title}
-                      </h3>
-                      <p className="text-muted-foreground leading-relaxed">
-                        {feature.description}
-                      </p>
-                    </CardContent>
-                  </Card>
-                </motion.div>
-              );
-            })}
-          </div>
-        </div>
-      </section>
-
-      {/* CTA Section */}
-      <section className="relative py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-primary/5 to-primary/10">
-        <div className="max-w-4xl mx-auto text-center">
+        <div className="max-w-2xl mx-auto text-center relative">
           <motion.div
             initial={animations && !reducedMotion ? { opacity: 0, y: 20 } : {}}
             whileInView={
               animations && !reducedMotion ? { opacity: 1, y: 0 } : {}
             }
             viewport={{ once: true }}
-            className="space-y-8"
+            className="space-y-6"
           >
-            <div className="space-y-4">
-              <h2 className="text-3xl lg:text-4xl font-bold">
-                {contentSettings?.ctaTitle ||
-                  "Ready to Transform Your Learning Journey?"}
-              </h2>
-              <p className="text-xl text-muted-foreground">
-                {contentSettings?.ctaDescription ||
-                  "Join thousands of learners accelerating their growth with personalized testing."}
-              </p>
-            </div>
+            <SectionLabel>Get started</SectionLabel>
+            <h2 className="text-3xl lg:text-4xl font-bold">
+              {contentSettings?.ctaTitle ||
+                "Ready to Transform Your Learning Journey?"}
+            </h2>
+            <p className="text-lg text-muted-foreground">
+              {contentSettings?.ctaDescription ||
+                "Join thousands of learners accelerating their growth with personalized testing."}
+            </p>
 
-            <div className="max-w-md mx-auto">
-              <form
-                onSubmit={handleEmailSubmit}
-                className="flex flex-col sm:flex-row gap-3"
+            <form
+              onSubmit={handleEmailSubmit}
+              className="flex flex-col sm:flex-row gap-3 max-w-md mx-auto"
+            >
+              <Input
+                type="email"
+                placeholder="Enter your email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                className="flex-1 h-11"
+              />
+              <Button
+                type="submit"
+                className="h-11 px-6 gap-2 whitespace-nowrap"
               >
-                <Input
-                  type="email"
-                  placeholder="Enter your email to get started"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                  className="flex-1 h-12 text-base"
-                />
-                <Button
-                  type="submit"
-                  size="lg"
-                  className="whitespace-nowrap h-12 px-8"
-                >
-                  Get Started
-                  <ArrowRight className="w-4 h-4 ml-2" />
-                </Button>
-              </form>
-            </div>
-          </motion.div>
-        </div>
-      </section>
+                Get Started
+                <ArrowRight className="w-4 h-4" />
+              </Button>
+            </form>
 
-      {/* FAQ Section */}
-      <section
-        id="faqs"
-        className="relative py-20 px-4 sm:px-6 lg:px-8 bg-muted/30"
-      >
-        <div className="max-w-4xl mx-auto">
-          <motion.div
-            initial={animations && !reducedMotion ? { opacity: 0, y: 30 } : {}}
-            whileInView={
-              animations && !reducedMotion ? { opacity: 1, y: 0 } : {}
-            }
-            viewport={{ once: true }}
-            className="text-center mb-16"
-          >
-            <h2 className="text-3xl lg:text-4xl font-bold mb-4">
-              Frequently Asked <span className="text-primary">Questions</span>
-            </h2>
-            <p className="text-xl text-muted-foreground">
-              Get answers to common questions about our platform and features.
+            <p className="text-xs text-muted-foreground/60">
+              Start learning today.
             </p>
           </motion.div>
-
-          <motion.div
-            initial={animations && !reducedMotion ? { opacity: 0, y: 20 } : {}}
-            whileInView={
-              animations && !reducedMotion ? { opacity: 1, y: 0 } : {}
-            }
-            viewport={{ once: true }}
-            transition={animations && !reducedMotion ? { delay: 0.2 } : {}}
-          >
-            <Accordion type="single" collapsible className="space-y-4">
-              {faqs.slice(0, 5).map((faq, index) => (
-                <AccordionItem
-                  key={faq._id || index}
-                  value={`item-${index}`}
-                  className="border-2 border-border/60 hover:border-primary/50 rounded-lg px-6 bg-background/50 hover:bg-background transition-all duration-200"
-                >
-                  <AccordionTrigger className="text-left hover:no-underline font-semibold text-foreground py-5">
-                    {faq.question}
-                  </AccordionTrigger>
-                  <AccordionContent className="text-foreground/80 leading-relaxed pt-2 pb-4 text-base">
-                    {faq.answer}
-                  </AccordionContent>
-                </AccordionItem>
-              ))}
-            </Accordion>
-          </motion.div>
         </div>
       </section>
+
+      <Divider />
+
+      {/* ── FAQ ── */}
+      {faqs && faqs.length > 0 && (
+        <section
+          id="faqs"
+          className="relative py-20 px-4 sm:px-6 lg:px-8 bg-muted/20"
+        >
+          <div className="max-w-3xl mx-auto">
+            <motion.div
+              initial={
+                animations && !reducedMotion ? { opacity: 0, y: 24 } : {}
+              }
+              whileInView={
+                animations && !reducedMotion ? { opacity: 1, y: 0 } : {}
+              }
+              viewport={{ once: true }}
+              className="text-center mb-12"
+            >
+              <SectionLabel>Questions</SectionLabel>
+              <h2 className="text-3xl lg:text-4xl font-bold mb-3">
+                Frequently Asked <span className="text-primary">Questions</span>
+              </h2>
+              <p className="text-muted-foreground">
+                Get answers to common questions about our platform.
+              </p>
+            </motion.div>
+
+            <motion.div
+              initial={
+                animations && !reducedMotion ? { opacity: 0, y: 16 } : {}
+              }
+              whileInView={
+                animations && !reducedMotion ? { opacity: 1, y: 0 } : {}
+              }
+              viewport={{ once: true }}
+              transition={{ delay: 0.15 }}
+            >
+              <Accordion type="single" collapsible className="space-y-3">
+                {faqs.slice(0, 5).map((faq, index) => (
+                  <AccordionItem
+                    key={faq._id || index}
+                    value={`item-${index}`}
+                    className="border border-border/60 hover:border-primary/40 rounded-xl px-5 bg-background/60 backdrop-blur-sm transition-colors duration-200"
+                  >
+                    <AccordionTrigger className="text-left hover:no-underline font-medium text-foreground py-4 text-sm sm:text-base">
+                      {faq.question}
+                    </AccordionTrigger>
+                    <AccordionContent className="text-muted-foreground leading-relaxed pb-4 text-sm sm:text-base">
+                      {faq.answer}
+                    </AccordionContent>
+                  </AccordionItem>
+                ))}
+              </Accordion>
+            </motion.div>
+          </div>
+        </section>
+      )}
     </div>
   );
 };
