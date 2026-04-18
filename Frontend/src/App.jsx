@@ -356,7 +356,6 @@ const BackgroundElements = ({ animations, reducedMotion }) => {
   );
 };
 
-// Add this BEFORE the App function
 const ProfileRouteGuard = () => {
   const { username } = useParams();
 
@@ -369,10 +368,59 @@ const ProfileRouteGuard = () => {
   return <PublicProfile />;
 };
 
+import BlockedPage from "./pages/BlockedPage";
+import { useEffect, useState } from "react";
+
 function App() {
   const { loading: authLoading, isAuthenticated } = useAuth();
   const { animations, reducedMotion } = useTheme();
   const location = useLocation();
+  const [ipBlocked, setIpBlocked] = useState(null); // null = not blocked, object = block info
+
+  // intercept all axios/fetch errors globally for IP_BLOCKED code
+  useEffect(() => {
+    const handleFetchError = async (e) => {
+      // only intercept if response exists
+    };
+
+    const origFetch = window.fetch;
+    window.fetch = async (...args) => {
+      const res = await origFetch(...args);
+      if (res.status === 403) {
+        try {
+          const clone = res.clone();
+          const data = await clone.json();
+          if (data?.code === "IP_BLOCKED") {
+            setIpBlocked({ expiresAt: data.expiresAt || null });
+          }
+        } catch (_) {}
+      }
+      return res;
+    };
+
+    return () => {
+      window.fetch = origFetch;
+    };
+  }, []);
+
+  // if ip is blocked, only show home and the blocked notice on other routes
+  if (ipBlocked && location.pathname !== "/") {
+    return (
+      <UnheadProvider head={head}>
+        <ErrorBoundary>
+          <ContentProvider>
+            <div className="bg-background text-foreground">
+              <Header />
+              <main className="relative z-10 min-h-screen">
+                <BlockedPage expiresAt={ipBlocked.expiresAt} />
+              </main>
+            </div>
+          </ContentProvider>
+        </ErrorBoundary>
+      </UnheadProvider>
+    );
+  }
+
   return (
     <UnheadProvider head={head}>
       <ErrorBoundary>
