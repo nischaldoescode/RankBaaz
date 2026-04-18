@@ -13,6 +13,138 @@ import {
 } from "react-icons/fi";
 import { motion } from "framer-motion";
 
+const BlockedIpsList = () => {
+  const [blocked, setBlocked] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [unblocking, setUnblocking] = useState(null);
+
+  useEffect(() => {
+    fetchBlocked();
+  }, []);
+
+  const fetchBlocked = async () => {
+    try {
+      setLoading(true);
+      const res = await axios.get("/api/admin/ip/blocked", {
+        withCredentials: true,
+      });
+      setBlocked(res.data.data.blocked || []);
+    } catch (err) {
+      console.error("Failed to fetch blocked IPs:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleUnblock = async (ip) => {
+    setUnblocking(ip);
+    try {
+      await axios.post(
+        "/api/admin/ip/unblock",
+        { ip },
+        { withCredentials: true },
+      );
+      toast.success(`IP ${ip} unblocked`);
+      setBlocked((prev) => prev.filter((b) => b.ip !== ip));
+    } catch (err) {
+      toast.error("Failed to unblock IP");
+    } finally {
+      setUnblocking(null);
+    }
+  };
+
+  return (
+    <div className="mt-8 bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
+      <div className="p-6 border-b border-gray-200 bg-gradient-to-r from-purple-50 to-indigo-50">
+        <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+          <FiShield className="w-5 h-5 text-purple-600" />
+          Blocked IP Addresses
+        </h2>
+      </div>
+      {loading ? (
+        <div className="flex justify-center py-8">
+          <div className="animate-spin rounded-full h-8 w-8 border-4 border-purple-200 border-t-purple-600"></div>
+        </div>
+      ) : blocked.length === 0 ? (
+        <div className="text-center py-10 text-gray-500">No blocked IPs</div>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead className="bg-gray-50 border-b border-gray-200">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase">
+                  IP Address
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase">
+                  User
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase">
+                  Reason
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase">
+                  Expires
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase">
+                  Actions
+                </th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-200">
+              {blocked.map((b) => (
+                <tr key={b.ip} className="hover:bg-gray-50">
+                  <td className="px-6 py-4 font-mono text-sm text-gray-900">
+                    {b.ip}
+                  </td>
+                  <td className="px-6 py-4 text-sm text-gray-700">
+                    {b.userId ? (
+                      <div>
+                        <p className="font-medium">{b.userId.name}</p>
+                        <p className="text-xs text-gray-500">
+                          {b.userId.email}
+                        </p>
+                      </div>
+                    ) : (
+                      <span className="text-gray-400">unknown</span>
+                    )}
+                  </td>
+                  <td className="px-6 py-4 text-sm text-gray-600">
+                    {b.reason}
+                  </td>
+                  <td className="px-6 py-4 text-sm">
+                    {b.expiresAt ? (
+                      <span className="text-amber-600 font-medium">
+                        {new Date(b.expiresAt).toLocaleDateString("en-US", {
+                          month: "short",
+                          day: "numeric",
+                          year: "numeric",
+                        })}
+                      </span>
+                    ) : (
+                      <span className="px-2 py-1 bg-red-100 text-red-700 rounded text-xs font-semibold">
+                        Permanent
+                      </span>
+                    )}
+                  </td>
+                  <td className="px-6 py-4">
+                    <button
+                      onClick={() => handleUnblock(b.ip)}
+                      disabled={unblocking === b.ip}
+                      className="px-3 py-1.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                    >
+                      <FiCheck className="w-4 h-4" />
+                      {unblocking === b.ip ? "Unblocking..." : "Unblock"}
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+};
+
 const Violations = () => {
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -120,7 +252,7 @@ const Violations = () => {
             label: "Recent (24h)",
             value: stats.recentViolations.filter(
               (v) =>
-                new Date(v.lastViolation) > Date.now() - 24 * 60 * 60 * 1000
+                new Date(v.lastViolation) > Date.now() - 24 * 60 * 60 * 1000,
             ).length,
             icon: FiClock,
             color: "blue",
@@ -222,6 +354,8 @@ const Violations = () => {
           </table>
         </div>
       </div>
+      {/* Blocked IPs Section */}
+      <BlockedIpsList />
       {/* User Details Modal */}
       {selectedUser && (
         <UserDetailsModal
@@ -303,7 +437,7 @@ const UserDetailsModal = ({ user, onClose, onBan, onUnban }) => {
                   <p className="text-sm font-semibold text-red-900">
                     {userDetails.user.devToolsViolations?.lastViolation
                       ? new Date(
-                          userDetails.user.devToolsViolations.lastViolation
+                          userDetails.user.devToolsViolations.lastViolation,
                         ).toLocaleString()
                       : "N/A"}
                   </p>
@@ -340,7 +474,7 @@ const UserDetailsModal = ({ user, onClose, onBan, onUnban }) => {
                           IP: {violation.ipAddress}
                         </p>
                       </div>
-                    )
+                    ),
                   )}
                 </div>
               </div>
