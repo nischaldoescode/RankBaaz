@@ -30,6 +30,7 @@ import RedisStore from "connect-redis";
 import trackingRoutes from "./Routes/trackingRoutes.js";
 import { checkIpBlock } from "./Middleware/ipBlockMiddleware.js";
 import teacherRoutes from "./Routes/teacherRoutes.js";
+import khaltiRoutes from "./Routes/khaltiRoutes.js";
 
 // Load environment variables
 dotenv.config();
@@ -496,7 +497,7 @@ app.use("/api/coupons", couponLimiter, couponRoutes);
 app.use("/api/devtools", devToolsRoutes);
 app.use("/track", trackingRoutes);
 app.use("/api/teachers", teacherRoutes);
-
+app.use("/api/payments/khalti", khaltiRoutes);
 /**
  * Root endpoint - Minimal response for security
  */
