@@ -325,7 +325,7 @@ const TeacherJoin = () => {
           >
             <WaitlistCounter />
             <a
-              href="https://teacher.vidhgrow.online"
+              href="https://teachers.vidhgrow.online"
               className="text-sm text-muted-foreground hover:text-foreground transition-colors underline underline-offset-4"
             >
               Already have an account? Sign in
