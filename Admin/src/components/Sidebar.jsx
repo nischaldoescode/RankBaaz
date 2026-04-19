@@ -78,6 +78,12 @@ const Sidebar = ({ isOpen, onClose }) => {
       name: "Global Leaderboard",
       icon: Medal,
       color: "from-yellow-500 to-yellow-600",
+    },
+    {
+      href: "/admin/teachers",
+      name: "Teachers",
+      icon: Users,
+      color: "from-green-500 to-green-600",
     }
   ];
 

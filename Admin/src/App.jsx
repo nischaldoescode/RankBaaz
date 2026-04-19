@@ -27,6 +27,7 @@ import ContentManagement from "./pages/ContentManagement.jsx";
 import CouponManagement from "./pages/UniversalCoupons.jsx";
 import Violations from "./pages/Violations.jsx";
 import GlobalLeaderboard from "./pages/GlobalLeaderBoard.jsx";
+const TeacherManagement = React.lazy(() => import("./pages/TeacherManagement"));
 
 function App() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -130,6 +131,10 @@ function App() {
                                   element={<Violations />}
                                 />
                               </Routes>
+                              <Route
+                                path="/admin/teachers"
+                                element={<TeacherManagement />}
+                              />
                             </div>
                           </main>
                         </div>
