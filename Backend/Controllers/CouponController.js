@@ -603,3 +603,228 @@ export const deleteCoupon = async (req, res) => {
     });
   }
 };
+
+
+// ── Teacher coupon management ──
+
+/**
+ * teacher creates a coupon — only allowed if admin granted access
+ * and teacher owns the course
+ */
+export const teacherCreateCoupon = async (req, res) => {
+  try {
+    const teacherId = req.teacher.teacherId;
+    const { courseId, discount, maxUsage, validUntil, code } = req.body;
+
+    if (!code || !courseId || !discount) {
+      return res.status(400).json({
+        success: false,
+        message: "Code, courseId, and discount are required",
+      });
+    }
+
+    // validate code format
+    const cleanCode = code.trim().toUpperCase().replace(/[^A-Z0-9]/g, "");
+    if (cleanCode.length < 4 || cleanCode.length > 20) {
+      return res.status(400).json({
+        success: false,
+        message: "Coupon code must be 4-20 uppercase letters/numbers",
+      });
+    }
+
+    if (![2, 5, 10, 15, 20].includes(parseInt(discount))) {
+      return res.status(400).json({
+        success: false,
+        message: "Discount must be 2, 5, 10, 15, or 20 percent",
+      });
+    }
+
+    // verify teacher owns course and course is approved
+    const course = await Course.findOne({
+      _id: courseId,
+      teacher: teacherId,
+      approvalStatus: "approved",
+      isPaid: true,
+    });
+
+    if (!course) {
+      return res.status(403).json({
+        success: false,
+        message: "Course not found, not approved, or not owned by you",
+      });
+    }
+
+    // security: check if admin granted coupon access for this teacher
+    const Teacher = (await import("../Models/Teacher.js")).default;
+    const teacher = await Teacher.findById(teacherId).select("couponAccess accessBlocked");
+
+    if (!teacher || teacher.accessBlocked) {
+      return res.status(403).json({ success: false, message: "Account restricted" });
+    }
+
+    if (!teacher.couponAccess) {
+      return res.status(403).json({
+        success: false,
+        code: "COUPON_ACCESS_DENIED",
+        message: "You don't have permission to create coupons. Contact admin.",
+      });
+    }
+
+    // check duplicate
+    const hashedCode = crypto.createHash("sha256").update(cleanCode).digest("hex");
+    const existing = await Coupon.findOne({ hashedCode });
+    if (existing) {
+      return res.status(400).json({ success: false, message: "Coupon code already exists" });
+    }
+
+    const coupon = await Coupon.create({
+      code: cleanCode,
+      hashedCode,
+      type: "course",
+      course: courseId,
+      discount: parseInt(discount),
+      maxUsage: maxUsage ? parseInt(maxUsage) : null,
+      validUntil: validUntil || null,
+      createdBy: req.teacher.username || "teacher",
+      createdByTeacher: teacherId,
+    });
+
+    return res.status(201).json({
+      success: true,
+      message: "Coupon created",
+      data: {
+        coupon: {
+          _id: coupon._id,
+          code: coupon.code,
+          discount: coupon.discount,
+          maxUsage: coupon.maxUsage,
+          validUntil: coupon.validUntil,
+          isActive: coupon.isActive,
+          usageCount: coupon.usageCount,
+          createdAt: coupon.createdAt,
+        },
+      },
+    });
+  } catch (error) {
+    console.error("Teacher create coupon error:", error);
+    res.status(500).json({ success: false, message: "Failed to create coupon" });
+  }
+};
+
+export const teacherGetCourseCoupons = async (req, res) => {
+  try {
+    const teacherId = req.teacher.teacherId;
+    const { courseId } = req.params;
+
+    // verify teacher owns course
+    const course = await Course.findOne({ _id: courseId, teacher: teacherId });
+    if (!course) {
+      return res.status(403).json({ success: false, message: "Not authorized" });
+    }
+
+    const coupons = await Coupon.find({ course: courseId }).sort({ createdAt: -1 }).lean();
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        coupons: coupons.map((c) => ({
+          _id: c._id,
+          code: c.code,
+          discount: c.discount,
+          isActive: c.isActive,
+          usageCount: c.usageCount,
+          maxUsage: c.maxUsage,
+          validUntil: c.validUntil,
+          createdAt: c.createdAt,
+          createdBy: c.createdBy,
+        })),
+      },
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: "Failed to fetch coupons" });
+  }
+};
+
+export const teacherDeleteCoupon = async (req, res) => {
+  try {
+    const teacherId = req.teacher.teacherId;
+    const { couponId } = req.params;
+
+    const coupon = await Coupon.findById(couponId).populate("course");
+    if (!coupon) {
+      return res.status(404).json({ success: false, message: "Coupon not found" });
+    }
+
+    // security: teacher can only delete their own course's coupons
+    const courseTeacher = coupon.course?.teacher?.toString();
+    if (courseTeacher !== teacherId.toString()) {
+      return res.status(403).json({ success: false, message: "Not authorized" });
+    }
+
+    await Coupon.findByIdAndDelete(couponId);
+
+    try {
+      await redisClient.del(`coupon:${coupon.code.toUpperCase()}`);
+    } catch {}
+
+    return res.status(200).json({ success: true, message: "Coupon deleted" });
+  } catch (error) {
+    res.status(500).json({ success: false, message: "Failed to delete" });
+  }
+};
+
+export const teacherToggleCouponStatus = async (req, res) => {
+  try {
+    const teacherId = req.teacher.teacherId;
+    const { couponId } = req.params;
+    const { isActive } = req.body;
+
+    const coupon = await Coupon.findById(couponId).populate("course");
+    if (!coupon) {
+      return res.status(404).json({ success: false, message: "Not found" });
+    }
+
+    if (coupon.course?.teacher?.toString() !== teacherId.toString()) {
+      return res.status(403).json({ success: false, message: "Not authorized" });
+    }
+
+    coupon.isActive = isActive;
+    await coupon.save();
+
+    try {
+      await redisClient.del(`coupon:${coupon.code.toUpperCase()}`);
+    } catch {}
+
+    return res.status(200).json({ success: true });
+  } catch (error) {
+    res.status(500).json({ success: false, message: "Failed" });
+  }
+};
+
+/**
+ * admin grants/revokes coupon creation access to a teacher
+ */
+export const adminSetTeacherCouponAccess = async (req, res) => {
+  try {
+    const { teacherId, access } = req.body;
+
+    const Teacher = (await import("../Models/Teacher.js")).default;
+    const teacher = await Teacher.findByIdAndUpdate(
+      teacherId,
+      { couponAccess: !!access },
+      { new: true }
+    ).select("name email username couponAccess");
+
+    if (!teacher) {
+      return res.status(404).json({ success: false, message: "Teacher not found" });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: `Coupon access ${access ? "granted" : "revoked"}`,
+      data: { teacher },
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: "Failed" });
+  }
+};

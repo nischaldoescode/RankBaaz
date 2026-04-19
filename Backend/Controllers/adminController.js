@@ -9,7 +9,7 @@ import {
   isCaptchaRequired,
   generateAdminCaptcha,
 } from "../Middleware/adminCaptcha.js";
-
+import redisClient from "../Config/redis.js";
 import IpBlock from "../Models/IpBlock.js";
 
 /**
@@ -852,6 +852,8 @@ export const deleteUser = async (req, res) => {
     // delete the user
     await User.findByIdAndDelete(userId);
 
+    await redisClient.del(`profile:${user.username}`).catch(() => {});
+
     return res.status(200).json({
       success: true,
       message: `User ${user.name} and all associated data deleted`,
@@ -859,5 +861,37 @@ export const deleteUser = async (req, res) => {
   } catch (error) {
     console.error("Delete user error:", error);
     res.status(500).json({ success: false, message: "Failed to delete user" });
+  }
+};
+
+export const adminUnblockTeacher = async (req, res) => {
+  try {
+    const { teacherId } = req.body;
+
+    const Teacher = (await import("../Models/Teacher.js")).default;
+    const teacher = await Teacher.findByIdAndUpdate(
+      teacherId,
+      {
+        accessBlocked: false,
+        accessBlockReason: null,
+      },
+      { new: true }
+    ).select("name email accessBlocked");
+
+    if (!teacher) {
+      return res.status(404).json({ success: false, message: "Not found" });
+    }
+
+    // invalidate cache
+    const { default: redis } = await import("../Config/redis.js");
+    await redis.del(`teacher:${teacherId}`).catch(() => {});
+
+    return res.status(200).json({
+      success: true,
+      message: "Teacher unblocked",
+      data: { teacher },
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: "Failed to unblock" });
   }
 };

@@ -21,11 +21,18 @@ export const getPublicProfile = async (req, res) => {
     }
 
     // Fetch from database
-    const user = await User.findOne({ username: username.toLowerCase() })
+    const user = await User.findOne({
+      username: username.toLowerCase(),
+      isVerified: true, // only verified users have public profiles
+    })
       .select("username name nameVisibility points badges stats createdAt")
       .lean();
 
     if (!user) {
+      // if we had cached this profile but user was deleted, bust the cache
+      try {
+        await redisClient.del(cacheKey);
+      } catch {}
       return res.status(404).json({
         success: false,
         message: `There is no profile named @${username}`,

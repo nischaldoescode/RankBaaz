@@ -115,6 +115,8 @@ const teacherSchema = new mongoose.Schema(
       default: null,
     },
     inviteEmailSentAt: { type: Date, default: null },
+    // admin can grant/revoke coupon creation permission
+    couponAccess: { type: Boolean, default: false },
 
     revenueSharePercent: { type: Number, default: 80 },
     totalEarnings: { type: Number, default: 0 },
@@ -135,11 +137,8 @@ const teacherSchema = new mongoose.Schema(
       },
     },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
-
-teacherSchema.index({ email: 1 });
-teacherSchema.index({ username: 1 });
 teacherSchema.index({ country: 1 });
 teacherSchema.index({ documentStatus: 1 });
 teacherSchema.index({ isActive: 1 });

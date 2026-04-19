@@ -36,7 +36,10 @@ import {
   sendTeacherInvite,
   rejectTeacherApplication,
 } from "../Controllers/teacherController.js";
-import { authenticateTeacher } from "../Middleware/teacherAuth.js";
+import {
+  authenticateTeacher,
+  requireDocumentVerification,
+} from "../Middleware/teacherAuth.js";
 import { authenticateAdmin } from "../Middleware/auth.js";
 import { uploadCourseImage, handleUploadError } from "../Middleware/Upload.js";
 
@@ -122,6 +125,19 @@ router.post("/otp/send", sendSignupOtp);
 router.post("/otp/verify", verifySignupOtp);
 router.post("/signup", teacherSignup);
 router.post("/login", teacherLogin);
+router.post("/check-email", async (req, res) => {
+  try {
+    const Teacher = (await import("../Models/Teacher.js")).default;
+    const exists = await Teacher.exists({
+      email: req.body.email?.toLowerCase(),
+    });
+    // don't reveal whether account is active or blocked — just existence
+    return res.status(200).json({ success: true, exists: !!exists });
+  } catch {
+    res.status(500).json({ success: false, exists: false });
+  }
+});
+
 router.post("/logout", teacherLogout);
 router.post("/forgot-password", teacherForgotPassword);
 router.post("/forgot-password/verify-otp", teacherVerifyForgotOtp);
@@ -131,24 +147,10 @@ router.get("/public/:username", getPublicTeacherProfile);
 // ── teacher authenticated ──
 router.get("/me", authenticateTeacher, getTeacherProfile);
 router.get("/me/analytics", authenticateTeacher, getTeacherAnalytics);
-router.put(
-  "/me/profile",
-  authenticateTeacher,
-  handleProfileUpload,
-  updateTeacherProfile,
-);
-router.put("/me/payment-details", authenticateTeacher, updatePaymentDetails);
-router.post(
-  "/me/documents",
-  authenticateTeacher,
-  handleDocumentUpload,
-  uploadDocuments,
-);
-
-// teacher course management
 router.post(
   "/me/courses",
   authenticateTeacher,
+  requireDocumentVerification, // blocks network requests too
   uploadCourseImage,
   handleUploadError,
   teacherCreateCourse,
@@ -156,21 +158,38 @@ router.post(
 router.put(
   "/me/courses/:courseId",
   authenticateTeacher,
+  requireDocumentVerification,
   uploadCourseImage,
   handleUploadError,
   teacherUpdateCourse,
 );
-router.get(
-  "/me/courses/:courseId/questions",
-  authenticateTeacher,
-  teacherGetCourseQuestions,
-);
 router.post(
   "/me/courses/:courseId/questions",
   authenticateTeacher,
+  requireDocumentVerification,
   uploadCourseImage,
   handleUploadError,
   teacherAddQuestion,
+);
+router.put(
+  "/me/profile",
+  authenticateTeacher,
+  requireDocumentVerification,
+  handleProfileUpload,
+  updateTeacherProfile,
+);
+router.put(
+  "/me/payment-details",
+  authenticateTeacher,
+  requireDocumentVerification,
+  updatePaymentDetails,
+);
+router.post(
+  "/me/documents",
+  authenticateTeacher,
+  handleDocumentUpload,
+  uploadDocuments,
+  // note: NO requireDocumentVerification here — documents tab must always work
 );
 
 // ── admin ──
@@ -181,6 +200,17 @@ router.post(
   authenticateAdmin,
   rejectTeacherApplication,
 );
+router.post(
+  "/admin/request-documents",
+  authenticateAdmin,
+  adminRequestDocuments,
+);
+router.post("/admin/unblock", authenticateAdmin, (req, res) => {
+  import("../Controllers/adminController.js").then(({ adminUnblockTeacher }) =>
+    adminUnblockTeacher(req, res),
+  );
+});
+
 router.get("/admin/all", authenticateAdmin, getAllTeachers);
 router.get("/admin/:teacherId", authenticateAdmin, getTeacherById);
 router.delete("/admin/:teacherId", authenticateAdmin, adminDeleteTeacher);

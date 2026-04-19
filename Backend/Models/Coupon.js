@@ -65,6 +65,18 @@ const couponSchema = new mongoose.Schema(
         },
       },
     ],
+    // if created by a teacher (not admin)
+    createdByTeacher: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Teacher",
+      default: null,
+    },
+    // admin can allow/revoke teacher coupon creation for a course
+    teacherCouponAccess: {
+      type: Boolean,
+      default: false,
+    },
+
     createdBy: {
       type: String,
       required: true,
@@ -72,7 +84,7 @@ const couponSchema = new mongoose.Schema(
   },
   {
     timestamps: true,
-  }
+  },
 );
 
 // Method to verify coupon code
