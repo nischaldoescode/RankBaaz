@@ -119,6 +119,36 @@ const router = express.Router();
 
 // ── public ──
 router.post("/apply", submitTeacherApplication);
+router.post("/application/status", async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email) return res.status(400).json({ success: false });
+
+    const TeacherApplication = (await import("../Models/TeacherApplication.js"))
+      .default;
+    const Teacher = (await import("../Models/Teacher.js")).default;
+
+    const [app, teacher] = await Promise.all([
+      TeacherApplication.findOne({ email: email.toLowerCase() })
+        .select("status createdAt")
+        .lean(),
+      Teacher.findOne({ email: email.toLowerCase() }).select("_id").lean(),
+    ]);
+
+    if (teacher) {
+      return res.json({ success: true, data: { status: "registered" } });
+    }
+    if (app) {
+      return res.json({
+        success: true,
+        data: { status: app.status, appliedAt: app.createdAt },
+      });
+    }
+    return res.json({ success: true, data: { status: "none" } });
+  } catch {
+    res.status(500).json({ success: false });
+  }
+});
 router.get("/waitlist-count", getWaitlistCount);
 router.get("/verify-invite", verifyInviteToken);
 router.post("/otp/send", sendSignupOtp);
