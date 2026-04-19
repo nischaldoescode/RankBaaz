@@ -40,7 +40,7 @@ const NotFound = React.lazy(() => import("./pages/NotFound"));
 const TeacherJoin = React.lazy(() => import("./pages/TeacherJoin"));
 const TeacherSignup = React.lazy(() => import("./pages/TeacherSignup"));
 const TeacherLogin = React.lazy(() => import("./pages/TeacherLogin"));
-const TeacherDashboard = React.lazy(() => import("./pages/TeacherDashboard"));
+const TeacherProfile = React.lazy(() => import("./pages/TeacherProfile"));
 const PublicProfile = React.lazy(() => import("./pages/PublicProfile"));
 const Contact = React.lazy(() => import("./pages/Contact"));
 const About = React.lazy(() => import("./pages/About"));
@@ -726,7 +726,7 @@ function App() {
                       }
                     />
 
-{/* Teacher Routes */}
+                    {/* Teacher Routes */}
                     <Route
                       path="/teacher"
                       element={
@@ -760,9 +760,17 @@ function App() {
                       }
                     />
 
+                    <Route
+                      path="/teacher/:username"
+                      element={
+                        <Suspense fallback={<Loading variant="page" />}>
+                          <TeacherProfile />
+                        </Suspense>
+                      }
+                    />
+
                     {/* 404 Route */}
                     <Route
-
                       path="*"
                       element={
                         <Suspense

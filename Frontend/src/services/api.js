@@ -95,7 +95,7 @@ api.interceptors.request.use(
     ];
 
     const isPublicEndpoint = publicEndpoints.some((endpoint) =>
-      config.url?.includes(endpoint)
+      config.url?.includes(endpoint),
     );
 
     // Public GET endpoints (no auth required)
@@ -131,7 +131,7 @@ api.interceptors.request.use(
   },
   (error) => {
     return Promise.reject(error);
-  }
+  },
 );
 
 // Helper function to add signature to request
@@ -200,7 +200,7 @@ api.interceptors.response.use(
       try {
         if (import.meta.env.VITE_ENV === "development") {
           console.log(
-            `[SIGNATURE] Handling ${error.response.data.code}, fetching new secret...`
+            `[SIGNATURE] Handling ${error.response.data.code}, fetching new secret...`,
           );
         }
 
@@ -262,7 +262,7 @@ api.interceptors.response.use(
     }
 
     return Promise.reject(error);
-  }
+  },
 );
 
 // Response Interceptor - Handle Auth & Errors
@@ -335,7 +335,7 @@ api.interceptors.response.use(
       // If CSRF token error, try to refresh CSRF token first
       if (errorCode && errorCode.includes("CSRF")) {
         console.log(
-          "[API] CSRF error detected, token will be refreshed automatically"
+          "[API] CSRF error detected, token will be refreshed automatically",
         );
         // The interceptor at the top will handle fetching new CSRF token
         return Promise.reject(error);
@@ -430,7 +430,7 @@ api.interceptors.response.use(
     }
 
     return Promise.reject(error);
-  }
+  },
 );
 
 // API methods
@@ -497,6 +497,32 @@ export const apiMethods = {
     checkPurchase: (courseId) =>
       api.get(`/api/payments/check-purchase/${courseId}`),
     getPurchaseHistory: () => api.get("/api/payments/history"),
+    // khalti (nepal)
+    khaltiInitiate: (data) => api.post("/api/payments/khalti/initiate", data),
+    khaltiVerify: (data) => api.post("/api/payments/khalti/verify", data),
+  },
+  teacher: {
+    getWaitlistCount: () => api.get("/api/teachers/waitlist-count"),
+    apply: (data) => api.post("/api/teachers/apply", data),
+    getPublicProfile: (username) => api.get(`/api/teachers/public/${username}`),
+    sendOtp: (data) => api.post("/api/teachers/otp/send", data),
+    verifyOtp: (data) => api.post("/api/teachers/otp/verify", data),
+    signup: (data) => api.post("/api/teachers/signup", data),
+    login: (data) => api.post("/api/teachers/login", data),
+    logout: () => api.post("/api/teachers/logout"),
+    forgotPassword: (data) => api.post("/api/teachers/forgot-password", data),
+    verifyForgotOtp: (data) =>
+      api.post("/api/teachers/forgot-password/verify-otp", data),
+    resetPassword: (data) =>
+      api.post("/api/teachers/forgot-password/reset", data),
+    getProfile: () => api.get("/api/teachers/me"),
+    getAnalytics: () => api.get("/api/teachers/me/analytics"),
+    updateProfile: (data) => api.put("/api/teachers/me/profile", data),
+    updatePayment: (data) => api.put("/api/teachers/me/payment-details", data),
+    uploadDocuments: (formData) =>
+      api.post("/api/teachers/me/documents", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      }),
   },
 
   coupons: {
