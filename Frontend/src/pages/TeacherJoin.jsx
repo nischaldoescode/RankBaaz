@@ -42,7 +42,7 @@ const useWaitlistCount = () => {
 
   useEffect(() => {
     axios
-      .get(`${API}/teachers/waitlist-count`)
+      .get(`${API}/api/teachers/waitlist-count`)
       .then((r) => setCount(r.data.data?.count ?? 0))
       .catch(() => {});
   }, []);
@@ -230,7 +230,7 @@ const ApplicationForm = ({ onApplied }) => {
     }
     setLoading(true);
     try {
-      await axios.post(`${API}/teachers/apply`, form);
+      await axios.post(`${API}/api/teachers/apply`, form);
       // store in localStorage so user sees status on revisit
       setStored({
         email: form.email,
@@ -453,7 +453,7 @@ const TeacherJoin = () => {
   // ── waitlist count ──
   useEffect(() => {
     axios
-      .get(`${API}/teachers/waitlist-count`)
+      .get(`${API}/api/teachers/waitlist-count`)
       .then((r) => setWaitlistCount(r.data.data?.count ?? 0))
       .catch(() => {});
   }, []);
@@ -471,7 +471,7 @@ const TeacherJoin = () => {
     setAppliedEmail(stored.email);
 
     axios
-      .post(`${API}/teachers/application/status`, { email: stored.email })
+      .post(`${API}/api/teachers/application/status`, { email: stored.email })
       .then((r) => {
         const { status } = r.data.data;
         setAppStatus(status);
