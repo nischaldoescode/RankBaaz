@@ -7,7 +7,7 @@ import Course from "../Models/Course.js";
 import TestResult from "../Models/TestResult.js";
 import { v2 as cloudinary } from "cloudinary";
 import { generateSigningSecret } from "../Middleware/requestSignature.js";
-import { generateOtp, sendOtpEmail } from "../helpers/OtpUtils.js";
+import { generateOtp, sendOtpEmail } from "../utils/OtpUtils.js";
 import redisClient from "../Config/redis.js";
 
 const PLATFORM_FEE_PERCENT = 20;

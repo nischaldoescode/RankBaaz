@@ -38,7 +38,7 @@ import {
 } from "../Controllers/teacherController.js";
 import { authenticateTeacher } from "../Middleware/teacherAuth.js";
 import { authenticateAdmin } from "../Middleware/auth.js";
-import { uploadCourseImage, handleUploadError } from "../helpers/Upload.js";
+import { uploadCourseImage, handleUploadError } from "../Middleware/Upload.js";
 
 const require = createRequire(import.meta.url);
 const CloudinaryStorage = require("multer-storage-cloudinary");
