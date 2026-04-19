@@ -4,58 +4,83 @@ import crypto from "crypto";
 import Teacher from "../Models/Teacher.js";
 import TeacherApplication from "../Models/TeacherApplication.js";
 import Course from "../Models/Course.js";
+import TestResult from "../Models/TestResult.js";
 import { v2 as cloudinary } from "cloudinary";
 import { generateSigningSecret } from "../Middleware/requestSignature.js";
-import ContentSettings from "../Models/ContentSettings.js";
+import { generateOtp, sendOtpEmail } from "../helpers/OtpUtils.js";
+import redisClient from "../Config/redis.js";
 
 const PLATFORM_FEE_PERCENT = 20;
+const TEACHER_CACHE_TTL = 300; // 5 min
 
-/**
- * generate a secure invite token with 4-minute expiry
- */
-const generateInviteToken = () => {
-  const token = crypto.randomBytes(32).toString("hex");
-  const expiry = new Date(Date.now() + 4 * 60 * 1000); // 4 minutes
-  return { token, expiry };
-};
+const teacherCacheKey = (id) => `teacher:${id}`;
+const publicProfileCacheKey = (username) => `teacher:profile:${username}`;
 
-const generateTeacherToken = (teacherId) => {
-  return jwt.sign(
+const generateTeacherToken = (teacherId) =>
+  jwt.sign(
     { teacherId, role: "teacher" },
     process.env.TEACHER_JWT_SECRET || process.env.JWT_SECRET,
-    { expiresIn: "7d" }
+    { expiresIn: "7d" },
   );
+
+const setTeacherCookie = (res, token) => {
+  res.cookie("teacherToken", token, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    maxAge: 7 * 24 * 60 * 60 * 1000,
+    path: "/",
+    ...(process.env.NODE_ENV === "production" && {
+      domain: process.env.COOKIE_DOMAIN || undefined,
+    }),
+  });
 };
 
-// ── public: submit application ──
+const invalidateTeacherCache = async (teacherId) => {
+  try {
+    await redisClient.del(teacherCacheKey(teacherId));
+  } catch {}
+};
+
+// ── public ──
 
 export const submitTeacherApplication = async (req, res) => {
   try {
     const { name, email, qualification, reason, country } = req.body;
 
     if (!name || !email || !qualification || !reason || !country) {
-      return res.status(400).json({ success: false, message: "All fields are required" });
+      return res
+        .status(400)
+        .json({ success: false, message: "All fields required" });
     }
 
     if (!["india", "nepal"].includes(country)) {
-      return res.status(400).json({ success: false, message: "Country must be india or nepal" });
-    }
-
-    // check for duplicate
-    const existing = await TeacherApplication.findOne({ email: email.toLowerCase() });
-    if (existing) {
       return res.status(400).json({
         success: false,
-        message: "An application with this email already exists",
+        message: "Country must be india or nepal",
       });
     }
 
-    const existingTeacher = await Teacher.findOne({ email: email.toLowerCase() });
-    if (existingTeacher) {
-      return res.status(400).json({ success: false, message: "Email already registered as teacher" });
+    const [existingApp, existingTeacher] = await Promise.all([
+      TeacherApplication.findOne({ email: email.toLowerCase() }),
+      Teacher.findOne({ email: email.toLowerCase() }),
+    ]);
+
+    if (existingApp) {
+      return res.status(400).json({
+        success: false,
+        message: "An application already exists for this email",
+      });
     }
 
-    const application = await TeacherApplication.create({
+    if (existingTeacher) {
+      return res.status(400).json({
+        success: false,
+        message: "This email is already registered",
+      });
+    }
+
+    await TeacherApplication.create({
       name: name.trim(),
       email: email.toLowerCase().trim(),
       qualification: qualification.trim(),
@@ -63,30 +88,1006 @@ export const submitTeacherApplication = async (req, res) => {
       country,
     });
 
-    // total pending count for social proof
-    const waitlistCount = await TeacherApplication.countDocuments({ status: "pending" });
+    const waitlistCount = await TeacherApplication.countDocuments({
+      status: "pending",
+    });
 
     return res.status(201).json({
       success: true,
-      message: "Application submitted successfully",
+      message: "Application submitted",
       data: { waitlistPosition: waitlistCount },
     });
   } catch (error) {
-    console.error("Submit teacher application error:", error);
-    res.status(500).json({ success: false, message: "Failed to submit application" });
+    console.error("Submit application error:", error);
+    res.status(500).json({ success: false, message: "Failed to submit" });
   }
 };
 
 export const getWaitlistCount = async (req, res) => {
   try {
-    const count = await TeacherApplication.countDocuments({ status: "pending" });
+    const cacheKey = "teacher:waitlist:count";
+    const cached = await redisClient.get(cacheKey);
+    if (cached) {
+      return res
+        .status(200)
+        .json({ success: true, data: { count: parseInt(cached) } });
+    }
+
+    const count = await TeacherApplication.countDocuments({
+      status: "pending",
+    });
+    await redisClient.setex(cacheKey, 60, count.toString());
     return res.status(200).json({ success: true, data: { count } });
   } catch (error) {
-    res.status(500).json({ success: false, message: "Failed to fetch count" });
+    res.status(500).json({ success: false, message: "Failed to fetch" });
   }
 };
 
-// ── admin: view applications ──
+export const verifyInviteToken = async (req, res) => {
+  try {
+    const { token } = req.query;
+    if (!token) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Token required" });
+    }
+
+    let payload;
+    try {
+      payload = jwt.verify(
+        token,
+        process.env.TEACHER_INVITE_SECRET || process.env.JWT_SECRET,
+      );
+    } catch (err) {
+      if (err.name === "TokenExpiredError") {
+        return res.status(410).json({
+          success: false,
+          code: "LINK_EXPIRED",
+          message: "Invite link expired",
+        });
+      }
+      return res.status(400).json({ success: false, message: "Invalid token" });
+    }
+
+    const existing = await Teacher.findOne({ email: payload.email });
+    if (existing) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Email already registered" });
+    }
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        name: payload.name,
+        email: payload.email,
+        country: payload.country,
+        token,
+      },
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: "Verification failed" });
+  }
+};
+
+// ── signup flow ──
+
+export const sendSignupOtp = async (req, res) => {
+  try {
+    const { email, token } = req.body;
+
+    if (!email || !token) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Email and token required" });
+    }
+
+    // verify invite token
+    let payload;
+    try {
+      payload = jwt.verify(
+        token,
+        process.env.TEACHER_INVITE_SECRET || process.env.JWT_SECRET,
+      );
+    } catch (err) {
+      if (err.name === "TokenExpiredError") {
+        return res.status(410).json({ success: false, code: "LINK_EXPIRED" });
+      }
+      return res.status(400).json({ success: false, message: "Invalid token" });
+    }
+
+    if (payload.email.toLowerCase() !== email.toLowerCase()) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Email does not match invite" });
+    }
+
+    // rate limit — max 3 OTPs per 10 min
+    const rateKey = `teacher:otp:rate:${email.toLowerCase()}`;
+    const attempts = await redisClient.incr(rateKey);
+    if (attempts === 1) await redisClient.expire(rateKey, 600);
+    if (attempts > 3) {
+      return res.status(429).json({
+        success: false,
+        message: "Too many OTP requests. Wait 10 minutes.",
+      });
+    }
+
+    const otp = generateOtp();
+    const otpKey = `teacher:otp:${email.toLowerCase()}`;
+    await redisClient.setex(otpKey, 300, otp); // 5 min expiry
+
+    await sendOtpEmail(email, otp, "Vidhgrow Teacher Portal");
+
+    return res.status(200).json({ success: true, message: "OTP sent" });
+  } catch (error) {
+    console.error("Send signup OTP error:", error);
+    res.status(500).json({ success: false, message: "Failed to send OTP" });
+  }
+};
+
+export const verifySignupOtp = async (req, res) => {
+  try {
+    const { email, otp } = req.body;
+
+    if (!email || !otp) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Email and OTP required" });
+    }
+
+    const otpKey = `teacher:otp:${email.toLowerCase()}`;
+    const stored = await redisClient.get(otpKey);
+
+    if (!stored) {
+      return res
+        .status(400)
+        .json({ success: false, message: "OTP expired or not found" });
+    }
+
+    if (stored !== otp.toString()) {
+      return res.status(400).json({ success: false, message: "Invalid OTP" });
+    }
+
+    // mark email as verified in redis for 15 min
+    await redisClient.del(otpKey);
+    await redisClient.setex(
+      `teacher:email:verified:${email.toLowerCase()}`,
+      900,
+      "1",
+    );
+
+    return res.status(200).json({ success: true, message: "Email verified" });
+  } catch (error) {
+    res.status(500).json({ success: false, message: "Verification failed" });
+  }
+};
+
+export const teacherSignup = async (req, res) => {
+  try {
+    const { token, password, username, bio, qualification, age, gender } =
+      req.body;
+
+    if (!token || !password || !username || !age || !gender) {
+      return res.status(400).json({
+        success: false,
+        message: "Token, password, username, age, and gender are required",
+      });
+    }
+
+    const ageNum = parseInt(age);
+    if (isNaN(ageNum) || ageNum < 19) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Must be at least 19 years old" });
+    }
+
+    if (!["Male", "Female", "Other"].includes(gender)) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid gender" });
+    }
+
+    if (
+      password.length < 8 ||
+      !/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(password)
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Password needs 8+ chars with upper, lower, and number",
+      });
+    }
+
+    if (
+      username.length < 3 ||
+      username.length > 30 ||
+      !/^[a-z0-9_]+$/.test(username)
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Username: 3-30 chars, lowercase, numbers, underscores only",
+      });
+    }
+
+    let payload;
+    try {
+      payload = jwt.verify(
+        token,
+        process.env.TEACHER_INVITE_SECRET || process.env.JWT_SECRET,
+      );
+    } catch (err) {
+      if (err.name === "TokenExpiredError") {
+        return res.status(410).json({
+          success: false,
+          code: "LINK_EXPIRED",
+          message: "Invite link expired",
+        });
+      }
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid invite token" });
+    }
+
+    // check email was verified via OTP
+    const emailVerified = await redisClient.get(
+      `teacher:email:verified:${payload.email.toLowerCase()}`,
+    );
+    if (!emailVerified) {
+      return res.status(400).json({
+        success: false,
+        message: "Email not verified. Please complete OTP verification first.",
+      });
+    }
+
+    const [existingEmail, existingUsername] = await Promise.all([
+      Teacher.findOne({ email: payload.email }),
+      Teacher.findOne({ username: username.toLowerCase() }),
+    ]);
+
+    if (existingEmail) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Email already registered" });
+    }
+    if (existingUsername) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Username taken" });
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 12);
+
+    const teacher = await Teacher.create({
+      name: payload.name,
+      email: payload.email,
+      password: hashedPassword,
+      username: username.toLowerCase(),
+      bio: bio?.trim() || "",
+      qualification: qualification?.trim() || "",
+      age: ageNum,
+      gender,
+      country: payload.country,
+      isVerified: true,
+      isActive: true,
+      invitedBy: payload.adminId || null,
+    });
+
+    // clean up redis
+    await redisClient.del(
+      `teacher:email:verified:${payload.email.toLowerCase()}`,
+    );
+    await redisClient.del(`teacher:waitlist:count`);
+
+    const authToken = generateTeacherToken(teacher._id);
+    setTeacherCookie(res, authToken);
+
+    const signingSecret = await generateSigningSecret(teacher._id.toString());
+
+    return res.status(201).json({
+      success: true,
+      message: "Account created",
+      data: {
+        teacher: {
+          id: teacher._id,
+          name: teacher.name,
+          email: teacher.email,
+          username: teacher.username,
+          country: teacher.country,
+          age: teacher.age,
+          gender: teacher.gender,
+          role: "teacher",
+          documentStatus: teacher.documentStatus,
+          accessBlocked: teacher.accessBlocked,
+        },
+        signingSecret,
+        signingSecretExpiresIn: 7 * 24 * 60 * 60,
+      },
+    });
+  } catch (error) {
+    console.error("Teacher signup error:", error);
+    res.status(500).json({ success: false, message: "Signup failed" });
+  }
+};
+
+export const teacherLogin = async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    if (!email || !password) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Email and password required" });
+    }
+
+    // rate limit login attempts
+    const ip =
+      req.headers["x-forwarded-for"]?.split(",")[0]?.trim() ||
+      req.socket?.remoteAddress;
+    const rateLimitKey = `teacher:login:attempts:${ip}`;
+    const attempts = await redisClient.incr(rateLimitKey);
+    if (attempts === 1) await redisClient.expire(rateLimitKey, 900); // 15 min
+    if (attempts > 10) {
+      return res.status(429).json({
+        success: false,
+        message: "Too many login attempts. Wait 15 minutes.",
+      });
+    }
+
+    const teacher = await Teacher.findOne({
+      email: email.toLowerCase(),
+    }).select("+password");
+
+    if (!teacher || !teacher.isActive) {
+      return res
+        .status(401)
+        .json({ success: false, message: "Invalid credentials" });
+    }
+
+    const isValid = await bcrypt.compare(password, teacher.password);
+    if (!isValid) {
+      return res
+        .status(401)
+        .json({ success: false, message: "Invalid credentials" });
+    }
+
+    // reset rate limit on success
+    await redisClient.del(rateLimitKey);
+
+    teacher.lastLoginAt = new Date();
+    teacher.lastIp = ip;
+    await teacher.save();
+
+    await invalidateTeacherCache(teacher._id);
+
+    const authToken = generateTeacherToken(teacher._id);
+    setTeacherCookie(res, authToken);
+
+    const signingSecret = await generateSigningSecret(teacher._id.toString());
+
+    return res.status(200).json({
+      success: true,
+      message: "Login successful",
+      data: {
+        teacher: {
+          id: teacher._id,
+          name: teacher.name,
+          email: teacher.email,
+          username: teacher.username,
+          country: teacher.country,
+          bio: teacher.bio,
+          age: teacher.age,
+          gender: teacher.gender,
+          profileImage: teacher.profileImage,
+          role: "teacher",
+          documentStatus: teacher.documentStatus,
+          documentRequested: teacher.documentRequested,
+          documentRequestNote: teacher.documentRequestNote,
+          accessBlocked: teacher.accessBlocked,
+          accessBlockReason: teacher.accessBlockReason,
+          paymentDetails: {
+            verified: teacher.paymentDetails?.verified,
+          },
+        },
+        signingSecret,
+        signingSecretExpiresIn: 7 * 24 * 60 * 60,
+      },
+    });
+  } catch (error) {
+    console.error("Teacher login error:", error);
+    res.status(500).json({ success: false, message: "Login failed" });
+  }
+};
+
+export const teacherLogout = async (req, res) => {
+  try {
+    if (req.teacher?.teacherId) {
+      await invalidateTeacherCache(req.teacher.teacherId);
+      // invalidate signing secret
+      try {
+        await redisClient.del(
+          `signing:secret:teacher:${req.teacher.teacherId}`,
+        );
+      } catch {}
+    }
+    res.clearCookie("teacherToken", { path: "/" });
+    return res.status(200).json({ success: true, message: "Logged out" });
+  } catch (error) {
+    res.status(500).json({ success: false, message: "Logout failed" });
+  }
+};
+
+// ── forgot password ──
+
+export const teacherForgotPassword = async (req, res) => {
+  try {
+    const { identifier } = req.body; // email or username
+
+    if (!identifier) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Email or username required" });
+    }
+
+    const teacher = await Teacher.findOne({
+      $or: [
+        { email: identifier.toLowerCase() },
+        { username: identifier.toLowerCase() },
+      ],
+    });
+
+    // always return success to prevent enumeration
+    if (!teacher) {
+      return res.status(200).json({
+        success: true,
+        message: "If an account exists, an OTP has been sent.",
+      });
+    }
+
+    // rate limit
+    const rateLimitKey = `teacher:forgot:rate:${teacher.email}`;
+    const attempts = await redisClient.incr(rateLimitKey);
+    if (attempts === 1) await redisClient.expire(rateLimitKey, 600);
+    if (attempts > 3) {
+      return res.status(429).json({
+        success: false,
+        message: "Too many requests. Wait 10 minutes.",
+      });
+    }
+
+    const otp = generateOtp();
+    const otpKey = `teacher:forgot:otp:${teacher.email}`;
+    await redisClient.setex(otpKey, 300, otp);
+
+    await sendOtpEmail(teacher.email, otp, "Vidhgrow Teacher Portal");
+
+    // return masked email for UI
+    const maskedEmail = teacher.email.replace(
+      /^(.{2})(.*)(@.*)$/,
+      (_, a, b, c) => `${a}${"*".repeat(b.length)}${c}`,
+    );
+
+    return res.status(200).json({
+      success: true,
+      message: "OTP sent",
+      data: { maskedEmail },
+    });
+  } catch (error) {
+    console.error("Teacher forgot password error:", error);
+    res.status(500).json({ success: false, message: "Failed to process" });
+  }
+};
+
+export const teacherVerifyForgotOtp = async (req, res) => {
+  try {
+    const { identifier, otp } = req.body;
+
+    const teacher = await Teacher.findOne({
+      $or: [
+        { email: identifier?.toLowerCase() },
+        { username: identifier?.toLowerCase() },
+      ],
+    });
+
+    if (!teacher) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Account not found" });
+    }
+
+    const otpKey = `teacher:forgot:otp:${teacher.email}`;
+    const stored = await redisClient.get(otpKey);
+
+    if (!stored || stored !== otp.toString()) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid or expired OTP" });
+    }
+
+    await redisClient.del(otpKey);
+
+    // issue a short-lived reset token
+    const resetToken = crypto.randomBytes(32).toString("hex");
+    const resetKey = `teacher:reset:${resetToken}`;
+    await redisClient.setex(resetKey, 600, teacher._id.toString()); // 10 min
+
+    return res.status(200).json({
+      success: true,
+      data: { resetToken },
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: "Verification failed" });
+  }
+};
+
+export const teacherResetPassword = async (req, res) => {
+  try {
+    const { resetToken, newPassword } = req.body;
+
+    if (!resetToken || !newPassword) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Token and new password required" });
+    }
+
+    if (
+      newPassword.length < 8 ||
+      !/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(newPassword)
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Password needs 8+ chars with upper, lower, number",
+      });
+    }
+
+    const resetKey = `teacher:reset:${resetToken}`;
+    const teacherId = await redisClient.get(resetKey);
+
+    if (!teacherId) {
+      return res.status(400).json({
+        success: false,
+        message: "Reset link expired or invalid",
+      });
+    }
+
+    const hashed = await bcrypt.hash(newPassword, 12);
+    await Teacher.findByIdAndUpdate(teacherId, { password: hashed });
+
+    await redisClient.del(resetKey);
+    await invalidateTeacherCache(teacherId);
+
+    return res.status(200).json({
+      success: true,
+      message: "Password updated successfully",
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: "Reset failed" });
+  }
+};
+
+// ── document upload ──
+
+export const uploadDocuments = async (req, res) => {
+  try {
+    const teacherId = req.teacher.teacherId;
+    const teacher = await Teacher.findById(teacherId);
+
+    if (!teacher) {
+      return res.status(404).json({ success: false, message: "Not found" });
+    }
+
+    if (!req.files || req.files.length === 0) {
+      return res
+        .status(400)
+        .json({ success: false, message: "At least one document required" });
+    }
+
+    if (req.files.length > 2) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Maximum 2 documents" });
+    }
+
+    // delete old docs from cloudinary
+    if (teacher.documents?.length > 0) {
+      await Promise.allSettled(
+        teacher.documents.map((doc) =>
+          cloudinary.uploader.destroy(doc.public_id, { resource_type: "raw" }),
+        ),
+      );
+    }
+
+    const newDocs = req.files.map((f) => ({
+      public_id: f.filename || f.public_id,
+      url: f.path,
+      originalName: f.originalname,
+      uploadedAt: new Date(),
+    }));
+
+    teacher.documents = newDocs;
+    teacher.documentStatus = "pending";
+    await teacher.save();
+
+    await invalidateTeacherCache(teacherId);
+
+    return res.status(200).json({
+      success: true,
+      message: "Documents uploaded. Admin will review shortly.",
+      data: { documentStatus: teacher.documentStatus },
+    });
+  } catch (error) {
+    console.error("Document upload error:", error);
+    res.status(500).json({ success: false, message: "Upload failed" });
+  }
+};
+
+// ── teacher profile ──
+
+export const getTeacherProfile = async (req, res) => {
+  try {
+    const teacherId = req.teacher.teacherId;
+
+    const cacheKey = teacherCacheKey(teacherId);
+    const cached = await redisClient.get(cacheKey);
+    if (cached) {
+      return res.status(200).json({ success: true, data: JSON.parse(cached) });
+    }
+
+    const [teacher, courses] = await Promise.all([
+      Teacher.findById(teacherId).select("-password -otp").lean(),
+      Course.find({ teacher: teacherId })
+        .select(
+          "name isPaid price approvalStatus isActive totalQuestions geoRestriction createdAt image",
+        )
+        .sort({ createdAt: -1 })
+        .lean(),
+    ]);
+
+    if (!teacher) {
+      return res.status(404).json({ success: false, message: "Not found" });
+    }
+
+    // analytics: students who took their courses
+    const courseIds = courses.map((c) => c._id);
+    const [studentCount, recentTestResults] = await Promise.all([
+      TestResult.distinct("user", { course: { $in: courseIds } }),
+      TestResult.find({ course: { $in: courseIds } })
+        .populate("user", "username name")
+        .sort({ createdAt: -1 })
+        .limit(10)
+        .lean(),
+    ]);
+
+    const responseData = {
+      teacher,
+      courses,
+      analytics: {
+        totalStudents: studentCount.length,
+        totalCourses: courses.length,
+        activeCourses: courses.filter(
+          (c) => c.isActive && c.approvalStatus === "approved",
+        ).length,
+        pendingApproval: courses.filter((c) => c.approvalStatus === "pending")
+          .length,
+      },
+      recentStudentActivity: recentTestResults.slice(0, 5).map((t) => ({
+        username: t.user?.username,
+        percentage: t.percentage,
+        completedAt: t.completedAt,
+      })),
+    };
+
+    await redisClient.setex(
+      cacheKey,
+      TEACHER_CACHE_TTL,
+      JSON.stringify(responseData),
+    );
+
+    return res.status(200).json({ success: true, data: responseData });
+  } catch (error) {
+    console.error("Get teacher profile error:", error);
+    res.status(500).json({ success: false, message: "Failed to fetch" });
+  }
+};
+
+export const getTeacherAnalytics = async (req, res) => {
+  try {
+    const teacherId = req.teacher.teacherId;
+    const cacheKey = `teacher:analytics:${teacherId}`;
+
+    const cached = await redisClient.get(cacheKey);
+    if (cached) {
+      return res.status(200).json({ success: true, data: JSON.parse(cached) });
+    }
+
+    const courses = await Course.find({ teacher: teacherId })
+      .select("_id name")
+      .lean();
+    const courseIds = courses.map((c) => c._id);
+
+    if (courseIds.length === 0) {
+      return res.status(200).json({
+        success: true,
+        data: {
+          totalStudents: 0,
+          totalTests: 0,
+          averageScore: 0,
+          topStudents: [],
+          courseStats: [],
+          walletSummary: {
+            totalEarnings: 0,
+            pendingPayout: 0,
+            totalPaidOut: 0,
+          },
+        },
+      });
+    }
+
+    const [testResults, teacher] = await Promise.all([
+      TestResult.find({ course: { $in: courseIds } })
+        .populate("user", "username name")
+        .populate("course", "name")
+        .lean(),
+      Teacher.findById(teacherId)
+        .select("totalEarnings pendingPayout totalPaidOut revenueSharePercent")
+        .lean(),
+    ]);
+
+    // unique students
+    const uniqueStudents = new Set(
+      testResults.map((t) => t.user?._id?.toString()),
+    );
+
+    // top students by average score
+    const studentMap = new Map();
+    testResults.forEach((t) => {
+      const uid = t.user?._id?.toString();
+      if (!uid) return;
+      if (!studentMap.has(uid)) {
+        studentMap.set(uid, {
+          username: t.user?.username,
+          name: t.user?.name,
+          scores: [],
+          testCount: 0,
+        });
+      }
+      const s = studentMap.get(uid);
+      s.scores.push(t.percentage);
+      s.testCount++;
+    });
+
+    const topStudents = Array.from(studentMap.values())
+      .map((s) => ({
+        username: s.username,
+        name: s.name,
+        averageScore:
+          Math.round(
+            (s.scores.reduce((a, b) => a + b, 0) / s.scores.length) * 10,
+          ) / 10,
+        testCount: s.testCount,
+      }))
+      .sort((a, b) => b.averageScore - a.averageScore)
+      .slice(0, 10);
+
+    // per-course stats
+    const courseStatMap = new Map(
+      courses.map((c) => [
+        c._id.toString(),
+        {
+          name: c.name,
+          tests: 0,
+          uniqueStudents: new Set(),
+          avgScore: 0,
+          scores: [],
+        },
+      ]),
+    );
+    testResults.forEach((t) => {
+      const cs = courseStatMap.get(t.course?._id?.toString());
+      if (!cs) return;
+      cs.tests++;
+      cs.uniqueStudents.add(t.user?._id?.toString());
+      cs.scores.push(t.percentage);
+    });
+
+    const courseStats = Array.from(courseStatMap.entries()).map(([id, cs]) => ({
+      courseId: id,
+      name: cs.name,
+      tests: cs.tests,
+      students: cs.uniqueStudents.size,
+      averageScore:
+        cs.scores.length > 0
+          ? Math.round(
+              (cs.scores.reduce((a, b) => a + b, 0) / cs.scores.length) * 10,
+            ) / 10
+          : 0,
+    }));
+
+    const avgScore =
+      testResults.length > 0
+        ? Math.round(
+            (testResults.reduce((sum, t) => sum + (t.percentage || 0), 0) /
+              testResults.length) *
+              10,
+          ) / 10
+        : 0;
+
+    const responseData = {
+      totalStudents: uniqueStudents.size,
+      totalTests: testResults.length,
+      averageScore: avgScore,
+      topStudents,
+      courseStats,
+      walletSummary: {
+        totalEarnings: teacher?.totalEarnings || 0,
+        pendingPayout: teacher?.pendingPayout || 0,
+        totalPaidOut: teacher?.totalPaidOut || 0,
+        revenueSharePercent: teacher?.revenueSharePercent || 80,
+      },
+    };
+
+    await redisClient.setex(cacheKey, 120, JSON.stringify(responseData));
+
+    return res.status(200).json({ success: true, data: responseData });
+  } catch (error) {
+    console.error("Teacher analytics error:", error);
+    res.status(500).json({ success: false, message: "Failed to fetch" });
+  }
+};
+
+export const updateTeacherProfile = async (req, res) => {
+  try {
+    const { bio, qualification } = req.body;
+    const teacherId = req.teacher.teacherId;
+
+    const updates = {};
+    if (bio !== undefined) updates.bio = bio.trim().slice(0, 500);
+    if (qualification !== undefined)
+      updates.qualification = qualification.trim().slice(0, 300);
+
+    if (req.file) {
+      const teacher = await Teacher.findById(teacherId).select("profileImage");
+      if (teacher?.profileImage?.public_id) {
+        await cloudinary.uploader
+          .destroy(teacher.profileImage.public_id)
+          .catch(() => {});
+      }
+      updates.profileImage = {
+        public_id: req.file.filename,
+        url: req.file.path,
+      };
+    }
+
+    const teacher = await Teacher.findByIdAndUpdate(teacherId, updates, {
+      new: true,
+      runValidators: true,
+    }).select("-password -otp");
+
+    await invalidateTeacherCache(teacherId);
+
+    return res.status(200).json({ success: true, data: { teacher } });
+  } catch (error) {
+    res.status(500).json({ success: false, message: "Update failed" });
+  }
+};
+
+export const updatePaymentDetails = async (req, res) => {
+  try {
+    const teacherId = req.teacher.teacherId;
+    const { nepal } = req.body;
+
+    const teacher = await Teacher.findById(teacherId);
+    if (!teacher) {
+      return res.status(404).json({ success: false, message: "Not found" });
+    }
+
+    // security: validate input
+    if (teacher.country === "nepal" && nepal) {
+      if (nepal.khaltiId) {
+        // khalti ID = 10-digit mobile number
+        if (!/^9[6-8]\d{8}$/.test(nepal.khaltiId)) {
+          return res.status(400).json({
+            success: false,
+            message:
+              "Invalid Khalti ID. Must be a valid Nepal mobile number (98XXXXXXXX)",
+          });
+        }
+        teacher.paymentDetails.nepal.khaltiId = nepal.khaltiId;
+      }
+    } else if (teacher.country === "india" && req.body.india) {
+      const india = req.body.india;
+      if (india.ifsc && !/^[A-Z]{4}0[A-Z0-9]{6}$/.test(india.ifsc)) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid IFSC code format",
+        });
+      }
+      teacher.paymentDetails.india = {
+        ...teacher.paymentDetails.india,
+        ...india,
+      };
+    } else {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid payment details for your country",
+      });
+    }
+
+    teacher.paymentDetails.verified = false;
+    await teacher.save();
+    await invalidateTeacherCache(teacherId);
+
+    return res.status(200).json({
+      success: true,
+      message: "Payment details saved. Admin will verify shortly.",
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: "Update failed" });
+  }
+};
+
+// ── public teacher profile ──
+
+export const getPublicTeacherProfile = async (req, res) => {
+  try {
+    const { username } = req.params;
+    const cacheKey = publicProfileCacheKey(username.toLowerCase());
+
+    const cached = await redisClient.get(cacheKey);
+    if (cached) {
+      return res.status(200).json({ success: true, data: JSON.parse(cached) });
+    }
+
+    const teacher = await Teacher.findOne({
+      username: username.toLowerCase(),
+      isActive: true,
+    })
+      .select(
+        "name username bio qualification profileImage country createdAt documentStatus",
+      )
+      .lean();
+
+    if (!teacher) {
+      return res.status(404).json({ success: false, message: "Not found" });
+    }
+
+    const courses = await Course.find({
+      teacher: teacher._id,
+      isActive: true,
+      approvalStatus: "approved",
+    })
+      .select(
+        "name description image isPaid price totalQuestions geoRestriction createdAt",
+      )
+      .lean();
+
+    const [testCount, studentCount] = await Promise.all([
+      TestResult.countDocuments({
+        course: { $in: courses.map((c) => c._id) },
+      }),
+      TestResult.distinct("user", {
+        course: { $in: courses.map((c) => c._id) },
+      }),
+    ]);
+
+    const responseData = {
+      teacher,
+      courses,
+      stats: {
+        totalCourses: courses.length,
+        totalStudents: studentCount.length,
+        totalTests: testCount,
+      },
+    };
+
+    await redisClient.setex(cacheKey, 300, JSON.stringify(responseData));
+
+    return res.status(200).json({ success: true, data: responseData });
+  } catch (error) {
+    res.status(500).json({ success: false, message: "Failed to fetch" });
+  }
+};
+
+// ── admin: teacher management ──
 
 export const getTeacherApplications = async (req, res) => {
   try {
@@ -114,63 +1115,88 @@ export const getTeacherApplications = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("Get teacher applications error:", error);
-    res.status(500).json({ success: false, message: "Failed to fetch applications" });
+    res.status(500).json({ success: false, message: "Failed to fetch" });
   }
 };
 
 export const sendTeacherInvite = async (req, res) => {
   try {
-    const { applicationId, emailContent } = req.body;
+    const { applicationId, emailContent, emailSubject } = req.body;
 
     if (!applicationId || !emailContent) {
-      return res.status(400).json({ success: false, message: "Application ID and email content are required" });
+      return res
+        .status(400)
+        .json({
+          success: false,
+          message: "Application ID and email content required",
+        });
     }
 
     const application = await TeacherApplication.findById(applicationId);
     if (!application) {
-      return res.status(404).json({ success: false, message: "Application not found" });
+      return res
+        .status(404)
+        .json({ success: false, message: "Application not found" });
     }
 
     if (application.status === "invited") {
-      return res.status(400).json({ success: false, message: "Invite already sent" });
+      return res
+        .status(400)
+        .json({ success: false, message: "Invite already sent" });
     }
 
-    const { token, expiry } = generateInviteToken();
-
-    // store token in a temp collection or directly send
-    // we embed invite info in the token itself for stateless verification
     const invitePayload = {
       email: application.email,
       name: application.name,
       country: application.country,
       applicationId: application._id.toString(),
-      token,
+      adminId: req.admin.userId,
     };
 
     const signedToken = jwt.sign(
       invitePayload,
       process.env.TEACHER_INVITE_SECRET || process.env.JWT_SECRET,
-      { expiresIn: "4m" }
+      { expiresIn: "4m" },
     );
 
-    // get content settings for email branding
-    const contentSettings = await ContentSettings.getSettings().catch(() => ({ siteName: "Vidhgrow", logo: null }));
+    const signupLink = `${process.env.TEACHER_PORTAL_URL || process.env.FRONTEND_URL + "/teacher"}/signup?token=${signedToken}`;
 
-    const signupLink = `${process.env.FRONTEND_URL}/teacher/signup?token=${signedToken}`;
-
-    // send email
     const { Resend } = await import("resend");
     const resend = new Resend(process.env.RESEND_API_KEY);
 
-    const siteName = contentSettings?.siteName || "Vidhgrow";
-    const logoUrl = contentSettings?.logo?.url || null;
+    const finalHtml = buildInviteEmail(
+      application.name,
+      emailContent,
+      signupLink,
+      emailSubject,
+    );
 
-    const logoHtml = logoUrl
-      ? `<img src="${logoUrl}" alt="${siteName}" style="max-width:140px;height:auto;margin-bottom:24px;" />`
-      : `<h2 style="margin:0 0 24px;color:#1a1a1a;font-size:24px;font-weight:700;">${siteName}</h2>`;
+    await resend.emails.send({
+      from: `Vidhgrow <${process.env.EMAIL_USER}>`,
+      to: application.email,
+      subject: emailSubject || `You're invited to teach on Vidhgrow`,
+      html: finalHtml,
+    });
 
-    const finalHtml = `
+    application.status = "invited";
+    application.inviteSentAt = new Date();
+    application.processedBy = req.admin.userId;
+    await application.save();
+
+    await redisClient.del("teacher:waitlist:count");
+
+    return res.status(200).json({
+      success: true,
+      message: "Invite sent",
+      data: { signupLink },
+    });
+  } catch (error) {
+    console.error("Send invite error:", error);
+    res.status(500).json({ success: false, message: "Failed to send invite" });
+  }
+};
+
+const buildInviteEmail = (name, content, signupLink, subject) => `
 <!DOCTYPE html>
 <html>
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
@@ -178,52 +1204,30 @@ export const sendTeacherInvite = async (req, res) => {
   <table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f4f4;padding:24px;">
     <tr><td align="center">
       <table width="600" cellpadding="0" cellspacing="0" style="background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.08);max-width:100%;">
-        <tr><td style="padding:40px 40px 32px;text-align:center;border-bottom:1px solid #e9ecef;">
-          ${logoHtml}
+        <tr><td style="padding:36px 40px 28px;text-align:center;border-bottom:1px solid #e9ecef;">
+          <h2 style="margin:0;color:#1a1a1a;font-size:24px;font-weight:700;">Vidhgrow</h2>
+          <p style="margin:8px 0 0;color:#64748b;font-size:14px;">Teacher Invitation</p>
         </td></tr>
-        <tr><td style="padding:40px;">
-          ${emailContent.replace(/\n/g, "<br/>")}
-          <div style="margin-top:32px;text-align:center;">
-            <a href="${signupLink}" style="display:inline-block;padding:14px 32px;background:#3b82f6;color:#fff;text-decoration:none;border-radius:8px;font-weight:600;font-size:15px;">
-              Complete Your Registration
+        <tr><td style="padding:36px 40px;">
+          <p style="margin:0 0 16px;color:#374151;font-size:15px;line-height:1.7;">Hi <strong>${name}</strong>,</p>
+          <div style="color:#374151;font-size:14px;line-height:1.8;">${content.replace(/\n/g, "<br/>")}</div>
+          <div style="margin:32px 0;text-align:center;">
+            <a href="${signupLink}" style="display:inline-block;padding:14px 36px;background:#2563eb;color:#fff;text-decoration:none;border-radius:10px;font-weight:700;font-size:15px;box-shadow:0 4px 14px rgba(37,99,235,0.3);">
+              Complete Registration
             </a>
           </div>
-          <p style="margin-top:24px;color:#666;font-size:13px;text-align:center;">
-            This link expires in <strong>4 minutes</strong>. If expired, please contact us.
+          <p style="margin:0;color:#94a3b8;font-size:13px;text-align:center;">
+            This link expires in <strong style="color:#ef4444;">4 minutes</strong>. Contact support if it expires.
           </p>
         </td></tr>
         <tr><td style="padding:20px;text-align:center;background:#f8f9fa;border-top:1px solid #e9ecef;">
-          <p style="margin:0;color:#999;font-size:12px;">© ${new Date().getFullYear()} ${siteName}. All rights reserved.</p>
+          <p style="margin:0;color:#999;font-size:12px;">© ${new Date().getFullYear()} Vidhgrow. All rights reserved.</p>
         </td></tr>
       </table>
     </td></tr>
   </table>
 </body>
 </html>`;
-
-    await resend.emails.send({
-      from: `${siteName} <${process.env.EMAIL_USER}>`,
-      to: application.email,
-      subject: `You're invited to teach on ${siteName}`,
-      html: finalHtml,
-    });
-
-    // update application status
-    application.status = "invited";
-    application.inviteSentAt = new Date();
-    application.processedBy = req.admin.userId;
-    await application.save();
-
-    return res.status(200).json({
-      success: true,
-      message: "Invite sent successfully",
-      data: { signupLink },
-    });
-  } catch (error) {
-    console.error("Send teacher invite error:", error);
-    res.status(500).json({ success: false, message: "Failed to send invite" });
-  }
-};
 
 export const rejectTeacherApplication = async (req, res) => {
   try {
@@ -237,387 +1241,217 @@ export const rejectTeacherApplication = async (req, res) => {
         rejectionReason: reason || null,
         processedBy: req.admin.userId,
       },
-      { new: true }
+      { new: true },
     );
 
     if (!application) {
-      return res.status(404).json({ success: false, message: "Application not found" });
+      return res.status(404).json({ success: false, message: "Not found" });
     }
 
-    return res.status(200).json({ success: true, message: "Application rejected" });
+    await redisClient.del("teacher:waitlist:count");
+
+    return res
+      .status(200)
+      .json({ success: true, message: "Application rejected" });
   } catch (error) {
-    res.status(500).json({ success: false, message: "Failed to reject application" });
+    res.status(500).json({ success: false, message: "Rejection failed" });
   }
 };
-
-// ── teacher: signup via invite link ──
-
-export const verifyInviteToken = async (req, res) => {
-  try {
-    const { token } = req.query;
-    if (!token) {
-      return res.status(400).json({ success: false, message: "Token required" });
-    }
-
-    let payload;
-    try {
-      payload = jwt.verify(token, process.env.TEACHER_INVITE_SECRET || process.env.JWT_SECRET);
-    } catch (err) {
-      if (err.name === "TokenExpiredError") {
-        return res.status(410).json({
-          success: false,
-          code: "LINK_EXPIRED",
-          message: "This invite link has expired. Please contact us for a new invitation.",
-        });
-      }
-      return res.status(400).json({ success: false, message: "Invalid invite link" });
-    }
-
-    // check if email already registered
-    const existing = await Teacher.findOne({ email: payload.email });
-    if (existing) {
-      return res.status(400).json({ success: false, message: "This email is already registered" });
-    }
-
-    return res.status(200).json({
-      success: true,
-      data: {
-        name: payload.name,
-        email: payload.email,
-        country: payload.country,
-        token,
-      },
-    });
-  } catch (error) {
-    res.status(500).json({ success: false, message: "Failed to verify token" });
-  }
-};
-
-export const teacherSignup = async (req, res) => {
-  try {
-    const { token, password, username, bio, qualification } = req.body;
-
-    if (!token || !password || !username) {
-      return res.status(400).json({ success: false, message: "Token, password, and username are required" });
-    }
-
-    if (password.length < 8 || !/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(password)) {
-      return res.status(400).json({
-        success: false,
-        message: "Password must be at least 8 characters with uppercase, lowercase, and number",
-      });
-    }
-
-    if (username.length < 3 || username.length > 30 || !/^[a-z0-9_]+$/.test(username)) {
-      return res.status(400).json({
-        success: false,
-        message: "Username must be 3-30 characters, lowercase letters, numbers, underscores only",
-      });
-    }
-
-    let payload;
-    try {
-      payload = jwt.verify(token, process.env.TEACHER_INVITE_SECRET || process.env.JWT_SECRET);
-    } catch (err) {
-      if (err.name === "TokenExpiredError") {
-        return res.status(410).json({
-          success: false,
-          code: "LINK_EXPIRED",
-          message: "Invite link expired. Please request a new invitation.",
-        });
-      }
-      return res.status(400).json({ success: false, message: "Invalid invite token" });
-    }
-
-    // duplicate checks
-    const [existingEmail, existingUsername] = await Promise.all([
-      Teacher.findOne({ email: payload.email }),
-      Teacher.findOne({ username: username.toLowerCase() }),
-    ]);
-
-    if (existingEmail) {
-      return res.status(400).json({ success: false, message: "Email already registered" });
-    }
-    if (existingUsername) {
-      return res.status(400).json({ success: false, message: "Username already taken" });
-    }
-
-    const hashedPassword = await bcrypt.hash(password, 12);
-
-    const teacher = await Teacher.create({
-      name: payload.name,
-      email: payload.email,
-      password: hashedPassword,
-      username: username.toLowerCase(),
-      bio: bio?.trim() || "",
-      qualification: qualification?.trim() || "",
-      country: payload.country,
-      isVerified: true,
-      isActive: true,
-    });
-
-    const authToken = generateTeacherToken(teacher._id);
-
-    res.cookie("teacherToken", authToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-      path: "/",
-      ...(process.env.NODE_ENV === "production" && { domain: ".vidhgrow.online" }),
-    });
-
-    const signingSecret = await generateSigningSecret(teacher._id.toString());
-
-    return res.status(201).json({
-      success: true,
-      message: "Account created successfully",
-      data: {
-        teacher: {
-          id: teacher._id,
-          name: teacher.name,
-          email: teacher.email,
-          username: teacher.username,
-          country: teacher.country,
-          role: "teacher",
-        },
-        signingSecret,
-        signingSecretExpiresIn: 7 * 24 * 60 * 60,
-      },
-    });
-  } catch (error) {
-    console.error("Teacher signup error:", error);
-    res.status(500).json({ success: false, message: "Failed to create account" });
-  }
-};
-
-export const teacherLogin = async (req, res) => {
-  try {
-    const { email, password } = req.body;
-
-    if (!email || !password) {
-      return res.status(400).json({ success: false, message: "Email and password required" });
-    }
-
-    const teacher = await Teacher.findOne({ email: email.toLowerCase() }).select("+password");
-
-    if (!teacher || !teacher.isActive) {
-      return res.status(401).json({ success: false, message: "Invalid credentials" });
-    }
-
-    const isValid = await bcrypt.compare(password, teacher.password);
-    if (!isValid) {
-      return res.status(401).json({ success: false, message: "Invalid credentials" });
-    }
-
-    teacher.lastLoginAt = new Date();
-    await teacher.save();
-
-    const authToken = generateTeacherToken(teacher._id);
-
-    res.cookie("teacherToken", authToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-      path: "/",
-      ...(process.env.NODE_ENV === "production" && { domain: ".vidhgrow.online" }),
-    });
-
-    const signingSecret = await generateSigningSecret(teacher._id.toString());
-
-    return res.status(200).json({
-      success: true,
-      message: "Login successful",
-      data: {
-        teacher: {
-          id: teacher._id,
-          name: teacher.name,
-          email: teacher.email,
-          username: teacher.username,
-          country: teacher.country,
-          bio: teacher.bio,
-          profileImage: teacher.profileImage,
-          role: "teacher",
-        },
-        signingSecret,
-        signingSecretExpiresIn: 7 * 24 * 60 * 60,
-      },
-    });
-  } catch (error) {
-    console.error("Teacher login error:", error);
-    res.status(500).json({ success: false, message: "Login failed" });
-  }
-};
-
-export const teacherLogout = async (req, res) => {
-  try {
-    res.clearCookie("teacherToken", { path: "/" });
-    return res.status(200).json({ success: true, message: "Logged out" });
-  } catch (error) {
-    res.status(500).json({ success: false, message: "Logout failed" });
-  }
-};
-
-export const getTeacherProfile = async (req, res) => {
-  try {
-    const teacher = await Teacher.findById(req.teacher.teacherId)
-      .select("-password -otp")
-      .lean();
-
-    if (!teacher) {
-      return res.status(404).json({ success: false, message: "Teacher not found" });
-    }
-
-    // get their courses
-    const courses = await Course.find({ teacher: req.teacher.teacherId })
-      .select("name isPaid price approvalStatus isActive totalQuestions createdAt")
-      .sort({ createdAt: -1 })
-      .lean();
-
-    return res.status(200).json({
-      success: true,
-      data: { teacher, courses },
-    });
-  } catch (error) {
-    res.status(500).json({ success: false, message: "Failed to fetch profile" });
-  }
-};
-
-export const updateTeacherProfile = async (req, res) => {
-  try {
-    const { bio, qualification } = req.body;
-    const teacherId = req.teacher.teacherId;
-
-    const updates = {};
-    if (bio !== undefined) updates.bio = bio.trim().slice(0, 500);
-    if (qualification !== undefined) updates.qualification = qualification.trim().slice(0, 300);
-
-    // handle profile image upload
-    if (req.file) {
-      const teacher = await Teacher.findById(teacherId).select("profileImage");
-
-      // delete old image
-      if (teacher?.profileImage?.public_id) {
-        await cloudinary.uploader.destroy(teacher.profileImage.public_id).catch(() => {});
-      }
-
-      updates.profileImage = {
-        public_id: req.file.filename,
-        url: req.file.path,
-      };
-    }
-
-    const teacher = await Teacher.findByIdAndUpdate(teacherId, updates, {
-      new: true,
-      runValidators: true,
-    }).select("-password -otp");
-
-    return res.status(200).json({ success: true, data: { teacher } });
-  } catch (error) {
-    res.status(500).json({ success: false, message: "Failed to update profile" });
-  }
-};
-
-export const updatePaymentDetails = async (req, res) => {
-  try {
-    const teacherId = req.teacher.teacherId;
-    const { india, nepal } = req.body;
-
-    const teacher = await Teacher.findById(teacherId);
-    if (!teacher) {
-      return res.status(404).json({ success: false, message: "Teacher not found" });
-    }
-
-    if (teacher.country === "india" && india) {
-      teacher.paymentDetails.india = { ...teacher.paymentDetails.india, ...india };
-    } else if (teacher.country === "nepal" && nepal) {
-      teacher.paymentDetails.nepal = { ...teacher.paymentDetails.nepal, ...nepal };
-    } else {
-      return res.status(400).json({ success: false, message: "Invalid payment details for your country" });
-    }
-
-    // mark as unverified until admin approves
-    teacher.paymentDetails.verified = false;
-    await teacher.save();
-
-    return res.status(200).json({
-      success: true,
-      message: "Payment details updated. Admin will verify shortly.",
-    });
-  } catch (error) {
-    res.status(500).json({ success: false, message: "Failed to update payment details" });
-  }
-};
-
-export const getPublicTeacherProfile = async (req, res) => {
-  try {
-    const { username } = req.params;
-
-    const teacher = await Teacher.findOne({ username: username.toLowerCase() })
-      .select("name username bio qualification profileImage country createdAt")
-      .lean();
-
-    if (!teacher) {
-      return res.status(404).json({ success: false, message: "Teacher not found" });
-    }
-
-    const courses = await Course.find({
-      teacher: teacher._id,
-      isActive: true,
-      approvalStatus: "approved",
-    })
-      .select("name description image isPaid price totalQuestions geoRestriction")
-      .lean();
-
-    return res.status(200).json({
-      success: true,
-      data: { teacher, courses },
-    });
-  } catch (error) {
-    res.status(500).json({ success: false, message: "Failed to fetch profile" });
-  }
-};
-
-// ── admin: manage teachers ──
 
 export const getAllTeachers = async (req, res) => {
   try {
-    const { page = 1, limit = 20 } = req.query;
+    const { page = 1, limit = 20, status, search } = req.query;
     const skip = (parseInt(page) - 1) * parseInt(limit);
 
+    const query = {};
+    if (status) query.documentStatus = status;
+    if (search) {
+      query.$or = [
+        { name: { $regex: search, $options: "i" } },
+        { email: { $regex: search, $options: "i" } },
+        { username: { $regex: search, $options: "i" } },
+      ];
+    }
+
     const [teachers, total] = await Promise.all([
-      Teacher.find()
-        .select("-password -otp -paymentDetails.india.accountNumber -paymentDetails.nepal")
+      Teacher.find(query)
+        .select("-password -otp -documents -paymentDetails.india.accountNumber")
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(parseInt(limit))
         .lean(),
-      Teacher.countDocuments(),
+      Teacher.countDocuments(query),
     ]);
 
     return res.status(200).json({
       success: true,
       data: {
         teachers,
-        pagination: { total, page: parseInt(page), totalPages: Math.ceil(total / parseInt(limit)) },
+        pagination: {
+          total,
+          page: parseInt(page),
+          totalPages: Math.ceil(total / parseInt(limit)),
+        },
       },
     });
   } catch (error) {
-    res.status(500).json({ success: false, message: "Failed to fetch teachers" });
+    res.status(500).json({ success: false, message: "Failed to fetch" });
+  }
+};
+
+export const getTeacherById = async (req, res) => {
+  try {
+    const { teacherId } = req.params;
+
+    const [teacher, courses] = await Promise.all([
+      Teacher.findById(teacherId).select("-password -otp").lean(),
+      Course.find({ teacher: teacherId })
+        .select(
+          "name isPaid price approvalStatus isActive totalQuestions createdAt geoRestriction",
+        )
+        .lean(),
+    ]);
+
+    if (!teacher) {
+      return res.status(404).json({ success: false, message: "Not found" });
+    }
+
+    // student count
+    const courseIds = courses.map((c) => c._id);
+    const studentCount = await TestResult.distinct("user", {
+      course: { $in: courseIds },
+    });
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        teacher,
+        courses,
+        stats: {
+          totalCourses: courses.length,
+          totalStudents: studentCount.length,
+        },
+      },
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: "Failed to fetch" });
+  }
+};
+
+export const adminVerifyDocuments = async (req, res) => {
+  try {
+    const { teacherId, approved, rejectionReason } = req.body;
+
+    const teacher = await Teacher.findById(teacherId);
+    if (!teacher) {
+      return res.status(404).json({ success: false, message: "Not found" });
+    }
+
+    teacher.documentStatus = approved ? "verified" : "rejected";
+    teacher.documentVerifiedAt = approved ? new Date() : null;
+    teacher.documentVerifiedBy = req.admin.userId;
+    teacher.documentRejectionReason = approved ? null : rejectionReason;
+
+    // unblock access if verified
+    if (approved && teacher.documentRequested) {
+      teacher.accessBlocked = false;
+      teacher.accessBlockReason = null;
+    }
+
+    await teacher.save();
+    await invalidateTeacherCache(teacherId);
+
+    return res.status(200).json({
+      success: true,
+      message: `Documents ${approved ? "verified" : "rejected"}`,
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: "Verification failed" });
+  }
+};
+
+export const adminRequestDocuments = async (req, res) => {
+  try {
+    const { teacherId, note } = req.body;
+
+    const teacher = await Teacher.findByIdAndUpdate(
+      teacherId,
+      {
+        documentRequested: true,
+        documentRequestedAt: new Date(),
+        documentRequestNote: note || null,
+        accessBlocked: true,
+        accessBlockReason: note || "Document verification required by admin",
+        documentStatus: "not_uploaded",
+      },
+      { new: true },
+    );
+
+    if (!teacher) {
+      return res.status(404).json({ success: false, message: "Not found" });
+    }
+
+    await invalidateTeacherCache(teacherId);
+
+    return res.status(200).json({
+      success: true,
+      message: "Document request sent. Teacher account blocked until verified.",
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: "Failed to request" });
+  }
+};
+
+export const adminDeleteTeacher = async (req, res) => {
+  try {
+    const { teacherId } = req.params;
+
+    const teacher = await Teacher.findById(teacherId);
+    if (!teacher) {
+      return res.status(404).json({ success: false, message: "Not found" });
+    }
+
+    // delete cloudinary assets
+    await Promise.allSettled(
+      [
+        teacher.profileImage?.public_id
+          ? cloudinary.uploader.destroy(teacher.profileImage.public_id)
+          : null,
+        ...(teacher.documents || []).map((d) =>
+          cloudinary.uploader.destroy(d.public_id, { resource_type: "raw" }),
+        ),
+      ].filter(Boolean),
+    );
+
+    // unassign courses
+    await Course.updateMany(
+      { teacher: teacherId },
+      { $unset: { teacher: 1 }, approvalStatus: "approved" },
+    );
+
+    await Teacher.findByIdAndDelete(teacherId);
+    await invalidateTeacherCache(teacherId);
+    await redisClient.del(publicProfileCacheKey(teacher.username));
+
+    return res.status(200).json({ success: true, message: "Teacher deleted" });
+  } catch (error) {
+    res.status(500).json({ success: false, message: "Delete failed" });
   }
 };
 
 export const getTeacherCourseApprovals = async (req, res) => {
   try {
-    const courses = await Course.find({ approvalStatus: "pending", teacher: { $ne: null } })
+    const courses = await Course.find({
+      approvalStatus: "pending",
+      teacher: { $ne: null },
+    })
       .populate("teacher", "name email username country")
       .sort({ createdAt: -1 })
       .lean();
 
     return res.status(200).json({ success: true, data: { courses } });
   } catch (error) {
-    res.status(500).json({ success: false, message: "Failed to fetch pending courses" });
+    res.status(500).json({ success: false, message: "Failed to fetch" });
   }
 };
 
@@ -632,22 +1466,29 @@ export const approveTeacherCourse = async (req, res) => {
         approvalNote: note || null,
         approvedBy: approved ? req.admin.userId : null,
         approvedAt: approved ? new Date() : null,
-        isActive: approved ? true : false,
+        isActive: approved,
       },
-      { new: true }
+      { new: true },
     ).populate("teacher", "name email");
 
     if (!course) {
-      return res.status(404).json({ success: false, message: "Course not found" });
+      return res.status(404).json({ success: false, message: "Not found" });
     }
+
+    // invalidate caches
+    await Promise.allSettled([
+      redisClient.del(`teacher:${course.teacher._id}`),
+      redisClient.del(
+        publicProfileCacheKey(course.teacher?.username || "unknown"),
+      ),
+    ]);
 
     return res.status(200).json({
       success: true,
       message: `Course ${approved ? "approved" : "rejected"}`,
-      data: { course },
     });
   } catch (error) {
-    res.status(500).json({ success: false, message: "Failed to update approval" });
+    res.status(500).json({ success: false, message: "Approval failed" });
   }
 };
 
@@ -658,20 +1499,22 @@ export const verifyTeacherPaymentDetails = async (req, res) => {
     const teacher = await Teacher.findByIdAndUpdate(
       teacherId,
       { "paymentDetails.verified": verified },
-      { new: true }
+      { new: true },
     ).select("name email paymentDetails.verified");
 
     if (!teacher) {
-      return res.status(404).json({ success: false, message: "Teacher not found" });
+      return res.status(404).json({ success: false, message: "Not found" });
     }
 
-    return res.status(200).json({ success: true, data: { teacher } });
+    await invalidateTeacherCache(teacherId);
+
+    return res.status(200).json({ success: true });
   } catch (error) {
-    res.status(500).json({ success: false, message: "Failed to verify payment details" });
+    res.status(500).json({ success: false, message: "Failed to verify" });
   }
 };
 
-// ── teacher: create course ──
+// ── teacher course management ──
 
 export const teacherCreateCourse = async (req, res) => {
   try {
@@ -679,71 +1522,70 @@ export const teacherCreateCourse = async (req, res) => {
     const teacher = await Teacher.findById(teacherId);
 
     if (!teacher) {
-      return res.status(404).json({ success: false, message: "Teacher not found" });
+      return res.status(404).json({ success: false, message: "Not found" });
     }
 
-    const {
-      name,
-      description,
-      difficulties,
-      isPaid,
-      price,
-      geoRestriction,
-    } = req.body;
-
-    const isPaidBool = isPaid === "true" || isPaid === true;
-
-    // geo restriction must match teacher's country for paid courses
-    if (isPaidBool && geoRestriction && geoRestriction !== teacher.country) {
-      return res.status(400).json({
+    // security: block if access blocked
+    if (teacher.accessBlocked) {
+      return res.status(403).json({
         success: false,
-        message: `You can only create courses restricted to your country (${teacher.country})`,
+        code: "ACCESS_BLOCKED",
+        message:
+          "Account access is restricted. Please upload required documents.",
       });
     }
 
-    const actualGeoRestriction = isPaidBool ? teacher.country : (geoRestriction || null);
+    const { name, description, difficulties, isPaid, price } = req.body;
+
+    const isPaidBool = isPaid === "true" || isPaid === true;
 
     let parsedDifficulties = difficulties;
     if (typeof difficulties === "string") {
       parsedDifficulties = JSON.parse(difficulties);
     }
 
-    const processedDifficulties = parsedDifficulties.map((diff) => ({
-      ...diff,
-      totalMarks: diff.marksPerQuestion * diff.maxQuestions,
+    const processedDifficulties = parsedDifficulties.map((d) => ({
+      ...d,
+      totalMarks: d.marksPerQuestion * d.maxQuestions,
     }));
 
-    const calculatedMaxQuestions = processedDifficulties.reduce(
-      (t, d) => t + d.maxQuestions,
-      0
+    const maxQuestions = processedDifficulties.reduce(
+      (t, d) => t + (d.maxQuestions || 0),
+      0,
     );
 
     let image = null;
     if (req.files?.image?.[0]) {
-      image = { public_id: req.files.image[0].filename, url: req.files.image[0].path };
+      image = {
+        public_id: req.files.image[0].filename,
+        url: req.files.image[0].path,
+      };
     }
 
     const courseData = {
       name: name.trim(),
       description: description?.trim(),
       difficulties: processedDifficulties,
-      maxQuestionsPerTest: calculatedMaxQuestions,
+      maxQuestionsPerTest: maxQuestions,
       isPaid: isPaidBool,
       currency: teacher.country === "nepal" ? "NPR" : "INR",
       teacher: teacherId,
       approvalStatus: "pending",
       isActive: false,
-      geoRestriction: actualGeoRestriction,
+      geoRestriction: isPaidBool ? teacher.country : null,
       questions: [],
       totalQuestions: 0,
       ...(image && { image }),
     };
 
-    if (isPaidBool) {
-      courseData.price = parseFloat(price) || 0;
+    if (isPaidBool && price) {
+      courseData.price = parseFloat(price);
     }
 
     const course = await Course.create(courseData);
+
+    // invalidate teacher cache
+    await invalidateTeacherCache(teacherId);
 
     return res.status(201).json({
       success: true,
@@ -752,6 +1594,198 @@ export const teacherCreateCourse = async (req, res) => {
     });
   } catch (error) {
     console.error("Teacher create course error:", error);
-    res.status(500).json({ success: false, message: "Failed to create course" });
+    res.status(500).json({ success: false, message: "Failed to create" });
+  }
+};
+
+export const teacherUpdateCourse = async (req, res) => {
+  try {
+    const teacherId = req.teacher.teacherId;
+    const { courseId } = req.params;
+
+    const teacher = await Teacher.findById(teacherId);
+    if (!teacher || teacher.accessBlocked) {
+      return res.status(403).json({
+        success: false,
+        code: "ACCESS_BLOCKED",
+        message: "Account restricted",
+      });
+    }
+
+    // ensure teacher owns this course
+    const course = await Course.findOne({
+      _id: courseId,
+      teacher: teacherId,
+    });
+
+    if (!course) {
+      return res.status(404).json({
+        success: false,
+        message: "Course not found or not authorized",
+      });
+    }
+
+    const { name, description, isActive } = req.body;
+    const updates = {};
+
+    if (name) updates.name = name.trim();
+    if (description !== undefined) updates.description = description.trim();
+    if (isActive !== undefined) {
+      // teacher can only activate approved courses
+      if (course.approvalStatus !== "approved") {
+        return res.status(400).json({
+          success: false,
+          message: "Cannot activate unapproved course",
+        });
+      }
+      updates.isActive = isActive === "true" || isActive === true;
+    }
+
+    let image = null;
+    if (req.file) {
+      if (course.image?.public_id) {
+        await cloudinary.uploader
+          .destroy(course.image.public_id)
+          .catch(() => {});
+      }
+      image = { public_id: req.file.filename, url: req.file.path };
+      updates.image = image;
+    }
+
+    const updated = await Course.findByIdAndUpdate(courseId, updates, {
+      new: true,
+    });
+
+    await invalidateTeacherCache(teacherId);
+
+    return res.status(200).json({
+      success: true,
+      message: "Course updated",
+      data: { course: updated },
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: "Update failed" });
+  }
+};
+
+export const teacherAddQuestion = async (req, res) => {
+  try {
+    const teacherId = req.teacher.teacherId;
+    const { courseId } = req.params;
+
+    const teacher = await Teacher.findById(teacherId);
+    if (!teacher || teacher.accessBlocked) {
+      return res
+        .status(403)
+        .json({ success: false, message: "Account restricted" });
+    }
+
+    const course = await Course.findOne({ _id: courseId, teacher: teacherId });
+    if (!course) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Not found or not authorized" });
+    }
+
+    const {
+      difficulty,
+      question,
+      explanation,
+      questionType,
+      options,
+      correctAnswer,
+      correctAnswerIndex,
+    } = req.body;
+
+    const difficultyConfig = course.difficulties.find(
+      (d) => d.name === difficulty,
+    );
+    if (!difficultyConfig) {
+      return res.status(400).json({
+        success: false,
+        message: `Difficulty '${difficulty}' not configured`,
+      });
+    }
+
+    let questionImage = null;
+    if (req.file) {
+      questionImage = { public_id: req.file.filename, url: req.file.path };
+    }
+
+    const newQuestion = {
+      difficulty,
+      question: question.trim(),
+      questionType: questionType || "multiple",
+      options:
+        questionType === "multiple"
+          ? options || []
+          : questionType === "truefalse"
+            ? ["True", "False"]
+            : [],
+      correctAnswer:
+        questionType === "single" ? correctAnswer : correctAnswerIndex,
+      explanation: explanation.trim(),
+      marksPerQuestion: difficultyConfig.marksPerQuestion,
+      createdBy: teacher.username,
+      ...(questionImage && { image: questionImage }),
+    };
+
+    course.questions.push(newQuestion);
+    course.totalQuestions = course.questions.filter((q) => q.isActive).length;
+
+    // re-submit for approval if was approved (editing means re-review)
+    if (course.approvalStatus === "approved") {
+      course.approvalStatus = "pending";
+      course.isActive = false;
+    }
+
+    await course.save();
+    await invalidateTeacherCache(teacherId);
+
+    return res.status(201).json({
+      success: true,
+      message:
+        course.approvalStatus === "pending"
+          ? "Question added. Course re-submitted for approval."
+          : "Question added",
+      data: { question: newQuestion },
+    });
+  } catch (error) {
+    console.error("Teacher add question:", error);
+    res.status(500).json({ success: false, message: "Failed to add" });
+  }
+};
+
+export const teacherGetCourseQuestions = async (req, res) => {
+  try {
+    const teacherId = req.teacher.teacherId;
+    const { courseId } = req.params;
+
+    const course = await Course.findOne({
+      _id: courseId,
+      teacher: teacherId,
+    })
+      .select("name questions difficulties approvalStatus isActive")
+      .lean();
+
+    if (!course) {
+      return res.status(404).json({ success: false, message: "Not found" });
+    }
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        course: {
+          _id: course._id,
+          name: course.name,
+          approvalStatus: course.approvalStatus,
+          isActive: course.isActive,
+        },
+        questions: course.questions,
+        difficulties: course.difficulties,
+      },
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: "Failed to fetch" });
   }
 };
