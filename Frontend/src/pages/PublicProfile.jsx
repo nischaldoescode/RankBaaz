@@ -69,7 +69,7 @@ const PublicProfile = () => {
                 : undefined,
             identifier: profileData.username,
             description: `Member since ${new Date(
-              profileData.stats?.memberSince
+              profileData.stats?.memberSince,
             ).toLocaleDateString()}`,
             ...(profileData.rank && {
               award: `Global Rank #${profileData.rank}`,
@@ -95,8 +95,8 @@ const PublicProfile = () => {
         }
       : null,
   });
-
   useEffect(() => {
+    window.scrollTo({ top: 0, behavior: "smooth" });
     fetchProfile();
   }, [username]);
 
@@ -169,15 +169,12 @@ const PublicProfile = () => {
   }
 
   if (error || !profileData) {
+    // import and render the actual 404 page for consistency
+    const NotFound = React.lazy(() => import("./NotFound"));
     return (
-      <div className="min-h-screen pt-16 flex items-center justify-center">
-        <Card className="max-w-md w-full text-center p-8">
-          <p className="text-destructive mb-4">
-            {error || "Profile not found"}
-          </p>
-          <Button onClick={() => navigate("/")}>Go Home</Button>
-        </Card>
-      </div>
+      <React.Suspense fallback={null}>
+        <NotFound />
+      </React.Suspense>
     );
   }
 
@@ -217,7 +214,7 @@ const PublicProfile = () => {
                   className="text-2xl sm:text-3xl font-bold text-white"
                   style={{
                     backgroundColor: getAvatarColor(
-                      profileData.username.charAt(0)
+                      profileData.username.charAt(0),
                     ),
                   }}
                 >
