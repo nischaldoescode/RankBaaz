@@ -5,7 +5,6 @@ import { useAuth } from "./context/AuthContext";
 import { useTheme } from "./context/ThemeContext";
 import { ContentProvider } from "./context/ContentContext";
 import { Toaster } from "react-hot-toast";
-import { useLocation } from "react-router-dom";
 import {
   Brain,
   Award,
