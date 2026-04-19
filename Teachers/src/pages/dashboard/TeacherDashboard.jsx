@@ -4,7 +4,7 @@ import { useTeacher } from "../../context/TeacherContext.jsx";
 import CoursesTab from "./CoursesTab.jsx";
 import ProfileTab from "./ProfileTab.jsx";
 import PaymentTab from "./PaymentTab.jsx";
-import DocumentsTab from "./DocumentsTab.jsx";
+import DocumentsTab from "./DocumentTab.jsx";
 import AnalyticsTab from "./AnalyticsTab.jsx";
 import toast from "react-hot-toast";
 
