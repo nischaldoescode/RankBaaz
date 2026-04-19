@@ -69,7 +69,7 @@ const CouponForm = ({ courseId, onSuccess, onCancel }) => {
       setCheckingDuplicate(true);
 
       const isDuplicate = existingCoupons.some(
-        (c) => c.code.toUpperCase() === code.toUpperCase()
+        (c) => c.code.toUpperCase() === code.toUpperCase(),
       );
 
       if (isDuplicate) {
@@ -87,7 +87,7 @@ const CouponForm = ({ courseId, onSuccess, onCancel }) => {
 
       setCheckingDuplicate(false);
     },
-    [existingCoupons]
+    [existingCoupons],
   );
 
   const debouncedDuplicateCheck = useCallback(
@@ -100,7 +100,7 @@ const CouponForm = ({ courseId, onSuccess, onCancel }) => {
         }, 500);
       };
     })(),
-    [checkDuplicateCoupon]
+    [checkDuplicateCoupon],
   );
 
   const validateForm = () => {
@@ -751,7 +751,7 @@ const Courses = () => {
         !selectedDifficulty ||
         course.difficulties?.some(
           (level) =>
-            level.name.toLowerCase() === selectedDifficulty.toLowerCase()
+            level.name.toLowerCase() === selectedDifficulty.toLowerCase(),
         );
 
       return (
@@ -769,12 +769,12 @@ const Courses = () => {
         break;
       case "name":
         filtered.sort((a, b) =>
-          (a.name || a.title || "").localeCompare(b.name || b.title || "")
+          (a.name || a.title || "").localeCompare(b.name || b.title || ""),
         );
         break;
       case "questions":
         filtered.sort(
-          (a, b) => (b.totalQuestions || 0) - (a.totalQuestions || 0)
+          (a, b) => (b.totalQuestions || 0) - (a.totalQuestions || 0),
         );
         break;
       default:
@@ -808,7 +808,7 @@ const Courses = () => {
         selectedQuestions: { ...selectedQuestions },
         selectAllStates: { ...selectAllStates },
       }),
-      [expandedCourse, expandedQuestions, selectedQuestions, selectAllStates]
+      [expandedCourse, expandedQuestions, selectedQuestions, selectAllStates],
     );
 
     const restoreExpandedStates = useCallback((preservedState) => {
@@ -858,7 +858,7 @@ const Courses = () => {
     courseId,
     difficulty,
     questionId,
-    isSelected
+    isSelected,
   ) => {
     const key = `${courseId}-${difficulty}`;
     const questions = getQuestionsByDifficulty(courseId)[difficulty] || [];
@@ -946,7 +946,7 @@ const Courses = () => {
       setCourseQuestions((prev) => ({
         ...prev,
         [courseId]: (prev[courseId] || []).filter(
-          (q) => !questionsToDelete.includes(q._id)
+          (q) => !questionsToDelete.includes(q._id),
         ),
       }));
 
@@ -1009,7 +1009,7 @@ const Courses = () => {
     const questions = courseQuestions[course._id] || [];
     const totalQuestions = questions.length;
     const activeQuestions = questions.filter(
-      (q) => q.isActive !== false
+      (q) => q.isActive !== false,
     ).length;
     const difficulties = [...new Set(questions.map((q) => q.difficulty))];
 
@@ -1163,7 +1163,7 @@ const Courses = () => {
     formData,
     courseMaxMarks,
     allDifficulties,
-    currentDifficulty
+    currentDifficulty,
   ) => {
     const newErrors = {};
 
@@ -1248,7 +1248,7 @@ const Courses = () => {
    */
   const handleEditDifficulty = (course, difficultyName) => {
     const difficulty = course.difficulties.find(
-      (d) => d.name === difficultyName
+      (d) => d.name === difficultyName,
     );
 
     if (!difficulty) {
@@ -1319,7 +1319,7 @@ const Courses = () => {
       difficultyFormData,
       editingDifficulty.courseMaxMarks,
       editingDifficulty.allDifficulties,
-      editingDifficulty.difficulty
+      editingDifficulty.difficulty,
     );
 
     if (Object.keys(validationErrors).length > 0) {
@@ -1349,7 +1349,7 @@ const Courses = () => {
           };
         }
         return diff;
-      }
+      },
     );
 
     const updateData = {
@@ -1361,7 +1361,7 @@ const Courses = () => {
 
     if (result.success) {
       toast.success(
-        `${editingDifficulty.difficulty} difficulty updated successfully!`
+        `${editingDifficulty.difficulty} difficulty updated successfully!`,
       );
       setEditingDifficulty(null);
       setDifficultyFormData({
@@ -1481,7 +1481,7 @@ const Courses = () => {
       const result = await updateQuestion(
         editingQuestion.courseId,
         editingQuestion._id,
-        updateData
+        updateData,
       );
       if (result.success) {
         setEditingQuestion(null);
@@ -1544,7 +1544,7 @@ const Courses = () => {
     }
 
     const difficultyLevel = course?.difficulties?.find(
-      (d) => d.name.toLowerCase() === difficulty.toLowerCase()
+      (d) => d.name.toLowerCase() === difficulty.toLowerCase(),
     );
 
     setAddingQuestion({
@@ -1564,7 +1564,7 @@ const Courses = () => {
   };
   const getDifficultyLevel = (course, difficultyName) => {
     return course.difficulties?.find(
-      (diff) => diff.name.toLowerCase() === difficultyName.toLowerCase()
+      (diff) => diff.name.toLowerCase() === difficultyName.toLowerCase(),
     );
   };
   const handleCreateQuestion = async () => {
@@ -1718,7 +1718,7 @@ const Courses = () => {
       if (videoEditFormData.type === "course") {
         // Filter out empty links
         const validLinks = videoEditFormData.courseVideo.links.filter(
-          (link) => link.url && link.url.trim()
+          (link) => link.url && link.url.trim(),
         );
 
         if (validLinks.length === 0) {
@@ -1738,13 +1738,13 @@ const Courses = () => {
         // Process each difficulty
         for (const diffVideo of videoEditFormData.difficultyVideos) {
           const validLinks = diffVideo.links.filter(
-            (link) => link.url && link.url.trim()
+            (link) => link.url && link.url.trim(),
           );
 
           if (validLinks.length > 0) {
             if (validLinks.length > 2) {
               toast.error(
-                `Maximum 2 video links allowed for ${diffVideo.difficulty}`
+                `Maximum 2 video links allowed for ${diffVideo.difficulty}`,
               );
               return;
             }
@@ -1765,7 +1765,7 @@ const Courses = () => {
       // Call update API
       const result = await updateCourse(
         editingVideoContent.courseId,
-        updateData
+        updateData,
       );
 
       if (result.success) {
@@ -2191,7 +2191,7 @@ const Courses = () => {
                             </h3>
                             <span
                               className={`px-3 py-1 text-xs font-semibold rounded-full border ${getStatusColor(
-                                course
+                                course,
                               )}`}
                             >
                               {getStatusText(course)}
@@ -2211,12 +2211,43 @@ const Courses = () => {
                               <span className="font-medium">Category:</span>
                               <span>{getCategoryName(course.categoryId)}</span>
                             </div>
+
+                            {/* created by badge */}
+                            <div className="flex items-center space-x-2 text-gray-500">
+                              <svg
+                                className="h-4 w-4 text-indigo-500"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                                strokeWidth="2"
+                              >
+                                <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" />
+                                <circle cx="12" cy="7" r="4" />
+                              </svg>
+                              <span className="font-medium">By:</span>
+                              {course.teacher ? (
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-indigo-100 text-indigo-700">
+                                  <img
+                                    src={`https://api.dicebear.com/9.x/croodles-neutral/svg?seed=${course.teacher.username || course.teacher}`}
+                                    className="w-4 h-4 rounded-full"
+                                    alt=""
+                                  />
+                                  {course.teacher.name ||
+                                    `@${course.teacher.username}` ||
+                                    "Teacher"}
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-gray-100 text-gray-600">
+                                  Admin
+                                </span>
+                              )}
+                            </div>
                             <div className="flex items-center space-x-2 text-gray-500">
                               <Clock className="h-4 w-4 text-green-500" />
                               <span className="font-medium">Created:</span>
                               <span>
                                 {new Date(
-                                  course.createdAt
+                                  course.createdAt,
                                 ).toLocaleDateString()}
                               </span>
                             </div>
@@ -2316,7 +2347,7 @@ const Courses = () => {
                                   <div className="flex items-center justify-between mb-4">
                                     <span
                                       className={`px-3 py-1 text-sm font-semibold rounded-full ${getDifficultyColor(
-                                        level.name
+                                        level.name,
                                       )}`}
                                     >
                                       {level.name}
@@ -2365,7 +2396,7 @@ const Courses = () => {
                                         </span>
                                         <span className="font-bold text-blue-600">
                                           {(getQuestionsByDifficulty(
-                                            course._id
+                                            course._id,
                                           )[level.name]?.length || 0) *
                                             level.marksPerQuestion}
                                         </span>
@@ -2378,8 +2409,8 @@ const Courses = () => {
                                           {Math.min(
                                             course.maxQuestionsPerTest,
                                             getQuestionsByDifficulty(
-                                              course._id
-                                            )[level.name]?.length || 0
+                                              course._id,
+                                            )[level.name]?.length || 0,
                                           ) * level.marksPerQuestion}
                                         </span>
                                       </div>
@@ -2550,7 +2581,7 @@ const Courses = () => {
                                         <div className="flex items-center space-x-3">
                                           <span
                                             className={`px-3 py-1 text-sm font-semibold rounded-full ${getDifficultyColor(
-                                              difficulty
+                                              difficulty,
                                             )}`}
                                           >
                                             {difficulty}
@@ -2566,7 +2597,7 @@ const Courses = () => {
                                               onClick={() =>
                                                 toggleQuestionsExpansion(
                                                   course._id,
-                                                  difficulty
+                                                  difficulty,
                                                 )
                                               }
                                               className="text-sm text-blue-600 hover:text-blue-700 font-medium cursor-pointer"
@@ -2587,7 +2618,7 @@ const Courses = () => {
                                                   handleSelectAll(
                                                     course._id,
                                                     difficulty,
-                                                    questions
+                                                    questions,
                                                   )
                                                 }
                                                 className="text-sm text-purple-600 hover:text-purple-700 font-medium cursor-pointer flex items-center space-x-1"
@@ -2628,7 +2659,7 @@ const Courses = () => {
                                                   onClick={() =>
                                                     handleBulkDelete(
                                                       course._id,
-                                                      difficulty
+                                                      difficulty,
                                                     )
                                                   }
                                                   className="text-sm text-red-600 hover:text-red-700 font-medium cursor-pointer flex items-center space-x-1"
@@ -2652,7 +2683,7 @@ const Courses = () => {
                                             onClick={() =>
                                               handleAddQuestion(
                                                 course._id,
-                                                difficulty
+                                                difficulty,
                                               )
                                             }
                                             className="text-blue-600 hover:text-blue-800 font-medium transition-colors cursor-pointer flex items-center space-x-1"
@@ -2662,7 +2693,7 @@ const Courses = () => {
                                               Add Question (
                                               {getDifficultyLevel(
                                                 course,
-                                                difficulty
+                                                difficulty,
                                               )?.marksPerQuestion || 1}{" "}
                                               marks)
                                             </span>
@@ -2698,7 +2729,7 @@ const Courses = () => {
                                                       course._id,
                                                       difficulty,
                                                       question._id,
-                                                      e.target.checked
+                                                      e.target.checked,
                                                     )
                                                   }
                                                   className="mt-1 h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 cursor-pointer"
@@ -2721,7 +2752,7 @@ const Courses = () => {
                                                   onClick={() =>
                                                     handleEditQuestion(
                                                       question,
-                                                      course._id
+                                                      course._id,
                                                     )
                                                   }
                                                   className="p-1 text-gray-400 hover:text-green-600 transition-colors cursor-pointer"
@@ -2732,7 +2763,7 @@ const Courses = () => {
                                                   onClick={() =>
                                                     handleDeleteQuestion(
                                                       course._id,
-                                                      question._id
+                                                      question._id,
                                                     )
                                                   }
                                                   className="p-1 text-gray-400 hover:text-red-600 transition-colors cursor-pointer"
@@ -2753,7 +2784,7 @@ const Courses = () => {
                                                 onClick={() =>
                                                   toggleQuestionsExpansion(
                                                     course._id,
-                                                    difficulty
+                                                    difficulty,
                                                   )
                                                 }
                                                 className="text-sm text-blue-600 hover:text-blue-700 font-medium cursor-pointer"
@@ -2775,7 +2806,7 @@ const Courses = () => {
                                               onClick={() =>
                                                 handleAddQuestion(
                                                   course._id,
-                                                  difficulty
+                                                  difficulty,
                                                 )
                                               }
                                               className="mt-2 text-sm text-blue-600 hover:text-blue-700 font-medium cursor-pointer"
@@ -2787,7 +2818,7 @@ const Courses = () => {
                                       </div>
                                     </div>
                                   </div>
-                                )
+                                ),
                               )}
                             </div>
                           ) : (
@@ -2807,7 +2838,7 @@ const Courses = () => {
                                     course.difficulties?.[0]?.name || "Easy";
                                   handleAddQuestion(
                                     course._id,
-                                    firstDifficulty
+                                    firstDifficulty,
                                   );
                                 }}
                                 className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors cursor-pointer"
@@ -2936,7 +2967,7 @@ const Courses = () => {
                                           </div>
                                         </div>
                                       </div>
-                                    )
+                                    ),
                                   )
                                 ) : (
                                   <p className="text-sm text-gray-500 italic">
@@ -2962,14 +2993,14 @@ const Courses = () => {
                                           diffVideo.difficulty === "Easy"
                                             ? "bg-green-50 border-green-200"
                                             : diffVideo.difficulty === "Medium"
-                                            ? "bg-yellow-50 border-yellow-200"
-                                            : "bg-red-50 border-red-200"
+                                              ? "bg-yellow-50 border-yellow-200"
+                                              : "bg-red-50 border-red-200"
                                         }`}
                                       >
                                         <h5 className="font-medium mb-3 flex items-center space-x-2">
                                           <span
                                             className={`px-2 py-1 rounded-full text-xs ${getDifficultyColor(
-                                              diffVideo.difficulty
+                                              diffVideo.difficulty,
                                             )}`}
                                           >
                                             {diffVideo.difficulty}
@@ -2994,7 +3025,7 @@ const Courses = () => {
                                                       <span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-green-100 text-green-800 mt-1">
                                                         {link.platform ||
                                                           detectPlatform(
-                                                            link.url
+                                                            link.url,
                                                           )}
                                                       </span>
                                                     </div>
@@ -3009,7 +3040,7 @@ const Courses = () => {
                                                           platform:
                                                             link.platform ||
                                                             detectPlatform(
-                                                              link.url
+                                                              link.url,
                                                             ),
                                                         })
                                                       }
@@ -3022,7 +3053,7 @@ const Courses = () => {
                                                     </button>
                                                   </div>
                                                 </div>
-                                              )
+                                              ),
                                             )}
                                           </div>
                                         ) : (
@@ -3031,7 +3062,7 @@ const Courses = () => {
                                           </p>
                                         )}
                                       </div>
-                                    )
+                                    ),
                                   )
                                 ) : (
                                   <p className="text-sm text-gray-500 italic">
@@ -3158,7 +3189,7 @@ const Courses = () => {
                                               onClick={() => {
                                                 const newLinks =
                                                   videoEditFormData.courseVideo.links.filter(
-                                                    (_, i) => i !== index
+                                                    (_, i) => i !== index,
                                                   );
                                                 setVideoEditFormData({
                                                   ...videoEditFormData,
@@ -3194,7 +3225,7 @@ const Courses = () => {
                                           </div>
                                         )}
                                       </div>
-                                    )
+                                    ),
                                   )}
 
                                   {/* Add Link Button */}
@@ -3241,8 +3272,8 @@ const Courses = () => {
                                           diff.name === "Easy"
                                             ? "bg-green-50"
                                             : diff.name === "Medium"
-                                            ? "bg-yellow-50"
-                                            : "bg-red-50"
+                                              ? "bg-yellow-50"
+                                              : "bg-red-50"
                                         }`}
                                       >
                                         <h4 className="font-medium text-gray-900 mb-3">
@@ -3251,7 +3282,7 @@ const Courses = () => {
 
                                         {videoEditFormData.difficultyVideos
                                           ?.find(
-                                            (dv) => dv.difficulty === diff.name
+                                            (dv) => dv.difficulty === diff.name,
                                           )
                                           ?.links?.map((link, index) => (
                                             <div
@@ -3272,7 +3303,7 @@ const Courses = () => {
                                                         newDiffVideos.findIndex(
                                                           (dv) =>
                                                             dv.difficulty ===
-                                                            diff.name
+                                                            diff.name,
                                                         );
                                                       newDiffVideos[
                                                         diffIndex
@@ -3298,7 +3329,7 @@ const Courses = () => {
                                                         newDiffVideos.findIndex(
                                                           (dv) =>
                                                             dv.difficulty ===
-                                                            diff.name
+                                                            diff.name,
                                                         );
                                                       newDiffVideos[
                                                         diffIndex
@@ -3324,14 +3355,14 @@ const Courses = () => {
                                                       newDiffVideos.findIndex(
                                                         (dv) =>
                                                           dv.difficulty ===
-                                                          diff.name
+                                                          diff.name,
                                                       );
                                                     newDiffVideos[
                                                       diffIndex
                                                     ].links = newDiffVideos[
                                                       diffIndex
                                                     ].links.filter(
-                                                      (_, i) => i !== index
+                                                      (_, i) => i !== index,
                                                     );
                                                     setVideoEditFormData({
                                                       ...videoEditFormData,
@@ -3367,10 +3398,10 @@ const Courses = () => {
 
                                         {/* Add Link Button for each difficulty */}
                                         {(!videoEditFormData.difficultyVideos?.find(
-                                          (dv) => dv.difficulty === diff.name
+                                          (dv) => dv.difficulty === diff.name,
                                         )?.links ||
                                           videoEditFormData.difficultyVideos?.find(
-                                            (dv) => dv.difficulty === diff.name
+                                            (dv) => dv.difficulty === diff.name,
                                           )?.links.length < 2) && (
                                           <button
                                             type="button"
@@ -3381,7 +3412,7 @@ const Courses = () => {
                                               const diffIndex =
                                                 newDiffVideos.findIndex(
                                                   (dv) =>
-                                                    dv.difficulty === diff.name
+                                                    dv.difficulty === diff.name,
                                                 );
 
                                               if (diffIndex === -1) {
@@ -3419,14 +3450,14 @@ const Courses = () => {
                                               Add Video Link (
                                               {videoEditFormData.difficultyVideos?.find(
                                                 (dv) =>
-                                                  dv.difficulty === diff.name
+                                                  dv.difficulty === diff.name,
                                               )?.links?.length || 0}
                                               /2)
                                             </span>
                                           </button>
                                         )}
                                       </div>
-                                    )
+                                    ),
                                   )}
                                 </div>
                               )}
@@ -4168,8 +4199,8 @@ const Courses = () => {
                       newQuestionData.question.length < 10
                         ? "border-red-300 focus:ring-red-500"
                         : newQuestionData.question.length > 1000
-                        ? "border-red-300 focus:ring-red-500"
-                        : "border-gray-300 focus:ring-blue-500"
+                          ? "border-red-300 focus:ring-red-500"
+                          : "border-gray-300 focus:ring-blue-500"
                     }`}
                     rows="4"
                     maxLength="1000"
@@ -4520,7 +4551,7 @@ const Courses = () => {
                     onChange={(e) =>
                       handleDifficultyFieldChange(
                         "marksPerQuestion",
-                        e.target.value
+                        e.target.value,
                       )
                     }
                     className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 ${
@@ -4549,7 +4580,7 @@ const Courses = () => {
                     onChange={(e) =>
                       handleDifficultyFieldChange(
                         "maxQuestions",
-                        e.target.value
+                        e.target.value,
                       )
                     }
                     className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 ${
@@ -4658,7 +4689,7 @@ const Courses = () => {
                               return (
                                 total +
                                 (parseInt(
-                                  difficultyFormData.marksPerQuestion
+                                  difficultyFormData.marksPerQuestion,
                                 ) || 0) *
                                   (parseInt(difficultyFormData.maxQuestions) ||
                                     0)
@@ -4668,7 +4699,7 @@ const Courses = () => {
                               total + diff.marksPerQuestion * diff.maxQuestions
                             );
                           },
-                          0
+                          0,
                         ) === editingDifficulty.courseMaxMarks
                           ? "text-green-600"
                           : "text-red-600"
@@ -4688,7 +4719,7 @@ const Courses = () => {
                             total + diff.marksPerQuestion * diff.maxQuestions
                           );
                         },
-                        0
+                        0,
                       )}{" "}
                       / {editingDifficulty.courseMaxMarks}
                     </span>
