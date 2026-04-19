@@ -441,34 +441,20 @@ const ApplicationForm = ({ onApplied }) => {
 
 const PERKS = [
   {
-    icon: "💰",
     title: "80% Revenue Share",
     desc: "Keep the majority of every course sale.",
   },
   {
-    icon: "🇮🇳🇳🇵",
-    title: "India & Nepal",
-    desc: "Razorpay for India, Khalti for Nepal.",
-  },
-  {
-    icon: "📊",
-    title: "Live Analytics",
+    title: "Analytics",
     desc: "See student performance, top scorers, and more.",
   },
   {
-    icon: "🔒",
     title: "Verified Platform",
     desc: "All teachers are vetted for quality.",
   },
   {
-    icon: "🎓",
     title: "Full Control",
     desc: "Create, edit, and manage your own courses.",
-  },
-  {
-    icon: "⚡",
-    title: "Fast Payouts",
-    desc: "Admin-processed payouts on request.",
   },
 ];
 
@@ -562,24 +548,6 @@ const TeacherJoin = () => {
 
         <div className="relative z-10 max-w-5xl mx-auto px-4 sm:px-6 py-20 sm:py-28 text-center">
           {/* waitlist badge */}
-          <motion.div
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-primary/20 bg-primary/5 text-primary text-sm font-semibold mb-6"
-          >
-            <span
-              style={{
-                width: 8,
-                height: 8,
-                borderRadius: "50%",
-                background: "hsl(var(--primary))",
-                display: "inline-block",
-                animation: "ping 1.5s ease-in-out infinite",
-              }}
-            />
-            <AnimatedNumber value={waitlistCount} />{" "}
-            {waitlistCount === 1 ? "educator" : "educators"} on the waitlist
-          </motion.div>
 
           <motion.h1
             initial={{ opacity: 0, y: 16 }}
@@ -641,7 +609,6 @@ const TeacherJoin = () => {
                 transition={{ delay: 0.1 + i * 0.06 }}
                 className="bg-background/80 backdrop-blur border border-border rounded-xl p-4 text-left hover:border-primary/30 hover:shadow-sm transition-all"
               >
-                <span className="text-2xl mb-2 block">{p.icon}</span>
                 <p className="text-sm font-semibold text-foreground mb-1">
                   {p.title}
                 </p>
