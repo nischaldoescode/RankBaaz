@@ -1,4 +1,7 @@
-// add this inside Home.jsx, before the main component export
+import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
+import { motion } from "framer-motion";
+import axios from "axios";
 
 const TeacherCTASection = () => {
   const [count, setCount] = useState(null);
@@ -25,13 +28,6 @@ const TeacherCTASection = () => {
 
           <div className="relative flex flex-col lg:flex-row items-center gap-10">
             <div className="flex-1 text-center lg:text-left">
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-primary/10 text-primary border border-primary/20 rounded-full text-xs font-semibold mb-4">
-                <span className="relative flex h-1.5 w-1.5">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75" />
-                  <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-primary" />
-                </span>
-                Now accepting applications
-              </span>
 
               <h2 className="text-3xl sm:text-4xl font-bold text-foreground mb-4">
                 Share your expertise.{" "}
@@ -40,7 +36,7 @@ const TeacherCTASection = () => {
 
               <p className="text-muted-foreground text-base leading-relaxed mb-6 max-w-lg mx-auto lg:mx-0">
                 Join our invite-only teacher program. Keep 80% of every course
-                sale. Payments via Razorpay (India) and Khalti (Nepal).
+                sale.
               </p>
 
               {count !== null && (
@@ -72,8 +68,6 @@ const TeacherCTASection = () => {
             <div className="flex-shrink-0 grid grid-cols-2 gap-3 w-full max-w-xs">
               {[
                 { label: "Revenue share", value: "80%" },
-                { label: "Countries", value: "2" },
-                { label: "Payment methods", value: "Khalti + Razorpay" },
                 { label: "Approval time", value: "< 48h" },
               ].map((item, i) => (
                 <div
@@ -91,3 +85,5 @@ const TeacherCTASection = () => {
     </section>
   );
 };
+
+export default TeacherCTASection;
