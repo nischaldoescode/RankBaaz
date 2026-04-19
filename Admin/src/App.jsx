@@ -130,11 +130,11 @@ function App() {
                                   path="/violations"
                                   element={<Violations />}
                                 />
+                                <Route
+                                  path="/admin/teachers"
+                                  element={<TeacherManagement />}
+                                />
                               </Routes>
-                              <Route
-                                path="/admin/teachers"
-                                element={<TeacherManagement />}
-                              />
                             </div>
                           </main>
                         </div>
