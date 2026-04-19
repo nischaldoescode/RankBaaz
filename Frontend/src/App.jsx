@@ -38,8 +38,6 @@ const Test = React.lazy(() => import("./pages/Test"));
 const Profile = React.lazy(() => import("./pages/Profile"));
 const NotFound = React.lazy(() => import("./pages/NotFound"));
 const TeacherJoin = React.lazy(() => import("./pages/TeacherJoin"));
-const TeacherSignup = React.lazy(() => import("./pages/TeacherSignup"));
-const TeacherLogin = React.lazy(() => import("./pages/TeacherLogin"));
 const TeacherProfile = React.lazy(() => import("./pages/TeacherProfile"));
 const PublicProfile = React.lazy(() => import("./pages/PublicProfile"));
 const Contact = React.lazy(() => import("./pages/Contact"));
@@ -732,22 +730,6 @@ function App() {
                       element={
                         <Suspense fallback={<Loading variant="page" />}>
                           <TeacherJoin />
-                        </Suspense>
-                      }
-                    />
-                    <Route
-                      path="/teacher/signup"
-                      element={
-                        <Suspense fallback={<Loading variant="page" />}>
-                          <TeacherSignup />
-                        </Suspense>
-                      }
-                    />
-                    <Route
-                      path="/teacher/login"
-                      element={
-                        <Suspense fallback={<Loading variant="page" />}>
-                          <TeacherLogin />
                         </Suspense>
                       }
                     />
