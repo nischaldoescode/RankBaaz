@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import {
   User,
   LogOut,
@@ -11,8 +11,6 @@ import {
   BookOpen,
   FileText,
   Phone,
-  X,
-  Menu,
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import {
@@ -66,7 +64,6 @@ const avatarColors = {
 
 const Header = () => {
   const [scrolled, setScrolled] = useState(false);
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const { isAuthenticated, user, logout } = useAuth();
   const { animations, reducedMotion } = useTheme();
@@ -83,21 +80,7 @@ const Header = () => {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  // close mobile menu on route change
-  useEffect(() => {
-    setMobileMenuOpen(false);
-  }, [location.pathname]);
-
-  // prevent body scroll when mobile menu open
-  useEffect(() => {
-    document.body.style.overflow = mobileMenuOpen ? "hidden" : "";
-    return () => {
-      document.body.style.overflow = "";
-    };
-  }, [mobileMenuOpen]);
-
   const handleLogout = async () => {
-    setMobileMenuOpen(false);
     await logout();
     navigate("/");
   };
@@ -252,18 +235,6 @@ const Header = () => {
                       <Link to="/register">Sign Up</Link>
                     </Button>
                   </div>
-
-                  {/* mobile hamburger — only shown on sm/md when NOT authenticated
-                      (authenticated users use the bottom nav + avatar dropdown) */}
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="lg:hidden h-9 w-9"
-                    onClick={() => setMobileMenuOpen(true)}
-                  >
-                    <Menu className="w-5 h-5" />
-                    <span className="sr-only">Open menu</span>
-                  </Button>
                 </>
               )}
             </div>
@@ -271,95 +242,8 @@ const Header = () => {
         </div>
       </motion.header>
 
-      {/* ─────────────────── Mobile full-screen menu (non-authenticated) ─────────────────── */}
-      <AnimatePresence>
-        {mobileMenuOpen && !isAuthenticated && (
-          <>
-            {/* backdrop */}
-            <motion.div
-              key="backdrop"
-              className="fixed inset-0 z-[60] bg-black/50 backdrop-blur-sm lg:hidden"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setMobileMenuOpen(false)}
-            />
-
-            {/* drawer */}
-            <motion.div
-              key="drawer"
-              className="fixed inset-x-0 bottom-0 z-[70] bg-background rounded-t-3xl border-t border-border p-6 pb-10 lg:hidden"
-              initial={{ y: "100%" }}
-              animate={{ y: 0 }}
-              exit={{ y: "100%" }}
-              transition={{ type: "spring", stiffness: 300, damping: 30 }}
-            >
-              <div className="flex items-center justify-between mb-6">
-                <div className="flex items-center gap-2">
-                  {contentSettings?.logo?.url ? (
-                    <img
-                      src={contentSettings.logo.url}
-                      alt={contentSettings.siteName || "Logo"}
-                      className="h-8 w-auto object-contain rounded-lg"
-                    />
-                  ) : (
-                    <div className="w-7 h-7 bg-primary rounded-lg flex items-center justify-center">
-                      <GraduationCap className="w-4 h-4 text-primary-foreground" />
-                    </div>
-                  )}
-                  <span className="font-bold text-foreground">
-                    {contentSettings?.siteName || "Vidhgrow"}
-                  </span>
-                </div>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8"
-                  onClick={() => setMobileMenuOpen(false)}
-                >
-                  <X className="w-4 h-4" />
-                </Button>
-              </div>
-
-              <nav className="space-y-1 mb-6">
-                {filteredLinks.map((link) => (
-                  <Link
-                    key={link.path}
-                    to={link.path}
-                    onClick={() => setMobileMenuOpen(false)}
-                    className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 ${
-                      isActive(link.path)
-                        ? "bg-primary/10 text-primary"
-                        : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                    }`}
-                  >
-                    <link.icon className="w-4 h-4" />
-                    {link.label}
-                  </Link>
-                ))}
-              </nav>
-
-              <div className="flex flex-col gap-3">
-                <Button variant="outline" asChild className="w-full">
-                  <Link to="/login" onClick={() => setMobileMenuOpen(false)}>
-                    Sign In
-                  </Link>
-                </Button>
-                <Button asChild className="w-full">
-                  <Link to="/register" onClick={() => setMobileMenuOpen(false)}>
-                    Sign Up
-                  </Link>
-                </Button>
-              </div>
-            </motion.div>
-          </>
-        )}
-      </AnimatePresence>
-
-      {/* ─────────────────── Mobile bottom floating nav ─────────────────── */}
-      {/* shown for all users on mobile — unauthenticated gets login/register as last item */}
       <>
-        <div className="h-20 lg:hidden" />
+        <div className="h-24 lg:hidden" />
 
         <div className="lg:hidden fixed bottom-4 left-4 right-4 z-50 flex justify-center pointer-events-none">
           <motion.nav
@@ -373,13 +257,18 @@ const Header = () => {
               delay: 0.2,
             }}
           >
-            {filteredLinks.map((link) => {
+            {[
+              { path: "/", label: "Home", icon: Home },
+              { path: "/courses", label: "Courses", icon: BookOpen },
+              { path: "/privacy", label: "Privacy", icon: FileText },
+              { path: "/contact", label: "Contact", icon: Phone },
+            ].map((link) => {
               const active = isActive(link.path);
               return (
                 <Link
                   key={link.path}
                   to={link.path}
-                  className="relative flex flex-col items-center justify-center flex-1 px-3.5 py-2 rounded-xl transition-all"
+                  className="relative flex flex-col items-center justify-center px-3.5 py-2 rounded-xl transition-all min-w-[52px]"
                 >
                   {active && (
                     <motion.div
@@ -394,12 +283,12 @@ const Header = () => {
                   )}
                   <div className="relative z-10 flex flex-col items-center gap-0.5">
                     <link.icon
-                      className={`w-[18px] h-[18px] transition-colors ${
+                      className={`w-[18px] h-[18px] transition-colors duration-200 ${
                         active ? "text-primary" : "text-muted-foreground"
                       }`}
                     />
                     <span
-                      className={`text-[9px] font-bold uppercase tracking-tight transition-colors leading-none ${
+                      className={`text-[9px] font-bold uppercase tracking-tight leading-none transition-colors duration-200 ${
                         active ? "text-primary" : "text-muted-foreground"
                       }`}
                     >
@@ -410,11 +299,10 @@ const Header = () => {
               );
             })}
 
-            {/* user / login tab */}
             {isAuthenticated ? (
               <Link
                 to="/profile"
-                className="relative flex flex-col items-center justify-center flex-1 px-3.5 py-2 rounded-xl transition-all"
+                className="relative flex flex-col items-center justify-center px-3.5 py-2 rounded-xl transition-all min-w-[52px]"
               >
                 {isActive("/profile") && (
                   <motion.div
@@ -424,14 +312,15 @@ const Header = () => {
                   />
                 )}
                 <div className="relative z-10 flex flex-col items-center gap-0.5">
-                  <div
+                  <motion.div
                     className="w-[18px] h-[18px] rounded-full flex items-center justify-center text-[8px] font-bold text-white flex-shrink-0"
                     style={{ backgroundColor: avatarColor }}
+                    whileTap={{ scale: 0.85 }}
                   >
                     {initial}
-                  </div>
+                  </motion.div>
                   <span
-                    className={`text-[9px] font-bold uppercase tracking-tight transition-colors leading-none ${
+                    className={`text-[9px] font-bold uppercase tracking-tight leading-none transition-colors duration-200 ${
                       isActive("/profile")
                         ? "text-primary"
                         : "text-muted-foreground"
@@ -444,7 +333,7 @@ const Header = () => {
             ) : (
               <Link
                 to="/login"
-                className="relative flex flex-col items-center justify-center flex-1 px-3.5 py-2 rounded-xl transition-all"
+                className="relative flex flex-col items-center justify-center px-3.5 py-2 rounded-xl transition-all min-w-[52px]"
               >
                 {isActive("/login") && (
                   <motion.div
@@ -455,14 +344,14 @@ const Header = () => {
                 )}
                 <div className="relative z-10 flex flex-col items-center gap-0.5">
                   <User
-                    className={`w-[18px] h-[18px] transition-colors ${
+                    className={`w-[18px] h-[18px] transition-colors duration-200 ${
                       isActive("/login")
                         ? "text-primary"
                         : "text-muted-foreground"
                     }`}
                   />
                   <span
-                    className={`text-[9px] font-bold uppercase tracking-tight transition-colors leading-none ${
+                    className={`text-[9px] font-bold uppercase tracking-tight leading-none transition-colors duration-200 ${
                       isActive("/login")
                         ? "text-primary"
                         : "text-muted-foreground"
@@ -476,10 +365,6 @@ const Header = () => {
           </motion.nav>
         </div>
       </>
-      
-
-      {/* bottom spacer for non-authenticated mobile so footer clears the hamburger area */}
-      {!isAuthenticated && <div className="h-0 lg:hidden" />}
     </>
   );
 };
