@@ -6,6 +6,13 @@ import babel from '@rolldown/plugin-babel'
 export default defineConfig({
   plugins: [
     react(),
+    {
+      resolve: {
+        alias: {
+          "@": path.resolve(__dirname, "./src"),
+        },
+      },
+    },
     babel({ presets: [reactCompilerPreset()] })
   ],
 })

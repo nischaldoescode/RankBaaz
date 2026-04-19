@@ -1,121 +1,80 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import heroImg from './assets/hero.png'
-import './App.css'
+import React, { Suspense } from "react";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { Toaster } from "react-hot-toast";
+import { TeacherProvider, useTeacher } from "./context/TeacherContext.jsx";
+import "@fontsource-variable/inter";
 
-function App() {
-  const [count, setCount] = useState(0)
+const Login = React.lazy(() => import("./pages/Login.jsx"));
+const Signup = React.lazy(() => import("./pages/Signup.jsx"));
+const InviteExpired = React.lazy(() => import("./pages/InviteExpired.jsx"));
+const TeacherDashboard = React.lazy(() => import("./pages/dashboard/TeacherDashboard.jsx"));
 
-  return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.jsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
+const PageLoader = () => (
+  <div className="min-h-screen flex items-center justify-center bg-gray-50">
+    <div className="w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+  </div>
+);
 
-      <div className="ticks"></div>
+const ProtectedRoute = ({ children }) => {
+  const { teacher, initializing } = useTeacher();
+  if (initializing) return <PageLoader />;
+  if (!teacher) return <Navigate to="/login" replace />;
+  return children;
+};
 
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
+const PublicRoute = ({ children }) => {
+  const { teacher, initializing } = useTeacher();
+  if (initializing) return <PageLoader />;
+  if (teacher) return <Navigate to="/dashboard" replace />;
+  return children;
+};
 
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
-  )
-}
+const AppRoutes = () => (
+  <Routes>
+    <Route path="/" element={<Navigate to="/dashboard" replace />} />
+    <Route
+      path="/login"
+      element={
+        <PublicRoute>
+          <Login />
+        </PublicRoute>
+      }
+    />
+    <Route path="/signup" element={<Signup />} />
+    <Route path="/invite-expired" element={<InviteExpired />} />
+    <Route
+      path="/dashboard"
+      element={
+        <ProtectedRoute>
+          <TeacherDashboard />
+        </ProtectedRoute>
+      }
+    />
+    <Route path="*" element={<Navigate to="/dashboard" replace />} />
+  </Routes>
+);
 
-export default App
+const App = () => (
+  <BrowserRouter>
+    <TeacherProvider>
+      <Suspense fallback={<PageLoader />}>
+        <AppRoutes />
+      </Suspense>
+      <Toaster
+        position="bottom-right"
+        toastOptions={{
+          duration: 3500,
+          style: {
+            fontFamily: "'Inter Variable', sans-serif",
+            fontSize: "14px",
+            borderRadius: "10px",
+            boxShadow: "0 4px 24px rgba(0,0,0,0.10)",
+          },
+          success: { iconTheme: { primary: "#2563eb", secondary: "#fff" } },
+        }}
+      />
+    </TeacherProvider>
+  </BrowserRouter>
+);
+
+export default App;
