@@ -1,133 +1,100 @@
 import axios from "axios";
 import { teacherRequestSigner } from "../utils/requestSigning.js";
 
-const BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:7000/api";
+const BASE = import.meta.env.VITE_API_URL || "http://localhost:7000/api";
 
-export const api = axios.create({
-  baseURL: BASE_URL,
+const api = axios.create({
+  baseURL: BASE,
   withCredentials: true,
-  timeout: 30000,
-  headers: { "Content-Type": "application/json" },
 });
 
-const publicEndpoints = [
-  "/teachers/login",
-  "/teachers/logout",
-  "/teachers/signup",
-  "/teachers/verify-invite",
-  "/teachers/waitlist-count",
-  "/teachers/apply",
-];
+// attach request signature to writes
+api.interceptors.request.use((config) => {
+  const writeMethod = ["post", "put", "patch", "delete"].includes(
+    config.method?.toLowerCase(),
+  );
+  if (writeMethod) {
+    const { signature, timestamp, nonce } = teacherRequestSigner.sign(
+      config.data ? JSON.stringify(config.data) : "",
+    );
+    config.headers["x-signature"] = signature;
+    config.headers["x-timestamp"] = timestamp;
+    config.headers["x-nonce"] = nonce;
+  }
+  return config;
+});
 
-api.interceptors.request.use(
-  (config) => {
-    const isPublic = publicEndpoints.some((ep) => config.url?.includes(ep));
-    if (isPublic) return config;
-
-    if (!teacherRequestSigner.isSecretValid()) {
-      teacherRequestSigner.loadSigningSecret();
-    }
-
-    const isAuthenticated = !!localStorage.getItem("teacher");
-    if (isAuthenticated && teacherRequestSigner.isSecretValid()) {
-      config = teacherRequestSigner.signRequest(config);
-    }
-
-    return config;
-  },
-  (error) => Promise.reject(error),
-);
-
-const signatureErrorCodes = [
-  "SIGNATURE_EXPIRED",
-  "SIGNATURE_MISSING",
-  "SIGNATURE_INVALID",
-  "REPLAY_ATTACK",
-];
-
+// auto-refresh signing secret on 401 with INVALID_SIGNATURE
 api.interceptors.response.use(
-  (response) => response,
-  async (error) => {
-    const original = error.config;
-
+  (res) => res,
+  async (err) => {
     if (
-      error.response?.data?.code &&
-      signatureErrorCodes.includes(error.response.data.code)
+      err.response?.status === 401 &&
+      err.response?.data?.code === "INVALID_SIGNATURE" &&
+      !err.config._retried
     ) {
-      if (original._signatureRetry) {
-        teacherRequestSigner.clearSigningSecret();
-        localStorage.removeItem("teacher");
-        window.location.href = "/login";
-        return Promise.reject(error);
-      }
-
+      err.config._retried = true;
       try {
-        original._signatureRetry = true;
-        teacherRequestSigner.clearSigningSecret();
-
-        const secretRes = await axios.get(
-          `${BASE_URL}/security/signing-secret`,
-          {
-            withCredentials: true,
-          },
+        const refreshRes = await axios.post(
+          `${BASE}/auth/signing-secret`,
+          {},
+          { withCredentials: true },
         );
-
-        if (secretRes.data.success) {
-          const { signingSecret, expiresIn } = secretRes.data.data;
-          teacherRequestSigner.setSigningSecret(signingSecret, expiresIn);
+        if (refreshRes.data.success) {
+          teacherRequestSigner.setSigningSecret(
+            refreshRes.data.data.signingSecret,
+            refreshRes.data.data.expiresIn,
+          );
+          return api(err.config);
         }
-
-        delete original._signatureRetry;
-        const signed = teacherRequestSigner.signRequest(original);
-        return api(signed);
-      } catch {
-        teacherRequestSigner.clearSigningSecret();
-        localStorage.removeItem("teacher");
-        window.location.href = "/login";
-        return Promise.reject(error);
-      }
+      } catch {}
     }
-
-    if (error.response?.status === 401) {
-      localStorage.removeItem("teacher");
-      teacherRequestSigner.clearSigningSecret();
-      if (!window.location.pathname.includes("/login")) {
-        window.location.href = "/login";
-      }
-    }
-
-    return Promise.reject(error);
+    return Promise.reject(err);
   },
 );
 
 export const teacherApi = {
   auth: {
     login: (data) => api.post("/teachers/login", data),
-    checkEmailExists: (email) => api.post("/teachers/check-email", { email }),
     logout: () => api.post("/teachers/logout"),
-    verifyInvite: (token) => api.get(`/teachers/verify-invite?token=${token}`),
     signup: (data) => api.post("/teachers/signup", data),
-    getSigningSecret: () => api.get("/security/signing-secret"),
+    verifyInvite: (token) => api.get(`/teachers/verify-invite?token=${token}`),
+    sendOtp: (data) => api.post("/teachers/otp/send", data),
+    verifyOtp: (data) => api.post("/teachers/otp/verify", data),
+    forgotPassword: (data) => api.post("/teachers/forgot-password", data),
+    verifyForgotOtp: (data) =>
+      api.post("/teachers/forgot-password/verify-otp", data),
+    resetPassword: (data) => api.post("/teachers/forgot-password/reset", data),
+    checkEmailExists: (email) => api.post("/teachers/check-email", { email }),
   },
   profile: {
     get: () => api.get("/teachers/me"),
-    update: (data) => {
-      const formData = new FormData();
-      Object.entries(data).forEach(([k, v]) => {
-        if (v !== undefined && v !== null) formData.append(k, v);
-      });
-      return api.put("/teachers/me/profile", formData, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
-    },
+    getAnalytics: () => api.get("/teachers/me/analytics"),
+    update: (data) => api.put("/teachers/me/profile", data),
     updatePayment: (data) => api.put("/teachers/me/payment-details", data),
+    uploadDocuments: (formData) =>
+      api.post("/teachers/me/documents", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      }),
   },
   courses: {
+    getAll: () => api.get("/teachers/me/courses/all"),
     create: (formData) =>
       api.post("/teachers/me/courses", formData, {
         headers: { "Content-Type": "multipart/form-data" },
       }),
+    updateCourse: (courseId, data) =>
+      api.put(`/teachers/me/courses/${courseId}`, data),
+    getQuestions: (courseId) =>
+      api.get(`/teachers/me/courses/${courseId}/questions`),
+    addQuestion: (courseId, data) =>
+      api.post(`/teachers/me/courses/${courseId}/questions`, data),
+  },
+  coupons: {
+    create: (data) => api.post("/coupons/teacher", data),
+    getByCourse: (courseId) => api.get(`/coupons/teacher/course/${courseId}`),
+    delete: (couponId) => api.delete(`/coupons/teacher/${couponId}`),
+    toggleStatus: (couponId, isActive) =>
+      api.patch(`/coupons/teacher/${couponId}/status`, { isActive }),
   },
 };
-
-export default api;
