@@ -11,7 +11,8 @@ import {
   FileText,
   TicketPercent,
   ShieldAlert,
-  Medal
+  Medal,
+  GraduationCap
 } from "lucide-react";
 
 const Sidebar = ({ isOpen, onClose }) => {
@@ -82,7 +83,7 @@ const Sidebar = ({ isOpen, onClose }) => {
     {
       href: "/admin/teachers",
       name: "Teachers",
-      icon: Users,
+      icon: GraduationCap,
       color: "from-green-500 to-green-600",
     }
   ];
