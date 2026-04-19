@@ -158,7 +158,6 @@ const userSchema = new mongoose.Schema(
   },
 );
 
-// userSchema.index({ username: 1 }, { unique: true });
 userSchema.index({ points: -1 });
 userSchema.index({ "stats.leaderboardDaysOnTop": -1 });
 userSchema.index({ "stats.testsCompleted": -1 });

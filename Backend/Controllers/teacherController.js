@@ -963,6 +963,10 @@ export const updateTeacherProfile = async (req, res) => {
     }).select("-password -otp");
 
     await invalidateTeacherCache(teacherId);
+    // also invalidate public profile cache
+    await redisClient
+      .del(publicProfileCacheKey(teacher.username))
+      .catch(() => {});
 
     return res.status(200).json({ success: true, data: { teacher } });
   } catch (error) {
@@ -1040,6 +1044,7 @@ export const getPublicTeacherProfile = async (req, res) => {
     const teacher = await Teacher.findOne({
       username: username.toLowerCase(),
       isActive: true,
+      accessBlocked: false, // blocked teachers have no public profile
     })
       .select(
         "name username bio qualification profileImage country createdAt documentStatus",
@@ -1124,12 +1129,10 @@ export const sendTeacherInvite = async (req, res) => {
     const { applicationId, emailContent, emailSubject } = req.body;
 
     if (!applicationId || !emailContent) {
-      return res
-        .status(400)
-        .json({
-          success: false,
-          message: "Application ID and email content required",
-        });
+      return res.status(400).json({
+        success: false,
+        message: "Application ID and email content required",
+      });
     }
 
     const application = await TeacherApplication.findById(applicationId);
