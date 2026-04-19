@@ -3,28 +3,49 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { Toaster } from "react-hot-toast";
 import { TeacherProvider, useTeacher } from "./context/TeacherContext.jsx";
 import "@fontsource-variable/inter";
+import "./index.css";
 
 const Login = React.lazy(() => import("./pages/Login.jsx"));
 const Signup = React.lazy(() => import("./pages/Signup.jsx"));
 const InviteExpired = React.lazy(() => import("./pages/InviteExpired.jsx"));
-const TeacherDashboard = React.lazy(() => import("./pages/dashboard/TeacherDashboard.jsx"));
+const TeacherDashboard = React.lazy(
+  () => import("./pages/dashboard/TeacherDashboard.jsx"),
+);
 
-const PageLoader = () => (
-  <div className="min-h-screen flex items-center justify-center bg-gray-50">
-    <div className="w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+const Spinner = () => (
+  <div
+    style={{
+      minHeight: "100vh",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      background: "#f8fafc",
+    }}
+  >
+    <div
+      style={{
+        width: 36,
+        height: 36,
+        border: "3px solid #bfdbfe",
+        borderTopColor: "#2563eb",
+        borderRadius: "50%",
+        animation: "spin 0.7s linear infinite",
+      }}
+    />
+    <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
   </div>
 );
 
 const ProtectedRoute = ({ children }) => {
   const { teacher, initializing } = useTeacher();
-  if (initializing) return <PageLoader />;
+  if (initializing) return <Spinner />;
   if (!teacher) return <Navigate to="/login" replace />;
   return children;
 };
 
 const PublicRoute = ({ children }) => {
   const { teacher, initializing } = useTeacher();
-  if (initializing) return <PageLoader />;
+  if (initializing) return <Spinner />;
   if (teacher) return <Navigate to="/dashboard" replace />;
   return children;
 };
@@ -50,6 +71,7 @@ const AppRoutes = () => (
         </ProtectedRoute>
       }
     />
+    {/* catch-all */}
     <Route path="*" element={<Navigate to="/dashboard" replace />} />
   </Routes>
 );
@@ -57,7 +79,7 @@ const AppRoutes = () => (
 const App = () => (
   <BrowserRouter>
     <TeacherProvider>
-      <Suspense fallback={<PageLoader />}>
+      <Suspense fallback={<Spinner />}>
         <AppRoutes />
       </Suspense>
       <Toaster

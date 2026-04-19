@@ -35,7 +35,7 @@ api.interceptors.request.use(
 
     return config;
   },
-  (error) => Promise.reject(error)
+  (error) => Promise.reject(error),
 );
 
 const signatureErrorCodes = [
@@ -65,9 +65,12 @@ api.interceptors.response.use(
         original._signatureRetry = true;
         teacherRequestSigner.clearSigningSecret();
 
-        const secretRes = await axios.get(`${BASE_URL}/security/signing-secret`, {
-          withCredentials: true,
-        });
+        const secretRes = await axios.get(
+          `${BASE_URL}/security/signing-secret`,
+          {
+            withCredentials: true,
+          },
+        );
 
         if (secretRes.data.success) {
           const { signingSecret, expiresIn } = secretRes.data.data;
@@ -94,12 +97,13 @@ api.interceptors.response.use(
     }
 
     return Promise.reject(error);
-  }
+  },
 );
 
 export const teacherApi = {
   auth: {
     login: (data) => api.post("/teachers/login", data),
+    checkEmailExists: (email) => api.post("/teachers/check-email", { email }),
     logout: () => api.post("/teachers/logout"),
     verifyInvite: (token) => api.get(`/teachers/verify-invite?token=${token}`),
     signup: (data) => api.post("/teachers/signup", data),

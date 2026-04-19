@@ -1,13 +1,41 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTeacher } from "../../context/TeacherContext.jsx";
 import CoursesTab from "./CoursesTab.jsx";
 import ProfileTab from "./ProfileTab.jsx";
 import PaymentTab from "./PaymentTab.jsx";
 import DocumentsTab from "./DocumentsTab.jsx";
+import AnalyticsTab from "./AnalyticsTab.jsx";
 import toast from "react-hot-toast";
 
+/**
+ * dicebear avatar url — croodles-neutral style
+ */
+const dicebearUrl = (seed) =>
+  `https://api.dicebear.com/9.x/croodles-neutral/svg?seed=${encodeURIComponent(seed)}`;
+
 const NAV_ITEMS = [
+  {
+    id: "analytics",
+    label: "Overview",
+    icon: (
+      <svg
+        width="20"
+        height="20"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
+        <rect x="3" y="3" width="7" height="7" />
+        <rect x="14" y="3" width="7" height="7" />
+        <rect x="14" y="14" width="7" height="7" />
+        <rect x="3" y="14" width="7" height="7" />
+      </svg>
+    ),
+  },
   {
     id: "courses",
     label: "Courses",
@@ -87,9 +115,8 @@ const NAV_ITEMS = [
 ];
 
 const Avatar = ({ teacher, size = 40 }) => {
-  const initial = teacher?.name?.charAt(0)?.toUpperCase() || "T";
-  const colors = ["#2563eb", "#7c3aed", "#059669", "#d97706", "#dc2626"];
-  const color = colors[initial.charCodeAt(0) % colors.length];
+  const seed = teacher?.username || teacher?.name || "teacher";
+  const avatarUrl = dicebearUrl(seed);
 
   if (teacher?.profileImage?.url) {
     return (
@@ -102,65 +129,130 @@ const Avatar = ({ teacher, size = 40 }) => {
           borderRadius: "50%",
           objectFit: "cover",
           border: "2px solid #e2e8f0",
+          flexShrink: 0,
         }}
       />
     );
   }
 
+  // use dicebear as fallback
   return (
-    <div
+    <img
+      src={avatarUrl}
+      alt={teacher?.name || "Teacher"}
       style={{
         width: size,
         height: size,
         borderRadius: "50%",
-        background: color,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        color: "#fff",
-        fontSize: size * 0.38,
-        fontWeight: 700,
+        border: "2px solid #e2e8f0",
+        background: "#f1f5f9",
         flexShrink: 0,
-        border: "2px solid rgba(255,255,255,0.2)",
       }}
-    >
-      {initial}
-    </div>
+    />
   );
 };
 
-const StatusPill = ({ verified }) => (
-  <span
+const BlockedOverlay = ({ teacher, onGoToDocuments }) => (
+  <div
     style={{
-      display: "inline-flex",
-      alignItems: "center",
-      gap: 5,
-      padding: "3px 10px",
-      borderRadius: 20,
-      fontSize: 11,
-      fontWeight: 600,
-      background: verified ? "#dcfce7" : "#fef9c3",
-      color: verified ? "#166534" : "#854d0e",
-      border: `1px solid ${verified ? "#bbf7d0" : "#fde68a"}`,
+      padding: "48px 24px",
+      textAlign: "center",
+      background: "#fff",
+      borderRadius: 16,
+      border: "1.5px solid #fecaca",
     }}
   >
-    <span
+    <div
       style={{
-        width: 6,
-        height: 6,
+        width: 72,
+        height: 72,
+        background: "#fef2f2",
         borderRadius: "50%",
-        background: verified ? "#16a34a" : "#ca8a04",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        margin: "0 auto 20px",
       }}
-    />
-    {verified ? "Payment verified" : "Payment pending"}
-  </span>
+    >
+      <svg
+        width="32"
+        height="32"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="#dc2626"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
+        <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+        <path d="M7 11V7a5 5 0 0110 0v4" />
+      </svg>
+    </div>
+    <h3
+      style={{
+        fontSize: 18,
+        fontWeight: 700,
+        color: "#991b1b",
+        marginBottom: 12,
+      }}
+    >
+      Account Access Restricted
+    </h3>
+    <p
+      style={{
+        fontSize: 14,
+        color: "#6b7280",
+        lineHeight: 1.8,
+        maxWidth: 440,
+        margin: "0 auto 24px",
+      }}
+    >
+      {teacher?.accessBlockReason ||
+        "An admin has restricted your account access. Please upload the required verification documents to restore full access."}
+    </p>
+    {teacher?.documentRequestNote && (
+      <div
+        style={{
+          padding: "12px 16px",
+          background: "#fffbeb",
+          border: "1px solid #fde68a",
+          borderRadius: 10,
+          marginBottom: 20,
+          fontSize: 13,
+          color: "#92400e",
+          maxWidth: 440,
+          margin: "0 auto 20px",
+          textAlign: "left",
+        }}
+      >
+        <strong>Admin note:</strong> {teacher.documentRequestNote}
+      </div>
+    )}
+    <button
+      onClick={onGoToDocuments}
+      style={{
+        padding: "11px 28px",
+        background: "linear-gradient(135deg,#dc2626,#b91c1c)",
+        color: "#fff",
+        border: "none",
+        borderRadius: 10,
+        fontSize: 14,
+        fontWeight: 600,
+        cursor: "pointer",
+        boxShadow: "0 4px 14px rgba(220,38,38,0.25)",
+      }}
+    >
+      Upload Documents →
+    </button>
+  </div>
 );
 
 const TeacherDashboard = () => {
   const { teacher, courses, loading, logout } = useTeacher();
-  const [tab, setTab] = useState("courses");
+  const [tab, setTab] = useState("analytics");
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
+  const SIDEBAR_W = 260;
 
   const handleLogout = async () => {
     setLoggingOut(true);
@@ -189,12 +281,17 @@ const TeacherDashboard = () => {
             animation: "spin 0.7s linear infinite",
           }}
         />
-        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+        <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
       </div>
     );
   }
 
-  const SIDEBAR_W = 260;
+  const docBadge =
+    teacher?.documentStatus === "pending"
+      ? "🔴"
+      : teacher?.accessBlocked
+        ? "⛔"
+        : null;
 
   const SidebarContent = () => (
     <div
@@ -207,17 +304,14 @@ const TeacherDashboard = () => {
     >
       {/* brand */}
       <div
-        style={{
-          padding: "24px 20px 20px",
-          borderBottom: "1px solid #f1f5f9",
-        }}
+        style={{ padding: "22px 20px 18px", borderBottom: "1px solid #f1f5f9" }}
       >
         <div
           style={{
             display: "flex",
             alignItems: "center",
             gap: 10,
-            marginBottom: 20,
+            marginBottom: 18,
           }}
         >
           <div
@@ -265,14 +359,14 @@ const TeacherDashboard = () => {
           style={{
             display: "flex",
             alignItems: "center",
-            gap: 12,
-            padding: "12px 14px",
+            gap: 10,
+            padding: "10px 12px",
             background: "#f8fafc",
             borderRadius: 12,
             border: "1px solid #f1f5f9",
           }}
         >
-          <Avatar teacher={teacher} size={40} />
+          <Avatar teacher={teacher} size={38} />
           <div style={{ minWidth: 0 }}>
             <p
               style={{
@@ -288,7 +382,7 @@ const TeacherDashboard = () => {
             </p>
             <p
               style={{
-                fontSize: 12,
+                fontSize: 11,
                 color: "#94a3b8",
                 overflow: "hidden",
                 textOverflow: "ellipsis",
@@ -300,30 +394,32 @@ const TeacherDashboard = () => {
           </div>
         </div>
 
-        <div
-          style={{ marginTop: 10, display: "flex", justifyContent: "center" }}
-        >
-          <StatusPill verified={teacher?.paymentDetails?.verified} />
-        </div>
+        {/* blocked/pending warning */}
+        {(teacher?.accessBlocked || teacher?.documentStatus === "pending") && (
+          <div
+            style={{
+              marginTop: 10,
+              padding: "8px 10px",
+              background: teacher?.accessBlocked ? "#fef2f2" : "#fffbeb",
+              border: `1px solid ${teacher?.accessBlocked ? "#fecaca" : "#fde68a"}`,
+              borderRadius: 8,
+              fontSize: 11,
+              color: teacher?.accessBlocked ? "#dc2626" : "#d97706",
+              fontWeight: 500,
+            }}
+          >
+            {teacher?.accessBlocked
+              ? "⛔ Account blocked — upload documents"
+              : "🔄 Documents under review"}
+          </div>
+        )}
       </div>
 
       {/* nav */}
-      <nav style={{ flex: 1, padding: "16px 12px" }}>
-        <p
-          style={{
-            fontSize: 10,
-            fontWeight: 700,
-            color: "#94a3b8",
-            letterSpacing: "0.08em",
-            textTransform: "uppercase",
-            padding: "0 8px",
-            marginBottom: 8,
-          }}
-        >
-          Menu
-        </p>
+      <nav style={{ flex: 1, padding: "14px 12px" }}>
         {NAV_ITEMS.map((item) => {
           const active = tab === item.id;
+          const isDocuments = item.id === "documents";
           return (
             <button
               key={item.id}
@@ -335,8 +431,8 @@ const TeacherDashboard = () => {
                 width: "100%",
                 display: "flex",
                 alignItems: "center",
-                gap: 12,
-                padding: "10px 12px",
+                gap: 10,
+                padding: "9px 12px",
                 borderRadius: 10,
                 border: "none",
                 background: active ? "#eff6ff" : "transparent",
@@ -345,9 +441,9 @@ const TeacherDashboard = () => {
                 fontWeight: active ? 600 : 500,
                 cursor: "pointer",
                 marginBottom: 2,
-                transition: "all 0.15s",
-                position: "relative",
+                transition: "all 0.12s",
                 textAlign: "left",
+                position: "relative",
               }}
               onMouseEnter={(e) => {
                 if (!active) e.currentTarget.style.background = "#f8fafc";
@@ -356,47 +452,19 @@ const TeacherDashboard = () => {
                 if (!active) e.currentTarget.style.background = "transparent";
               }}
             >
-              {active && (
-                <motion.div
-                  layoutId="sidebarActive"
-                  style={{
-                    position: "absolute",
-                    inset: 0,
-                    background: "#eff6ff",
-                    borderRadius: 10,
-                    zIndex: 0,
-                  }}
-                  transition={{ type: "spring", stiffness: 400, damping: 30 }}
-                />
-              )}
-              <span
-                style={{ position: "relative", zIndex: 1, display: "flex" }}
-              >
-                {item.icon}
-              </span>
-              <span style={{ position: "relative", zIndex: 1 }}>
-                {item.label}
-              </span>
-              {active && (
-                <motion.div
-                  layoutId="sidebarDot"
-                  style={{
-                    position: "absolute",
-                    right: 12,
-                    width: 6,
-                    height: 6,
-                    borderRadius: "50%",
-                    background: "#2563eb",
-                    zIndex: 1,
-                  }}
-                />
+              {item.icon}
+              {item.label}
+              {isDocuments && docBadge && (
+                <span style={{ marginLeft: "auto", fontSize: 13 }}>
+                  {docBadge}
+                </span>
               )}
             </button>
           );
         })}
       </nav>
 
-      {/* bottom */}
+      {/* revenue pill */}
       <div style={{ padding: "0 12px" }}>
         <div
           style={{
@@ -404,7 +472,7 @@ const TeacherDashboard = () => {
             background: "#f0f9ff",
             borderRadius: 12,
             border: "1px solid #bae6fd",
-            marginBottom: 12,
+            marginBottom: 10,
           }}
         >
           <p
@@ -412,15 +480,15 @@ const TeacherDashboard = () => {
               fontSize: 11,
               fontWeight: 600,
               color: "#0369a1",
-              marginBottom: 3,
+              marginBottom: 2,
             }}
           >
             Revenue Share
           </p>
-          <p style={{ fontSize: 22, fontWeight: 800, color: "#0284c7" }}>
+          <p style={{ fontSize: 24, fontWeight: 800, color: "#0284c7" }}>
             {teacher?.revenueSharePercent || 80}%
           </p>
-          <p style={{ fontSize: 11, color: "#7dd3fc" }}>
+          <p style={{ fontSize: 10, color: "#7dd3fc" }}>
             of every sale goes to you
           </p>
         </div>
@@ -433,7 +501,7 @@ const TeacherDashboard = () => {
             display: "flex",
             alignItems: "center",
             gap: 10,
-            padding: "10px 12px",
+            padding: "9px 12px",
             borderRadius: 10,
             border: "1px solid #fee2e2",
             background: "#fff5f5",
@@ -441,7 +509,7 @@ const TeacherDashboard = () => {
             fontSize: 13,
             fontWeight: 600,
             cursor: loggingOut ? "not-allowed" : "pointer",
-            transition: "all 0.15s",
+            transition: "all 0.12s",
           }}
           onMouseEnter={(e) => (e.currentTarget.style.background = "#fee2e2")}
           onMouseLeave={(e) => (e.currentTarget.style.background = "#fff5f5")}
@@ -491,12 +559,12 @@ const TeacherDashboard = () => {
           display: "flex",
           flexDirection: "column",
         }}
-        className="hidden-mobile"
+        className="teacher-sidebar-desktop"
       >
         <SidebarContent />
       </aside>
 
-      {/* mobile sidebar overlay */}
+      {/* mobile overlay */}
       <AnimatePresence>
         {sidebarOpen && (
           <>
@@ -537,7 +605,7 @@ const TeacherDashboard = () => {
         )}
       </AnimatePresence>
 
-      {/* main content */}
+      {/* main */}
       <main
         style={{
           flex: 1,
@@ -546,6 +614,7 @@ const TeacherDashboard = () => {
           flexDirection: "column",
           minWidth: 0,
         }}
+        className="teacher-main"
       >
         {/* topbar */}
         <header
@@ -559,13 +628,12 @@ const TeacherDashboard = () => {
             position: "sticky",
             top: 0,
             zIndex: 20,
-            gap: 16,
+            gap: 14,
           }}
         >
-          {/* hamburger (mobile) */}
           <button
             onClick={() => setSidebarOpen(true)}
-            className="show-mobile"
+            className="teacher-hamburger"
             style={{
               background: "none",
               border: "none",
@@ -573,7 +641,6 @@ const TeacherDashboard = () => {
               color: "#475569",
               padding: 4,
               display: "flex",
-              alignItems: "center",
             }}
           >
             <svg
@@ -592,119 +659,41 @@ const TeacherDashboard = () => {
 
           <div style={{ flex: 1 }}>
             <h1 style={{ fontSize: 16, fontWeight: 700, color: "#0f172a" }}>
-              {NAV_ITEMS.find((n) => n.id === tab)?.label}
+              {NAV_ITEMS.find((n) => n.id === tab)?.label || "Dashboard"}
             </h1>
-            <p style={{ fontSize: 12, color: "#94a3b8" }}>
-              {tab === "courses" && `${courses.length} total`}
-              {tab === "profile" && `@${teacher?.username}`}
-              {tab === "payment" &&
-                (teacher?.paymentDetails?.verified
-                  ? "Verified"
-                  : "Verification pending")}
-            </p>
           </div>
 
           <Avatar teacher={teacher} size={34} />
         </header>
 
-        {/* tab content */}
+        {/* content */}
         <div
           style={{
             flex: 1,
             padding: "24px 20px",
-            maxWidth: 900,
+            maxWidth: 980,
             width: "100%",
           }}
         >
           <AnimatePresence mode="wait">
             <motion.div
               key={tab}
-              initial={{ opacity: 0, y: 10 }}
+              initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              transition={{ duration: 0.18 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.16 }}
             >
-              {/* show blocked overlay for all tabs except documents */}
+              {/* blocked overlay for all except documents */}
               {teacher?.accessBlocked && tab !== "documents" ? (
-                <div
-                  style={{
-                    padding: "40px 24px",
-                    textAlign: "center",
-                    background: "#fff",
-                    borderRadius: 16,
-                    border: "1px solid #fecaca",
-                  }}
-                >
-                  <div
-                    style={{
-                      width: 64,
-                      height: 64,
-                      background: "#fef2f2",
-                      borderRadius: "50%",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      margin: "0 auto 20px",
-                    }}
-                  >
-                    <svg
-                      width="28"
-                      height="28"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="#dc2626"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    >
-                      <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
-                      <path d="M7 11V7a5 5 0 0110 0v4" />
-                    </svg>
-                  </div>
-                  <h3
-                    style={{
-                      fontSize: 17,
-                      fontWeight: 700,
-                      color: "#991b1b",
-                      marginBottom: 10,
-                    }}
-                  >
-                    Account Access Restricted
-                  </h3>
-                  <p
-                    style={{
-                      fontSize: 14,
-                      color: "#6b7280",
-                      lineHeight: 1.7,
-                      maxWidth: 400,
-                      margin: "0 auto 20px",
-                    }}
-                  >
-                    {teacher.accessBlockReason ||
-                      "Admin has requested verification documents. Please upload them to restore access."}
-                  </p>
-                  <button
-                    onClick={() => setTab("documents")}
-                    style={{
-                      padding: "10px 24px",
-                      background: "linear-gradient(135deg,#dc2626,#b91c1c)",
-                      color: "#fff",
-                      border: "none",
-                      borderRadius: 9,
-                      fontSize: 14,
-                      fontWeight: 600,
-                      cursor: "pointer",
-                      boxShadow: "0 3px 10px rgba(220,38,38,0.25)",
-                    }}
-                  >
-                    Upload Documents →
-                  </button>
-                </div>
+                <BlockedOverlay
+                  teacher={teacher}
+                  onGoToDocuments={() => setTab("documents")}
+                />
               ) : (
                 <>
+                  {tab === "analytics" && <AnalyticsTab />}
                   {tab === "courses" && <CoursesTab />}
                   {tab === "profile" && <ProfileTab />}
-                  {tab === "analytics" && <AnalyticsTab />}
                   {tab === "payment" && <PaymentTab />}
                   {tab === "documents" && <DocumentsTab />}
                 </>
@@ -715,15 +704,15 @@ const TeacherDashboard = () => {
       </main>
 
       <style>{`
-        @keyframes spin { to { transform: rotate(360deg); } }
-        @media (min-width: 768px) {
-          main { margin-left: ${SIDEBAR_W}px !important; }
-          .hidden-mobile { display: flex !important; }
-          .show-mobile { display: none !important; }
+        @keyframes spin{to{transform:rotate(360deg)}}
+        @media(min-width:768px){
+          .teacher-main{margin-left:${SIDEBAR_W}px!important;}
+          .teacher-sidebar-desktop{display:flex!important;}
+          .teacher-hamburger{display:none!important;}
         }
-        @media (max-width: 767px) {
-          .hidden-mobile { display: none !important; }
-          .show-mobile { display: flex !important; }
+        @media(max-width:767px){
+          .teacher-sidebar-desktop{display:none!important;}
+          .teacher-hamburger{display:flex!important;}
         }
       `}</style>
     </div>
