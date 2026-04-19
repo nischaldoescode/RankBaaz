@@ -1458,6 +1458,24 @@ export const getTeacherCourseApprovals = async (req, res) => {
   }
 };
 
+export const getTeacherCourses = async (req, res) => {
+  try {
+    const teacherId = req.teacher.teacherId;
+
+    const courses = await Course.find({ teacher: teacherId })
+      .select("name description image isPaid price geoRestriction isActive totalQuestions difficulties approvalStatus createdAt updatedAt teacher")
+      .sort({ createdAt: -1 })
+      .lean();
+
+    return res.status(200).json({
+      success: true,
+      data: { courses },
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: "Failed to fetch" });
+  }
+};
+
 export const approveTeacherCourse = async (req, res) => {
   try {
     const { courseId, approved, note } = req.body;
@@ -1573,8 +1591,9 @@ export const teacherCreateCourse = async (req, res) => {
       isPaid: isPaidBool,
       currency: teacher.country === "nepal" ? "NPR" : "INR",
       teacher: teacherId,
-      approvalStatus: "pending",
-      isActive: false,
+      approvalStatus: "approved",
+      isActive: true,
+      approvedAt: new Date(),
       geoRestriction: isPaidBool ? teacher.country : null,
       questions: [],
       totalQuestions: 0,

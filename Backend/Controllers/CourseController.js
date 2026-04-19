@@ -2500,7 +2500,7 @@ export const getCategoryById = async (req, res) => {
     // Get courses in this category
     const courses = await Course.find({ category: categoryId }).select(
       "name description isActive createdAt"
-    );
+    ).populate("teacher", "name username profileImage");
 
     res.status(200).json({
       success: true,
