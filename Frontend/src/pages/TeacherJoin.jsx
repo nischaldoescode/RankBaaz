@@ -380,28 +380,6 @@ const ApplicationForm = ({ onApplied }) => {
           )}
         </div>
 
-        {/* payment info */}
-        {form.country && (
-          <div
-            className={`p-3 rounded-xl text-xs border ${
-              form.country === "india"
-                ? "bg-blue-50 border-blue-200 text-blue-800"
-                : "bg-purple-50 border-purple-200 text-purple-800"
-            }`}
-          >
-            {form.country === "india" ? (
-              <>
-                🇮🇳 Payments via <strong>Razorpay</strong> — bank transfer or UPI
-              </>
-            ) : (
-              <>
-                🇳🇵 Payments via <strong>Khalti</strong> — Nepal mobile wallet
-              </>
-            )}
-            {" · "}Keep <strong>80%</strong> of every sale
-          </div>
-        )}
-
         {errors.submit && (
           <div className="px-4 py-3 bg-destructive/10 border border-destructive/20 rounded-xl text-sm text-destructive">
             {errors.submit}
