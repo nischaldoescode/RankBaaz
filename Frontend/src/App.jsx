@@ -1,5 +1,5 @@
-import React, { Suspense, useEffect, useState, useLocation } from "react";
-import { Routes, Route, Navigate, useParams } from "react-router-dom";
+import React, { Suspense, useEffect, useState } from "react";
+import { Routes, Route, Navigate, useParams, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "./context/AuthContext";
 import { useTheme } from "./context/ThemeContext";
