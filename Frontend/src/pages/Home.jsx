@@ -47,6 +47,7 @@ import { useAuth } from "../context/AuthContext";
 import { useTheme } from "../context/ThemeContext";
 import { useContent } from "../context/ContentContext";
 import Loading from "../components/common/Loading";
+import axios from "axios";
 
 const iconMap = {
   Brain,
@@ -62,6 +63,7 @@ const iconMap = {
   Lightbulb,
 };
 
+import TeacherCTASection from "../components/TeacherCTASection";
 // subtle animated gradient badge
 const Badge = ({ children }) => (
   <motion.span
@@ -280,7 +282,6 @@ const Home = () => {
             transition={animations && !reducedMotion ? { duration: 0.7 } : {}}
             className="space-y-7"
           >
-
             <h1 className="text-4xl sm:text-5xl lg:text-[3.75rem] font-bold tracking-tight leading-tight">
               {contentSettings?.heroTitle || "Master Your Skills with"}
               <br />
@@ -616,6 +617,8 @@ const Home = () => {
       </section>
 
       <Divider />
+
+      <TeacherCTASection />
 
       {/* ── FAQ ── */}
       {faqs && faqs.length > 0 && (
