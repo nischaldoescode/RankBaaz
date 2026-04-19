@@ -1,48 +1,60 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { ArrowLeft, BookOpen, Users, Award, Globe, Calendar } from "lucide-react";
-import { Button } from "@/components/ui/Button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
-import { Badge } from "@/components/ui/badge";
-import Loading from "../components/common/Loading";
 import axios from "axios";
-import toast from "react-hot-toast";
-import CourseDetailsExpander from "@/components/testandcourse/CourseDetailsExpander";
+import Loading from "../components/common/Loading";
+import NotFound from "./NotFound"; // your existing 404 page
 
 const API = import.meta.env.VITE_API_URL || "http://localhost:7000/api";
+const DICEBEAR = (seed) =>
+  `https://api.dicebear.com/9.x/croodles-neutral/svg?seed=${encodeURIComponent(seed)}`;
 
 const TeacherProfile = () => {
-  const { username } = useParams();
+  const { username: rawUsername } = useParams();
+  // strip @ if present — handles both /@username and /teacher/@username
+  const username = rawUsername?.startsWith("@")
+    ? rawUsername.slice(1)
+    : rawUsername;
+
   const navigate = useNavigate();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [expandedCourseId, setExpandedCourseId] = useState(null);
+  const [notFound, setNotFound] = useState(false);
 
   useEffect(() => {
+    if (!username) {
+      setNotFound(true);
+      setLoading(false);
+      return;
+    }
+
+    window.scrollTo({ top: 0, behavior: "smooth" });
+
     axios
       .get(`${API}/teachers/public/${username}`)
       .then((r) => setData(r.data.data))
-      .catch(() => {
-        toast.error("Teacher not found");
-        navigate("/courses");
+      .catch((err) => {
+        // 404 means not found OR blocked — show 404 page
+        setNotFound(true);
       })
       .finally(() => setLoading(false));
-  }, [username, navigate]);
+  }, [username]);
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen pt-16 flex items-center justify-center">
         <Loading variant="page" />
       </div>
     );
   }
 
-  if (!data) return null;
+  if (notFound || !data) {
+    // render the actual 404 component — same as App.jsx 404 route
+    return <NotFound />;
+  }
 
   const { teacher, courses, stats } = data;
-
-  const countryLabel = teacher.country === "india" ? "India" : "Nepal";
+  const avatarUrl = teacher.profileImage?.url || DICEBEAR(teacher.username);
   const countryFlag = teacher.country === "india" ? "🇮🇳" : "🇳🇵";
   const joinDate = new Date(teacher.createdAt).toLocaleDateString("en-US", {
     year: "numeric",
@@ -50,189 +62,204 @@ const TeacherProfile = () => {
   });
 
   return (
-    <div className="min-h-screen py-10 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-5xl mx-auto">
-        {/* back */}
-        <Button
-          variant="ghost"
-          size="sm"
+    <div className="min-h-screen pt-16 pb-10 bg-background">
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
+        {/* back button */}
+        <button
           onClick={() => navigate(-1)}
-          className="mb-6 gap-1.5"
+          className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors mb-6"
         >
-          <ArrowLeft className="w-4 h-4" />
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+          >
+            <path d="M19 12H5M12 5l-7 7 7 7" />
+          </svg>
           Back
-        </Button>
+        </button>
 
-        {/* profile header */}
-        <Card className="mb-6 overflow-hidden">
-          <CardContent className="p-6 sm:p-8">
-            <div className="flex flex-col sm:flex-row items-start gap-6">
-              {/* avatar */}
-              <div className="flex-shrink-0">
-                {teacher.profileImage?.url ? (
-                  <img
-                    src={teacher.profileImage.url}
-                    alt={teacher.name}
-                    className="w-24 h-24 sm:w-28 sm:h-28 rounded-2xl object-cover border-2 border-border"
-                  />
-                ) : (
-                  <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 border-2 border-border flex items-center justify-center">
-                    <span className="text-4xl font-bold text-primary">
-                      {teacher.name.charAt(0).toUpperCase()}
-                    </span>
-                  </div>
-                )}
+        {/* hero card */}
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-card border border-border rounded-2xl overflow-hidden mb-5 shadow-sm"
+        >
+          {/* top gradient bar */}
+          <div
+            className="h-24 sm:h-32 w-full"
+            style={{
+              background:
+                "linear-gradient(135deg, hsl(var(--primary)/0.15), hsl(var(--primary)/0.05))",
+            }}
+          />
+
+          <div className="px-5 sm:px-8 pb-6 sm:pb-8 -mt-12 sm:-mt-14">
+            {/* avatar */}
+            <div className="flex items-end justify-between mb-4">
+              <div className="relative">
+                <img
+                  src={avatarUrl}
+                  alt={teacher.name}
+                  className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl border-4 border-background object-cover bg-muted shadow-md"
+                  onError={(e) => {
+                    // fallback to dicebear if image 404s
+                    e.target.src = DICEBEAR(teacher.username);
+                  }}
+                />
+                <span
+                  className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-green-400 border-2 border-background"
+                  title="Active teacher"
+                />
               </div>
 
-              {/* info */}
-              <div className="flex-1 min-w-0">
-                <div className="flex items-start justify-between flex-wrap gap-3 mb-2">
-                  <div>
-                    <h1 className="text-2xl sm:text-3xl font-bold text-foreground">
-                      {teacher.name}
-                    </h1>
-                    <p className="text-muted-foreground">@{teacher.username}</p>
-                  </div>
-                  <Badge className="bg-primary/10 text-primary border border-primary/20 px-3 py-1 text-xs font-semibold">
-                    Teacher
-                  </Badge>
-                </div>
-
-                <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground mb-4">
-                  <span className="flex items-center gap-1.5">
-                    <Globe className="w-4 h-4" />
-                    {countryFlag} {countryLabel}
-                  </span>
-                  <span className="flex items-center gap-1.5">
-                    <Calendar className="w-4 h-4" />
-                    Joined {joinDate}
-                  </span>
-                </div>
-
-                {teacher.bio && (
-                  <p className="text-sm text-foreground/80 leading-relaxed mb-3">
-                    {teacher.bio}
-                  </p>
-                )}
-
-                {teacher.qualification && (
-                  <p className="text-xs text-muted-foreground bg-muted/50 px-3 py-1.5 rounded-lg inline-block">
-                    {teacher.qualification}
-                  </p>
-                )}
-              </div>
+              <span className="px-3 py-1 bg-primary/10 text-primary border border-primary/20 rounded-full text-xs font-semibold">
+                Teacher
+              </span>
             </div>
-          </CardContent>
-        </Card>
+
+            {/* name + username */}
+            <h1 className="text-2xl sm:text-3xl font-bold text-foreground mb-1">
+              {teacher.name}
+            </h1>
+            <p className="text-muted-foreground text-sm mb-3">
+              @{teacher.username}
+            </p>
+
+            {/* meta */}
+            <div className="flex flex-wrap items-center gap-4 text-xs text-muted-foreground mb-4">
+              <span>
+                {countryFlag} {teacher.country === "india" ? "India" : "Nepal"}
+              </span>
+              <span>📅 Joined {joinDate}</span>
+            </div>
+
+            {/* bio */}
+            {teacher.bio && (
+              <p className="text-sm text-foreground/80 leading-relaxed mb-4 max-w-xl">
+                {teacher.bio}
+              </p>
+            )}
+
+            {/* qualification chip */}
+            {teacher.qualification && (
+              <span className="inline-block px-3 py-1.5 bg-muted text-xs text-muted-foreground rounded-lg">
+                🎓 {teacher.qualification}
+              </span>
+            )}
+          </div>
+        </motion.div>
 
         {/* stats row */}
-        <div className="grid grid-cols-3 gap-4 mb-6">
+        <div className="grid grid-cols-3 gap-3 sm:gap-4 mb-5">
           {[
-            { icon: BookOpen, label: "Courses", value: stats.totalCourses },
-            { icon: Users, label: "Students", value: stats.totalStudents },
-            { icon: Award, label: "Tests Taken", value: stats.totalTests },
-          ].map((stat, i) => (
+            { label: "Courses", value: stats.totalCourses, icon: "📚" },
+            { label: "Students", value: stats.totalStudents, icon: "🎓" },
+            { label: "Tests Taken", value: stats.totalTests, icon: "📝" },
+          ].map((s, i) => (
             <motion.div
-              key={i}
-              initial={{ opacity: 0, y: 12 }}
+              key={s.label}
+              initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.1 }}
+              transition={{ delay: i * 0.08 }}
+              className="bg-card border border-border rounded-xl p-3 sm:p-4 text-center shadow-sm"
             >
-              <Card>
-                <CardContent className="p-4 sm:p-5 flex items-center gap-3">
-                  <div className="w-10 h-10 bg-primary/10 rounded-xl flex items-center justify-center flex-shrink-0">
-                    <stat.icon className="w-5 h-5 text-primary" />
-                  </div>
-                  <div>
-                    <p className="text-xl font-bold text-foreground">{stat.value}</p>
-                    <p className="text-xs text-muted-foreground">{stat.label}</p>
-                  </div>
-                </CardContent>
-              </Card>
+              <p className="text-xl sm:text-2xl mb-1">{s.icon}</p>
+              <p className="text-xl sm:text-2xl font-bold text-foreground">
+                {s.value}
+              </p>
+              <p className="text-xs text-muted-foreground">{s.label}</p>
             </motion.div>
           ))}
         </div>
 
         {/* courses */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">
+        <div className="bg-card border border-border rounded-2xl shadow-sm overflow-hidden">
+          <div className="px-5 sm:px-7 py-4 border-b border-border">
+            <h2 className="font-bold text-foreground">
               Courses by {teacher.name}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {courses.length === 0 ? (
-              <div className="text-center py-10 text-muted-foreground">
-                <BookOpen className="w-10 h-10 mx-auto mb-3 opacity-40" />
-                <p className="text-sm">No published courses yet.</p>
-              </div>
-            ) : (
-              <div className="grid sm:grid-cols-2 gap-4">
-                {courses.map((course, i) => (
+            </h2>
+          </div>
+
+          {courses.length === 0 ? (
+            <div className="py-12 text-center">
+              <p className="text-4xl mb-3">📚</p>
+              <p className="text-sm text-muted-foreground">
+                No published courses yet.
+              </p>
+            </div>
+          ) : (
+            <div className="divide-y divide-border">
+              {courses.map((course, i) => {
+                const currencySymbol =
+                  course.geoRestriction === "nepal" ? "रू" : "₹";
+                return (
                   <motion.div
                     key={course._id}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: i * 0.06 }}
-                    className="border border-border rounded-xl overflow-hidden hover:border-primary/30 hover:shadow-sm transition-all"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: i * 0.05 }}
+                    className="flex items-start gap-4 p-4 sm:p-5 hover:bg-muted/30 transition-colors"
                   >
-                    {course.image?.url && (
-                      <img
-                        src={course.image.url}
-                        alt={course.name}
-                        className="w-full h-36 object-cover"
-                      />
-                    )}
-                    <div className="p-4">
-                      <div className="flex items-start justify-between gap-2 mb-2">
+                    {/* course image */}
+                    <div className="flex-shrink-0">
+                      {course.image?.url ? (
+                        <img
+                          src={course.image.url}
+                          alt={course.name}
+                          className="w-14 h-14 sm:w-16 sm:h-16 rounded-xl object-cover border border-border"
+                        />
+                      ) : (
+                        <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-xl bg-primary/10 flex items-center justify-center">
+                          <span className="text-2xl">📖</span>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-start justify-between gap-2 flex-wrap">
                         <h3 className="font-semibold text-sm text-foreground line-clamp-2">
                           {course.name}
                         </h3>
-                        <Badge
-                          className={`flex-shrink-0 text-xs ${
+                        <span
+                          className={`flex-shrink-0 px-2 py-0.5 rounded-full text-xs font-semibold ${
                             course.isPaid
                               ? "bg-amber-100 text-amber-700"
                               : "bg-green-100 text-green-700"
                           }`}
                         >
                           {course.isPaid
-                            ? `${course.geoRestriction === "nepal" ? "रू" : "₹"}${course.price}`
+                            ? `${currencySymbol}${course.price}`
                             : "Free"}
-                        </Badge>
+                        </span>
                       </div>
 
                       {course.description && (
-                        <p className="text-xs text-muted-foreground line-clamp-2 mb-3">
+                        <p className="text-xs text-muted-foreground line-clamp-2 mt-1">
                           {course.description}
                         </p>
                       )}
 
-                      <div className="flex items-center justify-between text-xs text-muted-foreground">
+                      <div className="flex flex-wrap items-center gap-3 mt-2 text-xs text-muted-foreground">
                         <span>{course.totalQuestions} questions</span>
                         {course.geoRestriction && (
-                          <span className="text-xs bg-muted px-2 py-0.5 rounded-full">
-                            {course.geoRestriction === "nepal" ? "🇳🇵 Nepal" : "🇮🇳 India"} only
+                          <span className="px-2 py-0.5 bg-muted rounded-full">
+                            {course.geoRestriction === "nepal"
+                              ? "🇳🇵 Nepal only"
+                              : "🇮🇳 India only"}
                           </span>
                         )}
                       </div>
-
-                      <div className="mt-3">
-                        <CourseDetailsExpander
-                          course={course}
-                          viewMode="grid"
-                          isExpanded={expandedCourseId === course._id}
-                          onExpandChange={(expanded) =>
-                            setExpandedCourseId(expanded ? course._id : null)
-                          }
-                        />
-                      </div>
                     </div>
                   </motion.div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+                );
+              })}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

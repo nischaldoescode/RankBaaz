@@ -262,12 +262,16 @@ const Home = () => {
       {/* ── Hero ── */}
       <section className="relative pt-24 pb-32 px-4 sm:px-6 lg:px-8 min-h-screen flex items-center">
         {/* subtle grid overlay */}
+        {/* full-bleed grid — no gap, covers entire section */}
         <div
-          className="absolute inset-0 pointer-events-none opacity-[0.03]"
+          className="absolute inset-0 pointer-events-none"
           style={{
-            backgroundImage:
-              "linear-gradient(hsl(var(--foreground)) 1px, transparent 1px), linear-gradient(90deg, hsl(var(--foreground)) 1px, transparent 1px)",
-            backgroundSize: "48px 48px",
+            backgroundImage: `
+      linear-gradient(hsl(var(--foreground)/0.04) 1px, transparent 1px),
+      linear-gradient(90deg, hsl(var(--foreground)/0.04) 1px, transparent 1px)
+    `,
+            backgroundSize: "40px 40px",
+            backgroundPosition: "0 0" /* anchored to top-left — no gap */,
           }}
         />
 

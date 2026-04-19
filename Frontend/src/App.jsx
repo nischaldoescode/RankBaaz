@@ -1,4 +1,4 @@
-import React, { Suspense, useEffect, useState } from "react";
+import React, { Suspense, useEffect, useState, useLocation } from "react";
 import { Routes, Route, Navigate, useParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "./context/AuthContext";
@@ -28,6 +28,7 @@ import ErrorBoundary from "./components/common/ErrorBoundary";
 import { createHead, UnheadProvider } from "@unhead/react/client";
 import BlockedPage from "./pages/BlockedPage";
 import CookieConsent from "./components/common/CookieConsent";
+import TeacherOrUserProfile from "./pages/TeacherOrUserProfile";
 
 // Lazy loaded for better performance
 const Home = React.lazy(() => import("./pages/Home"));
@@ -378,6 +379,14 @@ function App() {
   const { animations, reducedMotion } = useTheme();
   const location = useLocation();
   const [ipBlocked, setIpBlocked] = useState(null); // null = not blocked, object = block info
+  // scroll to top on route change
+  const ScrollToTop = () => {
+    const { pathname } = useLocation();
+    useEffect(() => {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }, [pathname]);
+    return null;
+  };
 
   // intercept all axios/fetch errors globally for IP_BLOCKED code
   useEffect(() => {
@@ -541,7 +550,7 @@ function App() {
                       path="/:username"
                       element={
                         <Suspense fallback={<Loading variant="page" />}>
-                          <ProfileRouteGuard />
+                          <TeacherOrUserProfile />
                         </Suspense>
                       }
                     />
@@ -735,7 +744,7 @@ function App() {
                     />
 
                     <Route
-                      path="/teacher/:username"
+                      path="/teacher/@:username"
                       element={
                         <Suspense fallback={<Loading variant="page" />}>
                           <TeacherProfile />
