@@ -751,14 +751,6 @@ function App() {
                         </Suspense>
                       }
                     />
-                    <Route
-                      path="/teacher/dashboard"
-                      element={
-                        <Suspense fallback={<Loading variant="page" />}>
-                          <TeacherDashboard />
-                        </Suspense>
-                      }
-                    />
 
                     <Route
                       path="/teacher/:username"

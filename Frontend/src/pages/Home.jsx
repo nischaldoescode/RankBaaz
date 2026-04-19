@@ -63,7 +63,8 @@ const iconMap = {
   Lightbulb,
 };
 
-import TeacherCTASection from "../components/TeacherCTASection";
+import TeacherCTASection from "../components/Teachers/TeacherCTA";
+
 // subtle animated gradient badge
 const Badge = ({ children }) => (
   <motion.span
