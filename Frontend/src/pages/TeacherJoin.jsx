@@ -27,8 +27,10 @@ const CounterAnimation = ({ end, duration = 2000, suffix = "" }) => {
 
   useEffect(() => {
     const observer = new IntersectionObserver(
-      ([entry]) => { if (entry.isIntersecting && !started) setStarted(true); },
-      { threshold: 0.5 }
+      ([entry]) => {
+        if (entry.isIntersecting && !started) setStarted(true);
+      },
+      { threshold: 0.5 },
     );
     if (ref.current) observer.observe(ref.current);
     return () => observer.disconnect();
@@ -53,7 +55,8 @@ const CounterAnimation = ({ end, duration = 2000, suffix = "" }) => {
 
   return (
     <span ref={ref}>
-      {count.toLocaleString()}{suffix}
+      {count.toLocaleString()}
+      {suffix}
     </span>
   );
 };
@@ -62,7 +65,8 @@ const WaitlistCounter = () => {
   const [count, setCount] = useState(null);
 
   useEffect(() => {
-    axios.get(`${API}/teachers/waitlist-count`)
+    axios
+      .get(`${API}/teachers/waitlist-count`)
       .then((r) => setCount(r.data.data?.count || 0))
       .catch(() => setCount(null));
   }, []);
@@ -80,7 +84,8 @@ const WaitlistCounter = () => {
         <span className="relative inline-flex h-2 w-2 rounded-full bg-amber-500" />
       </span>
       <span>
-        <strong>{count}</strong> educator{count !== 1 ? "s" : ""} on the waiting list
+        <strong>{count}</strong> educator{count !== 1 ? "s" : ""} on the waiting
+        list
       </span>
     </motion.div>
   );
@@ -125,9 +130,12 @@ const ApplicationForm = () => {
         <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto">
           <CheckCircle className="w-8 h-8 text-green-500" />
         </div>
-        <h3 className="text-xl font-bold text-foreground">Application received</h3>
+        <h3 className="text-xl font-bold text-foreground">
+          Application received
+        </h3>
         <p className="text-muted-foreground max-w-xs mx-auto text-sm leading-relaxed">
-          We review every application personally. You will hear from us via email if selected.
+          We review every application personally. You will hear from us via
+          email if selected.
         </p>
       </motion.div>
     );
@@ -188,7 +196,9 @@ const ApplicationForm = () => {
         </label>
         <textarea
           value={form.qualification}
-          onChange={(e) => setForm((p) => ({ ...p, qualification: e.target.value }))}
+          onChange={(e) =>
+            setForm((p) => ({ ...p, qualification: e.target.value }))
+          }
           placeholder="Degrees, certifications, years of experience..."
           required
           rows={3}
@@ -216,7 +226,8 @@ const ApplicationForm = () => {
       </Button>
 
       <p className="text-xs text-center text-muted-foreground">
-        Applications are reviewed personally. We respond within 3-5 business days.
+        Applications are reviewed personally. We respond within 3-5 business
+        days.
       </p>
     </form>
   );
@@ -227,28 +238,31 @@ const TeacherJoin = () => {
     {
       icon: TrendingUp,
       title: "Earn 80% revenue",
-      description: "Keep 80% of every course sale. We handle payments, infrastructure, and support.",
+      description:
+        "Keep 80% of every course sale. We handle payments, infrastructure, and support.",
     },
     {
       icon: Users,
       title: "Reach serious learners",
-      description: "Our platform attracts motivated students actively seeking to improve.",
+      description:
+        "Our platform attracts motivated students actively seeking to improve.",
     },
     {
       icon: Shield,
       title: "Full course control",
-      description: "Create, price, and manage your courses entirely on your own terms.",
+      description:
+        "Create, price, and manage your courses entirely on your own terms.",
     },
     {
       icon: Zap,
       title: "Fast payouts",
-      description: "Receive your earnings directly via Razorpay (India) or eSewa/Khalti (Nepal).",
+      description:
+        "Receive your earnings directly via Razorpay (India) or eSewa/Khalti (Nepal).",
     },
   ];
 
   return (
     <div className="min-h-screen bg-background overflow-x-hidden">
-
       {/* ── Hero ── */}
       <section className="relative pt-24 pb-20 px-4 sm:px-6 lg:px-8">
         {/* subtle grid */}
@@ -271,7 +285,7 @@ const TeacherJoin = () => {
             transition={{ duration: 0.5 }}
           >
             <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-primary/10 text-primary border border-primary/20">
-              <Star className="w-3 h-3" /> Invite-only beta
+              Invite-only beta
             </span>
           </motion.div>
 
@@ -299,8 +313,8 @@ const TeacherJoin = () => {
             transition={{ duration: 0.6, delay: 0.2 }}
             className="text-lg sm:text-xl text-muted-foreground max-w-2xl mx-auto leading-relaxed"
           >
-            Share your expertise, build your audience, and earn from your knowledge.
-            We handle everything else.
+            Share your expertise, build your audience, and earn from your
+            knowledge. We handle everything else.
           </motion.p>
 
           <motion.div
@@ -310,12 +324,12 @@ const TeacherJoin = () => {
             className="flex flex-col sm:flex-row items-center justify-center gap-4"
           >
             <WaitlistCounter />
-            <Link
-              to="/teacher/login"
+            <a
+              href="https://teacher.vidhgrow.online"
               className="text-sm text-muted-foreground hover:text-foreground transition-colors underline underline-offset-4"
             >
               Already have an account? Sign in
-            </Link>
+            </a>
           </motion.div>
 
           {/* stats row */}
@@ -323,18 +337,19 @@ const TeacherJoin = () => {
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.5 }}
-            className="grid grid-cols-3 gap-6 max-w-lg mx-auto pt-4"
+            className="grid grid-cols-2 gap-6 max-w-lg mx-auto pt-4"
           >
             {[
               { value: 80, suffix: "%", label: "Revenue share" },
-              { value: 2, suffix: " countries", label: "Supported" },
               { value: 48, suffix: "h", label: "Approval time" },
             ].map((s, i) => (
               <div key={i} className="text-center">
                 <div className="text-2xl font-bold text-foreground">
                   <CounterAnimation end={s.value} suffix={s.suffix} />
                 </div>
-                <div className="text-xs text-muted-foreground mt-0.5">{s.label}</div>
+                <div className="text-xs text-muted-foreground mt-0.5">
+                  {s.label}
+                </div>
               </div>
             ))}
           </motion.div>
@@ -366,8 +381,12 @@ const TeacherJoin = () => {
                 <div className="w-10 h-10 bg-primary/10 rounded-xl flex items-center justify-center mb-4">
                   <perk.icon className="w-5 h-5 text-primary" />
                 </div>
-                <h3 className="font-semibold text-sm text-foreground mb-1.5">{perk.title}</h3>
-                <p className="text-xs text-muted-foreground leading-relaxed">{perk.description}</p>
+                <h3 className="font-semibold text-sm text-foreground mb-1.5">
+                  {perk.title}
+                </h3>
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  {perk.description}
+                </p>
               </motion.div>
             ))}
           </div>
@@ -384,45 +403,6 @@ const TeacherJoin = () => {
             <h2 className="text-3xl font-bold">Get paid your way</h2>
           </div>
 
-          <div className="grid sm:grid-cols-2 gap-6">
-            <div className="p-6 bg-orange-50 dark:bg-orange-950/20 border border-orange-200 dark:border-orange-900 rounded-xl">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-8 h-8 bg-orange-500 rounded-lg flex items-center justify-center">
-                  <span className="text-white font-bold text-xs">₹</span>
-                </div>
-                <h3 className="font-bold text-foreground">India</h3>
-              </div>
-              <p className="text-sm text-muted-foreground mb-3">
-                Payouts via Razorpay direct bank transfer or UPI. Courses priced in INR.
-              </p>
-              <div className="flex flex-wrap gap-2">
-                {["Bank Transfer", "UPI"].map((m) => (
-                  <span key={m} className="px-2 py-1 bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 text-xs rounded-full font-medium">
-                    {m}
-                  </span>
-                ))}
-              </div>
-            </div>
-
-            <div className="p-6 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900 rounded-xl">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center">
-                  <span className="text-white font-bold text-xs">रू</span>
-                </div>
-                <h3 className="font-bold text-foreground">Nepal</h3>
-              </div>
-              <p className="text-sm text-muted-foreground mb-3">
-                Payouts via eSewa or Khalti. Courses priced in NPR, visible only to Nepali students.
-              </p>
-              <div className="flex flex-wrap gap-2">
-                {["eSewa", "Khalti"].map((m) => (
-                  <span key={m} className="px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 text-xs rounded-full font-medium">
-                    {m}
-                  </span>
-                ))}
-              </div>
-            </div>
-          </div>
         </div>
       </section>
 
