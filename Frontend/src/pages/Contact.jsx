@@ -24,7 +24,7 @@ const Contact = () => {
   });
 
   const handleEmailClick = () => {
-    window.location.href = "hello@testmasterpro.com";
+    window.location.href = "mailto:support@vidhgrow.online";
   };
 
   const containerVariants = {
