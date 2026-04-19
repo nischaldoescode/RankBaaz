@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { useAdmin } from "../context/AdminContext";
+import { useAdmin } from "../contexts/AdminContext.jsx";
 import toast from "react-hot-toast";
 
 // ── helpers ──
