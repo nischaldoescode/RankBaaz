@@ -55,12 +55,12 @@ const TeacherCTASection = () => {
                     <path d="M5 12h14M12 5l7 7-7 7" />
                   </svg>
                 </Link>
-                <Link
-                  to="/teacher/login"
+                <a
+                  href="https://teachers.vidhgrow.online"
                   className="text-sm text-muted-foreground hover:text-foreground transition-colors underline underline-offset-4"
                 >
                   Already a teacher? Sign in
-                </Link>
+                </a>
               </div>
             </div>
 
