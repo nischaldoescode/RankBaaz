@@ -35,6 +35,7 @@ import {
   getTeacherApplications,
   sendTeacherInvite,
   rejectTeacherApplication,
+  getTeacherCourses,
 } from "../Controllers/teacherController.js";
 import {
   authenticateTeacher,
@@ -176,6 +177,7 @@ router.get("/public/:username", getPublicTeacherProfile);
 
 // ── teacher authenticated ──
 router.get("/me", authenticateTeacher, getTeacherProfile);
+router.get("/me/courses/all", authenticateTeacher, getTeacherCourses);
 router.get("/me/analytics", authenticateTeacher, getTeacherAnalytics);
 router.post(
   "/me/courses",
