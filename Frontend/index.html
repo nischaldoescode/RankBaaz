@@ -200,7 +200,25 @@
     <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
     <title>Vidhgrow - Prepare with Precision</title>
   </head>
+  <style>
+    /* Visually hide without harming SEO or accessibility */
+    .seo-h1 {
+      position: absolute !important;
+      left: -9999px !important;
+      top: -9999px !important;
+      height: 1px !important;
+      width: 1px !important;
+      overflow: hidden !important;
+      opacity: 0 !important;
+      pointer-events: none !important;
+      z-index: -1 !important;
+      visibility: hidden !important;
+    }
+  </style>
   <body>
+    <h1 class="seo-h1">
+      Vidhgrow – Online Learning, Mock Tests & Skill Development
+    </h1>
     <div id="root"></div>
 
     <script>

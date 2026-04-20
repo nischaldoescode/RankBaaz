@@ -1,0 +1,37 @@
+services:
+  - type: web
+    name: vidhgrow
+    runtime: static
+    buildCommand: npm run build
+    staticPublishPath: dist
+
+    headers:
+      # Cache images for 1 day
+      - path: "*.png"
+        name: Cache-Control
+        value: public, max-age=86400
+
+      - path: "*.jpg"
+        name: Cache-Control
+        value: public, max-age=86400
+
+      - path: "*.jpeg"
+        name: Cache-Control
+        value: public, max-age=86400
+
+      - path: "*.webp"
+        name: Cache-Control
+        value: public, max-age=86400
+
+      - path: "*.svg"
+        name: Cache-Control
+        value: public, max-age=86400
+
+      - path: "*.gif"
+        name: Cache-Control
+        value: public, max-age=86400
+
+      # Cache JS/CSS for 1 day
+      - path: "/assets/*"
+        name: Cache-Control
+        value: public, max-age=86400
