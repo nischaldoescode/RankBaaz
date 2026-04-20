@@ -4,13 +4,18 @@ import { teacherApi } from "../../services/api.js";
 import { useTeacher } from "../../context/TeacherContext.jsx";
 import toast from "react-hot-toast";
 
+// ── constants ──
+
 const DICEBEAR = (seed) =>
   `https://api.dicebear.com/9.x/croodles-neutral/svg?seed=${encodeURIComponent(seed)}`;
 
-// ── small components ──
+const DIFF_COLORS = {
+  Easy: { bg: "#f0fdf4", color: "#16a34a", border: "#bbf7d0" },
+  Medium: { bg: "#fffbeb", color: "#d97706", border: "#fde68a" },
+  Hard: { bg: "#fef2f2", color: "#dc2626", border: "#fecaca" },
+};
 
-const btn = (extra = "") =>
-  `inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${extra}`;
+// ── style helpers ──
 
 const inputS = {
   width: "100%",
@@ -27,119 +32,514 @@ const inputS = {
   transition: "border-color 0.2s",
 };
 
+const textareaS = {
+  ...inputS,
+  height: "auto",
+  padding: "10px 12px",
+  resize: "vertical",
+  lineHeight: 1.5,
+};
+
 const focus = (e) => (e.target.style.borderColor = "#2563eb");
 const blur = (e) => (e.target.style.borderColor = "#e2e8f0");
 
-// ── question type badge ──
-const QTypeBadge = ({ type }) => {
-  const map = {
-    multiple: { label: "MCQ", bg: "#eff6ff", color: "#2563eb" },
-    single: { label: "Short", bg: "#f0fdf4", color: "#16a34a" },
-    truefalse: { label: "T/F", bg: "#faf5ff", color: "#7c3aed" },
-  };
-  const s = map[type] || map.multiple;
-  return (
-    <span
-      style={{
-        padding: "1px 7px",
-        borderRadius: 20,
-        fontSize: 10,
-        fontWeight: 700,
-        background: s.bg,
-        color: s.color,
-        whiteSpace: "nowrap",
-      }}
-    >
-      {s.label}
-    </span>
-  );
-};
-
-// ── coupon row ──
-const CouponRow = ({ coupon, onToggle, onDelete }) => (
-  <div
+const FieldLabel = ({ children, required }) => (
+  <label
     style={{
-      display: "flex",
-      alignItems: "center",
-      gap: 10,
-      padding: "10px 12px",
-      background: "#f8fafc",
-      borderRadius: 10,
-      border: "1px solid #f1f5f9",
-      flexWrap: "wrap",
+      display: "block",
+      fontSize: 12,
+      fontWeight: 600,
+      color: "#374151",
+      marginBottom: 6,
     }}
   >
-    <code
+    {children}
+    {required && <span style={{ color: "#ef4444" }}> *</span>}
+  </label>
+);
+
+const Modal = ({ onClose, children, maxWidth = 560 }) => (
+  <div
+    style={{
+      position: "fixed",
+      inset: 0,
+      background: "rgba(0,0,0,0.5)",
+      display: "flex",
+      alignItems: "flex-start",
+      justifyContent: "center",
+      zIndex: 100,
+      padding: "20px 16px",
+      overflowY: "auto",
+    }}
+    onClick={(e) => e.target === e.currentTarget && onClose()}
+  >
+    <motion.div
+      initial={{ opacity: 0, y: 20, scale: 0.97 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      exit={{ opacity: 0, y: 12, scale: 0.97 }}
+      transition={{ duration: 0.18 }}
       style={{
-        fontFamily: "monospace",
-        fontWeight: 700,
-        fontSize: 13,
-        color: "#7c3aed",
-        background: "#faf5ff",
-        padding: "2px 8px",
-        borderRadius: 6,
-        border: "1px solid #e9d5ff",
+        background: "#fff",
+        borderRadius: 18,
+        padding: "24px 22px",
+        width: "100%",
+        maxWidth,
+        boxShadow: "0 20px 60px rgba(0,0,0,0.15)",
+        marginBottom: 20,
       }}
     >
-      {coupon.code}
-    </code>
-    <span style={{ fontSize: 12, fontWeight: 600, color: "#16a34a" }}>
-      {coupon.discount}% OFF
-    </span>
-    <span
-      style={{
-        fontSize: 11,
-        padding: "2px 8px",
-        borderRadius: 20,
-        background: coupon.isActive ? "#f0fdf4" : "#f9fafb",
-        color: coupon.isActive ? "#16a34a" : "#6b7280",
-        border: `1px solid ${coupon.isActive ? "#bbf7d0" : "#e5e7eb"}`,
-        fontWeight: 600,
-      }}
-    >
-      {coupon.isActive ? "Active" : "Inactive"}
-    </span>
-    <span style={{ fontSize: 11, color: "#94a3b8" }}>
-      Used {coupon.usageCount} times
-      {coupon.maxUsage ? ` / ${coupon.maxUsage}` : ""}
-    </span>
-    <div style={{ marginLeft: "auto", display: "flex", gap: 6 }}>
-      <button
-        onClick={() => onToggle(coupon._id, coupon.isActive)}
-        style={{
-          padding: "4px 10px",
-          borderRadius: 7,
-          border: "1px solid #e5e7eb",
-          background: "#fff",
-          fontSize: 11,
-          fontWeight: 600,
-          cursor: "pointer",
-          color: "#374151",
-        }}
-      >
-        {coupon.isActive ? "Deactivate" : "Activate"}
-      </button>
-      <button
-        onClick={() => onDelete(coupon._id)}
-        style={{
-          padding: "4px 8px",
-          borderRadius: 7,
-          border: "1px solid #fecaca",
-          background: "#fff5f5",
-          fontSize: 11,
-          fontWeight: 600,
-          cursor: "pointer",
-          color: "#dc2626",
-        }}
-      >
-        Delete
-      </button>
-    </div>
+      {children}
+    </motion.div>
   </div>
 );
 
-// ── add coupon form ──
-const AddCouponForm = ({ courseId, onCreated, onCancel }) => {
+const ModalHeader = ({ title, subtitle, onClose }) => (
+  <div
+    style={{
+      display: "flex",
+      alignItems: "flex-start",
+      justifyContent: "space-between",
+      marginBottom: 20,
+    }}
+  >
+    <div>
+      <h2
+        style={{ fontSize: 16, fontWeight: 700, color: "#111827", margin: 0 }}
+      >
+        {title}
+      </h2>
+      {subtitle && (
+        <p style={{ fontSize: 12, color: "#94a3b8", marginTop: 3 }}>
+          {subtitle}
+        </p>
+      )}
+    </div>
+    <button
+      onClick={onClose}
+      style={{
+        width: 30,
+        height: 30,
+        border: "none",
+        background: "#f3f4f6",
+        borderRadius: 8,
+        cursor: "pointer",
+        fontSize: 16,
+        color: "#6b7280",
+        flexShrink: 0,
+      }}
+    >
+      ×
+    </button>
+  </div>
+);
+
+const PrimaryBtn = ({ children, onClick, loading, disabled, style = {} }) => (
+  <button
+    onClick={onClick}
+    disabled={loading || disabled}
+    style={{
+      padding: "10px 20px",
+      border: "none",
+      borderRadius: 9,
+      background:
+        loading || disabled
+          ? "#93c5fd"
+          : "linear-gradient(135deg,#2563eb,#1d4ed8)",
+      color: "#fff",
+      fontSize: 13,
+      fontWeight: 600,
+      cursor: loading || disabled ? "not-allowed" : "pointer",
+      display: "flex",
+      alignItems: "center",
+      gap: 8,
+      boxShadow:
+        loading || disabled ? "none" : "0 3px 10px rgba(37,99,235,0.2)",
+      ...style,
+    }}
+  >
+    {loading ? (
+      <>
+        <div
+          style={{
+            width: 14,
+            height: 14,
+            border: "2px solid rgba(255,255,255,0.4)",
+            borderTopColor: "#fff",
+            borderRadius: "50%",
+            animation: "spin 0.7s linear infinite",
+          }}
+        />
+        {typeof loading === "string" ? loading : "Loading..."}
+      </>
+    ) : (
+      children
+    )}
+  </button>
+);
+
+// ── add/edit question modal ──
+
+const QuestionModal = ({
+  courseId,
+  difficulty,
+  marksPerQuestion,
+  question,
+  onClose,
+  onSaved,
+}) => {
+  const isEdit = !!question;
+  const [form, setForm] = useState({
+    question: question?.question || "",
+    questionType: question?.questionType || "multiple",
+    options: question?.options || ["", "", "", ""],
+    correctAnswerIndex:
+      typeof question?.correctAnswer === "number" ? question.correctAnswer : 0,
+    singleAnswer:
+      typeof question?.correctAnswer === "string" ? question.correctAnswer : "",
+    truefalseAnswer:
+      question?.questionType === "truefalse"
+        ? question.correctAnswer === 0
+          ? 0
+          : 1
+        : 0,
+    explanation: question?.explanation || "",
+    difficulty: question?.difficulty || difficulty,
+  });
+  const [loading, setLoading] = useState(false);
+
+  const validate = () => {
+    if (form.question.trim().length < 10) {
+      toast.error("Question min 10 chars");
+      return false;
+    }
+    if (form.explanation.trim().length < 10) {
+      toast.error("Explanation min 10 chars");
+      return false;
+    }
+    if (
+      form.questionType === "multiple" &&
+      form.options.some((o) => !o.trim())
+    ) {
+      toast.error("Fill all options");
+      return false;
+    }
+    if (form.questionType === "single" && !form.singleAnswer.trim()) {
+      toast.error("Answer required");
+      return false;
+    }
+    return true;
+  };
+
+  const buildPayload = () => {
+    const base = {
+      question: form.question.trim(),
+      explanation: form.explanation.trim(),
+      questionType: form.questionType,
+      difficulty: form.difficulty,
+    };
+    if (form.questionType === "multiple") {
+      base.options = form.options;
+      base.correctAnswerIndex = form.correctAnswerIndex;
+    } else if (form.questionType === "single") {
+      base.correctAnswer = form.singleAnswer.trim();
+    } else {
+      base.options = ["True", "False"];
+      base.correctAnswerIndex = form.truefalseAnswer;
+    }
+    return base;
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!validate()) return;
+    setLoading(true);
+    try {
+      if (isEdit) {
+        await teacherApi.courses.updateQuestion(
+          courseId,
+          question._id,
+          buildPayload(),
+        );
+        toast.success("Question updated");
+      } else {
+        await teacherApi.courses.addQuestion(courseId, buildPayload());
+        toast.success("Question added");
+      }
+      onSaved();
+      onClose();
+    } catch (err) {
+      if (
+        err.response?.status === 403 &&
+        err.response?.data?.code === "ACCESS_BLOCKED"
+      ) {
+        toast.error("Account blocked. Upload documents first.");
+      } else {
+        toast.error(err.response?.data?.message || "Failed");
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <Modal onClose={onClose} maxWidth={580}>
+      <ModalHeader
+        title={isEdit ? "Edit Question" : "Add Question"}
+        subtitle={`${form.difficulty} · ${marksPerQuestion || 1} marks`}
+        onClose={onClose}
+      />
+      <form
+        onSubmit={handleSubmit}
+        style={{ display: "flex", flexDirection: "column", gap: 16 }}
+      >
+        {/* type */}
+        <div>
+          <FieldLabel>Question Type</FieldLabel>
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(3,1fr)",
+              gap: 8,
+            }}
+          >
+            {["multiple", "single", "truefalse"].map((t) => (
+              <button
+                key={t}
+                type="button"
+                onClick={() =>
+                  setForm((p) => ({
+                    ...p,
+                    questionType: t,
+                    options:
+                      t === "truefalse"
+                        ? ["True", "False"]
+                        : p.options.length < 2
+                          ? ["", "", "", ""]
+                          : p.options,
+                  }))
+                }
+                style={{
+                  padding: "8px 4px",
+                  borderRadius: 9,
+                  border: `1.5px solid ${form.questionType === t ? "#2563eb" : "#e2e8f0"}`,
+                  background: form.questionType === t ? "#eff6ff" : "#fff",
+                  color: form.questionType === t ? "#2563eb" : "#475569",
+                  fontSize: 12,
+                  fontWeight: 600,
+                  cursor: "pointer",
+                  textAlign: "center",
+                }}
+              >
+                {t === "multiple"
+                  ? "MCQ"
+                  : t === "single"
+                    ? "Short Answer"
+                    : "True/False"}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* question text */}
+        <div>
+          <FieldLabel required>Question</FieldLabel>
+          <textarea
+            style={textareaS}
+            rows={3}
+            value={form.question}
+            onChange={(e) =>
+              setForm((p) => ({ ...p, question: e.target.value }))
+            }
+            placeholder="Question text (min 10 chars)..."
+            onFocus={focus}
+            onBlur={blur}
+          />
+          <p
+            style={{
+              fontSize: 11,
+              color:
+                form.question.length < 10 && form.question.length > 0
+                  ? "#dc2626"
+                  : "#94a3b8",
+              marginTop: 3,
+            }}
+          >
+            {form.question.length}/1000
+          </p>
+        </div>
+
+        {/* answers */}
+        {form.questionType === "multiple" && (
+          <div>
+            <FieldLabel required>
+              Options (click radio to mark correct)
+            </FieldLabel>
+            {(form.options.length < 4
+              ? [...form.options, ...Array(4 - form.options.length).fill("")]
+              : form.options
+            ).map((opt, i) => (
+              <div
+                key={i}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                  marginBottom: 6,
+                }}
+              >
+                <input
+                  type="radio"
+                  checked={form.correctAnswerIndex === i}
+                  onChange={() =>
+                    setForm((p) => ({ ...p, correctAnswerIndex: i }))
+                  }
+                  style={{ flexShrink: 0, accentColor: "#2563eb" }}
+                />
+                <input
+                  style={{ ...inputS, height: 36, flex: 1 }}
+                  value={opt}
+                  onChange={(e) => {
+                    const o = [
+                      ...(form.options.length < 4
+                        ? [
+                            ...form.options,
+                            ...Array(4 - form.options.length).fill(""),
+                          ]
+                        : form.options),
+                    ];
+                    o[i] = e.target.value;
+                    setForm((p) => ({ ...p, options: o }));
+                  }}
+                  placeholder={`Option ${String.fromCharCode(65 + i)}`}
+                  onFocus={focus}
+                  onBlur={blur}
+                />
+                <span
+                  style={{
+                    fontSize: 11,
+                    color:
+                      form.correctAnswerIndex === i ? "#16a34a" : "#94a3b8",
+                    fontWeight: 600,
+                    width: 44,
+                    flexShrink: 0,
+                  }}
+                >
+                  {form.correctAnswerIndex === i ? "✓ Correct" : ""}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {form.questionType === "single" && (
+          <div>
+            <FieldLabel required>Correct Answer</FieldLabel>
+            <input
+              style={inputS}
+              value={form.singleAnswer}
+              onChange={(e) =>
+                setForm((p) => ({ ...p, singleAnswer: e.target.value }))
+              }
+              placeholder="The correct answer..."
+              onFocus={focus}
+              onBlur={blur}
+            />
+          </div>
+        )}
+
+        {form.questionType === "truefalse" && (
+          <div>
+            <FieldLabel>Correct Answer</FieldLabel>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "1fr 1fr",
+                gap: 10,
+              }}
+            >
+              {["True", "False"].map((val, i) => (
+                <button
+                  key={val}
+                  type="button"
+                  onClick={() => setForm((p) => ({ ...p, truefalseAnswer: i }))}
+                  style={{
+                    padding: "12px",
+                    borderRadius: 9,
+                    border: `1.5px solid ${form.truefalseAnswer === i ? (i === 0 ? "#16a34a" : "#dc2626") : "#e2e8f0"}`,
+                    background:
+                      form.truefalseAnswer === i
+                        ? i === 0
+                          ? "#f0fdf4"
+                          : "#fef2f2"
+                        : "#fff",
+                    color:
+                      form.truefalseAnswer === i
+                        ? i === 0
+                          ? "#16a34a"
+                          : "#dc2626"
+                        : "#475569",
+                    fontSize: 14,
+                    fontWeight: 700,
+                    cursor: "pointer",
+                  }}
+                >
+                  {val === "True" ? "✅ True" : "❌ False"}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* explanation */}
+        <div>
+          <FieldLabel required>Explanation</FieldLabel>
+          <textarea
+            style={textareaS}
+            rows={2}
+            value={form.explanation}
+            onChange={(e) =>
+              setForm((p) => ({ ...p, explanation: e.target.value }))
+            }
+            placeholder="Why is this the correct answer? (min 10 chars)"
+            onFocus={focus}
+            onBlur={blur}
+          />
+        </div>
+
+        <div style={{ display: "flex", gap: 10 }}>
+          <button
+            type="button"
+            onClick={onClose}
+            style={{
+              flex: 1,
+              height: 40,
+              border: "1.5px solid #e2e8f0",
+              borderRadius: 9,
+              background: "#fff",
+              fontSize: 13,
+              fontWeight: 600,
+              cursor: "pointer",
+              color: "#475569",
+            }}
+          >
+            Cancel
+          </button>
+          <PrimaryBtn
+            style={{ flex: 2 }}
+            loading={loading ? (isEdit ? "Updating..." : "Adding...") : false}
+          >
+            {isEdit ? "Update Question" : "Add Question"}
+          </PrimaryBtn>
+        </div>
+      </form>
+      <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+    </Modal>
+  );
+};
+
+// ── coupon form ──
+
+const CouponForm = ({ courseId, onCreated, onCancel }) => {
   const [form, setForm] = useState({
     code: "",
     discount: "10",
@@ -150,7 +550,11 @@ const AddCouponForm = ({ courseId, onCreated, onCancel }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!form.code.trim() || form.code.length < 4) {
+    const clean = form.code
+      .trim()
+      .toUpperCase()
+      .replace(/[^A-Z0-9]/g, "");
+    if (clean.length < 4) {
       toast.error("Code must be 4+ chars");
       return;
     }
@@ -158,7 +562,7 @@ const AddCouponForm = ({ courseId, onCreated, onCancel }) => {
     try {
       await teacherApi.coupons.create({
         courseId,
-        code: form.code.toUpperCase(),
+        code: clean,
         discount: parseInt(form.discount),
         maxUsage: form.maxUsage ? parseInt(form.maxUsage) : null,
         validUntil: form.validUntil || null,
@@ -166,11 +570,10 @@ const AddCouponForm = ({ courseId, onCreated, onCancel }) => {
       toast.success("Coupon created");
       onCreated();
     } catch (err) {
-      const msg = err.response?.data?.message || "Failed";
       if (err.response?.data?.code === "COUPON_ACCESS_DENIED") {
-        toast.error("Admin has not granted coupon access to you yet.");
+        toast.error("Admin hasn't granted coupon access yet.");
       } else {
-        toast.error(msg);
+        toast.error(err.response?.data?.message || "Failed");
       }
     } finally {
       setLoading(false);
@@ -181,28 +584,23 @@ const AddCouponForm = ({ courseId, onCreated, onCancel }) => {
     <form
       onSubmit={handleSubmit}
       style={{
-        display: "flex",
-        flexDirection: "column",
-        gap: 12,
         padding: 14,
         background: "#f8fafc",
         borderRadius: 12,
         border: "1px solid #e2e8f0",
+        marginBottom: 12,
       }}
     >
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "1fr 1fr",
+          gap: 10,
+          marginBottom: 10,
+        }}
+      >
         <div>
-          <label
-            style={{
-              fontSize: 12,
-              fontWeight: 600,
-              color: "#374151",
-              display: "block",
-              marginBottom: 5,
-            }}
-          >
-            Code *
-          </label>
+          <FieldLabel>Code *</FieldLabel>
           <input
             style={{
               ...inputS,
@@ -225,17 +623,7 @@ const AddCouponForm = ({ courseId, onCreated, onCancel }) => {
           />
         </div>
         <div>
-          <label
-            style={{
-              fontSize: 12,
-              fontWeight: 600,
-              color: "#374151",
-              display: "block",
-              marginBottom: 5,
-            }}
-          >
-            Discount *
-          </label>
+          <FieldLabel>Discount *</FieldLabel>
           <select
             style={{ ...inputS, height: 38, cursor: "pointer" }}
             value={form.discount}
@@ -253,17 +641,7 @@ const AddCouponForm = ({ courseId, onCreated, onCancel }) => {
           </select>
         </div>
         <div>
-          <label
-            style={{
-              fontSize: 12,
-              fontWeight: 600,
-              color: "#374151",
-              display: "block",
-              marginBottom: 5,
-            }}
-          >
-            Max Uses
-          </label>
+          <FieldLabel>Max Uses</FieldLabel>
           <input
             type="number"
             style={{ ...inputS, height: 38 }}
@@ -278,17 +656,7 @@ const AddCouponForm = ({ courseId, onCreated, onCancel }) => {
           />
         </div>
         <div>
-          <label
-            style={{
-              fontSize: 12,
-              fontWeight: 600,
-              color: "#374151",
-              display: "block",
-              marginBottom: 5,
-            }}
-          >
-            Expires
-          </label>
+          <FieldLabel>Expires</FieldLabel>
           <input
             type="date"
             style={{ ...inputS, height: 38 }}
@@ -320,475 +688,296 @@ const AddCouponForm = ({ courseId, onCreated, onCancel }) => {
         >
           Cancel
         </button>
-        <button
-          type="submit"
-          disabled={loading}
-          style={{
-            flex: 2,
-            height: 36,
-            border: "none",
-            borderRadius: 9,
-            background: loading
-              ? "#93c5fd"
-              : "linear-gradient(135deg,#2563eb,#1d4ed8)",
-            color: "#fff",
-            fontSize: 13,
-            fontWeight: 600,
-            cursor: loading ? "not-allowed" : "pointer",
-          }}
+        <PrimaryBtn
+          style={{ flex: 2 }}
+          loading={loading ? "Creating..." : false}
         >
-          {loading ? "Creating..." : "Create Coupon"}
-        </button>
+          Create Coupon
+        </PrimaryBtn>
       </div>
     </form>
   );
 };
 
-// ── add question modal ──
-const AddQuestionModal = ({
-  courseId,
-  difficulty,
-  marksPerQuestion,
-  onClose,
-  onAdded,
-}) => {
-  const [form, setForm] = useState({
-    question: "",
-    questionType: "multiple",
-    options: ["", "", "", ""],
-    correctAnswerIndex: 0,
-    singleAnswer: "",
-    truefalseAnswer: 0,
-    explanation: "",
+// ── video links manager ──
+
+const VideoLinksManager = ({ course, onSaved }) => {
+  const [videoType, setVideoType] = useState(
+    course?.videoContent?.type || "none",
+  );
+  const [courseLinks, setCourseLinks] = useState(
+    course?.videoContent?.courseVideo?.links || [{ url: "", title: "" }],
+  );
+  const [diffLinks, setDiffLinks] = useState(() => {
+    const existing = course?.videoContent?.difficultyVideos || [];
+    const map = {};
+    existing.forEach((dv) => {
+      map[dv.difficulty] = dv.links;
+    });
+    return map;
   });
-  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (form.question.trim().length < 10) {
-      toast.error("Question min 10 chars");
-      return;
-    }
-    if (form.explanation.trim().length < 10) {
-      toast.error("Explanation min 10 chars");
-      return;
-    }
-    if (
-      form.questionType === "multiple" &&
-      form.options.some((o) => !o.trim())
-    ) {
-      toast.error("Fill all options");
-      return;
-    }
-    if (form.questionType === "single" && !form.singleAnswer.trim()) {
-      toast.error("Answer required");
-      return;
-    }
-
-    setLoading(true);
+  const detectPlatform = (url) => {
+    if (!url) return null;
     try {
-      const payload = {
-        difficulty,
-        question: form.question.trim(),
-        explanation: form.explanation.trim(),
-        questionType: form.questionType,
-      };
-
-      if (form.questionType === "multiple") {
-        payload.options = form.options;
-        payload.correctAnswerIndex = form.correctAnswerIndex;
-      } else if (form.questionType === "single") {
-        payload.correctAnswer = form.singleAnswer.trim();
-      } else if (form.questionType === "truefalse") {
-        payload.options = ["True", "False"];
-        payload.correctAnswerIndex = form.truefalseAnswer;
-      }
-
-      await teacherApi.courses.addQuestion(courseId, payload);
-      toast.success("Question added");
-      onAdded();
-      onClose();
-    } catch (err) {
-      const msg = err.response?.data?.message || "Failed";
-      if (
-        err.response?.status === 403 &&
-        err.response?.data?.code === "ACCESS_BLOCKED"
-      ) {
-        toast.error("Account blocked. Upload documents first.");
-      } else {
-        toast.error(msg);
-      }
-    } finally {
-      setLoading(false);
+      const h = new URL(url).hostname.replace("www.", "");
+      if (h.includes("youtube") || h.includes("youtu.be")) return "YouTube";
+      if (h.includes("vimeo")) return "Vimeo";
+      if (h.includes("dailymotion")) return "Dailymotion";
+      return "Other";
+    } catch {
+      return null;
     }
   };
 
-  return (
-    <div
-      style={{
-        position: "fixed",
-        inset: 0,
-        background: "rgba(0,0,0,0.5)",
-        display: "flex",
-        alignItems: "flex-start",
-        justifyContent: "center",
-        zIndex: 100,
-        padding: "24px 16px",
-        overflowY: "auto",
-      }}
-      onClick={(e) => e.target === e.currentTarget && onClose()}
-    >
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0 }}
-        style={{
-          background: "#fff",
-          borderRadius: 18,
-          padding: "24px 22px",
-          width: "100%",
-          maxWidth: 560,
-          boxShadow: "0 20px 60px rgba(0,0,0,0.15)",
-        }}
-      >
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      const payload = { videoType };
+      if (videoType === "course") {
+        const valid = courseLinks.filter((l) => l.url?.trim());
+        if (valid.length === 0) {
+          toast.error("Add at least one video URL");
+          setSaving(false);
+          return;
+        }
+        payload.courseVideoLinks = JSON.stringify(valid);
+      } else if (videoType === "difficulty") {
+        const data = {};
+        course.difficulties?.forEach((d) => {
+          const links = (diffLinks[d.name] || []).filter((l) => l.url?.trim());
+          if (links.length > 0) data[d.name] = { links };
+        });
+        if (Object.keys(data).length === 0) {
+          toast.error("Add at least one video link");
+          setSaving(false);
+          return;
+        }
+        payload.difficultyVideosData = JSON.stringify(data);
+      } else {
+        payload.videoType = "remove";
+      }
+      await teacherApi.courses.updateCourse(course._id, payload);
+      toast.success("Videos saved");
+      onSaved();
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to save");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const LinkRow = ({ link, index, links, setLinks }) => (
+    <div style={{ marginBottom: 10 }}>
+      <div style={{ display: "flex", gap: 8 }}>
         <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            marginBottom: 18,
-          }}
+          style={{ flex: 1, display: "flex", flexDirection: "column", gap: 6 }}
         >
-          <div>
-            <h3 style={{ fontSize: 16, fontWeight: 700, color: "#111827" }}>
-              Add Question
-            </h3>
-            <p style={{ fontSize: 12, color: "#94a3b8", marginTop: 2 }}>
-              {difficulty} · {marksPerQuestion} marks
-            </p>
-          </div>
+          <input
+            style={{ ...inputS, height: 38 }}
+            value={link.url}
+            onChange={(e) => {
+              const n = [...links];
+              n[index] = { ...n[index], url: e.target.value };
+              setLinks(n);
+            }}
+            placeholder="https://youtube.com/watch?v=..."
+            onFocus={focus}
+            onBlur={blur}
+          />
+          <input
+            style={{ ...inputS, height: 34, fontSize: 12 }}
+            value={link.title || ""}
+            onChange={(e) => {
+              const n = [...links];
+              n[index] = { ...n[index], title: e.target.value };
+              setLinks(n);
+            }}
+            placeholder="Video title (optional)"
+            onFocus={focus}
+            onBlur={blur}
+          />
+        </div>
+        {links.length > 1 && (
           <button
-            onClick={onClose}
+            type="button"
+            onClick={() => setLinks(links.filter((_, i) => i !== index))}
             style={{
-              width: 30,
-              height: 30,
-              border: "none",
-              background: "#f3f4f6",
+              padding: "0 10px",
               borderRadius: 8,
+              border: "1px solid #fecaca",
+              background: "#fff5f5",
+              color: "#dc2626",
               cursor: "pointer",
-              fontSize: 16,
-              color: "#6b7280",
+              fontSize: 18,
+              flexShrink: 0,
             }}
           >
             ×
           </button>
-        </div>
-
-        <form
-          onSubmit={handleSubmit}
-          style={{ display: "flex", flexDirection: "column", gap: 16 }}
+        )}
+      </div>
+      {link.url && detectPlatform(link.url) && (
+        <span
+          style={{
+            display: "inline-block",
+            marginTop: 4,
+            padding: "1px 8px",
+            borderRadius: 20,
+            fontSize: 10,
+            fontWeight: 600,
+            background: "#f0fdf4",
+            color: "#16a34a",
+            border: "1px solid #bbf7d0",
+          }}
         >
-          {/* type selector */}
-          <div>
-            <label
-              style={{
-                fontSize: 12,
-                fontWeight: 600,
-                color: "#374151",
-                display: "block",
-                marginBottom: 6,
-              }}
-            >
-              Question Type
-            </label>
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(3,1fr)",
-                gap: 8,
-              }}
-            >
-              {["multiple", "single", "truefalse"].map((t) => (
-                <button
-                  key={t}
-                  type="button"
-                  onClick={() => setForm((p) => ({ ...p, questionType: t }))}
-                  style={{
-                    padding: "8px 4px",
-                    borderRadius: 9,
-                    border: `1.5px solid ${form.questionType === t ? "#2563eb" : "#e2e8f0"}`,
-                    background: form.questionType === t ? "#eff6ff" : "#fff",
-                    color: form.questionType === t ? "#2563eb" : "#475569",
-                    fontSize: 12,
-                    fontWeight: 600,
-                    cursor: "pointer",
-                    textAlign: "center",
-                  }}
-                >
-                  {t === "multiple"
-                    ? "MCQ"
-                    : t === "single"
-                      ? "Short Answer"
-                      : "True/False"}
-                </button>
-              ))}
-            </div>
-          </div>
+          ✓ {detectPlatform(link.url)}
+        </span>
+      )}
+    </div>
+  );
 
-          {/* question */}
-          <div>
-            <label
-              style={{
-                fontSize: 12,
-                fontWeight: 600,
-                color: "#374151",
-                display: "block",
-                marginBottom: 6,
-              }}
-            >
-              Question *
-            </label>
-            <textarea
-              style={{
-                ...inputS,
-                height: "auto",
-                padding: "10px 12px",
-                resize: "vertical",
-                lineHeight: 1.5,
-              }}
-              rows={3}
-              value={form.question}
-              onChange={(e) =>
-                setForm((p) => ({ ...p, question: e.target.value }))
-              }
-              placeholder="Enter question text (min 10 chars)..."
-              required
-              onFocus={focus}
-              onBlur={blur}
+  return (
+    <div>
+      <FieldLabel>Video Type</FieldLabel>
+      <select
+        style={{ ...inputS, marginBottom: 16 }}
+        value={videoType}
+        onChange={(e) => setVideoType(e.target.value)}
+        onFocus={focus}
+        onBlur={blur}
+      >
+        <option value="none">No Videos</option>
+        <option value="course">Same for All Difficulties</option>
+        <option value="difficulty">Per Difficulty</option>
+      </select>
+
+      {videoType === "course" && (
+        <div
+          style={{
+            padding: 14,
+            background: "#f0f9ff",
+            borderRadius: 12,
+            border: "1px solid #bae6fd",
+            marginBottom: 12,
+          }}
+        >
+          <p
+            style={{
+              fontSize: 12,
+              fontWeight: 600,
+              color: "#0369a1",
+              marginBottom: 10,
+            }}
+          >
+            Course Video Links
+          </p>
+          {courseLinks.map((link, i) => (
+            <LinkRow
+              key={i}
+              link={link}
+              index={i}
+              links={courseLinks}
+              setLinks={setCourseLinks}
             />
-            <p
-              style={{
-                fontSize: 11,
-                color:
-                  form.question.length < 10 && form.question.length > 0
-                    ? "#dc2626"
-                    : "#94a3b8",
-                marginTop: 3,
-              }}
-            >
-              {form.question.length}/1000
-            </p>
-          </div>
-
-          {/* answer */}
-          {form.questionType === "multiple" && (
-            <div>
-              <label
-                style={{
-                  fontSize: 12,
-                  fontWeight: 600,
-                  color: "#374151",
-                  display: "block",
-                  marginBottom: 6,
-                }}
-              >
-                Options (select correct)
-              </label>
-              {form.options.map((opt, i) => (
-                <div
-                  key={i}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 8,
-                    marginBottom: 6,
-                  }}
-                >
-                  <input
-                    type="radio"
-                    checked={form.correctAnswerIndex === i}
-                    onChange={() =>
-                      setForm((p) => ({ ...p, correctAnswerIndex: i }))
-                    }
-                    style={{ flexShrink: 0 }}
-                  />
-                  <input
-                    style={{ ...inputS, height: 36, flex: 1 }}
-                    value={opt}
-                    onChange={(e) => {
-                      const o = [...form.options];
-                      o[i] = e.target.value;
-                      setForm((p) => ({ ...p, options: o }));
-                    }}
-                    placeholder={`Option ${String.fromCharCode(65 + i)}`}
-                    onFocus={focus}
-                    onBlur={blur}
-                  />
-                </div>
-              ))}
-            </div>
-          )}
-
-          {form.questionType === "single" && (
-            <div>
-              <label
-                style={{
-                  fontSize: 12,
-                  fontWeight: 600,
-                  color: "#374151",
-                  display: "block",
-                  marginBottom: 6,
-                }}
-              >
-                Correct Answer *
-              </label>
-              <input
-                style={inputS}
-                value={form.singleAnswer}
-                onChange={(e) =>
-                  setForm((p) => ({ ...p, singleAnswer: e.target.value }))
-                }
-                placeholder="The correct answer..."
-                required
-                onFocus={focus}
-                onBlur={blur}
-              />
-            </div>
-          )}
-
-          {form.questionType === "truefalse" && (
-            <div>
-              <label
-                style={{
-                  fontSize: 12,
-                  fontWeight: 600,
-                  color: "#374151",
-                  display: "block",
-                  marginBottom: 6,
-                }}
-              >
-                Correct Answer
-              </label>
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "1fr 1fr",
-                  gap: 10,
-                }}
-              >
-                {["True", "False"].map((val, i) => (
-                  <button
-                    key={val}
-                    type="button"
-                    onClick={() =>
-                      setForm((p) => ({ ...p, truefalseAnswer: i }))
-                    }
-                    style={{
-                      padding: "10px",
-                      borderRadius: 9,
-                      border: `1.5px solid ${form.truefalseAnswer === i ? (i === 0 ? "#16a34a" : "#dc2626") : "#e2e8f0"}`,
-                      background:
-                        form.truefalseAnswer === i
-                          ? i === 0
-                            ? "#f0fdf4"
-                            : "#fef2f2"
-                          : "#fff",
-                      color:
-                        form.truefalseAnswer === i
-                          ? i === 0
-                            ? "#16a34a"
-                            : "#dc2626"
-                          : "#475569",
-                      fontSize: 14,
-                      fontWeight: 700,
-                      cursor: "pointer",
-                    }}
-                  >
-                    {val === "True" ? "✅ True" : "❌ False"}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* explanation */}
-          <div>
-            <label
-              style={{
-                fontSize: 12,
-                fontWeight: 600,
-                color: "#374151",
-                display: "block",
-                marginBottom: 6,
-              }}
-            >
-              Explanation *
-            </label>
-            <textarea
-              style={{
-                ...inputS,
-                height: "auto",
-                padding: "10px 12px",
-                resize: "vertical",
-                lineHeight: 1.5,
-              }}
-              rows={2}
-              value={form.explanation}
-              onChange={(e) =>
-                setForm((p) => ({ ...p, explanation: e.target.value }))
-              }
-              placeholder="Why is this the correct answer? (min 10 chars)"
-              required
-              onFocus={focus}
-              onBlur={blur}
-            />
-          </div>
-
-          <div style={{ display: "flex", gap: 10 }}>
+          ))}
+          {courseLinks.length < 2 && (
             <button
               type="button"
-              onClick={onClose}
+              onClick={() =>
+                setCourseLinks([...courseLinks, { url: "", title: "" }])
+              }
               style={{
-                flex: 1,
-                height: 40,
-                border: "1.5px solid #e2e8f0",
-                borderRadius: 9,
-                background: "#fff",
-                fontSize: 13,
+                width: "100%",
+                padding: "8px",
+                border: "2px dashed #bae6fd",
+                borderRadius: 8,
+                background: "transparent",
+                color: "#0369a1",
+                fontSize: 12,
                 fontWeight: 600,
                 cursor: "pointer",
-                color: "#475569",
               }}
             >
-              Cancel
+              + Add Link ({courseLinks.length}/2)
             </button>
-            <button
-              type="submit"
-              disabled={loading}
+          )}
+        </div>
+      )}
+
+      {videoType === "difficulty" &&
+        course?.difficulties?.map((d) => {
+          const links = diffLinks[d.name] || [{ url: "", title: "" }];
+          const dc = DIFF_COLORS[d.name] || DIFF_COLORS.Medium;
+          const setLinks = (newLinks) =>
+            setDiffLinks((p) => ({ ...p, [d.name]: newLinks }));
+          return (
+            <div
+              key={d.name}
               style={{
-                flex: 2,
-                height: 40,
-                border: "none",
-                borderRadius: 9,
-                background: loading
-                  ? "#93c5fd"
-                  : "linear-gradient(135deg,#2563eb,#1d4ed8)",
-                color: "#fff",
-                fontSize: 13,
-                fontWeight: 600,
-                cursor: loading ? "not-allowed" : "pointer",
+                padding: 12,
+                borderRadius: 12,
+                border: `1px solid ${dc.border}`,
+                background: dc.bg,
+                marginBottom: 10,
               }}
             >
-              {loading ? "Adding..." : "Add Question"}
-            </button>
-          </div>
-        </form>
-      </motion.div>
+              <p
+                style={{
+                  fontSize: 12,
+                  fontWeight: 700,
+                  color: dc.color,
+                  marginBottom: 10,
+                }}
+              >
+                {d.name} Difficulty
+              </p>
+              {links.map((link, i) => (
+                <LinkRow
+                  key={i}
+                  link={link}
+                  index={i}
+                  links={links}
+                  setLinks={setLinks}
+                />
+              ))}
+              {links.length < 2 && (
+                <button
+                  type="button"
+                  onClick={() => setLinks([...links, { url: "", title: "" }])}
+                  style={{
+                    width: "100%",
+                    padding: "7px",
+                    border: `2px dashed ${dc.border}`,
+                    borderRadius: 8,
+                    background: "transparent",
+                    color: dc.color,
+                    fontSize: 11,
+                    fontWeight: 600,
+                    cursor: "pointer",
+                  }}
+                >
+                  + Add Link ({links.length}/2)
+                </button>
+              )}
+            </div>
+          );
+        })}
+
+      <PrimaryBtn
+        onClick={handleSave}
+        loading={saving ? "Saving..." : false}
+        style={{ width: "100%", justifyContent: "center" }}
+      >
+        Save Video Links
+      </PrimaryBtn>
     </div>
   );
 };
 
 // ── create course modal ──
+
 const CreateCourseModal = ({ teacher, onClose, onCreated }) => {
   const [form, setForm] = useState({
     name: "",
@@ -828,7 +1017,6 @@ const CreateCourseModal = ({ teacher, onClose, onCreated }) => {
       toast.error("Price required for paid courses");
       return;
     }
-
     setLoading(true);
     try {
       const fd = new FormData();
@@ -837,8 +1025,6 @@ const CreateCourseModal = ({ teacher, onClose, onCreated }) => {
       fd.append("isPaid", form.isPaid);
       if (form.isPaid === "true") fd.append("price", form.price);
       if (image) fd.append("image", image);
-
-      // default difficulty settings
       fd.append(
         "difficulties",
         JSON.stringify([
@@ -862,7 +1048,6 @@ const CreateCourseModal = ({ teacher, onClose, onCreated }) => {
           },
         ]),
       );
-
       const res = await teacherApi.courses.create(fd);
       toast.success("Course created");
       onCreated(res.data.data.course);
@@ -872,344 +1057,213 @@ const CreateCourseModal = ({ teacher, onClose, onCreated }) => {
         err.response?.status === 403 &&
         err.response?.data?.code === "ACCESS_BLOCKED"
       ) {
-        toast.error("Account blocked. Upload verification documents first.");
+        toast.error("Account blocked. Upload documents first.");
       } else {
-        toast.error(err.response?.data?.message || "Failed to create course");
+        toast.error(err.response?.data?.message || "Failed");
       }
     } finally {
       setLoading(false);
     }
   };
 
-  const currencySymbol = teacher?.country === "nepal" ? "रू (NPR)" : "₹ (INR)";
-
   return (
-    <div
-      style={{
-        position: "fixed",
-        inset: 0,
-        background: "rgba(0,0,0,0.5)",
-        display: "flex",
-        alignItems: "flex-start",
-        justifyContent: "center",
-        zIndex: 100,
-        padding: "24px 16px",
-        overflowY: "auto",
-      }}
-      onClick={(e) => e.target === e.currentTarget && onClose()}
-    >
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        style={{
-          background: "#fff",
-          borderRadius: 18,
-          padding: "26px 24px",
-          width: "100%",
-          maxWidth: 520,
-          boxShadow: "0 20px 60px rgba(0,0,0,0.15)",
-        }}
+    <Modal onClose={onClose} maxWidth={520}>
+      <ModalHeader
+        title="Create Course"
+        subtitle="Goes live immediately"
+        onClose={onClose}
+      />
+      <form
+        onSubmit={handleSubmit}
+        style={{ display: "flex", flexDirection: "column", gap: 14 }}
       >
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            marginBottom: 20,
-          }}
-        >
-          <div>
-            <h2 style={{ fontSize: 16, fontWeight: 700, color: "#111827" }}>
-              Create Course
-            </h2>
-            <p style={{ fontSize: 12, color: "#94a3b8", marginTop: 2 }}>
-              Goes live immediately after creation
-            </p>
-          </div>
-          <button
-            onClick={onClose}
-            style={{
-              width: 30,
-              height: 30,
-              border: "none",
-              background: "#f3f4f6",
-              borderRadius: 8,
-              cursor: "pointer",
-              fontSize: 16,
-              color: "#6b7280",
-            }}
-          >
-            ×
-          </button>
+        <div>
+          <FieldLabel required>Course Name</FieldLabel>
+          <input
+            style={inputS}
+            value={form.name}
+            onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
+            placeholder="Introduction to Mathematics"
+            required
+            onFocus={focus}
+            onBlur={blur}
+          />
         </div>
-
-        <form
-          onSubmit={handleSubmit}
-          style={{ display: "flex", flexDirection: "column", gap: 16 }}
-        >
-          <div>
-            <label
-              style={{
-                fontSize: 12,
-                fontWeight: 600,
-                color: "#374151",
-                display: "block",
-                marginBottom: 6,
-              }}
-            >
-              Course Name *
-            </label>
-            <input
-              style={inputS}
-              value={form.name}
-              onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
-              placeholder="Introduction to Mathematics"
-              required
-              onFocus={focus}
-              onBlur={blur}
-            />
-          </div>
-
-          <div>
-            <label
-              style={{
-                fontSize: 12,
-                fontWeight: 600,
-                color: "#374151",
-                display: "block",
-                marginBottom: 6,
-              }}
-            >
-              Description *
-            </label>
-            <textarea
-              style={{
-                ...inputS,
-                height: "auto",
-                padding: "10px 12px",
-                resize: "vertical",
-                lineHeight: 1.5,
-              }}
-              rows={3}
-              value={form.description}
-              onChange={(e) =>
-                setForm((p) => ({ ...p, description: e.target.value }))
-              }
-              placeholder="What will students learn?"
-              required
-              onFocus={focus}
-              onBlur={blur}
-            />
-          </div>
-
-          {/* course image */}
-          <div>
-            <label
-              style={{
-                fontSize: 12,
-                fontWeight: 600,
-                color: "#374151",
-                display: "block",
-                marginBottom: 6,
-              }}
-            >
-              Course Image
-            </label>
-            {imagePreview ? (
-              <div style={{ position: "relative", display: "inline-block" }}>
-                <img
-                  src={imagePreview}
-                  alt=""
-                  style={{
-                    width: "100%",
-                    height: 140,
-                    objectFit: "cover",
-                    borderRadius: 10,
-                    border: "1.5px solid #e2e8f0",
-                  }}
-                />
-                <button
-                  type="button"
-                  onClick={() => {
-                    setImage(null);
-                    setImagePreview(null);
-                  }}
-                  style={{
-                    position: "absolute",
-                    top: 6,
-                    right: 6,
-                    width: 22,
-                    height: 22,
-                    borderRadius: "50%",
-                    background: "#ef4444",
-                    border: "none",
-                    color: "#fff",
-                    cursor: "pointer",
-                    fontSize: 13,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                  }}
-                >
-                  ×
-                </button>
-              </div>
-            ) : (
-              <label
+        <div>
+          <FieldLabel required>Description</FieldLabel>
+          <textarea
+            style={{
+              ...inputS,
+              height: "auto",
+              padding: "10px 12px",
+              resize: "vertical",
+              lineHeight: 1.5,
+            }}
+            rows={3}
+            value={form.description}
+            onChange={(e) =>
+              setForm((p) => ({ ...p, description: e.target.value }))
+            }
+            placeholder="What will students learn?"
+            required
+            onFocus={focus}
+            onBlur={blur}
+          />
+        </div>
+        <div>
+          <FieldLabel>Course Image</FieldLabel>
+          {imagePreview ? (
+            <div style={{ position: "relative" }}>
+              <img
+                src={imagePreview}
+                alt=""
                 style={{
-                  display: "block",
-                  border: "2px dashed #e2e8f0",
+                  width: "100%",
+                  height: 130,
+                  objectFit: "cover",
                   borderRadius: 10,
-                  padding: "20px",
-                  textAlign: "center",
+                  border: "1.5px solid #e2e8f0",
+                }}
+              />
+              <button
+                type="button"
+                onClick={() => {
+                  setImage(null);
+                  setImagePreview(null);
+                }}
+                style={{
+                  position: "absolute",
+                  top: 6,
+                  right: 6,
+                  width: 22,
+                  height: 22,
+                  borderRadius: "50%",
+                  background: "#ef4444",
+                  border: "none",
+                  color: "#fff",
+                  cursor: "pointer",
+                  fontSize: 13,
+                }}
+              >
+                ×
+              </button>
+            </div>
+          ) : (
+            <label
+              style={{
+                display: "block",
+                border: "2px dashed #e2e8f0",
+                borderRadius: 10,
+                padding: "18px",
+                textAlign: "center",
+                cursor: "pointer",
+              }}
+              onMouseEnter={(e) =>
+                (e.currentTarget.style.borderColor = "#2563eb")
+              }
+              onMouseLeave={(e) =>
+                (e.currentTarget.style.borderColor = "#e2e8f0")
+              }
+            >
+              <p style={{ fontSize: 13, color: "#64748b", margin: 0 }}>
+                Click to upload (PNG, JPG up to 5MB)
+              </p>
+              <input
+                type="file"
+                accept="image/*"
+                onChange={handleImage}
+                style={{ display: "none" }}
+              />
+            </label>
+          )}
+        </div>
+        <div>
+          <FieldLabel>Course Type</FieldLabel>
+          <div
+            style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}
+          >
+            {[
+              ["false", "🆓 Free"],
+              ["true", "💰 Paid"],
+            ].map(([v, label]) => (
+              <button
+                key={v}
+                type="button"
+                onClick={() =>
+                  setForm((p) => ({
+                    ...p,
+                    isPaid: v,
+                    price: v === "false" ? "" : p.price,
+                  }))
+                }
+                style={{
+                  padding: "10px",
+                  borderRadius: 9,
+                  border: `1.5px solid ${form.isPaid === v ? "#2563eb" : "#e2e8f0"}`,
+                  background: form.isPaid === v ? "#eff6ff" : "#fff",
+                  color: form.isPaid === v ? "#2563eb" : "#475569",
+                  fontSize: 13,
+                  fontWeight: 600,
                   cursor: "pointer",
                 }}
-                onMouseEnter={(e) =>
-                  (e.currentTarget.style.borderColor = "#2563eb")
-                }
-                onMouseLeave={(e) =>
-                  (e.currentTarget.style.borderColor = "#e2e8f0")
-                }
               >
-                <p style={{ fontSize: 13, color: "#64748b" }}>
-                  Click to upload image
-                </p>
-                <p style={{ fontSize: 11, color: "#94a3b8", marginTop: 3 }}>
-                  PNG, JPG up to 5MB
-                </p>
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={handleImage}
-                  style={{ display: "none" }}
-                />
-              </label>
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
+        {form.isPaid === "true" && (
+          <div>
+            <FieldLabel required>
+              Price ({teacher?.country === "nepal" ? "रू NPR" : "₹ INR"})
+            </FieldLabel>
+            <input
+              type="number"
+              style={inputS}
+              value={form.price}
+              onChange={(e) =>
+                setForm((p) => ({ ...p, price: e.target.value }))
+              }
+              placeholder="299"
+              min="1"
+              required
+              onFocus={focus}
+              onBlur={blur}
+            />
+            {teacher?.country === "nepal" && (
+              <p style={{ fontSize: 11, color: "#7c3aed", marginTop: 3 }}>
+                🇳🇵 Nepal-only course (Khalti payment)
+              </p>
             )}
           </div>
-
-          {/* paid/free */}
-          <div>
-            <label
-              style={{
-                fontSize: 12,
-                fontWeight: 600,
-                color: "#374151",
-                display: "block",
-                marginBottom: 6,
-              }}
-            >
-              Course Type
-            </label>
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "1fr 1fr",
-                gap: 8,
-              }}
-            >
-              {["false", "true"].map((v) => (
-                <button
-                  key={v}
-                  type="button"
-                  onClick={() =>
-                    setForm((p) => ({
-                      ...p,
-                      isPaid: v,
-                      price: v === "false" ? "" : p.price,
-                    }))
-                  }
-                  style={{
-                    padding: "10px",
-                    borderRadius: 9,
-                    border: `1.5px solid ${form.isPaid === v ? "#2563eb" : "#e2e8f0"}`,
-                    background: form.isPaid === v ? "#eff6ff" : "#fff",
-                    color: form.isPaid === v ? "#2563eb" : "#475569",
-                    fontSize: 13,
-                    fontWeight: 600,
-                    cursor: "pointer",
-                  }}
-                >
-                  {v === "false" ? "🆓 Free" : "💰 Paid"}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {form.isPaid === "true" && (
-            <div>
-              <label
-                style={{
-                  fontSize: 12,
-                  fontWeight: 600,
-                  color: "#374151",
-                  display: "block",
-                  marginBottom: 6,
-                }}
-              >
-                Price ({currencySymbol}) *
-              </label>
-              <input
-                type="number"
-                style={inputS}
-                value={form.price}
-                onChange={(e) =>
-                  setForm((p) => ({ ...p, price: e.target.value }))
-                }
-                placeholder="299"
-                min="1"
-                required
-                onFocus={focus}
-                onBlur={blur}
-              />
-              {teacher?.country === "nepal" && (
-                <p style={{ fontSize: 11, color: "#7c3aed", marginTop: 3 }}>
-                  🇳🇵 This course will be Nepal-only (Khalti payment)
-                </p>
-              )}
-            </div>
-          )}
-
-          <div style={{ display: "flex", gap: 10, paddingTop: 4 }}>
-            <button
-              type="button"
-              onClick={onClose}
-              style={{
-                flex: 1,
-                height: 42,
-                border: "1.5px solid #e2e8f0",
-                borderRadius: 9,
-                background: "#fff",
-                fontSize: 13,
-                fontWeight: 600,
-                cursor: "pointer",
-                color: "#475569",
-              }}
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={loading}
-              style={{
-                flex: 2,
-                height: 42,
-                border: "none",
-                borderRadius: 9,
-                background: loading
-                  ? "#93c5fd"
-                  : "linear-gradient(135deg,#2563eb,#1d4ed8)",
-                color: "#fff",
-                fontSize: 13,
-                fontWeight: 600,
-                cursor: loading ? "not-allowed" : "pointer",
-              }}
-            >
-              {loading ? "Creating..." : "Create Course"}
-            </button>
-          </div>
-        </form>
-      </motion.div>
-    </div>
+        )}
+        <div style={{ display: "flex", gap: 10 }}>
+          <button
+            type="button"
+            onClick={onClose}
+            style={{
+              flex: 1,
+              height: 42,
+              border: "1.5px solid #e2e8f0",
+              borderRadius: 9,
+              background: "#fff",
+              fontSize: 13,
+              fontWeight: 600,
+              cursor: "pointer",
+              color: "#475569",
+            }}
+          >
+            Cancel
+          </button>
+          <PrimaryBtn
+            style={{ flex: 2, justifyContent: "center" }}
+            loading={loading ? "Creating..." : false}
+          >
+            Create Course
+          </PrimaryBtn>
+        </div>
+      </form>
+    </Modal>
   );
 };
 
@@ -1223,10 +1277,12 @@ const CoursesTab = () => {
   const [questions, setQuestions] = useState({});
   const [questionsLoading, setQuestionsLoading] = useState({});
   const [coupons, setCoupons] = useState({});
-  const [showCreateModal, setShowCreateModal] = useState(false);
-  const [addingQuestion, setAddingQuestion] = useState(null); // { courseId, difficulty, marksPerQuestion }
-  const [addingCoupon, setAddingCoupon] = useState(null); // courseId
-  const [expandedDiff, setExpandedDiff] = useState({}); // { courseId: difficulty }
+  const [showCreate, setShowCreate] = useState(false);
+  const [questionModal, setQuestionModal] = useState(null); // { courseId, difficulty, marksPerQuestion, question? }
+  const [addingCoupon, setAddingCoupon] = useState(null);
+  const [expandedSection, setExpandedSection] = useState({}); // { courseId: "questions"|"coupons"|"videos" }
+  const [expandedDiff, setExpandedDiff] = useState({});
+  const [deleteConfirm, setDeleteConfirm] = useState(null); // { type: "question", courseId, questionId }
 
   const loadCourses = useCallback(async () => {
     setLoading(true);
@@ -1244,52 +1300,52 @@ const CoursesTab = () => {
     loadCourses();
   }, [loadCourses]);
 
-  const handleExpand = useCallback(
-    async (courseId) => {
-      if (expandedId === courseId) {
-        setExpandedId(null);
-        return;
-      }
-      setExpandedId(courseId);
-
-      // load questions
-      if (!questions[courseId]) {
-        setQuestionsLoading((p) => ({ ...p, [courseId]: true }));
-        try {
-          const res = await teacherApi.courses.getQuestions(courseId);
-          setQuestions((p) => ({
-            ...p,
-            [courseId]: res.data.data.questions || [],
-          }));
-        } catch {
-          toast.error("Failed to load questions");
-        } finally {
-          setQuestionsLoading((p) => ({ ...p, [courseId]: false }));
-        }
-      }
-
-      // load coupons
-      if (!coupons[courseId]) {
-        try {
-          const res = await teacherApi.coupons.getByCourse(courseId);
-          setCoupons((p) => ({
-            ...p,
-            [courseId]: res.data.data.coupons || [],
-          }));
-        } catch {}
-      }
-    },
-    [expandedId, questions, coupons],
-  );
-
-  const refreshQuestions = async (courseId) => {
+  const loadQuestions = async (courseId) => {
+    if (questions[courseId]) return;
+    setQuestionsLoading((p) => ({ ...p, [courseId]: true }));
     try {
       const res = await teacherApi.courses.getQuestions(courseId);
       setQuestions((p) => ({
         ...p,
         [courseId]: res.data.data.questions || [],
       }));
+    } catch {
+      toast.error("Failed to load questions");
+    } finally {
+      setQuestionsLoading((p) => ({ ...p, [courseId]: false }));
+    }
+  };
+
+  const loadCoupons = async (courseId) => {
+    if (coupons[courseId]) return;
+    try {
+      const res = await teacherApi.coupons.getByCourse(courseId);
+      setCoupons((p) => ({ ...p, [courseId]: res.data.data.coupons || [] }));
     } catch {}
+  };
+
+  const handleExpand = async (courseId) => {
+    if (expandedId === courseId) {
+      setExpandedId(null);
+      return;
+    }
+    setExpandedId(courseId);
+    await loadQuestions(courseId);
+    await loadCoupons(courseId);
+  };
+
+  const refreshQuestions = async (courseId) => {
+    setQuestionsLoading((p) => ({ ...p, [courseId]: true }));
+    try {
+      const res = await teacherApi.courses.getQuestions(courseId);
+      setQuestions((p) => ({
+        ...p,
+        [courseId]: res.data.data.questions || [],
+      }));
+    } catch {
+    } finally {
+      setQuestionsLoading((p) => ({ ...p, [courseId]: false }));
+    }
   };
 
   const refreshCoupons = async (courseId) => {
@@ -1299,19 +1355,13 @@ const CoursesTab = () => {
     } catch {}
   };
 
-  const handleToggleCourse = async (courseId, currentlyActive) => {
+  const handleToggleCourse = async (courseId, currently) => {
     try {
-      await teacherApi.courses.updateCourse(courseId, {
-        isActive: !currentlyActive,
-      });
+      await teacherApi.courses.updateCourse(courseId, { isActive: !currently });
       setCourses((p) =>
-        p.map((c) =>
-          c._id === courseId ? { ...c, isActive: !currentlyActive } : c,
-        ),
+        p.map((c) => (c._id === courseId ? { ...c, isActive: !currently } : c)),
       );
-      toast.success(
-        currentlyActive ? "Course deactivated" : "Course activated",
-      );
+      toast.success(currently ? "Course deactivated" : "Course activated");
     } catch (err) {
       if (
         err.response?.status === 403 &&
@@ -1319,40 +1369,40 @@ const CoursesTab = () => {
       ) {
         toast.error("Account blocked.");
       } else {
-        toast.error("Failed to update");
+        toast.error("Failed");
       }
     }
   };
 
-  const handleToggleCoupon = async (courseId, couponId, isActive) => {
+  const handleDeleteQuestion = async () => {
+    if (!deleteConfirm) return;
     try {
-      await teacherApi.coupons.toggleStatus(couponId, !isActive);
-      setCoupons((p) => ({
+      await teacherApi.courses.deleteQuestion(
+        deleteConfirm.courseId,
+        deleteConfirm.questionId,
+      );
+      setQuestions((p) => ({
         ...p,
-        [courseId]: (p[courseId] || []).map((c) =>
-          c._id === couponId ? { ...c, isActive: !isActive } : c,
+        [deleteConfirm.courseId]: (p[deleteConfirm.courseId] || []).filter(
+          (q) => q._id !== deleteConfirm.questionId,
         ),
       }));
+      toast.success("Question deleted");
     } catch {
-      toast.error("Failed");
+      toast.error("Failed to delete");
+    } finally {
+      setDeleteConfirm(null);
     }
   };
 
-  const handleDeleteCoupon = async (courseId, couponId) => {
-    if (!window.confirm("Delete this coupon?")) return;
-    try {
-      await teacherApi.coupons.delete(couponId);
-      setCoupons((p) => ({
-        ...p,
-        [courseId]: (p[courseId] || []).filter((c) => c._id !== couponId),
-      }));
-      toast.success("Coupon deleted");
-    } catch {
-      toast.error("Failed");
-    }
+  const toggleSection = (courseId, section) => {
+    setExpandedSection((p) => ({
+      ...p,
+      [courseId]: p[courseId] === section ? null : section,
+    }));
   };
 
-  const questionsByDifficulty = (courseId) => {
+  const questionsByDiff = (courseId) => {
     const qs = questions[courseId] || [];
     return qs.reduce((acc, q) => {
       const d = q.difficulty || "Unknown";
@@ -1387,8 +1437,45 @@ const CoursesTab = () => {
     );
   }
 
+  const SectionBtn = ({ label, active, onClick, count }) => (
+    <button
+      onClick={onClick}
+      style={{
+        padding: "6px 12px",
+        borderRadius: 8,
+        border: `1.5px solid ${active ? "#2563eb" : "#e2e8f0"}`,
+        background: active ? "#eff6ff" : "#fff",
+        color: active ? "#2563eb" : "#475569",
+        fontSize: 12,
+        fontWeight: active ? 600 : 500,
+        cursor: "pointer",
+        display: "flex",
+        alignItems: "center",
+        gap: 5,
+        transition: "all 0.12s",
+      }}
+    >
+      {label}
+      {count !== undefined && (
+        <span
+          style={{
+            padding: "0 5px",
+            borderRadius: 10,
+            background: active ? "#2563eb" : "#e2e8f0",
+            color: active ? "#fff" : "#64748b",
+            fontSize: 10,
+            fontWeight: 700,
+          }}
+        >
+          {count}
+        </span>
+      )}
+    </button>
+  );
+
   return (
     <div>
+      {/* header */}
       <div
         style={{
           display: "flex",
@@ -1400,7 +1487,14 @@ const CoursesTab = () => {
         }}
       >
         <div>
-          <h2 style={{ fontSize: 18, fontWeight: 700, color: "#0f172a" }}>
+          <h2
+            style={{
+              fontSize: 18,
+              fontWeight: 700,
+              color: "#0f172a",
+              margin: 0,
+            }}
+          >
             My Courses
           </h2>
           <p style={{ fontSize: 13, color: "#94a3b8", marginTop: 3 }}>
@@ -1408,7 +1502,7 @@ const CoursesTab = () => {
           </p>
         </div>
         <button
-          onClick={() => setShowCreateModal(true)}
+          onClick={() => setShowCreate(true)}
           style={{
             padding: "9px 18px",
             background: "linear-gradient(135deg,#2563eb,#1d4ed8)",
@@ -1425,8 +1519,8 @@ const CoursesTab = () => {
           }}
         >
           <svg
-            width="16"
-            height="16"
+            width="15"
+            height="15"
             viewBox="0 0 24 24"
             fill="none"
             stroke="currentColor"
@@ -1464,7 +1558,7 @@ const CoursesTab = () => {
             Create your first course and start teaching
           </p>
           <button
-            onClick={() => setShowCreateModal(true)}
+            onClick={() => setShowCreate(true)}
             style={{
               padding: "10px 22px",
               background: "linear-gradient(135deg,#2563eb,#1d4ed8)",
@@ -1483,10 +1577,10 @@ const CoursesTab = () => {
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
           {courses.map((course) => {
             const isExpanded = expandedId === course._id;
-            const courseQs = questions[course._id];
-            const courseQsByDiff = questionsByDifficulty(course._id);
+            const activeSection = expandedSection[course._id];
+            const courseQsByDiff = questionsByDiff(course._id);
+            const totalQs = (questions[course._id] || []).length;
             const courseCoupons = coupons[course._id] || [];
-            const createdByAdmin = !course.teacher;
             const currencySymbol =
               course.geoRestriction === "nepal" ? "रू" : "₹";
 
@@ -1511,20 +1605,17 @@ const CoursesTab = () => {
                   style={{
                     display: "flex",
                     alignItems: "flex-start",
-                    gap: 14,
-                    padding: "16px 18px",
-                    cursor: "pointer",
+                    gap: 12,
+                    padding: "14px 16px",
                   }}
-                  onClick={() => handleExpand(course._id)}
                 >
-                  {/* image */}
                   {course.image?.url ? (
                     <img
                       src={course.image.url}
                       alt={course.name}
                       style={{
-                        width: 56,
-                        height: 56,
+                        width: 52,
+                        height: 52,
                         borderRadius: 10,
                         objectFit: "cover",
                         border: "1px solid #f1f5f9",
@@ -1534,14 +1625,14 @@ const CoursesTab = () => {
                   ) : (
                     <div
                       style={{
-                        width: 56,
-                        height: 56,
+                        width: 52,
+                        height: 52,
                         borderRadius: 10,
                         background: "#eff6ff",
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
-                        fontSize: 24,
+                        fontSize: 22,
                         flexShrink: 0,
                       }}
                     >
@@ -1554,76 +1645,81 @@ const CoursesTab = () => {
                       style={{
                         display: "flex",
                         alignItems: "flex-start",
-                        gap: 8,
+                        gap: 6,
                         flexWrap: "wrap",
                         marginBottom: 4,
                       }}
                     >
                       <h3
                         style={{
-                          fontSize: 15,
+                          fontSize: 14,
                           fontWeight: 700,
                           color: "#0f172a",
+                          margin: 0,
+                          wordBreak: "break-word",
                         }}
                       >
                         {course.name}
                       </h3>
-                      {/* active/inactive badge */}
                       <span
                         style={{
-                          padding: "1px 8px",
+                          padding: "1px 7px",
                           borderRadius: 20,
-                          fontSize: 11,
+                          fontSize: 10,
                           fontWeight: 600,
                           background: course.isActive ? "#f0fdf4" : "#f9fafb",
                           color: course.isActive ? "#16a34a" : "#6b7280",
                           border: `1px solid ${course.isActive ? "#bbf7d0" : "#e5e7eb"}`,
+                          whiteSpace: "nowrap",
                         }}
                       >
                         {course.isActive ? "Active" : "Inactive"}
                       </span>
-                      {/* paid/free */}
                       <span
                         style={{
-                          padding: "1px 8px",
+                          padding: "1px 7px",
                           borderRadius: 20,
-                          fontSize: 11,
+                          fontSize: 10,
                           fontWeight: 600,
                           background: course.isPaid ? "#fffbeb" : "#f0fdf4",
                           color: course.isPaid ? "#92400e" : "#166534",
                           border: `1px solid ${course.isPaid ? "#fde68a" : "#bbf7d0"}`,
+                          whiteSpace: "nowrap",
                         }}
                       >
                         {course.isPaid
                           ? `${currencySymbol}${course.price}`
                           : "Free"}
                       </span>
-                      {/* created by admin badge */}
-                      {createdByAdmin && (
-                        <span
-                          style={{
-                            padding: "1px 8px",
-                            borderRadius: 20,
-                            fontSize: 11,
-                            fontWeight: 600,
-                            background: "#f3f4f6",
-                            color: "#6b7280",
-                            border: "1px solid #e5e7eb",
-                          }}
-                        >
-                          by Admin
-                        </span>
-                      )}
                     </div>
-                    <p style={{ fontSize: 12, color: "#94a3b8" }}>
-                      {course.totalQuestions || 0} questions ·{" "}
-                      {course.difficulties?.length || 0} difficulties
+                    {course.description && (
+                      <p
+                        style={{
+                          fontSize: 12,
+                          color: "#64748b",
+                          margin: "0 0 6px",
+                          overflow: "hidden",
+                          display: "-webkit-box",
+                          WebkitLineClamp: 2,
+                          WebkitBoxOrient: "vertical",
+                        }}
+                      >
+                        {course.description}
+                      </p>
+                    )}
+                    <p style={{ fontSize: 11, color: "#94a3b8", margin: 0 }}>
+                      {totalQs} questions · {course.difficulties?.length || 0}{" "}
+                      difficulties
                     </p>
                   </div>
 
-                  {/* actions */}
                   <div
-                    style={{ display: "flex", gap: 6, flexShrink: 0 }}
+                    style={{
+                      display: "flex",
+                      gap: 6,
+                      flexShrink: 0,
+                      alignItems: "flex-start",
+                    }}
                     onClick={(e) => e.stopPropagation()}
                   >
                     <button
@@ -1639,336 +1735,611 @@ const CoursesTab = () => {
                         fontWeight: 600,
                         cursor: "pointer",
                         color: course.isActive ? "#dc2626" : "#16a34a",
+                        whiteSpace: "nowrap",
                       }}
                     >
                       {course.isActive ? "Deactivate" : "Activate"}
                     </button>
+                    <button
+                      onClick={() => handleExpand(course._id)}
+                      style={{
+                        width: 30,
+                        height: 30,
+                        borderRadius: 8,
+                        border: "1px solid #e2e8f0",
+                        background: isExpanded ? "#eff6ff" : "#fff",
+                        cursor: "pointer",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        color: isExpanded ? "#2563eb" : "#94a3b8",
+                      }}
+                    >
+                      <svg
+                        width="14"
+                        height="14"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2.5"
+                        style={{
+                          transform: isExpanded ? "rotate(180deg)" : "none",
+                          transition: "transform 0.2s",
+                        }}
+                      >
+                        <path d="M6 9l6 6 6-6" />
+                      </svg>
+                    </button>
                   </div>
-
-                  {/* expand arrow */}
-                  <svg
-                    width="18"
-                    height="18"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="#94a3b8"
-                    strokeWidth="2"
-                    style={{
-                      flexShrink: 0,
-                      transform: isExpanded ? "rotate(90deg)" : "none",
-                      transition: "transform 0.2s",
-                    }}
-                  >
-                    <path d="M9 18l6-6-6-6" />
-                  </svg>
                 </div>
 
-                {/* expanded: questions + coupons */}
+                {/* expanded body */}
                 <AnimatePresence>
                   {isExpanded && (
                     <motion.div
                       initial={{ height: 0, opacity: 0 }}
                       animate={{ height: "auto", opacity: 1 }}
                       exit={{ height: 0, opacity: 0 }}
-                      transition={{ duration: 0.2 }}
+                      transition={{ duration: 0.18 }}
                       style={{
                         overflow: "hidden",
                         borderTop: "1px solid #f1f5f9",
                       }}
                     >
-                      <div style={{ padding: "16px 18px" }}>
-                        {/* questions section */}
-                        <div style={{ marginBottom: 20 }}>
-                          <p
-                            style={{
-                              fontSize: 13,
-                              fontWeight: 700,
-                              color: "#374151",
-                              marginBottom: 12,
-                            }}
+                      {/* section tabs */}
+                      <div
+                        style={{
+                          display: "flex",
+                          gap: 8,
+                          padding: "12px 16px 0",
+                          flexWrap: "wrap",
+                        }}
+                      >
+                        <SectionBtn
+                          label="📚 Questions"
+                          active={activeSection === "questions"}
+                          onClick={() => toggleSection(course._id, "questions")}
+                          count={totalQs}
+                        />
+                        {course.isPaid && (
+                          <>
+                            <SectionBtn
+                              label="🏷 Coupons"
+                              active={activeSection === "coupons"}
+                              onClick={() =>
+                                toggleSection(course._id, "coupons")
+                              }
+                              count={courseCoupons.length}
+                            />
+                            <SectionBtn
+                              label="🎬 Videos"
+                              active={activeSection === "videos"}
+                              onClick={() =>
+                                toggleSection(course._id, "videos")
+                              }
+                            />
+                          </>
+                        )}
+                      </div>
+
+                      {/* questions section */}
+                      <AnimatePresence>
+                        {activeSection === "questions" && (
+                          <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            style={{ padding: "12px 16px 16px" }}
                           >
-                            Questions by Difficulty
-                          </p>
-
-                          {questionsLoading[course._id] ? (
-                            <div style={{ textAlign: "center", padding: 20 }}>
-                              <div
-                                style={{
-                                  width: 20,
-                                  height: 20,
-                                  border: "2px solid #bfdbfe",
-                                  borderTopColor: "#2563eb",
-                                  borderRadius: "50%",
-                                  animation: "spin 0.7s linear infinite",
-                                  margin: "0 auto",
-                                }}
-                              />
-                            </div>
-                          ) : courseQs ? (
-                            course.difficulties?.map((diff) => {
-                              const diffQs = courseQsByDiff[diff.name] || [];
-                              const key = `${course._id}-${diff.name}`;
-                              const expanded = expandedDiff[key];
-
-                              return (
+                            {questionsLoading[course._id] ? (
+                              <div style={{ textAlign: "center", padding: 20 }}>
                                 <div
-                                  key={diff.name}
                                   style={{
-                                    marginBottom: 10,
-                                    border: "1px solid #f1f5f9",
-                                    borderRadius: 10,
-                                    overflow: "hidden",
+                                    width: 20,
+                                    height: 20,
+                                    border: "2px solid #bfdbfe",
+                                    borderTopColor: "#2563eb",
+                                    borderRadius: "50%",
+                                    animation: "spin 0.7s linear infinite",
+                                    margin: "0 auto",
                                   }}
-                                >
-                                  {/* diff header */}
+                                />
+                              </div>
+                            ) : (
+                              course.difficulties?.map((diff) => {
+                                const diffQs = courseQsByDiff[diff.name] || [];
+                                const dc =
+                                  DIFF_COLORS[diff.name] || DIFF_COLORS.Medium;
+                                const diffKey = `${course._id}-${diff.name}`;
+                                const expanded = expandedDiff[diffKey];
+
+                                return (
                                   <div
+                                    key={diff.name}
                                     style={{
-                                      display: "flex",
-                                      alignItems: "center",
-                                      justifyContent: "space-between",
-                                      padding: "10px 12px",
-                                      background: "#f8fafc",
-                                      cursor: "pointer",
+                                      marginBottom: 8,
+                                      border: `1px solid ${dc.border}`,
+                                      borderRadius: 10,
+                                      overflow: "hidden",
                                     }}
-                                    onClick={() =>
-                                      setExpandedDiff((p) => ({
-                                        ...p,
-                                        [key]: !p[key],
-                                      }))
-                                    }
                                   >
+                                    {/* diff header */}
                                     <div
                                       style={{
                                         display: "flex",
                                         alignItems: "center",
-                                        gap: 8,
-                                      }}
-                                    >
-                                      <span
-                                        style={{
-                                          padding: "2px 8px",
-                                          borderRadius: 20,
-                                          fontSize: 11,
-                                          fontWeight: 700,
-                                          background:
-                                            diff.name === "Easy"
-                                              ? "#f0fdf4"
-                                              : diff.name === "Medium"
-                                                ? "#fffbeb"
-                                                : "#fef2f2",
-                                          color:
-                                            diff.name === "Easy"
-                                              ? "#16a34a"
-                                              : diff.name === "Medium"
-                                                ? "#d97706"
-                                                : "#dc2626",
-                                        }}
-                                      >
-                                        {diff.name}
-                                      </span>
-                                      <span
-                                        style={{
-                                          fontSize: 12,
-                                          color: "#64748b",
-                                        }}
-                                      >
-                                        {diffQs.length} questions ·{" "}
-                                        {diff.marksPerQuestion} marks each
-                                      </span>
-                                    </div>
-                                    <button
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        setAddingQuestion({
-                                          courseId: course._id,
-                                          difficulty: diff.name,
-                                          marksPerQuestion:
-                                            diff.marksPerQuestion,
-                                        });
-                                      }}
-                                      style={{
-                                        padding: "4px 10px",
-                                        borderRadius: 7,
-                                        border: "1px solid #bfdbfe",
-                                        background: "#eff6ff",
-                                        color: "#2563eb",
-                                        fontSize: 11,
-                                        fontWeight: 600,
+                                        justifyContent: "space-between",
+                                        padding: "9px 12px",
+                                        background: dc.bg,
                                         cursor: "pointer",
                                       }}
+                                      onClick={() =>
+                                        setExpandedDiff((p) => ({
+                                          ...p,
+                                          [diffKey]: !p[diffKey],
+                                        }))
+                                      }
                                     >
-                                      + Add
-                                    </button>
-                                  </div>
-
-                                  {/* questions list */}
-                                  {expanded && (
-                                    <div style={{ padding: "8px 10px" }}>
-                                      {diffQs.length === 0 ? (
-                                        <p
+                                      <div
+                                        style={{
+                                          display: "flex",
+                                          alignItems: "center",
+                                          gap: 8,
+                                        }}
+                                      >
+                                        <span
                                           style={{
-                                            fontSize: 12,
-                                            color: "#94a3b8",
-                                            textAlign: "center",
-                                            padding: "10px 0",
+                                            padding: "2px 8px",
+                                            borderRadius: 20,
+                                            fontSize: 11,
+                                            fontWeight: 700,
+                                            color: dc.color,
+                                            background: "#fff",
+                                            border: `1px solid ${dc.border}`,
                                           }}
                                         >
-                                          No questions yet. Click + Add above.
-                                        </p>
-                                      ) : (
-                                        diffQs.map((q, i) => (
-                                          <div
-                                            key={q._id || i}
+                                          {diff.name}
+                                        </span>
+                                        <span
+                                          style={{
+                                            fontSize: 12,
+                                            color: "#64748b",
+                                          }}
+                                        >
+                                          {diffQs.length} questions ·{" "}
+                                          {diff.marksPerQuestion} marks each
+                                        </span>
+                                      </div>
+                                      <div
+                                        style={{
+                                          display: "flex",
+                                          gap: 6,
+                                          alignItems: "center",
+                                        }}
+                                        onClick={(e) => e.stopPropagation()}
+                                      >
+                                        <button
+                                          onClick={() =>
+                                            setQuestionModal({
+                                              courseId: course._id,
+                                              difficulty: diff.name,
+                                              marksPerQuestion:
+                                                diff.marksPerQuestion,
+                                            })
+                                          }
+                                          style={{
+                                            padding: "4px 10px",
+                                            borderRadius: 7,
+                                            border: `1px solid ${dc.border}`,
+                                            background: "#fff",
+                                            color: dc.color,
+                                            fontSize: 11,
+                                            fontWeight: 600,
+                                            cursor: "pointer",
+                                          }}
+                                        >
+                                          + Add
+                                        </button>
+                                        <svg
+                                          width="14"
+                                          height="14"
+                                          viewBox="0 0 24 24"
+                                          fill="none"
+                                          stroke="#94a3b8"
+                                          strokeWidth="2.5"
+                                          style={{
+                                            transform: expanded
+                                              ? "rotate(180deg)"
+                                              : "none",
+                                            transition: "transform 0.2s",
+                                            flexShrink: 0,
+                                          }}
+                                        >
+                                          <path d="M6 9l6 6 6-6" />
+                                        </svg>
+                                      </div>
+                                    </div>
+
+                                    {/* questions list */}
+                                    {expanded && (
+                                      <div style={{ padding: "8px 10px" }}>
+                                        {diffQs.length === 0 ? (
+                                          <p
                                             style={{
-                                              display: "flex",
-                                              alignItems: "flex-start",
-                                              gap: 8,
-                                              padding: "8px 10px",
-                                              background: "#f8fafc",
-                                              borderRadius: 8,
-                                              marginBottom: 6,
+                                              fontSize: 12,
+                                              color: "#94a3b8",
+                                              textAlign: "center",
+                                              padding: "10px 0",
                                             }}
                                           >
-                                            <span
+                                            No questions. Click + Add above.
+                                          </p>
+                                        ) : (
+                                          diffQs.map((q, i) => (
+                                            <div
+                                              key={q._id || i}
                                               style={{
-                                                fontSize: 11,
-                                                fontWeight: 700,
-                                                color: "#94a3b8",
-                                                flexShrink: 0,
-                                                marginTop: 2,
+                                                display: "flex",
+                                                alignItems: "flex-start",
+                                                gap: 8,
+                                                padding: "8px 10px",
+                                                background: "#f8fafc",
+                                                borderRadius: 8,
+                                                marginBottom: 6,
                                               }}
                                             >
-                                              Q{i + 1}
-                                            </span>
-                                            <div
-                                              style={{ flex: 1, minWidth: 0 }}
-                                            >
-                                              <p
+                                              <span
                                                 style={{
-                                                  fontSize: 12,
-                                                  color: "#374151",
-                                                  lineHeight: 1.5,
-                                                  marginBottom: 4,
+                                                  fontSize: 10,
+                                                  fontWeight: 700,
+                                                  color: "#94a3b8",
+                                                  flexShrink: 0,
+                                                  marginTop: 3,
                                                 }}
-                                                className="line-clamp-2"
                                               >
-                                                {q.question}
-                                              </p>
-                                              <QTypeBadge
-                                                type={q.questionType}
-                                              />
+                                                Q{i + 1}
+                                              </span>
+                                              <div
+                                                style={{ flex: 1, minWidth: 0 }}
+                                              >
+                                                <p
+                                                  style={{
+                                                    fontSize: 12,
+                                                    color: "#374151",
+                                                    lineHeight: 1.5,
+                                                    margin: "0 0 4px",
+                                                    overflow: "hidden",
+                                                    display: "-webkit-box",
+                                                    WebkitLineClamp: 2,
+                                                    WebkitBoxOrient: "vertical",
+                                                  }}
+                                                >
+                                                  {q.question}
+                                                </p>
+                                                <div
+                                                  style={{
+                                                    display: "flex",
+                                                    gap: 6,
+                                                    alignItems: "center",
+                                                  }}
+                                                >
+                                                  <span
+                                                    style={{
+                                                      padding: "1px 6px",
+                                                      borderRadius: 10,
+                                                      fontSize: 9,
+                                                      fontWeight: 700,
+                                                      background: "#eff6ff",
+                                                      color: "#2563eb",
+                                                    }}
+                                                  >
+                                                    {q.questionType ===
+                                                    "multiple"
+                                                      ? "MCQ"
+                                                      : q.questionType ===
+                                                          "single"
+                                                        ? "Short"
+                                                        : "T/F"}
+                                                  </span>
+                                                </div>
+                                              </div>
+                                              {/* edit + delete */}
+                                              <div
+                                                style={{
+                                                  display: "flex",
+                                                  gap: 4,
+                                                  flexShrink: 0,
+                                                }}
+                                              >
+                                                <button
+                                                  onClick={() =>
+                                                    setQuestionModal({
+                                                      courseId: course._id,
+                                                      difficulty: diff.name,
+                                                      marksPerQuestion:
+                                                        diff.marksPerQuestion,
+                                                      question: q,
+                                                    })
+                                                  }
+                                                  style={{
+                                                    width: 28,
+                                                    height: 28,
+                                                    borderRadius: 7,
+                                                    border: "1px solid #e2e8f0",
+                                                    background: "#fff",
+                                                    cursor: "pointer",
+                                                    display: "flex",
+                                                    alignItems: "center",
+                                                    justifyContent: "center",
+                                                    color: "#64748b",
+                                                  }}
+                                                  title="Edit"
+                                                >
+                                                  <svg
+                                                    width="12"
+                                                    height="12"
+                                                    viewBox="0 0 24 24"
+                                                    fill="none"
+                                                    stroke="currentColor"
+                                                    strokeWidth="2"
+                                                  >
+                                                    <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" />
+                                                    <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" />
+                                                  </svg>
+                                                </button>
+                                                <button
+                                                  onClick={() =>
+                                                    setDeleteConfirm({
+                                                      type: "question",
+                                                      courseId: course._id,
+                                                      questionId: q._id,
+                                                    })
+                                                  }
+                                                  style={{
+                                                    width: 28,
+                                                    height: 28,
+                                                    borderRadius: 7,
+                                                    border: "1px solid #fecaca",
+                                                    background: "#fff5f5",
+                                                    cursor: "pointer",
+                                                    display: "flex",
+                                                    alignItems: "center",
+                                                    justifyContent: "center",
+                                                    color: "#dc2626",
+                                                  }}
+                                                  title="Delete"
+                                                >
+                                                  <svg
+                                                    width="12"
+                                                    height="12"
+                                                    viewBox="0 0 24 24"
+                                                    fill="none"
+                                                    stroke="currentColor"
+                                                    strokeWidth="2"
+                                                  >
+                                                    <polyline points="3 6 5 6 21 6" />
+                                                    <path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6" />
+                                                    <path d="M10 11v6M14 11v6" />
+                                                    <path d="M9 6V4h6v2" />
+                                                  </svg>
+                                                </button>
+                                              </div>
                                             </div>
-                                          </div>
-                                        ))
-                                      )}
-                                    </div>
-                                  )}
-                                </div>
-                              );
-                            })
-                          ) : null}
-                        </div>
-
-                        {/* coupons section (only for paid courses) */}
-                        {course.isPaid && (
-                          <div>
-                            <div
-                              style={{
-                                display: "flex",
-                                alignItems: "center",
-                                justifyContent: "space-between",
-                                marginBottom: 10,
-                              }}
-                            >
-                              <p
-                                style={{
-                                  fontSize: 13,
-                                  fontWeight: 700,
-                                  color: "#374151",
-                                }}
-                              >
-                                Coupons
-                              </p>
-                              {teacher?.couponAccess ? (
-                                <button
-                                  onClick={() => setAddingCoupon(course._id)}
-                                  style={{
-                                    padding: "4px 10px",
-                                    borderRadius: 7,
-                                    border: "1px solid #bfdbfe",
-                                    background: "#eff6ff",
-                                    color: "#2563eb",
-                                    fontSize: 11,
-                                    fontWeight: 600,
-                                    cursor: "pointer",
-                                  }}
-                                >
-                                  + Add Coupon
-                                </button>
-                              ) : (
-                                <span
-                                  style={{ fontSize: 11, color: "#94a3b8" }}
-                                >
-                                  Contact admin for coupon access
-                                </span>
-                              )}
-                            </div>
-
-                            {addingCoupon === course._id && (
-                              <div style={{ marginBottom: 10 }}>
-                                <AddCouponForm
-                                  courseId={course._id}
-                                  onCreated={() => {
-                                    setAddingCoupon(null);
-                                    refreshCoupons(course._id);
-                                  }}
-                                  onCancel={() => setAddingCoupon(null)}
-                                />
-                              </div>
+                                          ))
+                                        )}
+                                      </div>
+                                    )}
+                                  </div>
+                                );
+                              })
                             )}
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
 
-                            {courseCoupons.length > 0 ? (
+                      {/* coupons section */}
+                      <AnimatePresence>
+                        {activeSection === "coupons" && course.isPaid && (
+                          <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            style={{ padding: "12px 16px 16px" }}
+                          >
+                            {teacher?.couponAccess ? (
+                              <>
+                                {addingCoupon === course._id && (
+                                  <CouponForm
+                                    courseId={course._id}
+                                    onCreated={() => {
+                                      setAddingCoupon(null);
+                                      refreshCoupons(course._id);
+                                    }}
+                                    onCancel={() => setAddingCoupon(null)}
+                                  />
+                                )}
+                                {addingCoupon !== course._id && (
+                                  <button
+                                    onClick={() => setAddingCoupon(course._id)}
+                                    style={{
+                                      marginBottom: 10,
+                                      padding: "7px 14px",
+                                      border: "1.5px dashed #bfdbfe",
+                                      borderRadius: 8,
+                                      background: "#eff6ff",
+                                      color: "#2563eb",
+                                      fontSize: 12,
+                                      fontWeight: 600,
+                                      cursor: "pointer",
+                                    }}
+                                  >
+                                    + New Coupon
+                                  </button>
+                                )}
+                              </>
+                            ) : (
                               <div
                                 style={{
-                                  display: "flex",
-                                  flexDirection: "column",
-                                  gap: 8,
+                                  padding: "10px 12px",
+                                  background: "#fffbeb",
+                                  borderRadius: 8,
+                                  border: "1px solid #fde68a",
+                                  marginBottom: 10,
+                                  fontSize: 12,
+                                  color: "#92400e",
                                 }}
                               >
-                                {courseCoupons.map((c) => (
-                                  <CouponRow
-                                    key={c._id}
-                                    coupon={c}
-                                    onToggle={(id, isActive) =>
-                                      handleToggleCoupon(
-                                        course._id,
-                                        id,
-                                        isActive,
-                                      )
-                                    }
-                                    onDelete={(id) =>
-                                      handleDeleteCoupon(course._id, id)
-                                    }
-                                  />
-                                ))}
+                                Contact admin to enable coupon creation for your
+                                account.
                               </div>
-                            ) : (
+                            )}
+                            {courseCoupons.length === 0 ? (
                               <p
                                 style={{
                                   fontSize: 12,
                                   color: "#94a3b8",
                                   textAlign: "center",
-                                  padding: "12px 0",
+                                  padding: "10px 0",
                                 }}
                               >
-                                {teacher?.couponAccess
-                                  ? "No coupons yet."
-                                  : "No coupons."}
+                                No coupons yet.
                               </p>
+                            ) : (
+                              courseCoupons.map((c) => (
+                                <div
+                                  key={c._id}
+                                  style={{
+                                    display: "flex",
+                                    alignItems: "center",
+                                    gap: 8,
+                                    padding: "9px 12px",
+                                    background: "#f8fafc",
+                                    borderRadius: 9,
+                                    border: "1px solid #f1f5f9",
+                                    marginBottom: 6,
+                                    flexWrap: "wrap",
+                                  }}
+                                >
+                                  <code
+                                    style={{
+                                      fontFamily: "monospace",
+                                      fontWeight: 700,
+                                      fontSize: 13,
+                                      color: "#7c3aed",
+                                      background: "#faf5ff",
+                                      padding: "2px 8px",
+                                      borderRadius: 6,
+                                      border: "1px solid #e9d5ff",
+                                    }}
+                                  >
+                                    {c.code}
+                                  </code>
+                                  <span
+                                    style={{
+                                      fontSize: 12,
+                                      fontWeight: 600,
+                                      color: "#16a34a",
+                                    }}
+                                  >
+                                    {c.discount}% OFF
+                                  </span>
+                                  <span
+                                    style={{
+                                      fontSize: 11,
+                                      padding: "1px 7px",
+                                      borderRadius: 20,
+                                      background: c.isActive
+                                        ? "#f0fdf4"
+                                        : "#f9fafb",
+                                      color: c.isActive ? "#16a34a" : "#6b7280",
+                                      border: `1px solid ${c.isActive ? "#bbf7d0" : "#e5e7eb"}`,
+                                      fontWeight: 600,
+                                    }}
+                                  >
+                                    {c.isActive ? "Active" : "Inactive"}
+                                  </span>
+                                  <span
+                                    style={{ fontSize: 11, color: "#94a3b8" }}
+                                  >
+                                    Used {c.usageCount}
+                                    {c.maxUsage ? `/${c.maxUsage}` : ""}
+                                  </span>
+                                  <div
+                                    style={{
+                                      marginLeft: "auto",
+                                      display: "flex",
+                                      gap: 6,
+                                    }}
+                                  >
+                                    <button
+                                      onClick={async () => {
+                                        await teacherApi.coupons.toggleStatus(
+                                          c._id,
+                                          !c.isActive,
+                                        );
+                                        refreshCoupons(course._id);
+                                      }}
+                                      style={{
+                                        padding: "3px 9px",
+                                        borderRadius: 7,
+                                        border: "1px solid #e5e7eb",
+                                        background: "#fff",
+                                        fontSize: 10,
+                                        fontWeight: 600,
+                                        cursor: "pointer",
+                                        color: "#374151",
+                                      }}
+                                    >
+                                      {c.isActive ? "Deactivate" : "Activate"}
+                                    </button>
+                                    <button
+                                      onClick={async () => {
+                                        if (!window.confirm("Delete coupon?"))
+                                          return;
+                                        await teacherApi.coupons.delete(c._id);
+                                        refreshCoupons(course._id);
+                                        toast.success("Deleted");
+                                      }}
+                                      style={{
+                                        padding: "3px 9px",
+                                        borderRadius: 7,
+                                        border: "1px solid #fecaca",
+                                        background: "#fff5f5",
+                                        fontSize: 10,
+                                        fontWeight: 600,
+                                        cursor: "pointer",
+                                        color: "#dc2626",
+                                      }}
+                                    >
+                                      Delete
+                                    </button>
+                                  </div>
+                                </div>
+                              ))
                             )}
-                          </div>
+                          </motion.div>
                         )}
-                      </div>
+                      </AnimatePresence>
+
+                      {/* videos section */}
+                      <AnimatePresence>
+                        {activeSection === "videos" && course.isPaid && (
+                          <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            style={{ padding: "12px 16px 16px" }}
+                          >
+                            <VideoLinksManager
+                              course={course}
+                              onSaved={() => {
+                                loadCourses();
+                                toggleSection(course._id, null);
+                              }}
+                            />
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
                     </motion.div>
                   )}
                 </AnimatePresence>
@@ -1980,27 +2351,103 @@ const CoursesTab = () => {
 
       {/* modals */}
       <AnimatePresence>
-        {showCreateModal && (
+        {showCreate && (
           <CreateCourseModal
             key="create"
             teacher={teacher}
-            onClose={() => setShowCreateModal(false)}
-            onCreated={(course) => setCourses((p) => [course, ...p])}
+            onClose={() => setShowCreate(false)}
+            onCreated={(c) => setCourses((p) => [c, ...p])}
           />
         )}
-        {addingQuestion && (
-          <AddQuestionModal
-            key="addq"
-            courseId={addingQuestion.courseId}
-            difficulty={addingQuestion.difficulty}
-            marksPerQuestion={addingQuestion.marksPerQuestion}
-            onClose={() => setAddingQuestion(null)}
-            onAdded={() => refreshQuestions(addingQuestion.courseId)}
+        {questionModal && (
+          <QuestionModal
+            key="question"
+            courseId={questionModal.courseId}
+            difficulty={questionModal.difficulty}
+            marksPerQuestion={questionModal.marksPerQuestion}
+            question={questionModal.question}
+            onClose={() => setQuestionModal(null)}
+            onSaved={() => refreshQuestions(questionModal.courseId)}
           />
         )}
       </AnimatePresence>
 
-      <style>{`@keyframes spin{to{transform:rotate(360deg)}}.line-clamp-2{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}`}</style>
+      {/* delete confirm */}
+      {deleteConfirm && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0,0,0,0.4)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 200,
+            padding: 16,
+          }}
+        >
+          <div
+            style={{
+              background: "#fff",
+              borderRadius: 14,
+              padding: "24px 22px",
+              width: "100%",
+              maxWidth: 380,
+              boxShadow: "0 12px 40px rgba(0,0,0,0.15)",
+            }}
+          >
+            <h3
+              style={{
+                fontSize: 15,
+                fontWeight: 700,
+                color: "#111827",
+                marginBottom: 10,
+              }}
+            >
+              Delete Question?
+            </h3>
+            <p style={{ fontSize: 13, color: "#6b7280", marginBottom: 20 }}>
+              This cannot be undone.
+            </p>
+            <div style={{ display: "flex", gap: 10 }}>
+              <button
+                onClick={() => setDeleteConfirm(null)}
+                style={{
+                  flex: 1,
+                  height: 40,
+                  border: "1.5px solid #e2e8f0",
+                  borderRadius: 9,
+                  background: "#fff",
+                  fontSize: 13,
+                  fontWeight: 600,
+                  cursor: "pointer",
+                  color: "#475569",
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDeleteQuestion}
+                style={{
+                  flex: 1,
+                  height: 40,
+                  border: "none",
+                  borderRadius: 9,
+                  background: "#dc2626",
+                  color: "#fff",
+                  fontSize: 13,
+                  fontWeight: 600,
+                  cursor: "pointer",
+                }}
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
     </div>
   );
 };
