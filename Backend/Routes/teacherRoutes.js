@@ -36,6 +36,7 @@ import {
   sendTeacherInvite,
   rejectTeacherApplication,
   getTeacherCourses,
+  teacherUpdateQuestion
 } from "../Controllers/teacherController.js";
 import {
   authenticateTeacher,
