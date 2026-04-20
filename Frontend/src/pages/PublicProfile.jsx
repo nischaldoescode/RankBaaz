@@ -23,10 +23,13 @@ import { useSEO } from "../hooks/useSEO";
 const PublicProfile = () => {
   const { username: rawUsername } = useParams();
 
-  // Strip @ if it exists (handles both /@username and /username)
-  const username = rawUsername.startsWith("@")
+  if (!rawUsername) {
+    // handle missing username
+  }
+
+  const username = rawUsername?.startsWith("@")
     ? rawUsername.slice(1)
-    : rawUsername;
+    : (rawUsername ?? "");
 
   const navigate = useNavigate();
   const [profileData, setProfileData] = useState(null);
@@ -68,22 +71,19 @@ const PublicProfile = () => {
                 ? profileData.name
                 : undefined,
             identifier: profileData.username,
-            description: `Member since ${new Date(
-              profileData.stats?.memberSince,
-            ).toLocaleDateString()}`,
+            description: profileData.stats?.memberSince
+              ? `Member since ${new Date(profileData.stats.memberSince).toLocaleDateString()}`
+              : "Vidhgrow member",
             ...(profileData.rank && {
               award: `Global Rank #${profileData.rank}`,
             }),
             interactionStatistic: [
               {
                 "@type": "InteractionCounter",
-                interactionType: "https://schema.org/CommentAction",
+                interactionType: {
+                  "@type": "WatchAction",
+                },
                 userInteractionCount: profileData.stats?.testsCompleted || 0,
-              },
-              {
-                "@type": "InteractionCounter",
-                interactionType: "https://schema.org/LikeAction",
-                userInteractionCount: profileData.points || 0,
               },
             ],
           },
@@ -224,16 +224,19 @@ const PublicProfile = () => {
 
               <div className="flex-1 text-center md:text-left w-full">
                 <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-foreground mb-1 break-all hyphens-auto max-w-full">
-                  {profileData.name || `@${profileData.username}`}
+                  {profileData.nameVisibility === "public" && profileData.name
+                    ? profileData.name
+                    : `@${profileData.username}`}
                 </h1>
                 <p className="text-lg sm:text-xl text-muted-foreground mb-2 break-all max-w-full">
                   @{profileData.username}
                 </p>
-                {!profileData.name && !profileData.isOwnProfile && (
-                  <p className="text-xs sm:text-sm text-muted-foreground italic">
-                    This user keeps their name private
-                  </p>
-                )}
+                {profileData.nameVisibility === "private" &&
+                  !profileData.isOwnProfile && (
+                    <p className="text-xs sm:text-sm text-muted-foreground italic">
+                      This user keeps their name private
+                    </p>
+                  )}
 
                 {/* Rank Badge */}
                 {profileData.rank && (
