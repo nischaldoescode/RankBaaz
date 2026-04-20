@@ -21,7 +21,6 @@ Allow: /build/
 Disallow: /admin/
 Disallow: /api/
 Disallow: /app/test/
-Disallow: /assets/
 
 # Block sensitive folders
 Disallow: /config/
@@ -56,10 +55,10 @@ Disallow: /
 
 # Block AI crawlers (optional)
 User-agent: GPTBot
-Disallow: /
+Allow: /
 
 User-agent: ChatGPT-User
-Disallow: /
+Allow: /
 
 User-agent: CCBot
 Disallow: /
