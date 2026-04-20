@@ -170,6 +170,22 @@ router.post("/check-email", async (req, res) => {
     res.status(500).json({ success: false, exists: false });
   }
 });
+router.post("/applications/reset", authenticateAdmin, async (req, res) => {
+  try {
+    const TeacherApplication = (await import("../Models/TeacherApplication.js"))
+      .default;
+    const app = await TeacherApplication.findByIdAndUpdate(
+      req.body.applicationId,
+      { status: "pending", inviteSentAt: null, processedBy: null },
+      { new: true },
+    );
+    if (!app)
+      return res.status(404).json({ success: false, message: "Not found" });
+    return res.json({ success: true, message: "Application reset to pending" });
+  } catch {
+    res.status(500).json({ success: false, message: "Failed" });
+  }
+});
 
 router.post("/logout", teacherLogout);
 router.post("/forgot-password", teacherForgotPassword);
