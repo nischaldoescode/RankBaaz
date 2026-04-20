@@ -75,7 +75,6 @@ Your expertise and passion for education will be a great addition to our platfor
 - Keep 80% of every course sale
 - Reach thousands of motivated students
 - Create courses with full control over pricing and content
-- Receive fast payouts via Razorpay (India) or Khalti (Nepal)
 
 Click the button below to complete your registration. The link expires in 4 minutes, so please register promptly.
 
@@ -114,8 +113,12 @@ const EmailEditor = ({ application, onClose, onSent }) => {
   const [selectedTemplate, setSelectedTemplate] = useState(0);
   const [subject, setSubject] = useState(EMAIL_TEMPLATES[0].subject);
   const [body, setBody] = useState(EMAIL_TEMPLATES[0].body);
+  const [mode, setMode] = useState("text"); // "text" | "html"
   const [preview, setPreview] = useState(false);
   const [sending, setSending] = useState(false);
+  const [logoUrl, setLogoUrl] = useState("https://vidhgrow.online/logo.png");
+  const [primaryColor, setPrimaryColor] = useState("#2563eb");
+  const [showDesignPanel, setShowDesignPanel] = useState(false);
 
   const applyTemplate = (idx) => {
     setSelectedTemplate(idx);
@@ -125,6 +128,43 @@ const EmailEditor = ({ application, onClose, onSent }) => {
     }
   };
 
+  // build HTML email
+  const buildHtmlEmail = () => `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>${subject}</title>
+</head>
+<body style="margin:0;padding:0;font-family:Arial,sans-serif;background:#f4f4f4;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f4f4;padding:24px;">
+    <tr><td align="center">
+      <table width="600" cellpadding="0" cellspacing="0" style="background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.08);max-width:100%;">
+        <tr><td style="padding:32px 40px 24px;text-align:center;border-bottom:1px solid #e9ecef;">
+          ${logoUrl ? `<img src="${logoUrl}" alt="Vidhgrow" style="height:40px;max-width:160px;object-fit:contain;margin-bottom:12px;" />` : ""}
+          <p style="margin:0;color:#64748b;font-size:13px;">Teacher Invitation</p>
+        </td></tr>
+        <tr><td style="padding:36px 40px;">
+          <p style="margin:0 0 16px;color:#374151;font-size:15px;line-height:1.7;">Hi <strong>${application.name}</strong>,</p>
+          <div style="color:#374151;font-size:14px;line-height:1.9;white-space:pre-wrap;">${body}</div>
+          <div style="margin:36px 0;text-align:center;">
+            <a href="{{SIGNUP_LINK}}" style="display:inline-block;padding:14px 36px;background:${primaryColor};color:#fff;text-decoration:none;border-radius:10px;font-weight:700;font-size:15px;">
+              Complete Registration
+            </a>
+          </div>
+          <p style="margin:0;color:#94a3b8;font-size:13px;text-align:center;">
+            Link expires in <strong style="color:#ef4444;">4 minutes</strong>.
+          </p>
+        </td></tr>
+        <tr><td style="padding:20px;text-align:center;background:#f8f9fa;border-top:1px solid #e9ecef;">
+          <p style="margin:0;color:#999;font-size:12px;">© ${new Date().getFullYear()} Vidhgrow. All rights reserved.</p>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`;
+
   const handleSend = async () => {
     if (!subject.trim() || !body.trim()) {
       toast.error("Subject and body required");
@@ -132,10 +172,11 @@ const EmailEditor = ({ application, onClose, onSent }) => {
     }
     setSending(true);
     try {
-      await adminRequest("POST", "/api/teachers/applications/invite", {
+      await adminRequest("POST", "/teachers/applications/invite", {
         applicationId: application._id,
         emailSubject: subject,
-        emailContent: body,
+        emailContent: mode === "html" ? buildHtmlEmail() : body,
+        isHtml: mode === "html",
       });
       toast.success("Invite sent successfully");
       onSent();
@@ -145,6 +186,20 @@ const EmailEditor = ({ application, onClose, onSent }) => {
     } finally {
       setSending(false);
     }
+  };
+
+  const inputS = {
+    width: "100%",
+    padding: "10px 14px",
+    border: "1.5px solid #e5e7eb",
+    borderRadius: 10,
+    fontSize: 13,
+    color: "#111827",
+    background: "#f9fafb",
+    outline: "none",
+    boxSizing: "border-box",
+    fontFamily: "inherit",
+    transition: "border-color 0.15s",
   };
 
   return (
@@ -164,22 +219,24 @@ const EmailEditor = ({ application, onClose, onSent }) => {
       <motion.div
         initial={{ opacity: 0, scale: 0.95, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.95, y: 20 }}
+        exit={{ opacity: 0 }}
         transition={{ duration: 0.2 }}
         style={{
           background: "#fff",
           borderRadius: 16,
           width: "100%",
-          maxWidth: 720,
-          maxHeight: "90vh",
+          maxWidth: 800,
+          maxHeight: "92vh",
           overflowY: "auto",
           boxShadow: "0 20px 60px rgba(0,0,0,0.2)",
+          display: "flex",
+          flexDirection: "column",
         }}
       >
-        {/* header */}
+        {/* sticky header */}
         <div
           style={{
-            padding: "20px 24px",
+            padding: "18px 24px",
             borderBottom: "1px solid #e5e7eb",
             display: "flex",
             alignItems: "center",
@@ -187,39 +244,92 @@ const EmailEditor = ({ application, onClose, onSent }) => {
             position: "sticky",
             top: 0,
             background: "#fff",
-            zIndex: 1,
+            zIndex: 10,
           }}
         >
           <div>
-            <h2 style={{ fontSize: 16, fontWeight: 700, color: "#111827" }}>
+            <h2
+              style={{
+                fontSize: 16,
+                fontWeight: 700,
+                color: "#111827",
+                margin: 0,
+              }}
+            >
               Send Invite Email
             </h2>
-            <p style={{ fontSize: 13, color: "#6b7280", marginTop: 2 }}>
-              To: <strong>{application.name}</strong> ({application.email}) ·{" "}
-              {application.country === "india" ? "🇮🇳 India" : "🇳🇵 Nepal"}
+            <p style={{ fontSize: 12, color: "#6b7280", margin: "3px 0 0" }}>
+              To: <strong>{application.name}</strong> · {application.email} ·{" "}
+              {application.country === "india" ? "🇮🇳" : "🇳🇵"}
             </p>
           </div>
-          <div style={{ display: "flex", gap: 8 }}>
+          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+            {/* mode toggle */}
+            <div
+              style={{
+                display: "flex",
+                background: "#f3f4f6",
+                borderRadius: 8,
+                padding: 2,
+              }}
+            >
+              {["text", "html"].map((m) => (
+                <button
+                  key={m}
+                  onClick={() => setMode(m)}
+                  style={{
+                    padding: "5px 12px",
+                    borderRadius: 6,
+                    border: "none",
+                    background: mode === m ? "#fff" : "transparent",
+                    fontSize: 12,
+                    fontWeight: mode === m ? 600 : 400,
+                    color: mode === m ? "#111827" : "#6b7280",
+                    cursor: "pointer",
+                    boxShadow:
+                      mode === m ? "0 1px 3px rgba(0,0,0,0.1)" : "none",
+                    transition: "all 0.15s",
+                  }}
+                >
+                  {m.toUpperCase()}
+                </button>
+              ))}
+            </div>
             <button
               onClick={() => setPreview((p) => !p)}
               style={{
-                padding: "7px 14px",
+                padding: "6px 12px",
                 border: "1.5px solid #e5e7eb",
                 borderRadius: 8,
-                fontSize: 13,
+                fontSize: 12,
                 fontWeight: 600,
                 cursor: "pointer",
                 background: preview ? "#f3f4f6" : "#fff",
                 color: "#374151",
               }}
             >
-              {preview ? "Edit" : "Preview"}
+              {preview ? "✏️ Edit" : "👁 Preview"}
+            </button>
+            <button
+              onClick={() => setShowDesignPanel((p) => !p)}
+              style={{
+                padding: "6px 12px",
+                border: "1.5px solid #e5e7eb",
+                borderRadius: 8,
+                fontSize: 12,
+                fontWeight: 600,
+                cursor: "pointer",
+                background: showDesignPanel ? "#eff6ff" : "#fff",
+                color: showDesignPanel ? "#2563eb" : "#374151",
+              }}
+            >
+              🎨 Design
             </button>
             <button
               onClick={onClose}
               style={{
-                width: 32,
-                height: 32,
+                width: 30,
+                height: 30,
                 border: "none",
                 background: "#f3f4f6",
                 borderRadius: 8,
@@ -233,252 +343,442 @@ const EmailEditor = ({ application, onClose, onSent }) => {
           </div>
         </div>
 
-        <div style={{ padding: 24 }}>
-          {/* template selector */}
-          {!preview && (
-            <div style={{ marginBottom: 20 }}>
+        <div style={{ display: "flex", flex: 1 }}>
+          {/* main editor */}
+          <div style={{ flex: 1, padding: 24, minWidth: 0 }}>
+            {/* template selector */}
+            {!preview && (
+              <div style={{ marginBottom: 18 }}>
+                <p
+                  style={{
+                    fontSize: 11,
+                    fontWeight: 600,
+                    color: "#6b7280",
+                    textTransform: "uppercase",
+                    letterSpacing: "0.07em",
+                    marginBottom: 8,
+                  }}
+                >
+                  Templates
+                </p>
+                <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                  {EMAIL_TEMPLATES.map((t, i) => (
+                    <button
+                      key={t.id}
+                      onClick={() => applyTemplate(i)}
+                      style={{
+                        padding: "5px 12px",
+                        borderRadius: 8,
+                        border: `1.5px solid ${selectedTemplate === i ? "#2563eb" : "#e5e7eb"}`,
+                        background: selectedTemplate === i ? "#eff6ff" : "#fff",
+                        color: selectedTemplate === i ? "#2563eb" : "#374151",
+                        fontSize: 12,
+                        fontWeight: selectedTemplate === i ? 600 : 400,
+                        cursor: "pointer",
+                      }}
+                    >
+                      {t.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {preview ? (
+              // ── preview panel ──
+              mode === "html" ? (
+                <div
+                  style={{
+                    border: "1px solid #e5e7eb",
+                    borderRadius: 10,
+                    overflow: "hidden",
+                  }}
+                >
+                  <div
+                    style={{
+                      padding: "10px 14px",
+                      background: "#f9fafb",
+                      borderBottom: "1px solid #e5e7eb",
+                      fontSize: 12,
+                      color: "#374151",
+                    }}
+                  >
+                    <strong>Subject:</strong> {subject}
+                    <span style={{ marginLeft: 16, color: "#94a3b8" }}>
+                      HTML mode
+                    </span>
+                  </div>
+                  <iframe
+                    srcDoc={buildHtmlEmail()}
+                    style={{ width: "100%", height: 500, border: "none" }}
+                    title="Email Preview"
+                    sandbox="allow-same-origin"
+                  />
+                </div>
+              ) : (
+                <div
+                  style={{
+                    border: "1px solid #e5e7eb",
+                    borderRadius: 10,
+                    overflow: "hidden",
+                  }}
+                >
+                  <div
+                    style={{
+                      padding: "10px 14px",
+                      background: "#f9fafb",
+                      borderBottom: "1px solid #e5e7eb",
+                      fontSize: 12,
+                      color: "#374151",
+                    }}
+                  >
+                    <strong>Subject:</strong> {subject}
+                  </div>
+                  <div style={{ padding: 24 }}>
+                    <p
+                      style={{
+                        fontSize: 14,
+                        color: "#374151",
+                        lineHeight: 1.9,
+                        whiteSpace: "pre-wrap",
+                      }}
+                    >
+                      {body}
+                    </p>
+                    <div style={{ marginTop: 24, textAlign: "center" }}>
+                      <span
+                        style={{
+                          display: "inline-block",
+                          padding: "12px 28px",
+                          background: primaryColor,
+                          color: "#fff",
+                          borderRadius: 8,
+                          fontSize: 14,
+                          fontWeight: 600,
+                        }}
+                      >
+                        Complete Registration
+                      </span>
+                    </div>
+                    <p
+                      style={{
+                        marginTop: 14,
+                        fontSize: 12,
+                        color: "#9ca3af",
+                        textAlign: "center",
+                      }}
+                    >
+                      Link expires in 4 minutes
+                    </p>
+                  </div>
+                </div>
+              )
+            ) : (
+              // ── editor ──
+              <div
+                style={{ display: "flex", flexDirection: "column", gap: 14 }}
+              >
+                <div>
+                  <label
+                    style={{
+                      display: "block",
+                      fontSize: 12,
+                      fontWeight: 600,
+                      color: "#374151",
+                      marginBottom: 6,
+                    }}
+                  >
+                    Subject *
+                  </label>
+                  <input
+                    value={subject}
+                    onChange={(e) => setSubject(e.target.value)}
+                    style={{
+                      ...inputS,
+                      height: 42,
+                      maxWidth: 520,
+                      background: "#fff",
+                      borderRadius: 12,
+                      padding: "12px 16px",
+                      fontSize: 14,
+                      fontWeight: 500,
+                      letterSpacing: "0.2px",
+                      boxShadow: "0 1px 2px rgba(0,0,0,0.04)",
+                      marginBottom: 2,
+                    }}
+                    placeholder="Email subject..."
+                    onFocus={(e) => (e.target.style.borderColor = "#2563eb")}
+                    onBlur={(e) => (e.target.style.borderColor = "#e5e7eb")}
+                  />
+                </div>
+
+                <div>
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      marginBottom: 6,
+                    }}
+                  >
+                    <label
+                      style={{
+                        fontSize: 12,
+                        fontWeight: 600,
+                        color: "#374151",
+                      }}
+                    >
+                      {mode === "html" ? "HTML Body" : "Email Body"} *
+                    </label>
+                    {mode === "text" && (
+                      <span style={{ fontSize: 11, color: "#94a3b8" }}>
+                        The registration link button is added automatically
+                      </span>
+                    )}
+                  </div>
+                  <textarea
+                    value={body}
+                    onChange={(e) => setBody(e.target.value)}
+                    rows={mode === "html" ? 18 : 12}
+                    style={{
+                      ...inputS,
+                      height: "auto",
+                      resize: "vertical",
+                      lineHeight: 1.7,
+                      fontFamily: mode === "html" ? "monospace" : "inherit",
+                      fontSize: mode === "html" ? 12 : 13,
+                    }}
+                    onFocus={(e) => (e.target.style.borderColor = "#2563eb")}
+                    onBlur={(e) => (e.target.style.borderColor = "#e5e7eb")}
+                    placeholder={
+                      mode === "html"
+                        ? `<p>Hi ${application.name},</p>\n<p>Your custom HTML email content here...</p>\n<p>Use {{SIGNUP_LINK}} for the registration button.</p>`
+                        : "Your email message here...\n\nWe'll add the registration link automatically at the bottom."
+                    }
+                    spellCheck={mode === "text"}
+                  />
+                  {mode === "html" && (
+                    <p style={{ fontSize: 11, color: "#6b7280", marginTop: 4 }}>
+                      Use{" "}
+                      <code
+                        style={{
+                          background: "#f3f4f6",
+                          padding: "1px 4px",
+                          borderRadius: 4,
+                        }}
+                      >
+                        {"{{SIGNUP_LINK}}"}
+                      </code>{" "}
+                      where you want the registration button to appear.
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* design panel */}
+          {showDesignPanel && !preview && (
+            <div
+              style={{
+                width: 220,
+                borderLeft: "1px solid #f1f5f9",
+                padding: 20,
+                background: "#fafafa",
+                flexShrink: 0,
+              }}
+            >
               <p
                 style={{
                   fontSize: 12,
-                  fontWeight: 600,
-                  color: "#6b7280",
-                  textTransform: "uppercase",
-                  letterSpacing: "0.06em",
-                  marginBottom: 10,
-                }}
-              >
-                Templates
-              </p>
-              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                {EMAIL_TEMPLATES.map((t, i) => (
-                  <button
-                    key={t.id}
-                    onClick={() => applyTemplate(i)}
-                    style={{
-                      padding: "6px 14px",
-                      borderRadius: 8,
-                      border: `1.5px solid ${selectedTemplate === i ? "#2563eb" : "#e5e7eb"}`,
-                      background: selectedTemplate === i ? "#eff6ff" : "#fff",
-                      color: selectedTemplate === i ? "#2563eb" : "#374151",
-                      fontSize: 13,
-                      fontWeight: selectedTemplate === i ? 600 : 400,
-                      cursor: "pointer",
-                      transition: "all 0.15s",
-                    }}
-                  >
-                    {t.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {preview ? (
-            // preview panel
-            <div
-              style={{
-                border: "1px solid #e5e7eb",
-                borderRadius: 12,
-                overflow: "hidden",
-              }}
-            >
-              <div
-                style={{
-                  padding: "12px 16px",
-                  background: "#f9fafb",
-                  borderBottom: "1px solid #e5e7eb",
-                  fontSize: 13,
+                  fontWeight: 700,
                   color: "#374151",
+                  textTransform: "uppercase",
+                  letterSpacing: "0.07em",
+                  marginBottom: 16,
                 }}
               >
-                <strong>Subject:</strong> {subject}
-              </div>
-              <div style={{ padding: 24 }}>
-                <p
-                  style={{
-                    fontSize: 14,
-                    color: "#374151",
-                    lineHeight: 1.8,
-                    whiteSpace: "pre-wrap",
-                  }}
-                >
-                  {body}
-                </p>
-                <div
-                  style={{
-                    marginTop: 24,
-                    textAlign: "center",
-                  }}
-                >
-                  <span
-                    style={{
-                      display: "inline-block",
-                      padding: "12px 28px",
-                      background: "#2563eb",
-                      color: "#fff",
-                      borderRadius: 8,
-                      fontSize: 14,
-                      fontWeight: 600,
-                    }}
-                  >
-                    Complete Registration
-                  </span>
-                </div>
-                <p
-                  style={{
-                    marginTop: 16,
-                    fontSize: 12,
-                    color: "#9ca3af",
-                    textAlign: "center",
-                  }}
-                >
-                  Link expires in 4 minutes
-                </p>
-              </div>
-            </div>
-          ) : (
-            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-              {/* subject */}
-              <div>
+                Design
+              </p>
+
+              <div style={{ marginBottom: 16 }}>
                 <label
                   style={{
                     display: "block",
-                    fontSize: 13,
+                    fontSize: 11,
                     fontWeight: 600,
-                    color: "#374151",
-                    marginBottom: 8,
+                    color: "#6b7280",
+                    marginBottom: 6,
                   }}
                 >
-                  Subject
+                  Logo URL
                 </label>
                 <input
-                  value={subject}
-                  onChange={(e) => setSubject(e.target.value)}
-                  style={{
-                    width: "100%",
-                    height: 44,
-                    padding: "0 14px",
-                    border: "1.5px solid #e5e7eb",
-                    borderRadius: 10,
-                    fontSize: 14,
-                    color: "#111827",
-                    background: "#f9fafb",
-                    outline: "none",
-                    boxSizing: "border-box",
-                  }}
+                  value={logoUrl}
+                  onChange={(e) => setLogoUrl(e.target.value)}
+                  style={{ ...inputS, height: 36, fontSize: 11 }}
+                  placeholder="https://..."
                   onFocus={(e) => (e.target.style.borderColor = "#2563eb")}
                   onBlur={(e) => (e.target.style.borderColor = "#e5e7eb")}
                 />
+                {logoUrl && (
+                  <img
+                    src={logoUrl}
+                    alt="logo preview"
+                    style={{
+                      height: 28,
+                      marginTop: 6,
+                      objectFit: "contain",
+                      maxWidth: "100%",
+                    }}
+                    onError={(e) => (e.target.style.display = "none")}
+                  />
+                )}
               </div>
 
-              {/* body */}
-              <div>
+              <div style={{ marginBottom: 16 }}>
                 <label
                   style={{
                     display: "block",
-                    fontSize: 13,
+                    fontSize: 11,
                     fontWeight: 600,
-                    color: "#374151",
-                    marginBottom: 8,
+                    color: "#6b7280",
+                    marginBottom: 6,
                   }}
                 >
-                  Email Body
+                  Button Color
                 </label>
-                <textarea
-                  value={body}
-                  onChange={(e) => setBody(e.target.value)}
-                  rows={12}
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <input
+                    type="color"
+                    value={primaryColor}
+                    onChange={(e) => setPrimaryColor(e.target.value)}
+                    style={{
+                      width: 36,
+                      height: 36,
+                      border: "1.5px solid #e5e7eb",
+                      borderRadius: 8,
+                      cursor: "pointer",
+                      padding: 2,
+                    }}
+                  />
+                  <input
+                    value={primaryColor}
+                    onChange={(e) => setPrimaryColor(e.target.value)}
+                    style={{ ...inputS, height: 36, fontSize: 11, flex: 1 }}
+                    onFocus={(e) => (e.target.style.borderColor = "#2563eb")}
+                    onBlur={(e) => (e.target.style.borderColor = "#e5e7eb")}
+                  />
+                </div>
+              </div>
+
+              {/* button preview */}
+              <div style={{ padding: "10px 0", textAlign: "center" }}>
+                <span
                   style={{
-                    width: "100%",
-                    padding: "12px 14px",
-                    border: "1.5px solid #e5e7eb",
-                    borderRadius: 10,
-                    fontSize: 14,
-                    color: "#111827",
-                    background: "#f9fafb",
-                    outline: "none",
-                    boxSizing: "border-box",
-                    resize: "vertical",
-                    lineHeight: 1.7,
-                    fontFamily: "inherit",
+                    display: "inline-block",
+                    padding: "8px 18px",
+                    background: primaryColor,
+                    color: "#fff",
+                    borderRadius: 8,
+                    fontSize: 12,
+                    fontWeight: 600,
                   }}
-                  onFocus={(e) => (e.target.style.borderColor = "#2563eb")}
-                  onBlur={(e) => (e.target.style.borderColor = "#e5e7eb")}
-                />
-                <p style={{ fontSize: 12, color: "#9ca3af", marginTop: 4 }}>
-                  The registration link is automatically appended.
+                >
+                  Button Preview
+                </span>
+              </div>
+
+              <div
+                style={{
+                  marginTop: 16,
+                  padding: "10px 12px",
+                  background: "#fffbeb",
+                  border: "1px solid #fde68a",
+                  borderRadius: 8,
+                }}
+              >
+                <p style={{ fontSize: 10, color: "#92400e", lineHeight: 1.5 }}>
+                  Design options only apply in HTML mode. Switch to HTML mode to
+                  use full design control.
                 </p>
               </div>
             </div>
           )}
         </div>
 
-        {/* footer */}
+        {/* sticky footer */}
         <div
           style={{
-            padding: "16px 24px",
+            padding: "14px 24px",
             borderTop: "1px solid #e5e7eb",
             display: "flex",
-            justifyContent: "flex-end",
-            gap: 10,
+            justifyContent: "space-between",
+            alignItems: "center",
             position: "sticky",
             bottom: 0,
             background: "#fff",
           }}
         >
-          <button
-            onClick={onClose}
-            style={{
-              padding: "9px 20px",
-              border: "1.5px solid #e5e7eb",
-              borderRadius: 9,
-              fontSize: 14,
-              fontWeight: 600,
-              cursor: "pointer",
-              background: "#fff",
-              color: "#374151",
-            }}
-          >
-            Cancel
-          </button>
-          <button
-            onClick={handleSend}
-            disabled={sending}
-            style={{
-              padding: "9px 22px",
-              border: "none",
-              borderRadius: 9,
-              fontSize: 14,
-              fontWeight: 600,
-              cursor: sending ? "not-allowed" : "pointer",
-              background: sending
-                ? "#93c5fd"
-                : "linear-gradient(135deg,#2563eb,#1d4ed8)",
-              color: "#fff",
-              display: "flex",
-              alignItems: "center",
-              gap: 8,
-              boxShadow: sending ? "none" : "0 3px 10px rgba(37,99,235,0.25)",
-            }}
-          >
-            {sending ? (
-              <>
-                <div
-                  style={{
-                    width: 14,
-                    height: 14,
-                    border: "2px solid rgba(255,255,255,0.4)",
-                    borderTopColor: "#fff",
-                    borderRadius: "50%",
-                    animation: "spin 0.7s linear infinite",
-                  }}
-                />
-                Sending...
-              </>
-            ) : (
-              "Send Invite"
-            )}
-          </button>
+          <p style={{ fontSize: 12, color: "#94a3b8" }}>
+            {mode === "html"
+              ? "📝 HTML mode — full control"
+              : "📄 Text mode — auto-styled"}
+          </p>
+          <div style={{ display: "flex", gap: 10 }}>
+            <button
+              onClick={onClose}
+              style={{
+                padding: "9px 20px",
+                border: "1.5px solid #e5e7eb",
+                borderRadius: 9,
+                fontSize: 13,
+                fontWeight: 600,
+                cursor: "pointer",
+                background: "#fff",
+                color: "#374151",
+              }}
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleSend}
+              disabled={sending}
+              style={{
+                padding: "9px 22px",
+                border: "none",
+                borderRadius: 9,
+                fontSize: 13,
+                fontWeight: 600,
+                cursor: sending ? "not-allowed" : "pointer",
+                background: sending
+                  ? "#93c5fd"
+                  : "linear-gradient(135deg,#2563eb,#1d4ed8)",
+                color: "#fff",
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+              }}
+            >
+              {sending ? (
+                <>
+                  <div
+                    style={{
+                      width: 14,
+                      height: 14,
+                      border: "2px solid rgba(255,255,255,0.4)",
+                      borderTopColor: "#fff",
+                      borderRadius: "50%",
+                      animation: "spin 0.7s linear infinite",
+                    }}
+                  />
+                  Sending...
+                </>
+              ) : (
+                `✉️ Send Invite${mode === "html" ? " (HTML)" : ""}`
+              )}
+            </button>
+          </div>
         </div>
         <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
       </motion.div>
@@ -497,7 +797,7 @@ const TeacherDetailModal = ({ teacher, onClose, onRefresh }) => {
   const handleVerifyDocs = async (approved) => {
     setLoading(true);
     try {
-      await adminRequest("POST", "/api/teachers/admin/verify-documents", {
+      await adminRequest("POST", "/teachers/admin/verify-documents", {
         teacherId: teacher._id,
         approved,
         rejectionReason: approved ? null : rejectionReason,
@@ -515,7 +815,7 @@ const TeacherDetailModal = ({ teacher, onClose, onRefresh }) => {
   const handleRequestDocs = async () => {
     setLoading(true);
     try {
-      await adminRequest("POST", "/api/teachers/admin/request-documents", {
+      await adminRequest("POST", "/teachers/admin/request-documents", {
         teacherId: teacher._id,
         note: requestNote,
       });
@@ -536,7 +836,7 @@ const TeacherDetailModal = ({ teacher, onClose, onRefresh }) => {
       return;
     setLoading(true);
     try {
-      await adminRequest("DELETE", `/api/teachers/admin/${teacher._id}`);
+      await adminRequest("DELETE", `/teachers/admin/${teacher._id}`);
       toast.success("Teacher deleted");
       onRefresh();
       onClose();
@@ -1126,10 +1426,12 @@ const TeacherManagement = () => {
     try {
       const res = await adminRequest(
         "GET",
-        `/api/teachers/applications?status=${appStatusFilter}&limit=50`,
+        `/teachers/applications?status=${appStatusFilter}&limit=50`,
       );
-      setApplications(res.data.data.applications);
-    } catch {
+      console.log("Applications response:", res.data); // debug
+      setApplications(res.data.data.applications || []);
+    } catch (err) {
+      console.error("Applications error:", err.response?.data || err.message); // debug
       toast.error("Failed to load applications");
     } finally {
       setLoading(false);
@@ -1142,10 +1444,7 @@ const TeacherManagement = () => {
       try {
         const params = new URLSearchParams({ page, limit: 20 });
         if (search) params.append("search", search);
-        const res = await adminRequest(
-          "GET",
-          `/api/teachers/admin/all?${params}`,
-        );
+        const res = await adminRequest("GET", `/teachers/admin/all?${params}`);
         setTeachers(res.data.data.teachers);
         setPagination(res.data.data.pagination);
       } catch {
@@ -1165,7 +1464,7 @@ const TeacherManagement = () => {
   const handleReject = async (appId) => {
     if (!window.confirm("Reject this application?")) return;
     try {
-      await adminRequest("POST", "/api/teachers/applications/reject", {
+      await adminRequest("POST", "/teachers/applications/reject", {
         applicationId: appId,
       });
       toast.success("Application rejected");

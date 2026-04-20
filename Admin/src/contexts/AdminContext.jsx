@@ -3,6 +3,7 @@ import axios from "axios";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { useAuth } from "./AuthContext";
+import { adminRequestSigner } from "../utils/adminRequestSigner.js";
 
 const AdminContext = createContext();
 axios.defaults.baseURL =
@@ -71,7 +72,7 @@ export const AdminProvider = ({ children }) => {
               success: true,
               data: response.data.data.category,
             },
-          })
+          }),
         );
         return { success: true, data: response.data.data.category };
       }
@@ -90,7 +91,7 @@ export const AdminProvider = ({ children }) => {
       setLoading(true);
       const response = await axios.put(
         `/courses/categories/${categoryId}`,
-        categoryData
+        categoryData,
       );
 
       if (response.data.success) {
@@ -101,7 +102,7 @@ export const AdminProvider = ({ children }) => {
         window.dispatchEvent(
           new CustomEvent("adminOperation", {
             detail: { operation: "updateCategory", success: true },
-          })
+          }),
         );
         return { success: true };
       }
@@ -128,7 +129,7 @@ export const AdminProvider = ({ children }) => {
         window.dispatchEvent(
           new CustomEvent("adminOperation", {
             detail: { operation: "deleteCategory", success: true },
-          })
+          }),
         );
         return { success: true };
       }
@@ -157,8 +158,8 @@ export const AdminProvider = ({ children }) => {
                   ...course,
                   isActive: data.data?.course?.isActive ?? !course.isActive,
                 }
-              : course
-          )
+              : course,
+          ),
         );
         toast.success(data.message);
         return { success: true, data: data.data };
@@ -169,7 +170,7 @@ export const AdminProvider = ({ children }) => {
     } catch (error) {
       console.error("Toggle course status error:", error);
       toast.error(
-        error.response?.data?.message || "Failed to toggle course status"
+        error.response?.data?.message || "Failed to toggle course status",
       );
       return { success: false };
     }
@@ -342,7 +343,7 @@ export const AdminProvider = ({ children }) => {
 
       if (hasUpload && hasLinks) {
         throw new Error(
-          "Cannot have both uploaded video and links for course-level video"
+          "Cannot have both uploaded video and links for course-level video",
         );
       }
       if (hasLinks && videoContent.courseVideo.links.length > 2) {
@@ -355,12 +356,12 @@ export const AdminProvider = ({ children }) => {
 
         if (hasUpload && hasLinks) {
           throw new Error(
-            `Cannot have both uploaded video and links for ${diffVideo.difficulty}`
+            `Cannot have both uploaded video and links for ${diffVideo.difficulty}`,
           );
         }
         if (hasLinks && diffVideo.links.length > 2) {
           throw new Error(
-            `Maximum 2 video links allowed for ${diffVideo.difficulty}`
+            `Maximum 2 video links allowed for ${diffVideo.difficulty}`,
           );
         }
       });
@@ -410,7 +411,7 @@ export const AdminProvider = ({ children }) => {
         if (type === "course" && courseVideo?.links?.length > 0) {
           // Validate and append course video links
           const validLinks = courseVideo.links.filter(
-            (link) => link.url && link.url.trim()
+            (link) => link.url && link.url.trim(),
           );
 
           if (validLinks.length > 0) {
@@ -423,7 +424,7 @@ export const AdminProvider = ({ children }) => {
           if (difficultyVideos && difficultyVideos.length > 0) {
             difficultyVideos.forEach((diffVideo) => {
               const validLinks = diffVideo.links?.filter(
-                (link) => link.url && link.url.trim()
+                (link) => link.url && link.url.trim(),
               );
 
               // Only add if there are valid links
@@ -439,7 +440,7 @@ export const AdminProvider = ({ children }) => {
           if (Object.keys(diffVideosData).length > 0) {
             formData.append(
               "difficultyVideosData",
-              JSON.stringify(diffVideosData)
+              JSON.stringify(diffVideosData),
             );
           } else {
             // If no valid links, don't send difficultyVideosData at all
@@ -479,7 +480,7 @@ export const AdminProvider = ({ children }) => {
         },
         onUploadProgress: (progressEvent) => {
           const percentCompleted = Math.round(
-            (progressEvent.loaded * 100) / progressEvent.total
+            (progressEvent.loaded * 100) / progressEvent.total,
           );
           setVideoUploadProgress(percentCompleted);
         },
@@ -544,7 +545,7 @@ export const AdminProvider = ({ children }) => {
       if (courseData.difficulties && courseData.difficulties.length > 0) {
         formData.append(
           "difficulties",
-          JSON.stringify(courseData.difficulties)
+          JSON.stringify(courseData.difficulties),
         );
       }
 
@@ -592,7 +593,7 @@ export const AdminProvider = ({ children }) => {
           headers: {
             "Content-Type": "multipart/form-data",
           },
-        }
+        },
       );
 
       if (response.data.success) {
@@ -620,15 +621,15 @@ export const AdminProvider = ({ children }) => {
                   isActive: updatedCourseData.isActive !== false,
                   updatedAt: new Date(),
                 }
-              : course
-          )
+              : course,
+          ),
         );
 
         // Dispatch notification event
         window.dispatchEvent(
           new CustomEvent("adminOperation", {
             detail: { operation: "updateCourse", success: true },
-          })
+          }),
         );
 
         // Return the updated course data
@@ -690,7 +691,7 @@ export const AdminProvider = ({ children }) => {
         window.dispatchEvent(
           new CustomEvent("adminOperation", {
             detail: { operation: "updateCourse", success: true },
-          })
+          }),
         );
         return { success: true };
       }
@@ -776,7 +777,7 @@ export const AdminProvider = ({ children }) => {
       const response = await axios.post(
         `/courses/${questionData.course}/questions`,
         payload,
-        config
+        config,
       );
       if (response.data.success) {
         toast.success("Question created successfully!");
@@ -845,7 +846,7 @@ export const AdminProvider = ({ children }) => {
       const response = await axios.put(
         `/courses/${courseId}/questions/${questionId}`,
         payload,
-        config
+        config,
       );
       if (response.data.success) {
         toast.success("Question updated successfully!");
@@ -870,7 +871,7 @@ export const AdminProvider = ({ children }) => {
   const deleteQuestion = async (courseId, questionId, silent = false) => {
     try {
       const response = await axios.delete(
-        `/courses/${courseId}/questions/${questionId}`
+        `/courses/${courseId}/questions/${questionId}`,
       );
 
       if (response.data.success) {
@@ -883,7 +884,7 @@ export const AdminProvider = ({ children }) => {
     } catch (error) {
       if (!silent) {
         toast.error(
-          error.response?.data?.message || "Failed to delete question"
+          error.response?.data?.message || "Failed to delete question",
         );
       }
       return { success: false, message: error.response?.data?.message };
@@ -894,7 +895,7 @@ export const AdminProvider = ({ children }) => {
     try {
       const response = await axios.delete(
         `/courses/${courseId}/questions/bulk`,
-        { data: { questionIds } }
+        { data: { questionIds } },
       );
 
       if (response.data.success) {
@@ -907,8 +908,8 @@ export const AdminProvider = ({ children }) => {
                   totalQuestions:
                     (course.totalQuestions || 0) - response.data.deletedCount,
                 }
-              : course
-          )
+              : course,
+          ),
         );
 
         toast.success(response.data.message);
@@ -933,7 +934,7 @@ export const AdminProvider = ({ children }) => {
 
       // First validate that we have questions
       const hasQuestions = Object.values(questions).some(
-        (questionList) => questionList && questionList.length > 0
+        (questionList) => questionList && questionList.length > 0,
       );
 
       if (!hasQuestions) {
@@ -959,14 +960,14 @@ export const AdminProvider = ({ children }) => {
               q.questionType === "multiple"
                 ? q.options.filter((opt) => opt.trim())
                 : q.questionType === "truefalse"
-                ? ["True", "False"]
-                : [],
+                  ? ["True", "False"]
+                  : [],
             correctAnswer:
               q.questionType === "multiple"
                 ? q.correctAnswer
                 : q.questionType === "truefalse"
-                ? q.correctAnswer
-                : q.singleAnswer,
+                  ? q.correctAnswer
+                  : q.singleAnswer,
             explanation: q.explanation,
             questionImage: q.questionImage || null,
           }));
@@ -1033,12 +1034,12 @@ export const AdminProvider = ({ children }) => {
         // Update local state immediately
         setCourses((prev) =>
           prev.map((c) =>
-            c._id === courseId ? { ...c, hasPdfExport: newStatus } : c
-          )
+            c._id === courseId ? { ...c, hasPdfExport: newStatus } : c,
+          ),
         );
 
         toast.success(
-          `PDF export ${newStatus ? "enabled" : "disabled"} successfully!`
+          `PDF export ${newStatus ? "enabled" : "disabled"} successfully!`,
         );
 
         return { success: true };
@@ -1048,7 +1049,7 @@ export const AdminProvider = ({ children }) => {
     } catch (error) {
       console.error("Toggle PDF export error:", error);
       toast.error(
-        error.response?.data?.message || "Failed to toggle PDF export"
+        error.response?.data?.message || "Failed to toggle PDF export",
       );
       return { success: false };
     }
@@ -1065,7 +1066,7 @@ export const AdminProvider = ({ children }) => {
             totalQuestions: 0,
             totalUsers: 0,
             totalTests: 0,
-          }
+          },
         );
       }
     } catch (error) {
@@ -1295,7 +1296,7 @@ export const AdminProvider = ({ children }) => {
         // For multi-difficulty, check if there's specific difficulty data
         if (test.testSettings?.difficultyResults) {
           return test.testSettings.difficultyResults.some(
-            (dr) => dr.difficulty === difficulty
+            (dr) => dr.difficulty === difficulty,
           );
         }
         return false;
@@ -1315,7 +1316,7 @@ export const AdminProvider = ({ children }) => {
       ) {
         // For multi-difficulty tests, use the specific difficulty result
         const diffResult = test.testSettings.difficultyResults.find(
-          (dr) => dr.difficulty === difficulty
+          (dr) => dr.difficulty === difficulty,
         );
         if (diffResult && diffResult.maxPossibleScore > 0) {
           const diffPercentage =
@@ -1350,7 +1351,7 @@ export const AdminProvider = ({ children }) => {
             userData.recentTests?.length > 0
               ? userData.recentTests.reduce(
                   (sum, test) => sum + (test.percentage || 0),
-                  0
+                  0,
                 ) / userData.recentTests.length
               : 0,
           performanceByDifficulty: [
@@ -1358,33 +1359,33 @@ export const AdminProvider = ({ children }) => {
               difficulty: "Easy", // Changed from lowercase
               averageScore: calculateDifficultyAverage(
                 userData.recentTests,
-                "Easy"
+                "Easy",
               ),
               totalAttempts: countDifficultyAttempts(
                 userData.recentTests,
-                "Easy"
+                "Easy",
               ),
             },
             {
               difficulty: "Medium", // Changed from lowercase
               averageScore: calculateDifficultyAverage(
                 userData.recentTests,
-                "Medium"
+                "Medium",
               ),
               totalAttempts: countDifficultyAttempts(
                 userData.recentTests,
-                "Medium"
+                "Medium",
               ),
             },
             {
               difficulty: "Hard", // Changed from lowercase
               averageScore: calculateDifficultyAverage(
                 userData.recentTests,
-                "Hard"
+                "Hard",
               ),
               totalAttempts: countDifficultyAttempts(
                 userData.recentTests,
-                "Hard"
+                "Hard",
               ),
             },
           ],
@@ -1443,7 +1444,7 @@ export const AdminProvider = ({ children }) => {
       link.setAttribute("href", encodedUri);
       link.setAttribute(
         "download",
-        `user-stats-${new Date().toISOString().split("T")[0]}.csv`
+        `user-stats-${new Date().toISOString().split("T")[0]}.csv`,
       );
       document.body.appendChild(link);
       link.click();
@@ -1462,7 +1463,7 @@ export const AdminProvider = ({ children }) => {
     page = 1,
     limit = 20,
     sortBy = "createdAt",
-    sortOrder = "desc"
+    sortOrder = "desc",
   ) => {
     try {
       setLoading(true);
@@ -1526,7 +1527,7 @@ export const AdminProvider = ({ children }) => {
       // Don't show toast for auth errors as they're handled globally
       if (error.response?.status !== 401) {
         toast.error(
-          error.response?.data?.message || "Failed to fetch user details"
+          error.response?.data?.message || "Failed to fetch user details",
         );
       }
 
@@ -1562,6 +1563,23 @@ export const AdminProvider = ({ children }) => {
       });
     }
   }, [isAuthenticated]);
+
+  const adminRequest = async (method, url, data = null) => {
+    try {
+      let config = {
+        method: method.toLowerCase(),
+        url,
+        withCredentials: true,
+      };
+
+      if (data) config.data = data;
+      config = adminRequestSigner.signRequest(config);
+
+      return await axios(config);
+    } catch (error) {
+      throw error;
+    }
+  };
 
   const value = {
     // Categories
@@ -1617,6 +1635,8 @@ export const AdminProvider = ({ children }) => {
     pdfGenerating,
 
     togglePdfExport,
+
+    adminRequest,
   };
 
   return (
