@@ -130,7 +130,7 @@ const Home = () => {
 
   useSEO({
     title:
-      contentSettings?.seoTitle || "Advanced Online Learning & Test Platform",
+      contentSettings?.seoTitle || "Prepare with Precision",
     description:
       contentSettings?.seoDescription ||
       "Master your skills with Vidhgrow's interactive courses, personalized assessments, and real-time progress tracking.",
