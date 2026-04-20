@@ -243,7 +243,6 @@ const Header = () => {
       </motion.header>
 
       <>
-        <div className="h-24 lg:hidden" />
 
         <div className="lg:hidden fixed bottom-4 left-4 right-4 z-50 flex justify-center pointer-events-none">
           <motion.nav

@@ -743,7 +743,7 @@ function App() {
                     />
 
                     <Route
-                      path="/teacher/@:username"
+                      path="/teacher/:username"
                       element={
                         <Suspense fallback={<Loading variant="page" />}>
                           <TeacherProfile />
