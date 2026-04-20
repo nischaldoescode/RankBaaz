@@ -161,12 +161,18 @@ const Signup = () => {
       toast.error("Password: 8+ chars, upper, lower, number");
       return;
     }
+    const reservedCheck = checkReservedUsername(form.username);
+    if (reservedCheck.reserved) {
+      toast.error(reservedCheck.reason || "This username is not available");
+      return;
+    }
+
     if (
       form.username.length < 3 ||
-      form.username.length > 30 ||
+      form.username.length > 10 ||
       !/^[a-z0-9_]+$/.test(form.username)
     ) {
-      toast.error("Username: 3-30 chars, lowercase, numbers, underscores");
+      toast.error("Username: 3-10 chars, lowercase, numbers, underscores");
       return;
     }
     const ageNum = parseInt(form.age);
