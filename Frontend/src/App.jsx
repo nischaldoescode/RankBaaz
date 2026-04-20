@@ -1,5 +1,11 @@
 import React, { Suspense, useEffect, useState } from "react";
-import { Routes, Route, Navigate, useParams, useLocation } from "react-router-dom";
+import {
+  Routes,
+  Route,
+  Navigate,
+  useParams,
+  useLocation,
+} from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "./context/AuthContext";
 import { useTheme } from "./context/ThemeContext";
@@ -545,6 +551,17 @@ function App() {
                         )
                       }
                     />
+                    {/* student public profile — /profile/@username OR /@username */}
+                    <Route
+                      path="/profile/:username"
+                      element={
+                        <Suspense fallback={<Loading variant="page" />}>
+                          <PublicProfile />
+                        </Suspense>
+                      }
+                    />
+
+                    {/* universal @username handler — checks teacher vs student */}
                     <Route
                       path="/:username"
                       element={

@@ -44,7 +44,6 @@ import { apiMethods } from "../services/api";
 import { useSEO } from "../hooks/useSEO";
 import { useContent } from "../context/ContentContext";
 
-
 const GlobalLeaderboard = ({ userId }) => {
   const [leaderboard, setLeaderboard] = useState([]);
   const [userPosition, setUserPosition] = useState(null);
@@ -70,7 +69,7 @@ const GlobalLeaderboard = ({ userId }) => {
           setUserPosition(positionRes.value.data.data);
         } else {
           console.warn(
-            "User position unavailable - user may not have completed tests"
+            "User position unavailable - user may not have completed tests",
           );
         }
       } catch (error) {
@@ -115,8 +114,8 @@ const GlobalLeaderboard = ({ userId }) => {
                           userPosition.rankChange > 0
                             ? "text-green-600"
                             : userPosition.rankChange < 0
-                            ? "text-red-600"
-                            : "text-gray-500"
+                              ? "text-red-600"
+                              : "text-gray-500",
                         )}
                       >
                         {userPosition.rankChange > 0 && (
@@ -540,7 +539,7 @@ const Profile = () => {
             {user?.email}
           </p>
           <Link
-            to={`/@${user?.username}`}
+            to={`/@${user?.username?.replace(/^@/, "")}`}
             className="inline-flex items-center gap-2 text-sm text-primary hover:underline break-all px-4 max-w-full"
           >
             <User className="w-4 h-4 flex-shrink-0" />
@@ -867,7 +866,7 @@ const Profile = () => {
                   <button
                     onClick={() =>
                       setEditMode(
-                        editMode === "dateOfBirth" ? null : "dateOfBirth"
+                        editMode === "dateOfBirth" ? null : "dateOfBirth",
                       )
                     }
                     className="w-full p-4 flex items-center justify-between hover:bg-muted/50 transition-colors"
@@ -1118,7 +1117,7 @@ const Profile = () => {
                                 newVisibility === "public"
                                   ? "public"
                                   : "private"
-                              }`
+                              }`,
                             );
                           }
                         }}
@@ -1166,7 +1165,7 @@ const Profile = () => {
                           <button
                             onClick={() =>
                               setExpandedTest(
-                                expandedTest === test._id ? null : test._id
+                                expandedTest === test._id ? null : test._id,
                               )
                             }
                             className="w-full p-4 flex items-center justify-between hover:bg-muted/50 transition-colors min-w-0"
@@ -1177,10 +1176,10 @@ const Profile = () => {
                                   test.percentage >= 80
                                     ? "bg-green-500"
                                     : test.percentage >= 60
-                                    ? "bg-blue-500"
-                                    : test.percentage >= 40
-                                    ? "bg-amber-500"
-                                    : "bg-red-500"
+                                      ? "bg-blue-500"
+                                      : test.percentage >= 40
+                                        ? "bg-amber-500"
+                                        : "bg-red-500"
                                 }`}
                               >
                                 {test.percentage}%
@@ -1227,7 +1226,7 @@ const Profile = () => {
                                               ? Math.round(
                                                   (diffResult.totalScore /
                                                     diffResult.maxPossibleScore) *
-                                                    100
+                                                    100,
                                                 )
                                               : 0;
                                           return (
@@ -1244,10 +1243,10 @@ const Profile = () => {
                                                     diffPercentage >= 80
                                                       ? "text-green-500"
                                                       : diffPercentage >= 60
-                                                      ? "text-blue-500"
-                                                      : diffPercentage >= 40
-                                                      ? "text-amber-500"
-                                                      : "text-red-500"
+                                                        ? "text-blue-500"
+                                                        : diffPercentage >= 40
+                                                          ? "text-amber-500"
+                                                          : "text-red-500"
                                                   }`}
                                                 >
                                                   {diffPercentage}%
@@ -1284,7 +1283,7 @@ const Profile = () => {
                                               </div>
                                             </div>
                                           );
-                                        }
+                                        },
                                       )}
                                     </div>
                                   ) : (
@@ -1454,10 +1453,10 @@ const Profile = () => {
                                             index === 0
                                               ? "bg-amber-500 text-white"
                                               : index === 1
-                                              ? "bg-gray-400 text-white"
-                                              : index === 2
-                                              ? "bg-orange-600 text-white"
-                                              : "bg-muted text-muted-foreground"
+                                                ? "bg-gray-400 text-white"
+                                                : index === 2
+                                                  ? "bg-orange-600 text-white"
+                                                  : "bg-muted text-muted-foreground"
                                           }`}
                                         >
                                           {entry.rank}

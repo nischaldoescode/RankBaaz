@@ -26,6 +26,7 @@ import { apiMethods } from "../services/api";
 import toast from "react-hot-toast";
 import { useContent } from "../context/ContentContext";
 import { useSEO } from "../hooks/useSEO";
+import { checkReservedUsername } from "../utils/reservedUsernames";
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -109,10 +110,7 @@ const Register = () => {
       },
       potentialAction: {
         "@type": "RegisterAction",
-        target: {
-          "@type": "EntryPoint",
-          urlTemplate: window.location.href,
-        },
+        target: window.location.href,
       },
     },
   });
@@ -171,7 +169,6 @@ const Register = () => {
 
   const checkUsernameAvailability = useCallback(
     debounce(async (username) => {
-      // First check: only lowercase letters, numbers, and underscores
       if (!/^[a-z0-9_]+$/.test(username)) {
         setUsernameAvailable(false);
         setErrors((prev) => ({
@@ -181,12 +178,22 @@ const Register = () => {
         return;
       }
 
-      // Second check: must contain at least one letter
       if (!/[a-z]/.test(username)) {
         setUsernameAvailable(false);
         setErrors((prev) => ({
           ...prev,
           username: "Username must contain at least one letter",
+        }));
+        return;
+      }
+
+      // ── check reserved usernames client-side first ──
+      const reservedCheck = checkReservedUsername(username);
+      if (reservedCheck.reserved) {
+        setUsernameAvailable(false);
+        setErrors((prev) => ({
+          ...prev,
+          username: reservedCheck.reason || "This username is not available",
         }));
         return;
       }
@@ -216,7 +223,7 @@ const Register = () => {
         setCheckingUsername(false);
       }
     }, 500),
-    []
+    [],
   );
 
   const handleDateChange = useCallback((e) => {
@@ -310,7 +317,7 @@ const Register = () => {
       // Call a new API endpoint to verify OTP without username
       const response = await apiMethods.auth.verifyRegistrationOtp(
         formData.email,
-        otpValue
+        otpValue,
       );
 
       if (response.data.success) {
@@ -374,7 +381,7 @@ const Register = () => {
       const result = await verifyRegistrationOtp(
         formData.email,
         otpValue,
-        username
+        username,
       );
 
       if (result.success && result.user) {
@@ -834,10 +841,10 @@ const Register = () => {
                                     passwordStrength.strength <= 2
                                       ? "bg-red-500"
                                       : passwordStrength.strength <= 3
-                                      ? "bg-yellow-500"
-                                      : passwordStrength.strength <= 4
-                                      ? "bg-blue-500"
-                                      : "bg-green-500"
+                                        ? "bg-yellow-500"
+                                        : passwordStrength.strength <= 4
+                                          ? "bg-blue-500"
+                                          : "bg-green-500"
                                   }`}
                                   style={{
                                     width: `${
@@ -851,10 +858,10 @@ const Register = () => {
                                   passwordStrength.strength <= 2
                                     ? "text-red-500"
                                     : passwordStrength.strength <= 3
-                                    ? "text-yellow-500"
-                                    : passwordStrength.strength <= 4
-                                    ? "text-blue-500"
-                                    : "text-green-500"
+                                      ? "text-yellow-500"
+                                      : passwordStrength.strength <= 4
+                                        ? "text-blue-500"
+                                        : "text-green-500"
                                 }`}
                               >
                                 {passwordStrength.text}
@@ -1119,7 +1126,7 @@ const Register = () => {
                                 onChange={(e) => {
                                   const value = e.target.value.replace(
                                     /\D/g,
-                                    ""
+                                    "",
                                   );
                                   const newOtp = otpValue.split("");
 
@@ -1187,7 +1194,7 @@ const Register = () => {
                                   // Focus the next empty box or last box
                                   const nextIndex = Math.min(
                                     pastedData.length,
-                                    5
+                                    5,
                                   );
                                   document
                                     .getElementById(`reg-otp-${nextIndex}`)
@@ -1270,10 +1277,10 @@ const Register = () => {
                                 errors.username
                                   ? "border-destructive"
                                   : usernameAvailable === true
-                                  ? "border-green-500"
-                                  : usernameAvailable === false
-                                  ? "border-destructive"
-                                  : ""
+                                    ? "border-green-500"
+                                    : usernameAvailable === false
+                                      ? "border-destructive"
+                                      : ""
                               }`}
                               placeholder="Choose a unique username"
                               value={username}
@@ -1292,7 +1299,7 @@ const Register = () => {
 
                                 const cleanedValue = value.replace(
                                   /[^a-z0-9_]/g,
-                                  ""
+                                  "",
                                 );
                                 setUsername(cleanedValue);
 

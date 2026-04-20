@@ -119,7 +119,7 @@ export const useSEO = ({
 
   // Add Google Analytics
   scriptTags.push({
-    src: "https://www.googletagmanager.com/gtag/js?id=G-8HWEBDJ21T",
+    src: "https://www.googletagmanager.com/gtag/js?id=G-GQK7Y7WTG1",
     async: true,
   });
 
@@ -127,14 +127,32 @@ export const useSEO = ({
   scriptTags.push({
     innerHTML: `
       window.dataLayer = window.dataLayer || [];
-      function gtag(){dataLayer.push(arguments);}
-      gtag('js', new Date());
-      gtag('config', 'G-8HWEBDJ21T');
+      gtag("js", new Date());
+
+      gtag("config", "G-GQK7Y7WTG1");
     `,
   });
+  // CLEANER to remove null, undefined, empty strings, empty arrays, empty objects
+  const removeNulls = (obj) =>
+    JSON.parse(
+      JSON.stringify(obj, (key, value) => {
+        if (
+          value === null ||
+          value === undefined ||
+          value === "" ||
+          (Array.isArray(value) && value.length === 0) ||
+          (typeof value === "object" &&
+            value !== null &&
+            Object.keys(value).length === 0)
+        ) {
+          return undefined;
+        }
+        return value;
+      }),
+    );
 
   // Add basic Organization structured data
-  const organizationSchema = {
+  const organizationSchema = removeNulls({
     "@context": "https://schema.org",
     "@type": "Organization",
     name: siteName,
@@ -144,15 +162,14 @@ export const useSEO = ({
     ...(contentSettings?.social && {
       sameAs: Object.values(contentSettings.social).filter(Boolean),
     }),
-  };
+  });
 
   scriptTags.push({
     type: "application/ld+json",
-    innerHTML: JSON.stringify(organizationSchema),
+    innerHTML: JSON.stringify(removeNulls(organizationSchema)),
   });
 
-  // Add WebSite structured data
-  const websiteSchema = {
+  const websiteSchema = removeNulls({
     "@context": "https://schema.org",
     "@type": "WebSite",
     name: siteName,
@@ -162,18 +179,18 @@ export const useSEO = ({
       target: `${siteUrl}/courses?search={search_term_string}`,
       "query-input": "required name=search_term_string",
     },
-  };
+  });
 
   scriptTags.push({
     type: "application/ld+json",
-    innerHTML: JSON.stringify(websiteSchema),
+    innerHTML: JSON.stringify(removeNulls(websiteSchema)),
   });
 
   // Add custom structured data if provided
   if (structuredData) {
     scriptTags.push({
       type: "application/ld+json",
-      innerHTML: JSON.stringify(structuredData),
+      innerHTML: JSON.stringify(removeNulls(structuredData)),
     });
   }
 

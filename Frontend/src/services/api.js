@@ -92,6 +92,7 @@ api.interceptors.request.use(
       "/api/auth/reset-password",
       "/api/security/signing-secret",
       "/api/auth/refresh-token",
+      "/api/teachers/check-email",
     ];
 
     const isPublicEndpoint = publicEndpoints.some((endpoint) =>
