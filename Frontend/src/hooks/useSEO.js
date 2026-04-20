@@ -105,6 +105,7 @@ export const useSEO = ({
       content: "black-translucent",
     },
     { name: "apple-mobile-web-app-title", content: siteName },
+    
   ];
 
   // Prepare link tags array
