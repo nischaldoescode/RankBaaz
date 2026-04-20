@@ -1665,14 +1665,51 @@ const TeacherManagement = () => {
                         ? `${app.reason.slice(0, 120)}...`
                         : app.reason}
                     </p>
-                    {app.inviteSentAt && (
-                      <p
-                        style={{ fontSize: 11, color: "#9ca3af", marginTop: 6 }}
-                      >
-                        Invite sent:{" "}
-                        {new Date(app.inviteSentAt).toLocaleString()}
-                      </p>
-                    )}
+                    {app.inviteSentAt &&
+                      (() => {
+                        const sentAt = new Date(app.inviteSentAt);
+                        const now = new Date();
+                        const minutesSinceSent = (now - sentAt) / 1000 / 60;
+                        // invite link expires in 4 minutes
+                        const linkExpired = minutesSinceSent > 4;
+
+                        return (
+                          <div
+                            style={{
+                              marginTop: 8,
+                              display: "flex",
+                              alignItems: "center",
+                              gap: 8,
+                              flexWrap: "wrap",
+                            }}
+                          >
+                            <p
+                              style={{
+                                fontSize: 11,
+                                color: "#9ca3af",
+                                margin: 0,
+                              }}
+                            >
+                              Invite sent: {sentAt.toLocaleString()}
+                            </p>
+                            {linkExpired && (
+                              <span
+                                style={{
+                                  padding: "2px 8px",
+                                  borderRadius: 20,
+                                  fontSize: 10,
+                                  fontWeight: 700,
+                                  background: "#fef2f2",
+                                  color: "#dc2626",
+                                  border: "1px solid #fecaca",
+                                }}
+                              >
+                                Link Expired
+                              </span>
+                            )}
+                          </div>
+                        );
+                      })()}
                   </div>
 
                   {app.status === "pending" && (
@@ -1719,6 +1756,73 @@ const TeacherManagement = () => {
                       </button>
                     </div>
                   )}
+
+                  {app.status === "invited" &&
+                    (() => {
+                      const sentAt = new Date(app.inviteSentAt);
+                      const minutesSinceSent =
+                        (new Date() - sentAt) / 1000 / 60;
+                      const linkExpired = minutesSinceSent > 4;
+
+                      return linkExpired ? (
+                        <div
+                          style={{
+                            display: "flex",
+                            flexDirection: "column",
+                            gap: 8,
+                            flexShrink: 0,
+                          }}
+                        >
+                          <button
+                            onClick={() => {
+                              // reset status to pending so invite can be resent
+                              adminRequest(
+                                "POST",
+                                "/api/teachers/applications/reset",
+                                {
+                                  applicationId: app._id,
+                                },
+                              )
+                                .then(() => {
+                                  toast.success(
+                                    "Application reset — you can now resend the invite",
+                                  );
+                                  loadApplications();
+                                })
+                                .catch(() => toast.error("Failed to reset"));
+                            }}
+                            style={{
+                              padding: "8px 14px",
+                              background: "#fff",
+                              color: "#d97706",
+                              border: "1.5px solid #fde68a",
+                              borderRadius: 8,
+                              fontSize: 12,
+                              fontWeight: 600,
+                              cursor: "pointer",
+                              whiteSpace: "nowrap",
+                            }}
+                          >
+                            🔄 Resend Invite
+                          </button>
+                        </div>
+                      ) : (
+                        <span
+                          style={{
+                            fontSize: 11,
+                            color: "#2563eb",
+                            fontWeight: 600,
+                            padding: "4px 10px",
+                            background: "#eff6ff",
+                            borderRadius: 20,
+                            border: "1px solid #bfdbfe",
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          ✉️ Invite Sent
+                        </span>
+                      );
+                    })()}
                 </motion.div>
               ))}
             </div>
