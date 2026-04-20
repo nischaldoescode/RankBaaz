@@ -89,17 +89,33 @@ const Signup = () => {
     }
     teacherApi.auth
       .verifyInvite(token)
-      .then((r) => setInviteData(r.data.data))
+      .then((r) => {
+        // check if already registered
+        if (r.data.data?.alreadyRegistered) {
+          navigate("/invite-expired?reason=already_registered", {
+            replace: true,
+          });
+          return;
+        }
+        setInviteData(r.data.data);
+      })
       .catch((err) => {
-        if (
-          err.response?.data?.code === "LINK_EXPIRED" ||
-          err.response?.status === 410
-        ) {
-          navigate("/invite-expired");
+        const code = err.response?.data?.code;
+        const status = err.response?.status;
+
+        if (code === "LINK_EXPIRED" || status === 410) {
+          navigate("/invite-expired?reason=expired", { replace: true });
+        } else if (code === "ALREADY_REGISTERED") {
+          navigate("/invite-expired?reason=already_registered", {
+            replace: true,
+          });
+        } else if (status === 400 || status === 401) {
+          navigate("/invite-expired?reason=invalid", { replace: true });
         } else {
-          navigate("/invite-expired");
+          navigate("/invite-expired?reason=expired", { replace: true });
         }
       })
+
       .finally(() => setVerifying(false));
   }, [token, navigate]);
 

@@ -78,11 +78,12 @@ export const teacherApi = {
       }),
   },
   courses: {
-    // in courses:
     updateQuestion: (courseId, questionId, data) =>
       api.put(`/teachers/me/courses/${courseId}/questions/${questionId}`, data),
     deleteQuestion: (courseId, questionId) =>
       api.delete(`/teachers/me/courses/${courseId}/questions/${questionId}`),
+    updateCourse: (courseId, data) =>
+      api.put(`/teachers/me/courses/${courseId}`, data),
 
     getAll: () => api.get("/teachers/me/courses/all"),
     create: (formData) =>
