@@ -304,7 +304,7 @@ const Login = () => {
   };
 
   return (
-    <div className="h-[95vh] relative overflow-hidden mt-[-40px]">
+    <div className="h-[95vh] relative overflow-hidden mt-[-50px]">
       <div className="flex items-center justify-center min-h-screen relative z-10 px-4 sm:px-6 lg:px-8 py-3 sm:py-8">
         <AnimatePresence mode="wait">
           {showForgotPassword ? (
