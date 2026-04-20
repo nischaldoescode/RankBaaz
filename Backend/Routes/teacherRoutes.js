@@ -223,6 +223,18 @@ router.post(
   uploadDocuments,
   // note: NO requireDocumentVerification here — documents tab must always work
 );
+router.put(
+  "/me/courses/:courseId/questions/:questionId",
+  authenticateTeacher,
+  requireDocumentVerification,
+  teacherUpdateQuestion,
+);
+router.delete(
+  "/me/courses/:courseId/questions/:questionId",
+  authenticateTeacher,
+  requireDocumentVerification,
+  teacherDeleteQuestion,
+);
 
 // ── admin ──
 router.get("/applications", authenticateAdmin, getTeacherApplications);

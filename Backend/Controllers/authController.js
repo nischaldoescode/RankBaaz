@@ -170,6 +170,198 @@ export const updateProfileValidation = [
     .withMessage("Gender must be Male, Female, or Other"),
 ];
 
+const RESERVED_USERNAMES = new Set([
+  // system routes
+  "admin",
+  "administrator",
+  "admin1",
+  "admin123",
+  "admin_team",
+  "adminpanel",
+  "superadmin",
+  "root",
+  "login",
+  "logout",
+  "register",
+  "signup",
+  "signin",
+  "profile",
+  "settings",
+  "account",
+  "accounts",
+  "dashboard",
+  "home",
+  "index",
+  "about",
+  "contact",
+  "help",
+  "support",
+  "faq",
+  "terms",
+  "privacy",
+  "legal",
+  "api",
+  "v1",
+  "v2",
+  "static",
+  "assets",
+  "public",
+  "private",
+  "auth",
+  "oauth",
+  "callback",
+  "webhooks",
+  "notification",
+  "notifications",
+  "secure",
+  "security",
+  "password",
+  "reset",
+  "recover",
+  "forgot",
+
+  // education / platform routes
+  "teacher",
+  "teachers",
+  "teacheradmin",
+  "student",
+  "students",
+  "studentadmin",
+  "course",
+  "courses",
+  "class",
+  "classes",
+  "exam",
+  "exams",
+  "test",
+  "tests",
+
+  // generic routing words
+  "blog",
+  "news",
+  "feed",
+  "rss",
+  "site",
+  "sitemap",
+  "status",
+  "report",
+  "reports",
+  "search",
+  "explore",
+
+  // brand / platform blocked
+  "vidhgrow",
+  "vidhgrow_official",
+  "official",
+  "system",
+  "service",
+  "services",
+  "mod",
+  "moderator",
+  "staff",
+  "team",
+  "bot",
+  "null",
+  "undefined",
+
+  // impersonation / authority
+  "owner",
+  "creator",
+  "manager",
+  "ceo",
+  "cto",
+  "founder",
+  "developer",
+  "dev",
+  "support",
+  "support_team",
+  "helpdesk",
+  "adminsupport",
+  "sysadmin",
+
+  // generic user-group words
+  "anonymous",
+  "anon",
+  "guest",
+  "member",
+  "members",
+  "everyone",
+  "anyone",
+  "user",
+  "users",
+  "publicuser",
+
+  // common social slugs
+  "follow",
+  "followers",
+  "following",
+  "messages",
+  "inbox",
+  "chat",
+  "message",
+  "notification",
+  "notifications",
+  "comments",
+  "likes",
+
+  // external service terms
+  "www",
+  "mail",
+  "email",
+  "smtp",
+  "imap",
+
+  // mild offensive / prohibited (safe list, non-graphic)
+  "hate",
+  "hater",
+  "abuse",
+  "scam",
+  "spammer",
+  "spam",
+  "fake",
+  "fraud",
+  "fraudster",
+  "banned",
+  "blocked",
+  "toxic",
+  "bully",
+  "harass",
+  "harasser",
+
+  // profanity (non-graphic-safe)
+  "fuck",
+  "fck",
+  "sh1t",
+  "shit",
+  "ass",
+  "bitch",
+  "bastard",
+
+  // violence-related (no descriptions)
+  "kill",
+  "killer",
+  "die",
+  "death",
+
+  // inappropriate content (safe-filter)
+  "porn",
+  "prn",
+  "sex",
+  "nude",
+  "naked",
+  "nsfw",
+  "xxx",
+
+  // impersonation/variants that users attempt
+  "officialadmin",
+  "realadmin",
+  "officialteacher",
+  "teacherteam",
+  "admindev",
+  "adminmod",
+  "teamadmin",
+]);
+
 const encryptCookieData = (data) => {
   const encryptionKey = process.env.COOKIE_ENCRYPTION_KEY; // Add to .env
   return CryptoJS.AES.encrypt(JSON.stringify(data), encryptionKey).toString();
@@ -1566,6 +1758,11 @@ export const quickCheckUsername = async (req, res) => {
 
     if (!/^[a-z0-9_]+$/.test(username)) {
       return res.json({ available: false, reason: "invalid_format" });
+    }
+
+    // reserved check
+    if (RESERVED_USERNAMES.has(username.toLowerCase())) {
+      return res.json({ available: false, reason: "reserved" });
     }
 
     // Check Redis first
