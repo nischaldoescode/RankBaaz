@@ -288,6 +288,204 @@ export const teacherSignup = async (req, res) => {
         .json({ success: false, message: "Invalid gender" });
     }
 
+    const RESERVED_USERNAMES = new Set([
+      // system routes
+      "admin",
+      "administrator",
+      "admin1",
+      "admin123",
+      "admin_team",
+      "adminpanel",
+      "superadmin",
+      "root",
+      "login",
+      "logout",
+      "register",
+      "signup",
+      "signin",
+      "profile",
+      "settings",
+      "account",
+      "accounts",
+      "dashboard",
+      "home",
+      "index",
+      "about",
+      "contact",
+      "help",
+      "support",
+      "faq",
+      "terms",
+      "privacy",
+      "legal",
+      "api",
+      "v1",
+      "v2",
+      "static",
+      "assets",
+      "public",
+      "private",
+      "auth",
+      "oauth",
+      "callback",
+      "webhooks",
+      "notification",
+      "notifications",
+      "secure",
+      "security",
+      "password",
+      "reset",
+      "recover",
+      "forgot",
+
+      // education / platform routes
+      "teacher",
+      "teachers",
+      "teacheradmin",
+      "student",
+      "students",
+      "studentadmin",
+      "course",
+      "courses",
+      "class",
+      "classes",
+      "exam",
+      "exams",
+      "test",
+      "tests",
+
+      // generic routing words
+      "blog",
+      "news",
+      "feed",
+      "rss",
+      "site",
+      "sitemap",
+      "status",
+      "report",
+      "reports",
+      "search",
+      "explore",
+
+      // brand / platform blocked
+      "vidhgrow",
+      "vidhgrow_official",
+      "official",
+      "system",
+      "service",
+      "services",
+      "mod",
+      "moderator",
+      "staff",
+      "team",
+      "bot",
+      "null",
+      "undefined",
+
+      // impersonation / authority
+      "owner",
+      "creator",
+      "manager",
+      "ceo",
+      "cto",
+      "founder",
+      "developer",
+      "dev",
+      "support",
+      "support_team",
+      "helpdesk",
+      "adminsupport",
+      "sysadmin",
+
+      // generic user-group words
+      "anonymous",
+      "anon",
+      "guest",
+      "member",
+      "members",
+      "everyone",
+      "anyone",
+      "user",
+      "users",
+      "publicuser",
+
+      // common social slugs
+      "follow",
+      "followers",
+      "following",
+      "messages",
+      "inbox",
+      "chat",
+      "message",
+      "notification",
+      "notifications",
+      "comments",
+      "likes",
+
+      // external service terms
+      "www",
+      "mail",
+      "email",
+      "smtp",
+      "imap",
+
+      // mild offensive / prohibited (safe list, non-graphic)
+      "hate",
+      "hater",
+      "abuse",
+      "scam",
+      "spammer",
+      "spam",
+      "fake",
+      "fraud",
+      "fraudster",
+      "banned",
+      "blocked",
+      "toxic",
+      "bully",
+      "harass",
+      "harasser",
+
+      // profanity (non-graphic-safe)
+      "fuck",
+      "fck",
+      "sh1t",
+      "shit",
+      "ass",
+      "bitch",
+      "bastard",
+
+      // violence-related (no descriptions)
+      "kill",
+      "killer",
+      "die",
+      "death",
+
+      // inappropriate content (safe-filter)
+      "porn",
+      "prn",
+      "sex",
+      "nude",
+      "naked",
+      "nsfw",
+      "xxx",
+
+      // impersonation/variants that users attempt
+      "officialadmin",
+      "realadmin",
+      "officialteacher",
+      "teacherteam",
+      "admindev",
+      "adminmod",
+      "teamadmin",
+    ]);
+    if (RESERVED_USERNAMES.has(username.toLowerCase())) {
+      return res.status(400).json({
+        success: false,
+        message: "This username is not available",
+      });
+    }
+
     if (
       password.length < 8 ||
       !/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(password)
@@ -339,15 +537,29 @@ export const teacherSignup = async (req, res) => {
       });
     }
 
-    const [existingEmail, existingUsername] = await Promise.all([
-      Teacher.findOne({ email: payload.email }),
-      Teacher.findOne({ username: username.toLowerCase() }),
-    ]);
+    const User = (await import("../Models/User.js")).default;
+
+    const [existingEmail, existingUsername, existingStudent] =
+      await Promise.all([
+        Teacher.findOne({ email: payload.email }),
+        Teacher.findOne({ username: username.toLowerCase() }),
+        User.findOne({ email: payload.email.toLowerCase() }),
+      ]);
 
     if (existingEmail) {
-      return res
-        .status(400)
-        .json({ success: false, message: "Email already registered" });
+      return res.status(400).json({
+        success: false,
+        message: "Email already registered as a teacher",
+      });
+    }
+
+    if (existingStudent) {
+      // do NOT reveal it's a student account — just say "not available"
+      return res.status(400).json({
+        success: false,
+        message:
+          "This email is already in use and cannot be used for a teacher account",
+      });
     }
     if (existingUsername) {
       return res
@@ -406,6 +618,114 @@ export const teacherSignup = async (req, res) => {
   } catch (error) {
     console.error("Teacher signup error:", error);
     res.status(500).json({ success: false, message: "Signup failed" });
+  }
+};
+
+export const teacherUpdateQuestion = async (req, res) => {
+  try {
+    const teacherId = req.teacher.teacherId;
+    const { courseId, questionId } = req.params;
+
+    const teacher = await Teacher.findById(teacherId);
+    if (!teacher || teacher.accessBlocked) {
+      return res
+        .status(403)
+        .json({
+          success: false,
+          code: "ACCESS_BLOCKED",
+          message: "Account restricted",
+        });
+    }
+
+    // verify teacher owns course
+    const course = await Course.findOne({ _id: courseId, teacher: teacherId });
+    if (!course) {
+      return res
+        .status(403)
+        .json({ success: false, message: "Not authorized" });
+    }
+
+    const questionIndex = course.questions.findIndex(
+      (q) => q._id.toString() === questionId,
+    );
+
+    if (questionIndex === -1) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Question not found" });
+    }
+
+    const {
+      question,
+      explanation,
+      questionType,
+      options,
+      correctAnswer,
+      difficulty,
+    } = req.body;
+
+    if (question) course.questions[questionIndex].question = question.trim();
+    if (explanation)
+      course.questions[questionIndex].explanation = explanation.trim();
+    if (questionType)
+      course.questions[questionIndex].questionType = questionType;
+    if (options) course.questions[questionIndex].options = options;
+    if (correctAnswer !== undefined)
+      course.questions[questionIndex].correctAnswer = correctAnswer;
+    if (difficulty) course.questions[questionIndex].difficulty = difficulty;
+
+    await course.save();
+    await invalidateTeacherCache(teacherId);
+
+    return res.status(200).json({ success: true, message: "Question updated" });
+  } catch (error) {
+    res.status(500).json({ success: false, message: "Update failed" });
+  }
+};
+
+export const teacherDeleteQuestion = async (req, res) => {
+  try {
+    const teacherId = req.teacher.teacherId;
+    const { courseId, questionId } = req.params;
+
+    const teacher = await Teacher.findById(teacherId);
+    if (!teacher || teacher.accessBlocked) {
+      return res
+        .status(403)
+        .json({
+          success: false,
+          code: "ACCESS_BLOCKED",
+          message: "Account restricted",
+        });
+    }
+
+    const course = await Course.findOne({ _id: courseId, teacher: teacherId });
+    if (!course) {
+      return res
+        .status(403)
+        .json({ success: false, message: "Not authorized" });
+    }
+
+    const before = course.questions.length;
+    course.questions = course.questions.filter(
+      (q) => q._id.toString() !== questionId,
+    );
+
+    if (course.questions.length === before) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Question not found" });
+    }
+
+    course.totalQuestions = course.questions.filter(
+      (q) => q.isActive !== false,
+    ).length;
+    await course.save();
+    await invalidateTeacherCache(teacherId);
+
+    return res.status(200).json({ success: true, message: "Question deleted" });
+  } catch (error) {
+    res.status(500).json({ success: false, message: "Delete failed" });
   }
 };
 
@@ -1463,7 +1783,9 @@ export const getTeacherCourses = async (req, res) => {
     const teacherId = req.teacher.teacherId;
 
     const courses = await Course.find({ teacher: teacherId })
-      .select("name description image isPaid price geoRestriction isActive totalQuestions difficulties approvalStatus createdAt updatedAt teacher")
+      .select(
+        "name description image isPaid price geoRestriction isActive totalQuestions difficulties approvalStatus createdAt updatedAt teacher",
+      )
       .sort({ createdAt: -1 })
       .lean();
 
