@@ -628,13 +628,11 @@ export const teacherUpdateQuestion = async (req, res) => {
 
     const teacher = await Teacher.findById(teacherId);
     if (!teacher || teacher.accessBlocked) {
-      return res
-        .status(403)
-        .json({
-          success: false,
-          code: "ACCESS_BLOCKED",
-          message: "Account restricted",
-        });
+      return res.status(403).json({
+        success: false,
+        code: "ACCESS_BLOCKED",
+        message: "Account restricted",
+      });
     }
 
     // verify teacher owns course
@@ -690,13 +688,11 @@ export const teacherDeleteQuestion = async (req, res) => {
 
     const teacher = await Teacher.findById(teacherId);
     if (!teacher || teacher.accessBlocked) {
-      return res
-        .status(403)
-        .json({
-          success: false,
-          code: "ACCESS_BLOCKED",
-          message: "Account restricted",
-        });
+      return res.status(403).json({
+        success: false,
+        code: "ACCESS_BLOCKED",
+        message: "Account restricted",
+      });
     }
 
     const course = await Course.findOne({ _id: courseId, teacher: teacherId });
@@ -1492,6 +1488,10 @@ export const sendTeacherInvite = async (req, res) => {
       emailContent,
       signupLink,
       emailSubject,
+      {
+        logoUrl: req.body.logoUrl || "https://vidhgrow.online/logo.png",
+        primaryColor: req.body.primaryColor || "#2563eb",
+      },
     );
 
     await resend.emails.send({
@@ -1519,39 +1519,159 @@ export const sendTeacherInvite = async (req, res) => {
   }
 };
 
-const buildInviteEmail = (name, content, signupLink, subject) => `
-<!DOCTYPE html>
-<html>
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
-<body style="margin:0;padding:0;font-family:Arial,sans-serif;background:#f4f4f4;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f4f4;padding:24px;">
-    <tr><td align="center">
-      <table width="600" cellpadding="0" cellspacing="0" style="background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.08);max-width:100%;">
-        <tr><td style="padding:36px 40px 28px;text-align:center;border-bottom:1px solid #e9ecef;">
-          <h2 style="margin:0;color:#1a1a1a;font-size:24px;font-weight:700;">Vidhgrow</h2>
-          <p style="margin:8px 0 0;color:#64748b;font-size:14px;">Teacher Invitation</p>
-        </td></tr>
-        <tr><td style="padding:36px 40px;">
-          <p style="margin:0 0 16px;color:#374151;font-size:15px;line-height:1.7;">Hi <strong>${name}</strong>,</p>
-          <div style="color:#374151;font-size:14px;line-height:1.8;">${content.replace(/\n/g, "<br/>")}</div>
-          <div style="margin:32px 0;text-align:center;">
-            <a href="${signupLink}" style="display:inline-block;padding:14px 36px;background:#2563eb;color:#fff;text-decoration:none;border-radius:10px;font-weight:700;font-size:15px;box-shadow:0 4px 14px rgba(37,99,235,0.3);">
-              Complete Registration
-            </a>
-          </div>
-          <p style="margin:0;color:#94a3b8;font-size:13px;text-align:center;">
-            This link expires in <strong style="color:#ef4444;">4 minutes</strong>. Contact support if it expires.
-          </p>
-        </td></tr>
-        <tr><td style="padding:20px;text-align:center;background:#f8f9fa;border-top:1px solid #e9ecef;">
-          <p style="margin:0;color:#999;font-size:12px;">© ${new Date().getFullYear()} Vidhgrow. All rights reserved.</p>
-        </td></tr>
-      </table>
-    </td></tr>
+const buildInviteEmail = (name, content, signupLink, subject, options = {}) => {
+  const {
+    logoUrl = "https://vidhgrow.online/logo.png",
+    primaryColor = "#2563eb",
+  } = options;
+
+  // convert plain text content to HTML paragraphs
+  const htmlContent = content
+    .split("\n")
+    .filter((line) => line.trim() !== "")
+    .map((line) => {
+      // detect bullet points
+      if (line.trim().startsWith("-") || line.trim().startsWith("•")) {
+        return `<li style="margin-bottom:6px;color:#374151;font-size:14px;line-height:1.7;">${line.replace(/^[-•]\s*/, "")}</li>`;
+      }
+      return `<p style="margin:0 0 14px;color:#374151;font-size:14px;line-height:1.8;">${line}</p>`;
+    });
+
+  // wrap li items in ul
+  let inList = false;
+  const processedContent = [];
+  for (const item of htmlContent) {
+    if (item.startsWith("<li") && !inList) {
+      inList = true;
+      processedContent.push(`<ul style="margin:0 0 14px;padding-left:20px;">`);
+      processedContent.push(item);
+    } else if (!item.startsWith("<li") && inList) {
+      inList = false;
+      processedContent.push(`</ul>`);
+      processedContent.push(item);
+    } else {
+      processedContent.push(item);
+    }
+  }
+  if (inList) processedContent.push("</ul>");
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>${subject || "Teacher Invitation"}</title>
+  <!--[if mso]>
+  <noscript>
+    <xml>
+      <o:OfficeDocumentSettings>
+        <o:PixelsPerInch>96</o:PixelsPerInch>
+      </o:OfficeDocumentSettings>
+    </xml>
+  </noscript>
+  <![endif]-->
+</head>
+<body style="margin:0;padding:0;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;background-color:#f0f4f8;-webkit-text-size-adjust:100%;">
+  <!-- Preheader text (hidden) -->
+  <div style="display:none;font-size:1px;color:#fefefe;line-height:1px;max-height:0;max-width:0;opacity:0;overflow:hidden;">
+    You're invited to teach on Vidhgrow — ${name}
+  </div>
+
+  <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color:#f0f4f8;padding:40px 0;">
+    <tr>
+      <td align="center" style="padding:0 16px;">
+        <table role="presentation" cellpadding="0" cellspacing="0" width="600" style="max-width:600px;width:100%;background-color:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.08);">
+          
+          <!-- Header -->
+          <tr>
+            <td style="background:linear-gradient(135deg,${primaryColor},${primaryColor}dd);padding:32px 40px;text-align:center;">
+              ${
+                logoUrl
+                  ? `
+              <img src="${logoUrl}" alt="Vidhgrow" width="120" style="display:block;margin:0 auto 16px;max-height:44px;object-fit:contain;" />
+              `
+                  : `
+              <div style="font-size:24px;font-weight:800;color:#ffffff;margin-bottom:8px;letter-spacing:-0.5px;">Vidhgrow</div>
+              `
+              }
+              <div style="display:inline-block;padding:4px 14px;background:rgba(255,255,255,0.2);border-radius:20px;color:#ffffff;font-size:12px;font-weight:600;letter-spacing:0.5px;text-transform:uppercase;">
+                Teacher Invitation
+              </div>
+            </td>
+          </tr>
+
+          <!-- Body -->
+          <tr>
+            <td style="padding:40px 40px 32px;">
+              <p style="margin:0 0 20px;font-size:16px;font-weight:600;color:#0f172a;">
+                Hi ${name},
+              </p>
+              
+              ${processedContent.join("\n")}
+              
+              <!-- CTA Button — single, authoritative -->
+              <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin:32px 0 24px;">
+                <tr>
+                  <td align="center">
+                    <a href="${signupLink}" 
+                       target="_blank"
+                       style="display:inline-block;padding:14px 40px;background-color:${primaryColor};color:#ffffff;text-decoration:none;border-radius:10px;font-size:15px;font-weight:700;letter-spacing:0.3px;mso-padding-alt:14px 40px;">
+                      <!--[if mso]><i style="letter-spacing:40px;mso-font-width:-100%;mso-text-raise:30pt">&nbsp;</i><![endif]-->
+                      Complete Registration
+                      <!--[if mso]><i style="letter-spacing:40px;mso-font-width:-100%">&nbsp;</i><![endif]-->
+                    </a>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Expiry warning -->
+              <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
+                <tr>
+                  <td style="background-color:#fef3c7;border-left:4px solid #f59e0b;border-radius:0 8px 8px 0;padding:12px 16px;">
+                    <p style="margin:0;font-size:13px;color:#92400e;line-height:1.5;">
+                      ⏱ <strong>This link expires in 4 minutes.</strong> Please register promptly after clicking.
+                    </p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="background-color:#f8fafc;border-top:1px solid #e2e8f0;padding:24px 40px;text-align:center;">
+              <p style="margin:0 0 8px;font-size:12px;color:#94a3b8;">
+                If the button doesn't work, copy and paste this link:
+              </p>
+              <p style="margin:0 0 16px;font-size:11px;word-break:break-all;">
+                <a href="${signupLink}" style="color:${primaryColor};text-decoration:none;">${signupLink}</a>
+              </p>
+              <p style="margin:0;font-size:12px;color:#94a3b8;">
+                © ${new Date().getFullYear()} Vidhgrow. All rights reserved.
+              </p>
+            </td>
+          </tr>
+
+        </table>
+
+        <!-- Bottom spacing -->
+        <table role="presentation" cellpadding="0" cellspacing="0" width="600" style="max-width:600px;width:100%;margin-top:24px;">
+          <tr>
+            <td align="center">
+              <p style="margin:0;font-size:12px;color:#94a3b8;">
+                You received this email because someone applied to teach on Vidhgrow.
+                <br>Contact <a href="mailto:support@vidhgrow.online" style="color:${primaryColor};">support@vidhgrow.online</a> if you have questions.
+              </p>
+            </td>
+          </tr>
+        </table>
+
+      </td>
+    </tr>
   </table>
 </body>
 </html>`;
-
+};
 export const rejectTeacherApplication = async (req, res) => {
   try {
     const { applicationId, reason } = req.body;
