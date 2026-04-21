@@ -6,9 +6,9 @@ const SUPPORT_EMAIL = "support@vidhgrow.online";
 const FRONTEND_URL =
   import.meta.env.VITE_FRONTEND_URL || "https://vidhgrow.online";
 
-const InviteExpired = ({ reason = "expired" }) => {
+const InviteExpired = ({ initialReason = "expired" }) => {
   const [params] = useSearchParams();
-  const reason = params.get("reason") || "expired";
+  const reason = params.get("reason") || initialReason;
   const [counted, setCounted] = useState(false);
 
   // reasons: "expired" | "already_registered" | "invalid"
