@@ -1774,37 +1774,56 @@ const TeacherManagement = () => {
                           }}
                         >
                           <button
-                            onClick={() => {
-                              // reset status to pending so invite can be resent
-                              adminRequest(
-                                "POST",
-                                "/api/teachers/applications/reset",
-                                {
-                                  applicationId: app._id,
-                                },
-                              )
-                                .then(() => {
-                                  toast.success(
-                                    "Application reset — you can now resend the invite",
-                                  );
-                                  loadApplications();
-                                })
-                                .catch(() => toast.error("Failed to reset"));
+                            onClick={async () => {
+                              try {
+                                await adminRequest(
+                                  "POST",
+                                  "/teachers/applications/reset",
+                                  { applicationId: app._id },
+                                );
+                                // immediately open email editor with the application data
+                                setEmailEditorApp({
+                                  ...app,
+                                  status: "pending",
+                                });
+                                toast.success(
+                                  "Compose and send a new invite below",
+                                );
+                                // refresh list in background so count updates
+                                loadApplications();
+                              } catch (err) {
+                                toast.error(
+                                  err.response?.data?.message ||
+                                    "Failed to reset",
+                                );
+                              }
                             }}
                             style={{
                               padding: "8px 14px",
-                              background: "#fff",
-                              color: "#d97706",
-                              border: "1.5px solid #fde68a",
+                              background:
+                                "linear-gradient(135deg, #d97706, #b45309)",
+                              color: "#fff",
+                              border: "none",
                               borderRadius: 8,
                               fontSize: 12,
                               fontWeight: 600,
                               cursor: "pointer",
                               whiteSpace: "nowrap",
+                              boxShadow: "0 2px 8px rgba(217,119,6,0.25)",
                             }}
                           >
                             🔄 Resend Invite
                           </button>
+                          <p
+                            style={{
+                              fontSize: 10,
+                              color: "#9ca3af",
+                              textAlign: "center",
+                              margin: 0,
+                            }}
+                          >
+                            Link expired
+                          </p>
                         </div>
                       ) : (
                         <span
