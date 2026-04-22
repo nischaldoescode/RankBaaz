@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { teacherApi } from "../services/api.js";
 import { teacherRequestSigner } from "../utils/requestSigning.js";
 import toast from "react-hot-toast";
+import { checkReservedUsername } from "../utils/reservedUsernames.js";
 
 const inputStyle = {
   width: "100%",

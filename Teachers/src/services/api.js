@@ -24,14 +24,32 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-// auto-refresh signing secret on 401 with INVALID_SIGNATURE
+// list of endpoints that are allowed to return 401 without triggering session expiry
+const AUTH_PASSTHROUGH_URLS = [
+  "/teachers/login",
+  "/teachers/me", // fails on signup page — expected
+  "/teachers/otp/send",
+  "/teachers/otp/verify",
+  "/teachers/signup",
+  "/teachers/verify-invite",
+  "/teachers/check-email",
+  "/teachers/forgot-password",
+  "/teachers/forgot-password/verify-otp",
+  "/teachers/forgot-password/reset",
+];
+
 api.interceptors.response.use(
   (res) => res,
   async (err) => {
+    const url = err.config?.url || "";
+    const isPassthrough = AUTH_PASSTHROUGH_URLS.some((p) => url.includes(p));
+
+    // only attempt token refresh for authenticated routes
     if (
       err.response?.status === 401 &&
       err.response?.data?.code === "INVALID_SIGNATURE" &&
-      !err.config._retried
+      !err.config._retried &&
+      !isPassthrough
     ) {
       err.config._retried = true;
       try {
@@ -49,6 +67,7 @@ api.interceptors.response.use(
         }
       } catch {}
     }
+
     return Promise.reject(err);
   },
 );
