@@ -24,6 +24,8 @@ const ALLOWED_ORIGINS = [
   "https://admin.vidhgrow.online",
   "https://rankbaaz-admin.onrender.com",
   "http://localhost:4173",
+  "https://teachers.vidhgrow.online",
+  "https://www.teachers.vidhgrow.online",
 ];
 
 /**
