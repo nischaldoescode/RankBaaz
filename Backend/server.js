@@ -147,6 +147,7 @@ const corsOptions = {
       "https://rankbaaz.onrender.com/",
       "http://localhost:4173",
       "https://rankbaaz-admin.onrender.com/",
+      "http://localhost:5175",
     ];
 
     // Handle requests without origin header (server-to-server, curl, etc.)
