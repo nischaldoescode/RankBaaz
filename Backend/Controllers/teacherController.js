@@ -187,7 +187,7 @@ export const sendSignupOtp = async (req, res) => {
     try {
       payload = jwt.verify(
         token,
-        process.env.TEACHER_INVITE_SECRET || process.env.JWT_SECRET,
+        process.env.TEACHER_INVITE_SECRET,
       );
     } catch (err) {
       if (err.name === "TokenExpiredError") {
