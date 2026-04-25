@@ -132,7 +132,7 @@ const Signup = () => {
     try {
       await teacherApi.auth.sendOtp({ email: inviteData.email, token });
       setOtpSent(true);
-      setOtpTimer(120); // 2 min cooldown
+      setOtpTimer(15); // 2 min cooldown
       toast.success(`OTP sent to ${inviteData.email}`);
     } catch (err) {
       if (
