@@ -8,19 +8,49 @@ const api = axios.create({
   withCredentials: true,
 });
 
-// attach request signature to writes
+// these routes don't require HMAC signing — teacher has no secret yet
+const UNSIGNED_ROUTES = [
+  "/teachers/login",
+  "/teachers/logout",
+  "/teachers/signup",
+  "/teachers/otp/send",
+  "/teachers/otp/verify",
+  "/teachers/verify-invite",
+  "/teachers/check-email",
+  "/teachers/forgot-password",
+  "/teachers/forgot-password/verify-otp",
+  "/teachers/forgot-password/reset",
+  "/teachers/apply",
+  "/teachers/application/status",
+];
+
 api.interceptors.request.use((config) => {
   const writeMethod = ["post", "put", "patch", "delete"].includes(
     config.method?.toLowerCase(),
   );
-  if (writeMethod) {
-    const { signature, timestamp, nonce } = teacherRequestSigner.sign(
-      config.data ? JSON.stringify(config.data) : "",
-    );
-    config.headers["x-signature"] = signature;
-    config.headers["x-timestamp"] = timestamp;
-    config.headers["x-nonce"] = nonce;
+
+  if (!writeMethod) return config;
+
+  const url = config.url || "";
+  const isUnsigned = UNSIGNED_ROUTES.some((p) => url.includes(p));
+
+  if (isUnsigned) {
+    // no signing headers for public auth routes
+    return config;
   }
+
+  // only sign if we actually have a secret
+  if (!teacherRequestSigner.hasSecret()) {
+    return config;
+  }
+
+  const { signature, timestamp, nonce } = teacherRequestSigner.sign(
+    config.data ? JSON.stringify(config.data) : "",
+  );
+  config.headers["x-signature"] = signature;
+  config.headers["x-timestamp"] = timestamp;
+  config.headers["x-nonce"] = nonce;
+
   return config;
 });
 
