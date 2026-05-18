@@ -7,6 +7,7 @@ import Course from "../Models/Course.js";
 import TestResult from "../Models/TestResult.js";
 import CourseReview from "../Models/CourseReview.js";
 import Coupon from "../Models/Coupon.js";
+import TeacherPayout from "../Models/TeacherPayout.js";
 import { v2 as cloudinary } from "cloudinary";
 import { generateSigningSecret } from "../Middleware/requestSignature.js";
 import { generateOtp, sendOtpEmail } from "../utils/OtpUtils.js";
@@ -39,6 +40,7 @@ const usernameUsesName = (username, name) => {
     (compactName.length >= 3 && compactUsername.includes(compactName)) ||
     parts.some((part) => compactUsername.includes(part))
   );
+};
 
 const escapeHtml = (value = "") =>
   String(value)
@@ -47,7 +49,6 @@ const escapeHtml = (value = "") =>
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#39;");
-};
 
 const generateTeacherToken = (teacherId) =>
   jwt.sign(
@@ -2153,6 +2154,19 @@ export const adminDeleteTeacher = async (req, res) => {
     const teacher = await Teacher.findById(teacherId);
     if (!teacher) {
       return res.status(404).json({ success: false, message: "Not found" });
+    }
+
+    const openPayoutCount = await TeacherPayout.countDocuments({
+      teacher: teacherId,
+      status: { $in: ["pending", "processing"] },
+    });
+
+    if ((teacher.pendingPayout || 0) > 0 || openPayoutCount > 0) {
+      return res.status(409).json({
+        success: false,
+        message:
+          "Settle pending teacher payouts before deleting this teacher account.",
+      });
     }
 
     if (!process.env.RESEND_API_KEY || !process.env.EMAIL_USER) {
