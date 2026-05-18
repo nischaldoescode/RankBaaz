@@ -75,10 +75,12 @@ const pageTransition = {
 };
 
 // Background Elements Component
-const BackgroundElements = ({ animations, reducedMotion }) => {
+const BackgroundElements = ({ animations, reducedMotion, disabled = false }) => {
   const [scrollY, setScrollY] = useState(0);
 
   useEffect(() => {
+    if (disabled) return;
+
     let rafId = null;
     let lastScrollY = window.scrollY;
 
@@ -101,7 +103,9 @@ const BackgroundElements = ({ animations, reducedMotion }) => {
       window.removeEventListener("scroll", handleScroll);
       if (rafId) cancelAnimationFrame(rafId);
     };
-  }, []);
+  }, [disabled]);
+
+  if (disabled) return null;
 
   return (
     <div className="fixed inset-0 z-0 pointer-events-none">
@@ -446,6 +450,7 @@ function App() {
             <BackgroundElements
               animations={animations}
               reducedMotion={reducedMotion}
+              disabled={location.pathname === "/"}
             />
 
             {/* Main Application */}

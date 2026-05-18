@@ -19,13 +19,8 @@ const TeacherCTASection = () => {
           initial={{ opacity: 0, y: 24 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-primary/10 to-primary/5 border border-primary/20 p-8 sm:p-12"
+          className="relative overflow-hidden rounded-lg border border-primary/20 bg-primary/5 p-8 sm:p-12"
         >
-          {/* subtle background glow */}
-          <div className="absolute inset-0 pointer-events-none">
-            <div className="absolute top-0 right-0 w-64 h-64 bg-primary/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
-          </div>
-
           <div className="relative flex flex-col lg:flex-row items-center gap-10">
             <div className="flex-1 text-center lg:text-left">
 
@@ -72,7 +67,7 @@ const TeacherCTASection = () => {
               ].map((item, i) => (
                 <div
                   key={i}
-                  className="bg-background border border-border rounded-xl p-3 text-center"
+                  className="bg-background border border-border rounded-lg p-3 text-center"
                 >
                   <p className="text-lg font-bold text-foreground">{item.value}</p>
                   <p className="text-xs text-muted-foreground">{item.label}</p>

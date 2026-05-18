@@ -47,6 +47,51 @@ const MemoizedInput = memo(({ className, ...props }) => {
 
 MemoizedInput.displayName = "MemoizedInput";
 
+const normalizeNameParts = (name = "") =>
+  name
+    .toLowerCase()
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9\s]/g, " ")
+    .trim()
+    .split(/\s+/)
+    .filter((part) => part.length >= 2);
+
+const normalizeUsernameInput = (value, maxLength = 20) =>
+  value
+    .toLowerCase()
+    .replace(/[\s-]+/g, "_")
+    .replace(/[^a-z0-9_]/g, "")
+    .replace(/_+/g, "_")
+    .slice(0, maxLength);
+
+const usernameUsesName = (username, name) => {
+  const parts = normalizeNameParts(name);
+  if (parts.length === 0) return true;
+
+  const compactUsername = username.replace(/_/g, "");
+  const compactName = parts.join("");
+
+  return (
+    (compactName.length >= 3 && compactUsername.includes(compactName)) ||
+    parts.some((part) => compactUsername.includes(part))
+  );
+};
+
+const buildUsernameSuggestions = (name, maxLength = 20) => {
+  const parts = normalizeNameParts(name);
+  if (parts.length === 0) return [];
+
+  const [first, second] = parts;
+  const compact = parts.join("");
+  const underscored = [first, second].filter(Boolean).join("_");
+  const initial = second ? `${first}_${second[0]}` : "";
+
+  return Array.from(new Set([compact, underscored, initial]))
+    .map((item) => normalizeUsernameInput(item, maxLength))
+    .filter((item) => item.length >= 3 && item.length <= maxLength);
+};
+
 const Register = () => {
   const [formData, setFormData] = useState({
     firstName: "",
@@ -73,6 +118,11 @@ const Register = () => {
   const [usernameAvailable, setUsernameAvailable] = useState(null);
   const [checkingUsername, setCheckingUsername] = useState(false);
   const [debouncedPassword, setDebouncedPassword] = useState(formData.password);
+  const fullName = `${formData.firstName} ${formData.lastName}`.trim();
+  const usernameSuggestions = useMemo(
+    () => buildUsernameSuggestions(fullName),
+    [fullName],
+  );
 
   const {
     register,
@@ -168,7 +218,7 @@ const Register = () => {
   }, []); // Empty dependency array - function never recreates
 
   const checkUsernameAvailability = useCallback(
-    debounce(async (username) => {
+    debounce(async (username, nameForUsername) => {
       if (!/^[a-z0-9_]+$/.test(username)) {
         setUsernameAvailable(false);
         setErrors((prev) => ({
@@ -198,6 +248,15 @@ const Register = () => {
         return;
       }
 
+      if (!usernameUsesName(username, nameForUsername)) {
+        setUsernameAvailable(false);
+        setErrors((prev) => ({
+          ...prev,
+          username: "Use your name in the username",
+        }));
+        return;
+      }
+
       setCheckingUsername(true);
       try {
         const response = await apiMethods.auth.quickCheckUsername(username);
@@ -209,7 +268,13 @@ const Register = () => {
             username:
               response.data.reason === "too_short"
                 ? "Username too short"
-                : "Username already taken",
+                : response.data.reason === "too_long"
+                  ? "Username too long"
+                  : response.data.reason === "invalid_format"
+                    ? "Only lowercase letters, numbers, and underscores allowed"
+                    : response.data.reason === "reserved"
+                      ? "This username is not available"
+                      : "Username already taken",
           }));
         } else {
           setErrors((prev) => {
@@ -322,6 +387,11 @@ const Register = () => {
 
       if (response.data.success) {
         setRegisterStep(3);
+        const suggestedUsername = usernameSuggestions[0];
+        if (suggestedUsername && !username) {
+          setUsername(suggestedUsername);
+          checkUsernameAvailability(suggestedUsername, fullName);
+        }
         toast.success("Email verified! Now choose your username");
       }
     } catch (error) {
@@ -364,8 +434,15 @@ const Register = () => {
       return;
     }
 
-    if (username.length > 15) {
-      setErrors({ username: "Username too long, max 15 characters" });
+    const normalizedUsername = normalizeUsernameInput(username);
+
+    if (normalizedUsername.length > 20) {
+      setErrors({ username: "Username too long, max 20 characters" });
+      return;
+    }
+
+    if (!usernameUsesName(normalizedUsername, fullName)) {
+      setErrors({ username: "Use your name in the username" });
       return;
     }
 
@@ -381,7 +458,7 @@ const Register = () => {
       const result = await verifyRegistrationOtp(
         formData.email,
         otpValue,
-        username,
+        normalizedUsername,
       );
 
       if (result.success && result.user) {
@@ -1285,29 +1362,23 @@ const Register = () => {
                               placeholder="Choose a unique username"
                               value={username}
                               onChange={(e) => {
-                                const value = e.target.value.toLowerCase();
-
-                                if (value.includes(" ")) {
-                                  setErrors((prev) => ({
-                                    ...prev,
-                                    username: "Username cannot contain spaces",
-                                  }));
-                                  setUsernameAvailable(false);
-                                  setUsername(value);
-                                  return;
-                                }
-
-                                const cleanedValue = value.replace(
-                                  /[^a-z0-9_]/g,
-                                  "",
+                                const cleanedValue = normalizeUsernameInput(
+                                  e.target.value,
                                 );
                                 setUsername(cleanedValue);
 
                                 // Only check if length is at least 3
                                 if (cleanedValue.length >= 3) {
-                                  checkUsernameAvailability(cleanedValue);
+                                  checkUsernameAvailability(
+                                    cleanedValue,
+                                    fullName,
+                                  );
                                 } else {
                                   setUsernameAvailable(null);
+                                  setErrors((prev) => {
+                                    const { username, ...rest } = prev;
+                                    return rest;
+                                  });
                                 }
                               }}
                               disabled={isLoading}
@@ -1326,9 +1397,34 @@ const Register = () => {
                             </div>
                           </div>
                           <p className="text-xs text-muted-foreground text-left">
-                            3-20 characters. Lowercase letters, numbers, and
-                            underscores only.
+                            Use your name. 3-20 characters, lowercase letters,
+                            numbers, and underscores only.
                           </p>
+                          {usernameSuggestions.length > 0 && (
+                            <div className="flex flex-wrap gap-2">
+                              {usernameSuggestions.map((suggestion) => (
+                                <button
+                                  key={suggestion}
+                                  type="button"
+                                  onClick={() => {
+                                    setUsername(suggestion);
+                                    setUsernameAvailable(null);
+                                    checkUsernameAvailability(
+                                      suggestion,
+                                      fullName,
+                                    );
+                                  }}
+                                  className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
+                                    username === suggestion
+                                      ? "border-primary bg-primary/10 text-primary"
+                                      : "border-border bg-background text-muted-foreground hover:text-foreground"
+                                  }`}
+                                >
+                                  @{suggestion}
+                                </button>
+                              ))}
+                            </div>
+                          )}
                           {errors.username && (
                             <motion.p
                               {...errorAnimation}

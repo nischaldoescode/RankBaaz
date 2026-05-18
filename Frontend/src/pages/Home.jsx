@@ -14,8 +14,6 @@ import {
   Zap,
   Shield,
   Lightbulb,
-  Sparkles,
-  ChevronDown,
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
@@ -47,7 +45,6 @@ import { useAuth } from "../context/AuthContext";
 import { useTheme } from "../context/ThemeContext";
 import { useContent } from "../context/ContentContext";
 import Loading from "../components/common/Loading";
-import axios from "axios";
 
 const iconMap = {
   Brain,
@@ -65,35 +62,16 @@ const iconMap = {
 
 import TeacherCTASection from "../components/Teachers/TeacherCTA";
 
-// subtle animated gradient badge
 const Badge = ({ children }) => (
   <motion.span
     initial={{ opacity: 0, y: -8 }}
     animate={{ opacity: 1, y: 0 }}
     transition={{ duration: 0.5 }}
-    className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-primary/10 text-primary border border-primary/20 mb-6"
+    className="inline-flex items-center gap-1.5 rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-xs font-semibold text-primary"
   >
-    <Sparkles className="w-3 h-3" />
+    <Target className="h-3 w-3" />
     {children}
   </motion.span>
-);
-
-// floating scroll indicator
-const ScrollIndicator = () => (
-  <motion.div
-    className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-1 text-muted-foreground/50"
-    initial={{ opacity: 0 }}
-    animate={{ opacity: 1 }}
-    transition={{ delay: 1.2, duration: 0.6 }}
-  >
-    <span className="text-xs tracking-widest uppercase">Scroll</span>
-    <motion.div
-      animate={{ y: [0, 6, 0] }}
-      transition={{ repeat: Infinity, duration: 1.4, ease: "easeInOut" }}
-    >
-      <ChevronDown className="w-4 h-4" />
-    </motion.div>
-  </motion.div>
 );
 
 // thin animated divider
@@ -120,6 +98,53 @@ const SectionLabel = ({ children }) => (
     {children}
   </motion.p>
 );
+
+const humanDefaultCopy = {
+  heroTitle: "Practice smarter with",
+  heroHighlight: "courses, tests, and clear feedback",
+  heroDescription:
+    "Vidhgrow brings course learning, timed practice tests, score reports, and leaderboards into one simple place, so students can see what to study next.",
+  featuresTitle: "Built for focused practice",
+  featuresDescription:
+    "Choose a course, attempt a test, review your result, and keep improving with progress that is easy to understand.",
+  ctaTitle: "Start with a course, then test yourself",
+  ctaDescription:
+    "Create your free account and keep your practice history, results, badges, and course progress together.",
+};
+
+const oldDefaultCopy = {
+  heroTitle: "Master Your Skills with",
+  heroHighlight: "Advanced Testing",
+  heroDescription:
+    "Experience personalized learning. Track your progress, identify strengths, and achieve your goals faster than ever.",
+  featuresTitle: "Why Choose Vidhgrow",
+  featuresDescription:
+    "Our platform combines cutting-edge technology with proven learning methodologies to deliver personalized experiences that accelerate your growth.",
+  ctaTitle: "Ready to Transform Your Learning Journey?",
+  ctaDescription:
+    "Join thousands of learners accelerating their growth with personalized testing.",
+};
+
+const copyOrHumanDefault = (value, oldDefault, fallback) =>
+  value && value !== oldDefault ? value : fallback;
+
+const platformHighlights = [
+  {
+    icon: BookOpen,
+    title: "Learn from courses",
+    description: "Organized lessons and teacher-created material.",
+  },
+  {
+    icon: Target,
+    title: "Practice with tests",
+    description: "Timed attempts with question-level feedback.",
+  },
+  {
+    icon: Trophy,
+    title: "Track your rank",
+    description: "Progress, badges, and leaderboard movement.",
+  },
+];
 
 const Home = () => {
   const [email, setEmail] = useState("");
@@ -150,6 +175,42 @@ const Home = () => {
       value: parseInt(stat.value.replace(/[^0-9]/g, "")) || 0,
       displayValue: stat.value,
     })) || [];
+
+  const heroTitle = copyOrHumanDefault(
+    contentSettings?.heroTitle,
+    oldDefaultCopy.heroTitle,
+    humanDefaultCopy.heroTitle,
+  );
+  const heroHighlight = copyOrHumanDefault(
+    contentSettings?.heroHighlight,
+    oldDefaultCopy.heroHighlight,
+    humanDefaultCopy.heroHighlight,
+  );
+  const heroDescription = copyOrHumanDefault(
+    contentSettings?.heroDescription,
+    oldDefaultCopy.heroDescription,
+    humanDefaultCopy.heroDescription,
+  );
+  const featuresTitle = copyOrHumanDefault(
+    contentSettings?.featuresTitle,
+    oldDefaultCopy.featuresTitle,
+    humanDefaultCopy.featuresTitle,
+  );
+  const featuresDescription = copyOrHumanDefault(
+    contentSettings?.featuresDescription,
+    oldDefaultCopy.featuresDescription,
+    humanDefaultCopy.featuresDescription,
+  );
+  const ctaTitle = copyOrHumanDefault(
+    contentSettings?.ctaTitle,
+    oldDefaultCopy.ctaTitle,
+    humanDefaultCopy.ctaTitle,
+  );
+  const ctaDescription = copyOrHumanDefault(
+    contentSettings?.ctaDescription,
+    oldDefaultCopy.ctaDescription,
+    humanDefaultCopy.ctaDescription,
+  );
 
   const handleEmailSubmit = (e) => {
     e.preventDefault();
@@ -260,9 +321,7 @@ const Home = () => {
   return (
     <div className="overflow-x-hidden">
       {/* ── Hero ── */}
-      <section className="relative pt-24 pb-32 px-4 sm:px-6 lg:px-8 min-h-screen flex items-center">
-        {/* subtle grid overlay */}
-        {/* full-bleed grid — no gap, covers entire section */}
+      <section className="relative flex min-h-[calc(100vh-4rem)] items-center px-4 pb-16 pt-24 sm:px-6 sm:pb-20 lg:px-8">
         <div
           className="absolute inset-0 pointer-events-none"
           style={{
@@ -275,26 +334,22 @@ const Home = () => {
           }}
         />
 
-        {/* soft radial glow behind text */}
-        <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
-          <div className="w-[600px] h-[400px] rounded-full bg-primary/5 blur-3xl" />
-        </div>
-
-        <div className="max-w-5xl mx-auto text-center w-full relative">
+        <div className="relative mx-auto w-full max-w-6xl">
           <motion.div
             initial={animations && !reducedMotion ? { opacity: 0, y: 30 } : {}}
             animate={animations && !reducedMotion ? { opacity: 1, y: 0 } : {}}
             transition={animations && !reducedMotion ? { duration: 0.7 } : {}}
-            className="space-y-7"
+            className="mx-auto max-w-4xl space-y-7 text-center"
           >
+            <Badge>Built around real practice, not noise</Badge>
+
             <h1 className="text-4xl sm:text-5xl lg:text-[3.75rem] font-bold tracking-tight leading-tight">
-              {contentSettings?.heroTitle || "Master Your Skills with"}
+              {heroTitle}
               <br />
               <span className="relative inline-block text-primary">
-                {contentSettings?.heroHighlight || "Advanced Testing"}
-                {/* underline accent */}
+                {heroHighlight}
                 <motion.span
-                  className="absolute -bottom-1 left-0 h-[3px] bg-primary/30 rounded-full"
+                  className="absolute -bottom-1 left-0 h-[3px] rounded-full bg-primary/30"
                   initial={{ width: 0 }}
                   animate={{ width: "100%" }}
                   transition={{ delay: 0.6, duration: 0.7, ease: "easeOut" }}
@@ -303,8 +358,7 @@ const Home = () => {
             </h1>
 
             <p className="text-lg sm:text-xl text-muted-foreground max-w-2xl mx-auto leading-relaxed">
-              {contentSettings?.heroDescription ||
-                "Experience personalized learning. Track your progress, identify strengths, and achieve your goals faster than ever."}
+              {heroDescription}
             </p>
 
             {isAuthenticated ? (
@@ -365,19 +419,44 @@ const Home = () => {
                 initial={animations && !reducedMotion ? { opacity: 0 } : {}}
                 animate={animations && !reducedMotion ? { opacity: 1 } : {}}
                 transition={{ delay: 0.9 }}
-                className="text-xs text-muted-foreground/60 tracking-wide"
+                className="text-xs tracking-wide text-muted-foreground/70"
               >
-                Trusted by{" "}
+                Courses, tests, reports, and rank tracking for{" "}
                 <span className="text-foreground font-medium">
                   {contentSettings.stats[0]?.value || "thousands"}
                 </span>{" "}
-                learners worldwide
+                learners
               </motion.p>
             )}
           </motion.div>
-        </div>
 
-        <ScrollIndicator />
+          <motion.div
+            initial={animations && !reducedMotion ? { opacity: 0, y: 18 } : {}}
+            animate={animations && !reducedMotion ? { opacity: 1, y: 0 } : {}}
+            transition={animations && !reducedMotion ? { delay: 0.7 } : {}}
+            className="mt-12 grid gap-3 sm:grid-cols-3"
+          >
+            {platformHighlights.map((item) => {
+              const Icon = item.icon;
+              return (
+                <div
+                  key={item.title}
+                  className="rounded-lg border border-border/70 bg-background/75 p-4 shadow-sm backdrop-blur-sm"
+                >
+                  <div className="mb-3 flex h-9 w-9 items-center justify-center rounded-md bg-primary/10 text-primary">
+                    <Icon className="h-4 w-4" />
+                  </div>
+                  <h3 className="text-sm font-semibold text-foreground">
+                    {item.title}
+                  </h3>
+                  <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
+                    {item.description}
+                  </p>
+                </div>
+              );
+            })}
+          </motion.div>
+        </div>
       </section>
 
       <Divider />
@@ -445,10 +524,10 @@ const Home = () => {
                       transition={{ delay: index * 0.1 }}
                       onHoverStart={() => setActiveStatIndex(index)}
                       onHoverEnd={() => setActiveStatIndex(null)}
-                      className="group relative p-5 rounded-2xl border border-border/50 bg-background/60 backdrop-blur-sm hover:border-primary/30 hover:bg-primary/5 transition-all duration-300 cursor-default"
+                      className="group relative cursor-default rounded-lg border border-border/50 bg-background/70 p-5 backdrop-blur-sm transition-all duration-300 hover:border-primary/30 hover:bg-primary/5"
                     >
                       <div className="flex flex-col items-center text-center gap-2">
-                        <div className="w-10 h-10 bg-primary/10 rounded-xl flex items-center justify-center group-hover:bg-primary/20 transition-colors duration-300">
+                        <div className="flex h-10 w-10 items-center justify-center rounded-md bg-primary/10 transition-colors duration-300 group-hover:bg-primary/20">
                           <IconComponent className="w-5 h-5 text-primary" />
                         </div>
                         <div className="text-2xl sm:text-3xl font-bold text-foreground">
@@ -462,7 +541,7 @@ const Home = () => {
                       {activeStatIndex === index && (
                         <motion.div
                           layoutId="stat-glow"
-                          className="absolute inset-0 rounded-2xl bg-primary/5 -z-10"
+                          className="absolute inset-0 -z-10 rounded-lg bg-primary/5"
                           transition={{ type: "spring", bounce: 0.2 }}
                         />
                       )}
@@ -515,14 +594,10 @@ const Home = () => {
             >
               <SectionLabel>Why us</SectionLabel>
               <h2 className="text-3xl lg:text-4xl font-bold mb-4">
-                {contentSettings?.featuresTitle || "Why Choose"}{" "}
-                <span className="text-primary">
-                  {contentSettings?.siteName || "Vidhgrow"}
-                </span>
+                {featuresTitle}
               </h2>
               <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-                {contentSettings?.featuresDescription ||
-                  "Our platform combines cutting-edge technology with proven learning methodologies."}
+                {featuresDescription}
               </p>
             </motion.div>
 
@@ -542,9 +617,9 @@ const Home = () => {
                     transition={{ delay: index * 0.12 }}
                     whileHover={animations && !reducedMotion ? { y: -4 } : {}}
                   >
-                    <Card className="h-full border-border/50 hover:border-primary/25 hover:shadow-md transition-all duration-300 bg-background/70 backdrop-blur-sm">
+                    <Card className="h-full rounded-lg border-border/50 bg-background/70 backdrop-blur-sm transition-all duration-300 hover:border-primary/25 hover:shadow-md">
                       <CardContent className="p-6">
-                        <div className="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center mb-4">
+                        <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-md bg-primary/10">
                           <IconComponent className="w-6 h-6 text-primary" />
                         </div>
                         <h3 className="text-base font-semibold mb-2 text-foreground">
@@ -567,11 +642,9 @@ const Home = () => {
 
       {/* ── CTA ── */}
       <section className="relative py-24 px-4 sm:px-6 lg:px-8 overflow-hidden">
-        {/* background accent */}
         <div className="absolute inset-0 pointer-events-none">
           <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/20 to-transparent" />
           <div className="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-primary/20 to-transparent" />
-          <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[300px] bg-primary/5 rounded-full blur-3xl" />
         </div>
 
         <div className="max-w-2xl mx-auto text-center relative">
@@ -585,12 +658,10 @@ const Home = () => {
           >
             <SectionLabel>Get started</SectionLabel>
             <h2 className="text-3xl lg:text-4xl font-bold">
-              {contentSettings?.ctaTitle ||
-                "Ready to Transform Your Learning Journey?"}
+              {ctaTitle}
             </h2>
             <p className="text-lg text-muted-foreground">
-              {contentSettings?.ctaDescription ||
-                "Join thousands of learners accelerating their growth with personalized testing."}
+              {ctaDescription}
             </p>
 
             <form
