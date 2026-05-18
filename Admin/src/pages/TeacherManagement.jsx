@@ -5,6 +5,8 @@ import toast from "react-hot-toast";
 
 // ── helpers ──
 
+const countryName = (country) => (country === "india" ? "India" : "Nepal");
+
 const STATUS_CONFIG = {
   pending: {
     label: "Pending",
@@ -17,6 +19,18 @@ const STATUS_CONFIG = {
     color: "#2563eb",
     bg: "#eff6ff",
     border: "#bfdbfe",
+  },
+  registered: {
+    label: "Registered",
+    color: "#16a34a",
+    bg: "#f0fdf4",
+    border: "#bbf7d0",
+  },
+  approved: {
+    label: "Approved",
+    color: "#16a34a",
+    bg: "#f0fdf4",
+    border: "#bbf7d0",
   },
   rejected: {
     label: "Rejected",
@@ -85,17 +99,15 @@ The Vidhgrow Team`,
   },
   {
     id: "qualified",
-    label: "Highly Qualified",
-    subject: "Exclusive invitation to teach on Vidhgrow",
-    body: `Congratulations! After carefully reviewing your impressive qualifications and application, we're thrilled to extend you an exclusive invitation to join Vidhgrow as a featured teacher.
+    label: "Qualified Applicant",
+    subject: "Invitation to teach on Vidhgrow",
+    body: `We've reviewed your application and would like to invite you to teach on Vidhgrow.
 
-Your background and expertise are exactly what our students are looking for. We believe your courses will make a significant impact.
-
-As a Vidhgrow teacher you'll keep 80% of every sale, with payouts processed directly to your bank or digital wallet.
+Your background is a good fit for the courses our students are looking for. As a Vidhgrow teacher you'll keep 80% of every sale, with payouts processed directly to your bank or digital wallet.
 
 Please complete your registration using the link below. It expires in 4 minutes.
 
-Looking forward to working with you,
+Regards,
 The Vidhgrow Team`,
   },
   {
@@ -260,7 +272,7 @@ const EmailEditor = ({ application, onClose, onSent }) => {
             </h2>
             <p style={{ fontSize: 12, color: "#6b7280", margin: "3px 0 0" }}>
               To: <strong>{application.name}</strong> · {application.email} ·{" "}
-              {application.country === "india" ? "🇮🇳" : "🇳🇵"}
+              {countryName(application.country)}
             </p>
           </div>
           <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
@@ -775,7 +787,7 @@ const EmailEditor = ({ application, onClose, onSent }) => {
                   Sending...
                 </>
               ) : (
-                `✉️ Send Invite${mode === "html" ? " (HTML)" : ""}`
+                `Send Invite${mode === "html" ? " (HTML)" : ""}`
               )}
             </button>
           </div>
@@ -792,6 +804,7 @@ const TeacherDetailModal = ({ teacher, onClose, onRefresh }) => {
   const [docAction, setDocAction] = useState(null);
   const [rejectionReason, setRejectionReason] = useState("");
   const [requestNote, setRequestNote] = useState("");
+  const [deleteReason, setDeleteReason] = useState("");
   const [loading, setLoading] = useState(false);
 
   const handleVerifyDocs = async (approved) => {
@@ -830,18 +843,25 @@ const TeacherDetailModal = ({ teacher, onClose, onRefresh }) => {
   };
 
   const handleDelete = async () => {
+    const reason = deleteReason.trim();
+    if (reason.length < 10) {
+      toast.error("Deletion reason must be at least 10 characters");
+      return;
+    }
     if (
       !window.confirm(`Delete teacher ${teacher.name}? This cannot be undone.`)
     )
       return;
     setLoading(true);
     try {
-      await adminRequest("DELETE", `/teachers/admin/${teacher._id}`);
-      toast.success("Teacher deleted");
+      await adminRequest("DELETE", `/teachers/admin/${teacher._id}`, {
+        reason,
+      });
+      toast.success("Teacher deleted and notified by email");
       onRefresh();
       onClose();
-    } catch {
-      toast.error("Delete failed");
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Delete failed");
     } finally {
       setLoading(false);
     }
@@ -925,7 +945,7 @@ const TeacherDetailModal = ({ teacher, onClose, onRefresh }) => {
               </h2>
               <p style={{ fontSize: 13, color: "#6b7280" }}>
                 @{teacher.username} ·{" "}
-                {teacher.country === "india" ? "🇮🇳" : "🇳🇵"} {teacher.email}
+                {countryName(teacher.country)} · {teacher.email}
               </p>
             </div>
           </div>
@@ -1055,6 +1075,28 @@ const TeacherDetailModal = ({ teacher, onClose, onRefresh }) => {
                   </p>
                 </div>
               )}
+
+              {teacher.qualification && (
+                <div
+                  style={{
+                    gridColumn: "1 / -1",
+                    padding: "12px 14px",
+                    background: "#f9fafb",
+                    borderRadius: 10,
+                    border: "1px solid #f3f4f6",
+                  }}
+                >
+                  <p
+                    style={{ fontSize: 11, color: "#9ca3af", marginBottom: 4 }}
+                  >
+                    Qualification
+                  </p>
+                  <p style={{ fontSize: 13, color: "#374151" }}>
+                    {teacher.qualification}
+                  </p>
+                </div>
+              )}
+
             </div>
           )}
 
@@ -1340,17 +1382,102 @@ const TeacherDetailModal = ({ teacher, onClose, onRefresh }) => {
 
           {/* courses tab */}
           {tab === "courses" && (
-            <p
-              style={{
-                color: "#9ca3af",
-                fontSize: 13,
-                textAlign: "center",
-                padding: "16px 0",
-              }}
-            >
-              Course list visible in Courses panel. Filter by teacher name to
-              see their submissions.
-            </p>
+            <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
+                  gap: 10,
+                }}
+              >
+                {[
+                  ["Courses", teacher.stats?.totalCourses ?? teacher.courses?.length ?? 0],
+                  ["Students", teacher.stats?.totalStudents ?? 0],
+                  ["Tests", teacher.stats?.totalTests ?? 0],
+                  ["Completion", `${teacher.stats?.completionRate ?? 0}%`],
+                ].map(([label, value]) => (
+                  <div
+                    key={label}
+                    style={{
+                      padding: "10px 12px",
+                      background: "#f9fafb",
+                      border: "1px solid #f3f4f6",
+                      borderRadius: 10,
+                    }}
+                  >
+                    <p style={{ fontSize: 11, color: "#9ca3af" }}>{label}</p>
+                    <p
+                      style={{
+                        fontSize: 16,
+                        fontWeight: 800,
+                        color: "#111827",
+                      }}
+                    >
+                      {value}
+                    </p>
+                  </div>
+                ))}
+              </div>
+
+              {teacher.courses?.length > 0 ? (
+                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                  {teacher.courses.map((course) => (
+                    <div
+                      key={course._id}
+                      style={{
+                        padding: "12px 14px",
+                        border: "1px solid #e5e7eb",
+                        borderRadius: 10,
+                        background: "#fff",
+                      }}
+                    >
+                      <div
+                        style={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          gap: 12,
+                        }}
+                      >
+                        <div>
+                          <p
+                            style={{
+                              fontSize: 13,
+                              fontWeight: 700,
+                              color: "#111827",
+                            }}
+                          >
+                            {course.name}
+                          </p>
+                          <p style={{ fontSize: 11, color: "#9ca3af" }}>
+                            {course.totalQuestions || 0} questions ·{" "}
+                            {course.isPaid ? "Paid" : "Free"}
+                          </p>
+                        </div>
+                        <Badge
+                          {...(STATUS_CONFIG[course.approvalStatus] || {
+                            label: course.approvalStatus,
+                            color: "#6b7280",
+                            bg: "#f9fafb",
+                            border: "#e5e7eb",
+                          })}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p
+                  style={{
+                    color: "#9ca3af",
+                    fontSize: 13,
+                    textAlign: "center",
+                    padding: "16px 0",
+                  }}
+                >
+                  No courses created yet.
+                </p>
+              )}
+            </div>
           )}
 
           {/* actions tab */}
@@ -1376,11 +1503,30 @@ const TeacherDetailModal = ({ teacher, onClose, onRefresh }) => {
                 </p>
                 <p style={{ fontSize: 12, color: "#dc2626", marginBottom: 12 }}>
                   This permanently deletes the teacher account. Their courses
-                  will be unassigned (not deleted). This cannot be undone.
+                  and uploaded documents will be deleted. A reason is required
+                  and will be emailed to the teacher before deletion completes.
                 </p>
+                <textarea
+                  value={deleteReason}
+                  onChange={(e) => setDeleteReason(e.target.value)}
+                  placeholder="Reason for deleting this teacher account..."
+                  rows={4}
+                  style={{
+                    width: "100%",
+                    padding: "10px 12px",
+                    border: "1.5px solid #fecaca",
+                    borderRadius: 8,
+                    fontSize: 13,
+                    outline: "none",
+                    boxSizing: "border-box",
+                    resize: "vertical",
+                    fontFamily: "inherit",
+                    marginBottom: 12,
+                  }}
+                />
                 <button
                   onClick={handleDelete}
-                  disabled={loading}
+                  disabled={loading || deleteReason.trim().length < 10}
                   style={{
                     padding: "9px 20px",
                     background: "#dc2626",
@@ -1389,10 +1535,14 @@ const TeacherDetailModal = ({ teacher, onClose, onRefresh }) => {
                     borderRadius: 8,
                     fontSize: 13,
                     fontWeight: 600,
-                    cursor: loading ? "not-allowed" : "pointer",
+                    cursor:
+                      loading || deleteReason.trim().length < 10
+                        ? "not-allowed"
+                        : "pointer",
+                    opacity: deleteReason.trim().length < 10 ? 0.6 : 1,
                   }}
                 >
-                  Delete Account
+                  Delete Account and Email Teacher
                 </button>
               </div>
             </div>
@@ -1471,6 +1621,21 @@ const TeacherManagement = () => {
       loadApplications();
     } catch {
       toast.error("Failed");
+    }
+  };
+
+  const openTeacherDetails = async (teacher) => {
+    setSelectedTeacher({ ...teacher, _detailsLoading: true });
+    try {
+      const res = await adminRequest("GET", `/teachers/admin/${teacher._id}`);
+      setSelectedTeacher({
+        ...res.data.data.teacher,
+        courses: res.data.data.courses || [],
+        stats: res.data.data.stats || {},
+      });
+    } catch {
+      toast.error("Failed to load teacher details");
+      setSelectedTeacher(teacher);
     }
   };
 
@@ -1630,7 +1795,7 @@ const TeacherManagement = () => {
                           STATUS_CONFIG.pending)}
                       />
                       <span style={{ fontSize: 12, color: "#9ca3af" }}>
-                        {app.country === "india" ? "🇮🇳" : "🇳🇵"} ·{" "}
+                        {countryName(app.country)} ·{" "}
                         {new Date(app.createdAt).toLocaleDateString()}
                       </span>
                     </div>
@@ -1812,7 +1977,23 @@ const TeacherManagement = () => {
                               boxShadow: "0 2px 8px rgba(217,119,6,0.25)",
                             }}
                           >
-                            🔄 Resend Invite
+                            Resend Invite
+                          </button>
+                          <button
+                            onClick={() => handleReject(app._id)}
+                            style={{
+                              padding: "8px 14px",
+                              background: "#fff",
+                              color: "#dc2626",
+                              border: "1px solid #fecaca",
+                              borderRadius: 8,
+                              fontSize: 12,
+                              fontWeight: 600,
+                              cursor: "pointer",
+                              whiteSpace: "nowrap",
+                            }}
+                          >
+                            Reject
                           </button>
                           <p
                             style={{
@@ -1826,20 +2007,46 @@ const TeacherManagement = () => {
                           </p>
                         </div>
                       ) : (
-                        <span
+                        <div
                           style={{
-                            fontSize: 11,
-                            color: "#2563eb",
-                            fontWeight: 600,
-                            padding: "4px 10px",
-                            background: "#eff6ff",
-                            borderRadius: 20,
-                            border: "1px solid #bfdbfe",
-                            whiteSpace: "nowrap",
+                            display: "flex",
+                            flexDirection: "column",
+                            gap: 8,
+                            alignItems: "flex-end",
+                            flexShrink: 0,
                           }}
                         >
-                          ✉️ Invite Sent
-                        </span>
+                          <span
+                            style={{
+                              fontSize: 11,
+                              color: "#2563eb",
+                              fontWeight: 600,
+                              padding: "4px 10px",
+                              background: "#eff6ff",
+                              borderRadius: 20,
+                              border: "1px solid #bfdbfe",
+                              whiteSpace: "nowrap",
+                            }}
+                          >
+                            Invite Sent
+                          </span>
+                          <button
+                            onClick={() => handleReject(app._id)}
+                            style={{
+                              padding: "7px 12px",
+                              background: "#fff",
+                              color: "#dc2626",
+                              border: "1px solid #fecaca",
+                              borderRadius: 8,
+                              fontSize: 12,
+                              fontWeight: 600,
+                              cursor: "pointer",
+                              whiteSpace: "nowrap",
+                            }}
+                          >
+                            Reject
+                          </button>
+                        </div>
                       );
                     })()}
                 </motion.div>
@@ -1919,7 +2126,7 @@ const TeacherManagement = () => {
                       transition: "box-shadow 0.15s",
                       cursor: "pointer",
                     }}
-                    onClick={() => setSelectedTeacher(t)}
+                    onClick={() => openTeacherDetails(t)}
                     onMouseEnter={(e) =>
                       (e.currentTarget.style.boxShadow =
                         "0 2px 12px rgba(0,0,0,0.06)")
@@ -1995,7 +2202,7 @@ const TeacherManagement = () => {
                       </div>
                       <p style={{ fontSize: 12, color: "#9ca3af" }}>
                         @{t.username} · {t.email} ·{" "}
-                        {t.country === "india" ? "🇮🇳" : "🇳🇵"}
+                        {countryName(t.country)}
                       </p>
                     </div>
 

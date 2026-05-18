@@ -74,6 +74,23 @@ api.interceptors.response.use(
     const url = err.config?.url || "";
     const isPassthrough = AUTH_PASSTHROUGH_URLS.some((p) => url.includes(p));
 
+    if (
+      err.response?.status === 403 &&
+      err.response?.data?.code === "ACCESS_BLOCKED" &&
+      !url.includes("/teachers/me/documents")
+    ) {
+      window.dispatchEvent(
+        new CustomEvent("teacher-access-blocked", {
+          detail: err.response.data,
+        }),
+      );
+
+      if (!err.config?._accessReloaded) {
+        err.config._accessReloaded = true;
+        setTimeout(() => window.location.reload(), 250);
+      }
+    }
+
     // only attempt token refresh for authenticated routes
     if (
       err.response?.status === 401 &&

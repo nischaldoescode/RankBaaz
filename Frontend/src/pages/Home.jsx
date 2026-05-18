@@ -62,18 +62,6 @@ const iconMap = {
 
 import TeacherCTASection from "../components/Teachers/TeacherCTA";
 
-const Badge = ({ children }) => (
-  <motion.span
-    initial={{ opacity: 0, y: -8 }}
-    animate={{ opacity: 1, y: 0 }}
-    transition={{ duration: 0.5 }}
-    className="inline-flex items-center gap-1.5 rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-xs font-semibold text-primary"
-  >
-    <Target className="h-3 w-3" />
-    {children}
-  </motion.span>
-);
-
 // thin animated divider
 const Divider = () => (
   <div className="flex items-center justify-center py-2">
@@ -341,8 +329,6 @@ const Home = () => {
             transition={animations && !reducedMotion ? { duration: 0.7 } : {}}
             className="mx-auto max-w-4xl space-y-7 text-center"
           >
-            <Badge>Built around real practice, not noise</Badge>
-
             <h1 className="text-4xl sm:text-5xl lg:text-[3.75rem] font-bold tracking-tight leading-tight">
               {heroTitle}
               <br />

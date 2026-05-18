@@ -3,6 +3,7 @@ import {
   startTest,
   submitTest,
   getTestResult,
+  submitCourseFeedback,
   getTestHistory,
   getPerformanceStats,
   getLeaderboard,
@@ -57,6 +58,16 @@ router.post(
  * Auth: Cookie only
  */
 router.get("/result/:testId", getTestResult);
+
+/**
+ * POST /result/:testId/feedback - Save course feedback after completion
+ * Auth: Cookie + Request signature
+ */
+router.post(
+  "/result/:testId/feedback",
+  verifyRequestSignature,
+  submitCourseFeedback
+);
 
 /**
  * GET /history - Get user's test history

@@ -23,6 +23,7 @@ const ProfileTab = () => {
   const [form, setForm] = useState({
     bio: teacher?.bio || "",
     qualification: teacher?.qualification || "",
+    showQualification: teacher?.showQualification !== false,
   });
   const [imageFile, setImageFile] = useState(null);
   const [imagePreview, setImagePreview] = useState(teacher?.profileImage?.url || null);
@@ -52,10 +53,13 @@ const ProfileTab = () => {
   };
 
   const handleSave = async () => {
-    setLoading(true);
+      setLoading(true);
     try {
-      const payload = { bio: form.bio, qualification: form.qualification };
-      if (imageFile) payload.profileImage = imageFile;
+      const payload = new FormData();
+      payload.append("bio", form.bio);
+      payload.append("qualification", form.qualification);
+      payload.append("showQualification", form.showQualification ? "true" : "false");
+      if (imageFile) payload.append("profileImage", imageFile);
 
       const res = await teacherApi.profile.update(payload);
       updateTeacher(res.data.data.teacher);
@@ -71,6 +75,7 @@ const ProfileTab = () => {
   const hasChanges =
     form.bio !== (teacher?.bio || "") ||
     form.qualification !== (teacher?.qualification || "") ||
+    form.showQualification !== (teacher?.showQualification !== false) ||
     imageFile !== null;
 
   return (
@@ -268,6 +273,40 @@ const ProfileTab = () => {
             onBlur={(e) => (e.target.style.borderColor = "#e2e8f0")}
           />
         </div>
+
+        <label
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 12,
+            padding: "12px 14px",
+            border: "1px solid #e2e8f0",
+            borderRadius: 12,
+            background: "#f8fafc",
+            cursor: "pointer",
+          }}
+        >
+          <div>
+            <p style={{ fontSize: 13, fontWeight: 700, color: "#0f172a" }}>
+              Show qualification publicly
+            </p>
+            <p style={{ fontSize: 11, color: "#64748b", marginTop: 2 }}>
+              Control whether this appears on your public teacher page.
+            </p>
+          </div>
+          <input
+            type="checkbox"
+            checked={form.showQualification}
+            onChange={(e) =>
+              setForm((p) => ({
+                ...p,
+                showQualification: e.target.checked,
+              }))
+            }
+            style={{ width: 18, height: 18, flexShrink: 0 }}
+          />
+        </label>
 
         <motion.button
           onClick={handleSave}

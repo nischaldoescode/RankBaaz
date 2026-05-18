@@ -23,6 +23,7 @@ import { Card } from "../ui/Card";
 import Loading from "../common/Loading";
 import VideoPlayer from "../video/VideoPlayer";
 import { apiMethods } from "@/services/api";
+import toast from "react-hot-toast";
 
 const TestResult = ({ isPaid }) => {
   const { testId } = useParams();
@@ -39,6 +40,10 @@ const TestResult = ({ isPaid }) => {
   const [courseData, setCourseData] = useState(null);
   const [downloadingPDF, setDownloadingPDF] = useState(false);
   const [pdfError, setPdfError] = useState(null);
+  const [feedbackRating, setFeedbackRating] = useState(0);
+  const [feedbackText, setFeedbackText] = useState("");
+  const [submittingFeedback, setSubmittingFeedback] = useState(false);
+  const [localReview, setLocalReview] = useState(null);
 
   useEffect(() => {
     const loadTestData = async () => {
@@ -73,6 +78,18 @@ const TestResult = ({ isPaid }) => {
       return () => clearTimeout(timer);
     }
   }, [testResult]);
+
+  useEffect(() => {
+    if (testResult?.review) {
+      setLocalReview(testResult.review);
+      setFeedbackRating(testResult.review.rating || 0);
+      setFeedbackText(testResult.review.feedback || "");
+    } else {
+      setLocalReview(null);
+      setFeedbackRating(0);
+      setFeedbackText("");
+    }
+  }, [testResult?._id, testResult?.review]);
 
   // Change from useCallback to useMemo since it returns computed data
   const getDifficultyResults = useMemo(() => {
@@ -232,12 +249,7 @@ const TestResult = ({ isPaid }) => {
         "PDF downloaded successfully! This was your one-time download."
       );
 
-      // Update local state
-      setTestResult((prev) => ({
-        ...prev,
-        pdfDownloaded: true,
-        pdfDownloadedAt: new Date(),
-      }));
+      await getTestResult(testResult._id);
     } catch (error) {
       console.error("PDF download error:", error);
       const errorMessage = error.message || "Failed to download PDF";
@@ -252,6 +264,32 @@ const TestResult = ({ isPaid }) => {
   const handleSaveResult = useCallback(() => {
     console.log("Save result functionality");
   }, []);
+
+  const handleSubmitFeedback = async () => {
+    if (!testResult?._id || !testResult.course?.teacher) return;
+    if (feedbackRating < 1) {
+      toast.error("Choose a rating");
+      return;
+    }
+    if (feedbackText.trim().length < 10) {
+      toast.error("Feedback must be at least 10 characters");
+      return;
+    }
+
+    setSubmittingFeedback(true);
+    try {
+      const res = await apiMethods.tests.submitFeedback(testResult._id, {
+        rating: feedbackRating,
+        feedback: feedbackText,
+      });
+      setLocalReview(res.data.data.review);
+      toast.success("Feedback saved");
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Failed to save feedback");
+    } finally {
+      setSubmittingFeedback(false);
+    }
+  };
 
   // Animation variants
   const containerVariants = {
@@ -336,6 +374,7 @@ const TestResult = ({ isPaid }) => {
   const metrics = getPerformanceMetrics();
   const difficultyResults = getDifficultyResults;
   const isMultiDifficulty = difficultyResults.length > 1;
+  const courseTeacher = testResult.course?.teacher;
 
   // Filter questions based on selected difficulty
   const getFilteredQuestions = () => {
@@ -985,6 +1024,104 @@ const TestResult = ({ isPaid }) => {
           </motion.div>
         )}
 
+        {courseTeacher && (
+          <motion.div
+            variants={animations && !reducedMotion ? itemVariants : {}}
+          >
+            <Card className="p-6">
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                <div className="flex items-center gap-3">
+                  {courseTeacher.profileImage?.url ? (
+                    <img
+                      src={courseTeacher.profileImage.url}
+                      alt={courseTeacher.name}
+                      className="h-11 w-11 rounded-full object-cover"
+                    />
+                  ) : (
+                    <div className="flex h-11 w-11 items-center justify-center rounded-full bg-blue-100 text-sm font-bold text-blue-700">
+                      {(courseTeacher.name || courseTeacher.username)
+                        ?.charAt(0)
+                        .toUpperCase()}
+                    </div>
+                  )}
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-slate-100">
+                      Rate this teacher
+                    </h3>
+                    <p className="text-sm text-gray-600 dark:text-slate-400">
+                      {courseTeacher.name} will see this on their public profile
+                      after evaluation.
+                    </p>
+                  </div>
+                </div>
+                <Button
+                  variant="ghost"
+                  onClick={() =>
+                    navigate(`/teacher/@${courseTeacher.username}`)
+                  }
+                  className="cursor-pointer"
+                >
+                  View Profile
+                </Button>
+              </div>
+
+              {localReview ? (
+                <div className="mt-5 rounded-lg border border-green-200 bg-green-50 p-4 dark:border-green-900/40 dark:bg-green-900/20">
+                  <p className="text-sm font-semibold text-green-800 dark:text-green-200">
+                    Feedback saved
+                  </p>
+                  <p className="mt-1 text-sm text-green-700 dark:text-green-300">
+                    Rating: {localReview.rating}/5
+                  </p>
+                  <p className="mt-2 text-sm text-gray-700 dark:text-slate-300">
+                    {localReview.feedback}
+                  </p>
+                </div>
+              ) : (
+                <div className="mt-5 space-y-4">
+                  <div className="flex flex-wrap items-center gap-2">
+                    {[1, 2, 3, 4, 5].map((rating) => (
+                      <button
+                        key={rating}
+                        type="button"
+                        onClick={() => setFeedbackRating(rating)}
+                        className={`h-10 w-10 rounded-full border text-sm font-bold transition-colors ${
+                          feedbackRating >= rating
+                            ? "border-yellow-400 bg-yellow-100 text-yellow-700"
+                            : "border-gray-200 bg-white text-gray-500 hover:border-yellow-300"
+                        }`}
+                      >
+                        {rating}
+                      </button>
+                    ))}
+                  </div>
+                  <textarea
+                    value={feedbackText}
+                    onChange={(e) => setFeedbackText(e.target.value)}
+                    maxLength={800}
+                    rows={4}
+                    className="w-full rounded-lg border border-gray-200 bg-white p-3 text-sm text-gray-900 outline-none transition-colors focus:border-blue-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+                    placeholder="What helped, what was unclear, or what should improve?"
+                  />
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <p className="text-xs text-gray-500">
+                      {feedbackText.length}/800 characters
+                    </p>
+                    <Button
+                      variant="primary"
+                      onClick={handleSubmitFeedback}
+                      disabled={submittingFeedback}
+                      className="cursor-pointer"
+                    >
+                      {submittingFeedback ? "Saving..." : "Submit Feedback"}
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </Card>
+          </motion.div>
+        )}
+
         {/* Action Buttons */}
         <motion.div
           variants={animations && !reducedMotion ? itemVariants : {}}
@@ -1075,7 +1212,7 @@ const TestResult = ({ isPaid }) => {
           >
             <Card className="p-6">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-slate-100 mb-4">
-                🏆 Achievements Unlocked
+                Achievements Unlocked
               </h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                 {testResult.achievements.map((achievement, index) => (

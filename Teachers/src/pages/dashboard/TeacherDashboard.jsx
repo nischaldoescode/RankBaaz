@@ -114,6 +114,8 @@ const NAV_ITEMS = [
   },
 ];
 
+const RESTRICTED_ALLOWED_TABS = new Set(["profile", "documents"]);
+
 const Avatar = ({ teacher, size = 40 }) => {
   const seed = teacher?.username || teacher?.name || "teacher";
   const avatarUrl = dicebearUrl(seed);
@@ -242,7 +244,7 @@ const BlockedOverlay = ({ teacher, onGoToDocuments }) => (
         boxShadow: "0 4px 14px rgba(220,38,38,0.25)",
       }}
     >
-      Upload Documents →
+      Upload Documents
     </button>
   </div>
 );
@@ -253,6 +255,15 @@ const TeacherDashboard = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
   const SIDEBAR_W = 260;
+  const isRestricted =
+    !!teacher &&
+    (teacher.accessBlocked || teacher.documentStatus !== "verified");
+
+  useEffect(() => {
+    if (isRestricted && !RESTRICTED_ALLOWED_TABS.has(tab)) {
+      setTab("documents");
+    }
+  }, [isRestricted, tab]);
 
   const handleLogout = async () => {
     setLoggingOut(true);
@@ -288,9 +299,9 @@ const TeacherDashboard = () => {
 
   const docBadge =
     teacher?.documentStatus === "pending"
-      ? "🔴"
-      : teacher?.accessBlocked
-        ? "⛔"
+      ? "Review"
+      : isRestricted
+        ? "Needed"
         : null;
 
   const SidebarContent = () => (
@@ -395,22 +406,28 @@ const TeacherDashboard = () => {
         </div>
 
         {/* blocked/pending warning */}
-        {(teacher?.accessBlocked || teacher?.documentStatus === "pending") && (
+        {isRestricted && (
           <div
             style={{
               marginTop: 10,
               padding: "8px 10px",
-              background: teacher?.accessBlocked ? "#fef2f2" : "#fffbeb",
-              border: `1px solid ${teacher?.accessBlocked ? "#fecaca" : "#fde68a"}`,
+              background:
+                teacher?.documentStatus === "pending" ? "#fffbeb" : "#fef2f2",
+              border: `1px solid ${
+                teacher?.documentStatus === "pending" ? "#fde68a" : "#fecaca"
+              }`,
               borderRadius: 8,
               fontSize: 11,
-              color: teacher?.accessBlocked ? "#dc2626" : "#d97706",
+              color:
+                teacher?.documentStatus === "pending" ? "#d97706" : "#dc2626",
               fontWeight: 500,
             }}
           >
-            {teacher?.accessBlocked
-              ? "⛔ Account blocked — upload documents"
-              : "🔄 Documents under review"}
+            {teacher?.documentStatus === "pending"
+              ? "Documents under review"
+              : teacher?.accessBlocked
+              ? "Account restricted. Upload documents."
+              : "Verification documents required"}
           </div>
         )}
       </div>
@@ -420,10 +437,13 @@ const TeacherDashboard = () => {
         {NAV_ITEMS.map((item) => {
           const active = tab === item.id;
           const isDocuments = item.id === "documents";
+          const disabled = isRestricted && !RESTRICTED_ALLOWED_TABS.has(item.id);
           return (
             <button
               key={item.id}
+              disabled={disabled}
               onClick={() => {
+                if (disabled) return;
                 setTab(item.id);
                 setSidebarOpen(false);
               }}
@@ -436,26 +456,39 @@ const TeacherDashboard = () => {
                 borderRadius: 10,
                 border: "none",
                 background: active ? "#eff6ff" : "transparent",
-                color: active ? "#2563eb" : "#475569",
+                color: disabled ? "#cbd5e1" : active ? "#2563eb" : "#475569",
                 fontSize: 14,
                 fontWeight: active ? 600 : 500,
-                cursor: "pointer",
+                cursor: disabled ? "not-allowed" : "pointer",
                 marginBottom: 2,
                 transition: "all 0.12s",
                 textAlign: "left",
                 position: "relative",
+                opacity: disabled ? 0.55 : 1,
               }}
               onMouseEnter={(e) => {
-                if (!active) e.currentTarget.style.background = "#f8fafc";
+                if (!active && !disabled)
+                  e.currentTarget.style.background = "#f8fafc";
               }}
               onMouseLeave={(e) => {
-                if (!active) e.currentTarget.style.background = "transparent";
+                if (!active && !disabled)
+                  e.currentTarget.style.background = "transparent";
               }}
             >
               {item.icon}
               {item.label}
               {isDocuments && docBadge && (
-                <span style={{ marginLeft: "auto", fontSize: 13 }}>
+                <span
+                  style={{
+                    marginLeft: "auto",
+                    fontSize: 10,
+                    fontWeight: 700,
+                    color:
+                      teacher?.documentStatus === "pending"
+                        ? "#d97706"
+                        : "#dc2626",
+                  }}
+                >
                   {docBadge}
                 </span>
               )}
@@ -683,8 +716,8 @@ const TeacherDashboard = () => {
               exit={{ opacity: 0, y: -8 }}
               transition={{ duration: 0.16 }}
             >
-              {/* blocked overlay for all except documents */}
-              {teacher?.accessBlocked && tab !== "documents" ? (
+              {/* server-backed restriction guard for disabled sections */}
+              {isRestricted && !RESTRICTED_ALLOWED_TABS.has(tab) ? (
                 <BlockedOverlay
                   teacher={teacher}
                   onGoToDocuments={() => setTab("documents")}

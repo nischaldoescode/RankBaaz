@@ -195,8 +195,18 @@ router.get("/public/:username", getPublicTeacherProfile);
 
 // ── teacher authenticated ──
 router.get("/me", authenticateTeacher, getTeacherProfile);
-router.get("/me/courses/all", authenticateTeacher, getTeacherCourses);
-router.get("/me/analytics", authenticateTeacher, getTeacherAnalytics);
+router.get(
+  "/me/courses/all",
+  authenticateTeacher,
+  requireDocumentVerification,
+  getTeacherCourses,
+);
+router.get(
+  "/me/analytics",
+  authenticateTeacher,
+  requireDocumentVerification,
+  getTeacherAnalytics,
+);
 router.post(
   "/me/courses",
   authenticateTeacher,
@@ -221,10 +231,15 @@ router.post(
   handleUploadError,
   teacherAddQuestion,
 );
+router.get(
+  "/me/courses/:courseId/questions",
+  authenticateTeacher,
+  requireDocumentVerification,
+  teacherGetCourseQuestions,
+);
 router.put(
   "/me/profile",
   authenticateTeacher,
-  requireDocumentVerification,
   handleProfileUpload,
   updateTeacherProfile,
 );

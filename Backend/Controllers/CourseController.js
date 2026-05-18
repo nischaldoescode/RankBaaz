@@ -1271,6 +1271,45 @@ export const getAllCourses = async (req, res) => {
       },
       { $unwind: { path: "$category", preserveNullAndEmptyArrays: true } },
       {
+        $lookup: {
+          from: "teachers",
+          localField: "teacher",
+          foreignField: "_id",
+          as: "teacher",
+          pipeline: [
+            {
+              $project: {
+                name: 1,
+                username: 1,
+                profileImage: 1,
+                country: 1,
+                accessBlocked: 1,
+                documentStatus: 1,
+                isActive: 1,
+              },
+            },
+          ],
+        },
+      },
+      { $unwind: { path: "$teacher", preserveNullAndEmptyArrays: true } },
+      ...(isAdmin
+        ? []
+        : [
+            {
+              $match: {
+                $or: [
+                  { teacher: { $exists: false } },
+                  { "teacher._id": { $exists: false } },
+                  {
+                    "teacher.isActive": true,
+                    "teacher.accessBlocked": { $ne: true },
+                    "teacher.documentStatus": "verified",
+                  },
+                ],
+              },
+            },
+          ]),
+      {
         $addFields: {
           totalQuestions: {
             $size: {
@@ -1291,6 +1330,13 @@ export const getAllCourses = async (req, res) => {
           price: 1,
           totalQuestions: 1,
           category: 1,
+          teacher: {
+            _id: "$teacher._id",
+            name: "$teacher.name",
+            username: "$teacher.username",
+            profileImage: "$teacher.profileImage",
+            country: "$teacher.country",
+          },
           image: 1,
           createdAt: 1,
           difficulties: 1,
@@ -1337,6 +1383,10 @@ export const getCourseById = async (req, res) => {
 
     const course = await Course.findById(courseId)
       .populate("category", "name description isActive")
+      .populate(
+        "teacher",
+        "name username profileImage country accessBlocked documentStatus isActive",
+      )
       .select("-questions.image")
       .lean();
 
@@ -1345,6 +1395,29 @@ export const getCourseById = async (req, res) => {
         success: false,
         message: "Course not found",
       });
+    }
+
+    if (
+      !req.admin?.isAdmin &&
+      course.teacher &&
+      (!course.teacher.isActive ||
+        course.teacher.accessBlocked ||
+        course.teacher.documentStatus !== "verified")
+    ) {
+      return res.status(404).json({
+        success: false,
+        message: "Course not found",
+      });
+    }
+
+    if (course.teacher) {
+      course.teacher = {
+        _id: course.teacher._id,
+        name: course.teacher.name,
+        username: course.teacher.username,
+        profileImage: course.teacher.profileImage,
+        country: course.teacher.country,
+      };
     }
 
     // Add computed totalQuestions field

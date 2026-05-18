@@ -12,9 +12,10 @@ const teacherApplicationSchema = new mongoose.Schema(
     country: { type: String, required: true, enum: ["india", "nepal"] },
     status: {
       type: String,
-      enum: ["pending", "invited", "rejected"],
+      enum: ["pending", "invited", "registered", "rejected"],
       default: "pending",
     },
+    registeredAt: { type: Date, default: null },
     inviteSentAt: { type: Date, default: null },
     rejectedAt: { type: Date, default: null },
     rejectionReason: { type: String, default: null },

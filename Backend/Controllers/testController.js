@@ -2,6 +2,7 @@ import { body, validationResult } from "express-validator";
 import TestResult from "../Models/TestResult.js";
 import Course from "../Models/Course.js";
 import User from "../Models/User.js";
+import CourseReview from "../Models/CourseReview.js";
 import leaderboardService from "../services/leaderboardService.js";
 import mongoose from "mongoose";
 import redisClient from "../Config/redis.js";
@@ -631,7 +632,14 @@ export const submitTest = async (req, res) => {
 
     // Populate course name
     const populatedResult = await TestResult.findById(finalTestResult._id)
-      .populate("course", "name")
+      .populate({
+        path: "course",
+        select: "name teacher",
+        populate: {
+          path: "teacher",
+          select: "name username profileImage",
+        },
+      })
       .lean();
 
     // Add courseTitle for frontend
@@ -642,7 +650,7 @@ export const submitTest = async (req, res) => {
     const rankChange = previousRank && newRank ? previousRank - newRank : null;
     // Invalidate leaderboard and user caches after test submission
     await invalidateCache.leaderboard(courseId);
-    await invalidateCache.test(userId, testId);
+    await invalidateCache.test(userId, finalTestResult._id);
 
     res.status(201).json({
       success: true,
@@ -696,7 +704,8 @@ export const getTestResult = async (req, res) => {
 
     // Now fetch course with only needed fields
     const course = await Course.findById(testResult.course)
-      .select("name questions._id questions.question questions.explanation")
+      .select("name teacher questions._id questions.question questions.explanation")
+      .populate("teacher", "name username profileImage")
       .lean();
 
     if (!course) {
@@ -731,8 +740,27 @@ export const getTestResult = async (req, res) => {
     testResult.course = {
       _id: course._id,
       name: course.name,
+      teacher: course.teacher
+        ? {
+            _id: course.teacher._id,
+            name: course.teacher.name,
+            username: course.teacher.username,
+            profileImage: course.teacher.profileImage,
+          }
+        : null,
     };
     testResult.courseTitle = course.name;
+
+    const review = course.teacher
+      ? await CourseReview.findOne({
+          user: userId,
+          testResult: testResult._id,
+          course: course._id,
+        })
+          .select("rating feedback status evaluation createdAt updatedAt")
+          .lean()
+      : null;
+    testResult.review = review;
 
     res.status(200).json({
       success: true,
@@ -746,6 +774,127 @@ export const getTestResult = async (req, res) => {
     res.status(500).json({
       success: false,
       message: "Failed to retrieve test result",
+    });
+  }
+};
+
+export const submitCourseFeedback = async (req, res) => {
+  try {
+    const { testId } = req.params;
+    const userId = req.user.userId;
+    const rating = Number(req.body.rating);
+    const feedback = String(req.body.feedback || "")
+      .trim()
+      .replace(/\s+/g, " ");
+
+    if (!mongoose.Types.ObjectId.isValid(testId)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid test result",
+      });
+    }
+
+    if (!Number.isInteger(rating) || rating < 1 || rating > 5) {
+      return res.status(400).json({
+        success: false,
+        message: "Rating must be between 1 and 5",
+      });
+    }
+
+    if (feedback.length < 10 || feedback.length > 800) {
+      return res.status(400).json({
+        success: false,
+        message: "Feedback must be 10 to 800 characters",
+      });
+    }
+
+    const testResult = await TestResult.findOne({
+      _id: testId,
+      user: userId,
+      wasAbandoned: { $ne: true },
+    }).lean();
+
+    if (!testResult) {
+      return res.status(404).json({
+        success: false,
+        message: "Completed test result not found",
+      });
+    }
+
+    const course = await Course.findById(testResult.course)
+      .select("name teacher")
+      .populate("teacher", "username")
+      .lean();
+
+    if (!course) {
+      return res.status(404).json({
+        success: false,
+        message: "Course not found",
+      });
+    }
+
+    if (!course.teacher) {
+      return res.status(400).json({
+        success: false,
+        message: "Feedback is available for teacher-created courses only",
+      });
+    }
+
+    const wordCount = feedback.split(/\s+/).filter(Boolean).length;
+    const quality =
+      feedback.length >= 160 || wordCount >= 25
+        ? "detailed"
+        : feedback.length >= 60 || wordCount >= 10
+          ? "helpful"
+          : "brief";
+
+    const badges = [
+      rating === 5 ? "Excellent clarity" : null,
+      rating >= 4 ? "Recommended by student" : null,
+      quality === "detailed" ? "Detailed feedback" : null,
+      testResult.percentage >= 80 ? "Strong student outcome" : null,
+    ].filter(Boolean);
+
+    const review = await CourseReview.findOneAndUpdate(
+      { user: userId, testResult: testResult._id },
+      {
+        user: userId,
+        course: course._id,
+        teacher: course.teacher._id,
+        testResult: testResult._id,
+        rating,
+        feedback,
+        status: "approved",
+        isPublic: true,
+        evaluation: {
+          badges,
+          quality,
+          evaluatedAt: new Date(),
+        },
+      },
+      { new: true, upsert: true, runValidators: true, setDefaultsOnInsert: true },
+    ).lean();
+
+    await redisClient
+      .del(`teacher:profile:${course.teacher.username}`)
+      .catch(() => {});
+
+    return res.status(200).json({
+      success: true,
+      message: "Feedback saved",
+      data: { review },
+    });
+  } catch (error) {
+    if (error.code === 11000) {
+      return res.status(409).json({
+        success: false,
+        message: "Feedback already exists for this test result",
+      });
+    }
+    console.error("Submit course feedback error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to save feedback",
     });
   }
 };

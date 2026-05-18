@@ -81,8 +81,8 @@ export const authenticateTeacher = async (req, res, next) => {
 };
 
 /**
- * block access if teacher has not verified documents when requested
- * applies to destructive/write operations
+ * Block teacher-only features until documents are verified.
+ * Profile + document upload routes stay open so the teacher can fix verification.
  */
 export const requireDocumentVerification = (req, res, next) => {
   const teacher = req.teacher;
@@ -91,15 +91,24 @@ export const requireDocumentVerification = (req, res, next) => {
     return res.status(401).json({ success: false, message: "Unauthorized" });
   }
 
-  if (teacher.accessBlocked) {
+  const documentStatus = teacher.documentStatus || "not_uploaded";
+  const isRestricted = teacher.accessBlocked || documentStatus !== "verified";
+
+  if (isRestricted) {
+    const message =
+      teacher.documentRequestNote ||
+      teacher.accessBlockReason ||
+      (documentStatus === "pending"
+        ? "Your documents are under review. Full teacher tools unlock after verification."
+        : "Please upload verification documents before using teacher tools.");
+
     return res.status(403).json({
       success: false,
-      code: "ACCOUNT_BLOCKED",
-      message:
-        teacher.documentRequestNote ||
-        "Your account access is restricted. Please upload required verification documents.",
+      code: "ACCESS_BLOCKED",
+      reason: teacher.accessBlocked ? "blocked" : "verification_required",
+      message,
       data: {
-        documentStatus: teacher.documentStatus,
+        documentStatus,
         documentRequested: teacher.documentRequested,
         documentRequestNote: teacher.documentRequestNote,
       },

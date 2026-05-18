@@ -555,6 +555,8 @@ export const apiMethods = {
       api.post(`/api/tests/${testId}/answer`, { questionId, answer }),
     submitTest: (data) => api.post(`/api/tests/submit`, data),
     getResult: (testId) => api.get(`/api/tests/result/${testId}`),
+    submitFeedback: (testId, data) =>
+      api.post(`/api/tests/result/${testId}/feedback`, data),
     getHistory: () => api.get(`/api/tests/history`),
     getStats: () => api.get(`/api/tests/performance`),
     getLeaderboard: (courseId, difficulty = null) => {

@@ -98,7 +98,7 @@ const courseSchema = new mongoose.Schema(
     currency: {
       type: String,
       default: "INR",
-      enum: ["INR"],
+      enum: ["INR", "NPR"],
     },
     videoContent: {
       type: {

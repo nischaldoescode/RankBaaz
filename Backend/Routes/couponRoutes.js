@@ -16,7 +16,10 @@ import {
   adminSetTeacherCouponAccess,
 } from "../Controllers/CouponController.js";
 import { authenticateAdmin, authenticateUser } from "../Middleware/auth.js";
-import { authenticateTeacher } from "../Middleware/teacherAuth.js";
+import {
+  authenticateTeacher,
+  requireDocumentVerification,
+} from "../Middleware/teacherAuth.js";
 import { verifyRequestSignature } from "../Middleware/requestSignature.js";
 
 const router = express.Router();
@@ -58,16 +61,28 @@ router.post(
 );
 
 // ── teacher routes ──
-router.post("/teacher", authenticateTeacher, teacherCreateCoupon);
+router.post(
+  "/teacher",
+  authenticateTeacher,
+  requireDocumentVerification,
+  teacherCreateCoupon,
+);
 router.get(
   "/teacher/course/:courseId",
   authenticateTeacher,
+  requireDocumentVerification,
   teacherGetCourseCoupons,
 );
-router.delete("/teacher/:couponId", authenticateTeacher, teacherDeleteCoupon);
+router.delete(
+  "/teacher/:couponId",
+  authenticateTeacher,
+  requireDocumentVerification,
+  teacherDeleteCoupon,
+);
 router.patch(
   "/teacher/:couponId/status",
   authenticateTeacher,
+  requireDocumentVerification,
   teacherToggleCouponStatus,
 );
 
