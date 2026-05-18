@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { teacherApi } from "../services/api.js";
@@ -57,6 +57,51 @@ const FieldWrap = ({ label, hint, children }) => (
   </div>
 );
 
+const normalizeNameParts = (name = "") =>
+  name
+    .toLowerCase()
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9\s]/g, " ")
+    .trim()
+    .split(/\s+/)
+    .filter((part) => part.length >= 2);
+
+const normalizeUsernameInput = (value, maxLength = 30) =>
+  value
+    .toLowerCase()
+    .replace(/[\s-]+/g, "_")
+    .replace(/[^a-z0-9_]/g, "")
+    .replace(/_+/g, "_")
+    .slice(0, maxLength);
+
+const usernameUsesName = (username, name) => {
+  const parts = normalizeNameParts(name);
+  if (parts.length === 0) return true;
+
+  const compactUsername = username.replace(/_/g, "");
+  const compactName = parts.join("");
+
+  return (
+    (compactName.length >= 3 && compactUsername.includes(compactName)) ||
+    parts.some((part) => compactUsername.includes(part))
+  );
+};
+
+const buildUsernameSuggestions = (name, maxLength = 30) => {
+  const parts = normalizeNameParts(name);
+  if (parts.length === 0) return [];
+
+  const [first, second] = parts;
+  const compact = parts.join("");
+  const underscored = [first, second].filter(Boolean).join("_");
+  const initial = second ? `${first}_${second[0]}` : "";
+
+  return Array.from(new Set([compact, underscored, initial]))
+    .map((item) => normalizeUsernameInput(item, maxLength))
+    .filter((item) => item.length >= 3 && item.length <= maxLength);
+};
+
 const Signup = () => {
   const [params] = useSearchParams();
   const navigate = useNavigate();
@@ -81,6 +126,11 @@ const Signup = () => {
   const [otpTimer, setOtpTimer] = useState(0);
   const [showPass, setShowPass] = useState(false);
   const [loading, setLoading] = useState(false);
+
+  const usernameSuggestions = useMemo(
+    () => buildUsernameSuggestions(inviteData?.name || ""),
+    [inviteData?.name],
+  );
 
   // verify invite token
   useEffect(() => {
@@ -119,6 +169,12 @@ const Signup = () => {
 
       .finally(() => setVerifying(false));
   }, [token, navigate]);
+
+  useEffect(() => {
+    if (!form.username && usernameSuggestions.length > 0) {
+      setForm((p) => ({ ...p, username: usernameSuggestions[0] }));
+    }
+  }, [form.username, usernameSuggestions]);
 
   // OTP countdown timer
   useEffect(() => {
@@ -178,18 +234,27 @@ const Signup = () => {
       toast.error("Password: 8+ chars, upper, lower, number");
       return;
     }
-    const reservedCheck = checkReservedUsername(form.username);
+    const normalizedUsername = normalizeUsernameInput(form.username);
+    if (normalizedUsername !== form.username) {
+      setForm((p) => ({ ...p, username: normalizedUsername }));
+    }
+
+    const reservedCheck = checkReservedUsername(normalizedUsername);
     if (reservedCheck.reserved) {
       toast.error(reservedCheck.reason || "This username is not available");
       return;
     }
 
     if (
-      form.username.length < 3 ||
-      form.username.length > 10 ||
-      !/^[a-z0-9_]+$/.test(form.username)
+      normalizedUsername.length < 3 ||
+      normalizedUsername.length > 30 ||
+      !/^[a-z0-9_]+$/.test(normalizedUsername)
     ) {
-      toast.error("Username: 3-10 chars, lowercase, numbers, underscores");
+      toast.error("Username: 3-30 chars, lowercase, numbers, underscores");
+      return;
+    }
+    if (!usernameUsesName(normalizedUsername, inviteData?.name || "")) {
+      toast.error("Use your invited name in the username");
       return;
     }
     const ageNum = parseInt(form.age);
@@ -215,7 +280,7 @@ const Signup = () => {
       const res = await teacherApi.auth.signup({
         token,
         password: form.password,
-        username: form.username,
+        username: normalizeUsernameInput(form.username),
         age: parseInt(form.age),
         gender: form.gender,
         bio: form.bio,
@@ -400,7 +465,7 @@ const Signup = () => {
               >
                 <FieldWrap
                   label="Username"
-                  hint="3–30 chars · lowercase, numbers, underscores"
+                  hint={`Use your name, 3-30 chars · lowercase, numbers, underscores`}
                 >
                   <input
                     style={inputStyle}
@@ -408,12 +473,10 @@ const Signup = () => {
                     onChange={(e) =>
                       setForm((p) => ({
                         ...p,
-                        username: e.target.value
-                          .toLowerCase()
-                          .replace(/[^a-z0-9_]/g, ""),
+                        username: normalizeUsernameInput(e.target.value),
                       }))
                     }
-                    placeholder="your_username"
+                    placeholder={usernameSuggestions[0] || "your_username"}
                     required
                     minLength={3}
                     maxLength={30}
@@ -421,6 +484,39 @@ const Signup = () => {
                     onBlur={(e) => (e.target.style.borderColor = "#e2e8f0")}
                   />
                 </FieldWrap>
+                {usernameSuggestions.length > 0 && (
+                  <div
+                    style={{
+                      display: "flex",
+                      flexWrap: "wrap",
+                      gap: 8,
+                      marginTop: -8,
+                    }}
+                  >
+                    {usernameSuggestions.map((suggestion) => (
+                      <button
+                        key={suggestion}
+                        type="button"
+                        onClick={() =>
+                          setForm((p) => ({ ...p, username: suggestion }))
+                        }
+                        style={{
+                          border: "1px solid #bfdbfe",
+                          background:
+                            form.username === suggestion ? "#dbeafe" : "#eff6ff",
+                          color: "#1d4ed8",
+                          borderRadius: 999,
+                          padding: "6px 10px",
+                          fontSize: 12,
+                          fontWeight: 600,
+                          cursor: "pointer",
+                        }}
+                      >
+                        @{suggestion}
+                      </button>
+                    ))}
+                  </div>
+                )}
 
                 <div
                   style={{

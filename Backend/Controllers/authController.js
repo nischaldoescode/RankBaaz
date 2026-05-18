@@ -362,6 +362,29 @@ const RESERVED_USERNAMES = new Set([
   "teamadmin",
 ]);
 
+const normalizeNameParts = (name = "") =>
+  String(name)
+    .toLowerCase()
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9\s]/g, " ")
+    .trim()
+    .split(/\s+/)
+    .filter((part) => part.length >= 2);
+
+const usernameUsesName = (username, name) => {
+  const parts = normalizeNameParts(name);
+  if (parts.length === 0) return true;
+
+  const compactUsername = String(username).replace(/_/g, "");
+  const compactName = parts.join("");
+
+  return (
+    (compactName.length >= 3 && compactUsername.includes(compactName)) ||
+    parts.some((part) => compactUsername.includes(part))
+  );
+};
+
 const encryptCookieData = (data) => {
   const encryptionKey = process.env.COOKIE_ENCRYPTION_KEY; // Add to .env
   return CryptoJS.AES.encrypt(JSON.stringify(data), encryptionKey).toString();
@@ -754,15 +777,17 @@ export const verifyOTP = async (req, res) => {
       });
     }
 
+    const normalizedUsername = String(username || "").trim().toLowerCase();
+
     // Validate username format
-    if (username.length < 3 || username.length > 15) {
+    if (normalizedUsername.length < 3 || normalizedUsername.length > 20) {
       return res.status(400).json({
         success: false,
-        message: "Username must be between 3-15 characters",
+        message: "Username must be between 3-20 characters",
       });
     }
 
-    if (!/^[a-z0-9_]+$/.test(username)) {
+    if (!/^[a-z0-9_]+$/.test(normalizedUsername)) {
       return res.status(400).json({
         success: false,
         message:
@@ -770,11 +795,27 @@ export const verifyOTP = async (req, res) => {
       });
     }
 
-    // Check if username is already taken
-    const existingUsername = await User.findOne({
-      username: username.toLowerCase(),
-    });
-    if (existingUsername) {
+    if (RESERVED_USERNAMES.has(normalizedUsername)) {
+      return res.status(400).json({
+        success: false,
+        message: "This username is not available",
+      });
+    }
+
+    if (!usernameUsesName(normalizedUsername, registrationData.name)) {
+      return res.status(400).json({
+        success: false,
+        message: "Username must include your name",
+      });
+    }
+
+    // Check if username is already taken anywhere public handles are used.
+    const Teacher = (await import("../Models/Teacher.js")).default;
+    const [existingUsername, existingTeacherUsername] = await Promise.all([
+      User.findOne({ username: normalizedUsername }),
+      Teacher.findOne({ username: normalizedUsername }),
+    ]);
+    if (existingUsername || existingTeacherUsername) {
       return res.status(400).json({
         success: false,
         message: "Username already taken",
@@ -793,7 +834,7 @@ export const verifyOTP = async (req, res) => {
     const userDoc = {
       name: registrationData.name,
       email: registrationData.email,
-      username: username.toLowerCase(),
+      username: normalizedUsername,
       password: registrationData.password,
       age: registrationData.age,
       gender: registrationData.gender,
@@ -831,7 +872,7 @@ export const verifyOTP = async (req, res) => {
     }
 
     // Cache username as taken
-    const cacheKey = `username:check:${username.toLowerCase()}`;
+    const cacheKey = `username:check:${normalizedUsername}`;
     try {
       await redisClient.setex(cacheKey, 300, "taken");
     } catch (e) {
@@ -1756,6 +1797,10 @@ export const quickCheckUsername = async (req, res) => {
       return res.json({ available: false, reason: "too_short" });
     }
 
+    if (username.length > 20) {
+      return res.json({ available: false, reason: "too_long" });
+    }
+
     if (!/^[a-z0-9_]+$/.test(username)) {
       return res.json({ available: false, reason: "invalid_format" });
     }
@@ -1777,7 +1822,12 @@ export const quickCheckUsername = async (req, res) => {
     }
 
     // Check database
-    const exists = await User.exists({ username: username.toLowerCase() });
+    const Teacher = (await import("../Models/Teacher.js")).default;
+    const [userExists, teacherExists] = await Promise.all([
+      User.exists({ username: username.toLowerCase() }),
+      Teacher.exists({ username: username.toLowerCase() }),
+    ]);
+    const exists = userExists || teacherExists;
     const available = !exists;
 
     // Cache result

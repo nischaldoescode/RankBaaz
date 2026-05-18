@@ -16,6 +16,29 @@ const TEACHER_CACHE_TTL = 300; // 5 min
 const teacherCacheKey = (id) => `teacher:${id}`;
 const publicProfileCacheKey = (username) => `teacher:profile:${username}`;
 
+const normalizeNameParts = (name = "") =>
+  String(name)
+    .toLowerCase()
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9\s]/g, " ")
+    .trim()
+    .split(/\s+/)
+    .filter((part) => part.length >= 2);
+
+const usernameUsesName = (username, name) => {
+  const parts = normalizeNameParts(name);
+  if (parts.length === 0) return true;
+
+  const compactUsername = String(username).replace(/_/g, "");
+  const compactName = parts.join("");
+
+  return (
+    (compactName.length >= 3 && compactUsername.includes(compactName)) ||
+    parts.some((part) => compactUsername.includes(part))
+  );
+};
+
 const generateTeacherToken = (teacherId) =>
   jwt.sign(
     { teacherId, role: "teacher" },
@@ -267,6 +290,7 @@ export const teacherSignup = async (req, res) => {
   try {
     const { token, password, username, bio, qualification, age, gender } =
       req.body;
+    const normalizedUsername = String(username || "").trim().toLowerCase();
 
     if (!token || !password || !username || !age || !gender) {
       return res.status(400).json({
@@ -479,7 +503,7 @@ export const teacherSignup = async (req, res) => {
       "adminmod",
       "teamadmin",
     ]);
-    if (RESERVED_USERNAMES.has(username.toLowerCase())) {
+    if (RESERVED_USERNAMES.has(normalizedUsername)) {
       return res.status(400).json({
         success: false,
         message: "This username is not available",
@@ -497,9 +521,9 @@ export const teacherSignup = async (req, res) => {
     }
 
     if (
-      username.length < 3 ||
-      username.length > 30 ||
-      !/^[a-z0-9_]+$/.test(username)
+      normalizedUsername.length < 3 ||
+      normalizedUsername.length > 30 ||
+      !/^[a-z0-9_]+$/.test(normalizedUsername)
     ) {
       return res.status(400).json({
         success: false,
@@ -526,6 +550,13 @@ export const teacherSignup = async (req, res) => {
         .json({ success: false, message: "Invalid invite token" });
     }
 
+    if (!usernameUsesName(normalizedUsername, payload.name)) {
+      return res.status(400).json({
+        success: false,
+        message: "Username must include your invited name",
+      });
+    }
+
     // check email was verified via OTP
     const emailVerified = await redisClient.get(
       `teacher:email:verified:${payload.email.toLowerCase()}`,
@@ -539,12 +570,17 @@ export const teacherSignup = async (req, res) => {
 
     const User = (await import("../Models/User.js")).default;
 
-    const [existingEmail, existingUsername, existingStudent] =
-      await Promise.all([
-        Teacher.findOne({ email: payload.email }),
-        Teacher.findOne({ username: username.toLowerCase() }),
-        User.findOne({ email: payload.email.toLowerCase() }),
-      ]);
+    const [
+      existingEmail,
+      existingUsername,
+      existingStudent,
+      existingStudentUsername,
+    ] = await Promise.all([
+      Teacher.findOne({ email: payload.email }),
+      Teacher.findOne({ username: normalizedUsername }),
+      User.findOne({ email: payload.email.toLowerCase() }),
+      User.findOne({ username: normalizedUsername }),
+    ]);
 
     if (existingEmail) {
       return res.status(400).json({
@@ -561,7 +597,7 @@ export const teacherSignup = async (req, res) => {
           "This email is already in use and cannot be used for a teacher account",
       });
     }
-    if (existingUsername) {
+    if (existingUsername || existingStudentUsername) {
       return res
         .status(400)
         .json({ success: false, message: "Username taken" });
@@ -573,7 +609,7 @@ export const teacherSignup = async (req, res) => {
       name: payload.name,
       email: payload.email,
       password: hashedPassword,
-      username: username.toLowerCase(),
+      username: normalizedUsername,
       bio: bio?.trim() || "",
       qualification: qualification?.trim() || "",
       age: ageNum,

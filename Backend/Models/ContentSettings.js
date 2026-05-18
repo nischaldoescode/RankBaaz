@@ -10,11 +10,11 @@ const contentSettingsSchema = new mongoose.Schema({
   },
   siteTagline: {
     type: String,
-    default: 'Master Your Skills with Advanced Testing',
+    default: 'Courses, practice tests, and clear progress',
   },
   siteDescription: {
     type: String,
-    default: 'Experience personalized learning. Track your progress, identify strengths, and achieve your goals faster than ever.',
+    default: 'Learn from courses, attempt timed tests, review your score reports, and see what to study next.',
   },
   
   // Logo & Branding
@@ -33,15 +33,15 @@ const contentSettingsSchema = new mongoose.Schema({
   // Hero Section
   heroTitle: {
     type: String,
-    default: 'Master Your Skills with',
+    default: 'Practice smarter with',
   },
   heroHighlight: {
     type: String,
-    default: 'Advanced Testing',
+    default: 'courses, tests, and clear feedback',
   },
   heroDescription: {
     type: String,
-    default: 'Experience personalized learning. Track your progress, identify strengths, and achieve your goals faster than ever.',
+    default: 'Vidhgrow brings course learning, timed practice tests, score reports, and leaderboards into one simple place, so students can see what to study next.',
   },
   
   // Stats Section for Home Page
@@ -82,11 +82,11 @@ const contentSettingsSchema = new mongoose.Schema({
   // Features Section for Home Page
   featuresTitle: {
     type: String,
-    default: 'Why Choose Vidhgrow',
+    default: 'Built for focused practice',
   },
   featuresDescription: {
     type: String,
-    default: 'Our platform combines cutting-edge technology with proven learning methodologies to deliver personalized experiences that accelerate your growth.',
+    default: 'Choose a course, attempt a test, review your result, and keep improving with progress that is easy to understand.',
   },
   features: [{
     icon: {
@@ -161,11 +161,11 @@ const contentSettingsSchema = new mongoose.Schema({
   // CTA Section
   ctaTitle: {
     type: String,
-    default: 'Ready to Transform Your Learning Journey?',
+    default: 'Start with a course, then test yourself',
   },
   ctaDescription: {
     type: String,
-    default: 'Join thousands of learners accelerating their growth with personalized testing.',
+    default: 'Create your free account and keep your practice history, results, badges, and course progress together.',
   },
   
   // Colors & Theme
@@ -220,9 +220,9 @@ contentSettingsSchema.statics.getSettings = async function() {
         { icon: 'TrendingUp', value: '94%', label: 'Success Rate' },
       ],
       features: [
-        { icon: 'Brain', title: 'Smart Learning', description: 'Personalized learning paths adapted to your pace and style.' },
-        { icon: 'Target', title: 'Precision Testing', description: 'Expert-designed assessments with detailed analytics.' },
-        { icon: 'Trophy', title: 'Achievement System', description: 'Earn badges and track your progress with gamification.' },
+        { icon: 'Brain', title: 'Course learning', description: 'Follow organized lessons and teacher-created material before you test yourself.' },
+        { icon: 'Target', title: 'Focused practice tests', description: 'Attempt timed tests and review where your answers were strong or weak.' },
+        { icon: 'Trophy', title: 'Progress that stays visible', description: 'Track results, badges, and leaderboard movement as you keep practicing.' },
       ],
       aboutValues: [
         { icon: 'Target', title: 'Our Mission', description: 'To democratize quality education through innovative testing and personalized learning experiences that empower every student to reach their full potential.', color: 'text-blue-500', bgColor: 'bg-blue-500/10' },
