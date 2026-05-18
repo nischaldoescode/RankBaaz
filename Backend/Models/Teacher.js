@@ -51,6 +51,7 @@ const teacherSchema = new mongoose.Schema(
     },
     bio: { type: String, maxlength: 500, default: "" },
     qualification: { type: String, maxlength: 300, default: "" },
+    showQualification: { type: Boolean, default: true },
     profileImage: {
       public_id: String,
       url: String,

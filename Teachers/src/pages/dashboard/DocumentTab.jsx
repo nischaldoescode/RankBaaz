@@ -82,7 +82,7 @@ const DocumentsTab = () => {
         if (f) formData.append("documents", f);
       });
 
-      await teacherApi.uploadDocuments(formData);
+      await teacherApi.profile.uploadDocuments(formData);
       updateTeacher({ documentStatus: "pending" });
       toast.success("Documents uploaded successfully");
       setFiles([null, null]);

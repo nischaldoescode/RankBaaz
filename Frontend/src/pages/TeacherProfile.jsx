@@ -54,8 +54,9 @@ const TeacherProfile = () => {
   }
 
   const { teacher, courses, stats } = data;
+  const badges = data.badges || [];
+  const reviews = data.reviews || [];
   const avatarUrl = teacher.profileImage?.url || DICEBEAR(teacher.username);
-  const countryFlag = teacher.country === "india" ? "🇮🇳" : "🇳🇵";
   const joinDate = new Date(teacher.createdAt).toLocaleDateString("en-US", {
     year: "numeric",
     month: "long",
@@ -132,9 +133,9 @@ const TeacherProfile = () => {
             {/* meta */}
             <div className="flex flex-wrap items-center gap-4 text-xs text-muted-foreground mb-4">
               <span>
-                {countryFlag} {teacher.country === "india" ? "India" : "Nepal"}
+                {teacher.country === "india" ? "India" : "Nepal"}
               </span>
-              <span>📅 Joined {joinDate}</span>
+              <span>Joined {joinDate}</span>
             </div>
 
             {/* bio */}
@@ -147,18 +148,40 @@ const TeacherProfile = () => {
             {/* qualification chip */}
             {teacher.qualification && (
               <span className="inline-block px-3 py-1.5 bg-muted text-xs text-muted-foreground rounded-lg">
-                🎓 {teacher.qualification}
+                {teacher.qualification}
               </span>
             )}
           </div>
         </motion.div>
 
+        {badges.length > 0 && (
+          <div className="flex flex-wrap gap-2 mb-5">
+            {badges.map((badge) => (
+              <span
+                key={badge.key}
+                className="inline-flex items-center rounded-full border border-border bg-card px-3 py-1 text-xs font-semibold text-foreground shadow-sm"
+                title={badge.description}
+              >
+                {badge.label}
+              </span>
+            ))}
+          </div>
+        )}
+
         {/* stats row */}
-        <div className="grid grid-cols-3 gap-3 sm:gap-4 mb-5">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-5 sm:gap-4 mb-5">
           {[
-            { label: "Courses", value: stats.totalCourses, icon: "📚" },
-            { label: "Students", value: stats.totalStudents, icon: "🎓" },
-            { label: "Tests Taken", value: stats.totalTests, icon: "📝" },
+            { label: "Courses", value: stats.totalCourses },
+            { label: "Students", value: stats.totalStudents },
+            { label: "Tests Taken", value: stats.totalTests },
+            { label: "Completion", value: `${stats.completionRate || 0}%` },
+            {
+              label: "Rating",
+              value:
+                stats.reviewCount > 0
+                  ? `${stats.averageRating}/5`
+                  : "No ratings",
+            },
           ].map((s, i) => (
             <motion.div
               key={s.label}
@@ -167,8 +190,7 @@ const TeacherProfile = () => {
               transition={{ delay: i * 0.08 }}
               className="bg-card border border-border rounded-xl p-3 sm:p-4 text-center shadow-sm"
             >
-              <p className="text-xl sm:text-2xl mb-1">{s.icon}</p>
-              <p className="text-xl sm:text-2xl font-bold text-foreground">
+              <p className="text-lg sm:text-xl font-bold text-foreground">
                 {s.value}
               </p>
               <p className="text-xs text-muted-foreground">{s.label}</p>
@@ -186,7 +208,6 @@ const TeacherProfile = () => {
 
           {courses.length === 0 ? (
             <div className="py-12 text-center">
-              <p className="text-4xl mb-3">📚</p>
               <p className="text-sm text-muted-foreground">
                 No published courses yet.
               </p>
@@ -214,7 +235,18 @@ const TeacherProfile = () => {
                         />
                       ) : (
                         <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-xl bg-primary/10 flex items-center justify-center">
-                          <span className="text-2xl">📖</span>
+                          <svg
+                            width="24"
+                            height="24"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            className="text-primary"
+                          >
+                            <path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2z" />
+                            <path d="M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z" />
+                          </svg>
                         </div>
                       )}
                     </div>
@@ -248,8 +280,8 @@ const TeacherProfile = () => {
                         {course.geoRestriction && (
                           <span className="px-2 py-0.5 bg-muted rounded-full">
                             {course.geoRestriction === "nepal"
-                              ? "🇳🇵 Nepal only"
-                              : "🇮🇳 India only"}
+                              ? "Nepal only"
+                              : "India only"}
                           </span>
                         )}
                       </div>
@@ -257,6 +289,57 @@ const TeacherProfile = () => {
                   </motion.div>
                 );
               })}
+            </div>
+          )}
+        </div>
+
+        <div className="bg-card border border-border rounded-2xl shadow-sm overflow-hidden mt-5">
+          <div className="px-5 sm:px-7 py-4 border-b border-border">
+            <h2 className="font-bold text-foreground">Student Feedback</h2>
+          </div>
+
+          {reviews.length === 0 ? (
+            <div className="py-10 text-center">
+              <p className="text-sm text-muted-foreground">
+                No public feedback yet.
+              </p>
+            </div>
+          ) : (
+            <div className="divide-y divide-border">
+              {reviews.map((review) => (
+                <div key={review._id} className="p-4 sm:p-5">
+                  <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+                    <div>
+                      <p className="text-sm font-semibold text-foreground">
+                        {review.user?.name || review.user?.username || "Student"}
+                      </p>
+                      {review.course?.name && (
+                        <p className="text-xs text-muted-foreground">
+                          {review.course.name}
+                        </p>
+                      )}
+                    </div>
+                    <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-bold text-primary">
+                      {review.rating}/5
+                    </span>
+                  </div>
+                  <p className="text-sm text-foreground/80 leading-relaxed">
+                    {review.feedback}
+                  </p>
+                  {review.badges?.length > 0 && (
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {review.badges.map((badge) => (
+                        <span
+                          key={badge}
+                          className="rounded-full bg-muted px-2.5 py-1 text-xs text-muted-foreground"
+                        >
+                          {badge}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ))}
             </div>
           )}
         </div>

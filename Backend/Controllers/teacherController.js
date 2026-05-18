@@ -5,10 +5,12 @@ import Teacher from "../Models/Teacher.js";
 import TeacherApplication from "../Models/TeacherApplication.js";
 import Course from "../Models/Course.js";
 import TestResult from "../Models/TestResult.js";
+import CourseReview from "../Models/CourseReview.js";
+import Coupon from "../Models/Coupon.js";
 import { v2 as cloudinary } from "cloudinary";
 import { generateSigningSecret } from "../Middleware/requestSignature.js";
 import { generateOtp, sendOtpEmail } from "../utils/OtpUtils.js";
-import redisClient from "../Config/redis.js";
+import redisClient, { invalidateCache } from "../Config/redis.js";
 
 const PLATFORM_FEE_PERCENT = 20;
 const TEACHER_CACHE_TTL = 300; // 5 min
@@ -37,6 +39,14 @@ const usernameUsesName = (username, name) => {
     (compactName.length >= 3 && compactUsername.includes(compactName)) ||
     parts.some((part) => compactUsername.includes(part))
   );
+
+const escapeHtml = (value = "") =>
+  String(value)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
 };
 
 const generateTeacherToken = (teacherId) =>
@@ -63,6 +73,54 @@ const invalidateTeacherCache = async (teacherId) => {
   try {
     await redisClient.del(teacherCacheKey(teacherId));
   } catch {}
+};
+
+const invalidateTeacherPublicCaches = async (teacher) => {
+  if (!teacher) return;
+
+  const teacherId = teacher._id || teacher.id || teacher.teacherId || teacher;
+  const username = teacher.username;
+
+  await Promise.allSettled([
+    invalidateTeacherCache(teacherId),
+    username ? redisClient.del(publicProfileCacheKey(username)) : null,
+    invalidateCache.allCourses(),
+  ]);
+};
+
+const destroyCloudinaryAsset = async (publicId, resourceTypes = ["image"]) => {
+  if (!publicId) return;
+  await Promise.allSettled(
+    resourceTypes.map((resource_type) =>
+      cloudinary.uploader.destroy(publicId, { resource_type }),
+    ),
+  );
+};
+
+const destroyTeacherOwnedAssets = async (teacher, courses = []) => {
+  const deletions = [];
+
+  if (teacher?.profileImage?.public_id) {
+    deletions.push(destroyCloudinaryAsset(teacher.profileImage.public_id));
+  }
+
+  for (const doc of teacher?.documents || []) {
+    deletions.push(destroyCloudinaryAsset(doc.public_id, ["image", "raw"]));
+  }
+
+  for (const course of courses) {
+    if (course.image?.public_id) {
+      deletions.push(destroyCloudinaryAsset(course.image.public_id));
+    }
+
+    for (const question of course.questions || []) {
+      if (question.image?.public_id) {
+        deletions.push(destroyCloudinaryAsset(question.image.public_id));
+      }
+    }
+  }
+
+  await Promise.allSettled(deletions);
 };
 
 // ── public ──
@@ -620,6 +678,16 @@ export const teacherSignup = async (req, res) => {
       invitedBy: payload.adminId || null,
     });
 
+    await TeacherApplication.findOneAndUpdate(
+      { email: payload.email.toLowerCase() },
+      {
+        status: "registered",
+        registeredAt: new Date(),
+        processedBy: payload.adminId || null,
+      },
+      { new: true },
+    ).catch(() => {});
+
     // clean up redis
     await redisClient.del(
       `teacher:email:verified:${payload.email.toLowerCase()}`,
@@ -663,11 +731,11 @@ export const teacherUpdateQuestion = async (req, res) => {
     const { courseId, questionId } = req.params;
 
     const teacher = await Teacher.findById(teacherId);
-    if (!teacher || teacher.accessBlocked) {
+    if (!teacher || teacher.accessBlocked || teacher.documentStatus !== "verified") {
       return res.status(403).json({
         success: false,
         code: "ACCESS_BLOCKED",
-        message: "Account restricted",
+        message: "Document verification is required before editing courses.",
       });
     }
 
@@ -709,7 +777,7 @@ export const teacherUpdateQuestion = async (req, res) => {
     if (difficulty) course.questions[questionIndex].difficulty = difficulty;
 
     await course.save();
-    await invalidateTeacherCache(teacherId);
+    await invalidateTeacherPublicCaches(teacher);
 
     return res.status(200).json({ success: true, message: "Question updated" });
   } catch (error) {
@@ -723,11 +791,11 @@ export const teacherDeleteQuestion = async (req, res) => {
     const { courseId, questionId } = req.params;
 
     const teacher = await Teacher.findById(teacherId);
-    if (!teacher || teacher.accessBlocked) {
+    if (!teacher || teacher.accessBlocked || teacher.documentStatus !== "verified") {
       return res.status(403).json({
         success: false,
         code: "ACCESS_BLOCKED",
-        message: "Account restricted",
+        message: "Document verification is required before editing questions.",
       });
     }
 
@@ -753,7 +821,7 @@ export const teacherDeleteQuestion = async (req, res) => {
       (q) => q.isActive !== false,
     ).length;
     await course.save();
-    await invalidateTeacherCache(teacherId);
+    await invalidateTeacherPublicCaches(teacher);
 
     return res.status(200).json({ success: true, message: "Question deleted" });
   } catch (error) {
@@ -1084,19 +1152,46 @@ export const getTeacherProfile = async (req, res) => {
       return res.status(200).json({ success: true, data: JSON.parse(cached) });
     }
 
-    const [teacher, courses] = await Promise.all([
-      Teacher.findById(teacherId).select("-password -otp").lean(),
-      Course.find({ teacher: teacherId })
-        .select(
-          "name isPaid price approvalStatus isActive totalQuestions geoRestriction createdAt image",
-        )
-        .sort({ createdAt: -1 })
-        .lean(),
-    ]);
+    const teacher = await Teacher.findById(teacherId)
+      .select("-password -otp")
+      .lean();
 
     if (!teacher) {
       return res.status(404).json({ success: false, message: "Not found" });
     }
+
+    const isRestricted =
+      teacher.accessBlocked || teacher.documentStatus !== "verified";
+
+    if (isRestricted) {
+      const responseData = {
+        teacher,
+        courses: [],
+        analytics: {
+          totalStudents: 0,
+          totalCourses: 0,
+          activeCourses: 0,
+          pendingApproval: 0,
+        },
+        recentStudentActivity: [],
+        restricted: true,
+      };
+
+      await redisClient.setex(
+        cacheKey,
+        TEACHER_CACHE_TTL,
+        JSON.stringify(responseData),
+      );
+
+      return res.status(200).json({ success: true, data: responseData });
+    }
+
+    const courses = await Course.find({ teacher: teacherId })
+      .select(
+        "name isPaid price approvalStatus isActive totalQuestions geoRestriction createdAt image",
+      )
+      .sort({ createdAt: -1 })
+      .lean();
 
     // analytics: students who took their courses
     const courseIds = courses.map((c) => c._id);
@@ -1288,13 +1383,17 @@ export const getTeacherAnalytics = async (req, res) => {
 
 export const updateTeacherProfile = async (req, res) => {
   try {
-    const { bio, qualification } = req.body;
+    const { bio, qualification, showQualification } = req.body;
     const teacherId = req.teacher.teacherId;
 
     const updates = {};
     if (bio !== undefined) updates.bio = bio.trim().slice(0, 500);
     if (qualification !== undefined)
       updates.qualification = qualification.trim().slice(0, 300);
+    if (showQualification !== undefined) {
+      updates.showQualification =
+        showQualification === true || showQualification === "true";
+    }
 
     if (req.file) {
       const teacher = await Teacher.findById(teacherId).select("profileImage");
@@ -1314,11 +1413,7 @@ export const updateTeacherProfile = async (req, res) => {
       runValidators: true,
     }).select("-password -otp");
 
-    await invalidateTeacherCache(teacherId);
-    // also invalidate public profile cache
-    await redisClient
-      .del(publicProfileCacheKey(teacher.username))
-      .catch(() => {});
+    await invalidateTeacherPublicCaches(teacher);
 
     return res.status(200).json({ success: true, data: { teacher } });
   } catch (error) {
@@ -1397,15 +1492,22 @@ export const getPublicTeacherProfile = async (req, res) => {
       username: username.toLowerCase(),
       isActive: true,
       accessBlocked: false, // blocked teachers have no public profile
+      documentStatus: "verified",
     })
       .select(
-        "name username bio qualification profileImage country createdAt documentStatus",
+        "name username bio qualification showQualification profileImage country createdAt documentStatus",
       )
       .lean();
 
     if (!teacher) {
       return res.status(404).json({ success: false, message: "Not found" });
     }
+
+    const publicTeacher = {
+      ...teacher,
+      qualification:
+        teacher.showQualification === false ? "" : teacher.qualification,
+    };
 
     const courses = await Course.find({
       teacher: teacher._id,
@@ -1417,22 +1519,131 @@ export const getPublicTeacherProfile = async (req, res) => {
       )
       .lean();
 
-    const [testCount, studentCount] = await Promise.all([
+    const courseIds = courses.map((c) => c._id);
+    const [
+      completedTests,
+      abandonedTests,
+      studentCount,
+      reviews,
+      ratingSummary,
+    ] = await Promise.all([
       TestResult.countDocuments({
-        course: { $in: courses.map((c) => c._id) },
+        course: { $in: courseIds },
+        wasAbandoned: { $ne: true },
+      }),
+      TestResult.countDocuments({
+        course: { $in: courseIds },
+        wasAbandoned: true,
       }),
       TestResult.distinct("user", {
-        course: { $in: courses.map((c) => c._id) },
+        course: { $in: courseIds },
       }),
+      CourseReview.find({
+        teacher: teacher._id,
+        status: "approved",
+        isPublic: true,
+      })
+        .populate("user", "name username")
+        .populate("course", "name")
+        .sort({ createdAt: -1 })
+        .limit(12)
+        .lean(),
+      CourseReview.aggregate([
+        {
+          $match: {
+            teacher: teacher._id,
+            status: "approved",
+            isPublic: true,
+          },
+        },
+        {
+          $group: {
+            _id: "$teacher",
+            averageRating: { $avg: "$rating" },
+            reviewCount: { $sum: 1 },
+          },
+        },
+      ]),
     ]);
 
+    const totalAttempts = completedTests + abandonedTests;
+    const completionRate =
+      totalAttempts > 0 ? Math.round((completedTests / totalAttempts) * 100) : 0;
+    const averageRating = ratingSummary[0]?.averageRating
+      ? Math.round(ratingSummary[0].averageRating * 10) / 10
+      : 0;
+    const reviewCount = ratingSummary[0]?.reviewCount || 0;
+
+    const badges = [
+      {
+        key: "verified_teacher",
+        label: "Verified Teacher",
+        description: "Documents reviewed by the Vidhgrow team.",
+        tone: "green",
+        show: teacher.documentStatus === "verified",
+      },
+      {
+        key: "course_builder",
+        label: "Course Builder",
+        description: "Published multiple active courses.",
+        tone: "blue",
+        show: courses.length >= 3,
+      },
+      {
+        key: "student_favorite",
+        label: "Student Favorite",
+        description: "Reached at least 25 unique students.",
+        tone: "amber",
+        show: studentCount.length >= 25,
+      },
+      {
+        key: "highly_rated",
+        label: "Highly Rated",
+        description: "Maintains a strong student rating.",
+        tone: "violet",
+        show: averageRating >= 4.5 && reviewCount >= 3,
+      },
+      {
+        key: "strong_completion",
+        label: "Strong Completion",
+        description: "Students regularly finish this teacher's tests.",
+        tone: "slate",
+        show: completionRate >= 80 && completedTests >= 10,
+      },
+    ].filter((badge) => badge.show);
+
     const responseData = {
-      teacher,
+      teacher: publicTeacher,
       courses,
+      reviews: reviews.map((review) => ({
+        _id: review._id,
+        rating: review.rating,
+        feedback: review.feedback,
+        badges: review.evaluation?.badges || [],
+        quality: review.evaluation?.quality || "brief",
+        createdAt: review.createdAt,
+        user: review.user
+          ? {
+              name: review.user.name,
+              username: review.user.username,
+            }
+          : null,
+        course: review.course
+          ? {
+              _id: review.course._id,
+              name: review.course.name,
+            }
+          : null,
+      })),
+      badges,
       stats: {
         totalCourses: courses.length,
         totalStudents: studentCount.length,
-        totalTests: testCount,
+        totalTests: completedTests,
+        totalAttempts,
+        completionRate,
+        averageRating,
+        reviewCount,
       },
     };
 
@@ -1450,14 +1661,20 @@ export const getTeacherApplications = async (req, res) => {
   try {
     const { status = "pending", page = 1, limit = 20 } = req.query;
     const skip = (parseInt(page) - 1) * parseInt(limit);
+    const registeredEmails = await Teacher.distinct("email");
+    const query = { status };
+
+    if (status !== "registered" && registeredEmails.length > 0) {
+      query.email = { $nin: registeredEmails };
+    }
 
     const [applications, total] = await Promise.all([
-      TeacherApplication.find({ status })
+      TeacherApplication.find(query)
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(parseInt(limit))
         .lean(),
-      TeacherApplication.countDocuments({ status }),
+      TeacherApplication.countDocuments(query),
     ]);
 
     return res.status(200).json({
@@ -1795,11 +2012,39 @@ export const getTeacherById = async (req, res) => {
       return res.status(404).json({ success: false, message: "Not found" });
     }
 
-    // student count
     const courseIds = courses.map((c) => c._id);
-    const studentCount = await TestResult.distinct("user", {
-      course: { $in: courseIds },
-    });
+    const [studentCount, completedTests, abandonedTests, ratingSummary] =
+      await Promise.all([
+        TestResult.distinct("user", {
+          course: { $in: courseIds },
+        }),
+        TestResult.countDocuments({
+          course: { $in: courseIds },
+          wasAbandoned: { $ne: true },
+        }),
+        TestResult.countDocuments({
+          course: { $in: courseIds },
+          wasAbandoned: true,
+        }),
+        CourseReview.aggregate([
+          {
+            $match: {
+              teacher: teacher._id,
+              status: "approved",
+              isPublic: true,
+            },
+          },
+          {
+            $group: {
+              _id: "$teacher",
+              averageRating: { $avg: "$rating" },
+              reviewCount: { $sum: 1 },
+            },
+          },
+        ]),
+      ]);
+
+    const totalAttempts = completedTests + abandonedTests;
 
     return res.status(200).json({
       success: true,
@@ -1809,6 +2054,16 @@ export const getTeacherById = async (req, res) => {
         stats: {
           totalCourses: courses.length,
           totalStudents: studentCount.length,
+          totalTests: completedTests,
+          totalAttempts,
+          completionRate:
+            totalAttempts > 0
+              ? Math.round((completedTests / totalAttempts) * 100)
+              : 0,
+          averageRating: ratingSummary[0]?.averageRating
+            ? Math.round(ratingSummary[0].averageRating * 10) / 10
+            : 0,
+          reviewCount: ratingSummary[0]?.reviewCount || 0,
         },
       },
     });
@@ -1838,7 +2093,7 @@ export const adminVerifyDocuments = async (req, res) => {
     }
 
     await teacher.save();
-    await invalidateTeacherCache(teacherId);
+    await invalidateTeacherPublicCaches(teacher);
 
     return res.status(200).json({
       success: true,
@@ -1870,7 +2125,7 @@ export const adminRequestDocuments = async (req, res) => {
       return res.status(404).json({ success: false, message: "Not found" });
     }
 
-    await invalidateTeacherCache(teacherId);
+    await invalidateTeacherPublicCaches(teacher);
 
     return res.status(200).json({
       success: true,
@@ -1884,35 +2139,111 @@ export const adminRequestDocuments = async (req, res) => {
 export const adminDeleteTeacher = async (req, res) => {
   try {
     const { teacherId } = req.params;
+    const reason = String(req.body?.reason || "")
+      .trim()
+      .replace(/\s+/g, " ");
+
+    if (reason.length < 10 || reason.length > 1000) {
+      return res.status(400).json({
+        success: false,
+        message: "Deletion reason must be 10 to 1000 characters",
+      });
+    }
 
     const teacher = await Teacher.findById(teacherId);
     if (!teacher) {
       return res.status(404).json({ success: false, message: "Not found" });
     }
 
-    // delete cloudinary assets
-    await Promise.allSettled(
-      [
-        teacher.profileImage?.public_id
-          ? cloudinary.uploader.destroy(teacher.profileImage.public_id)
-          : null,
-        ...(teacher.documents || []).map((d) =>
-          cloudinary.uploader.destroy(d.public_id, { resource_type: "raw" }),
-        ),
-      ].filter(Boolean),
-    );
+    if (!process.env.RESEND_API_KEY || !process.env.EMAIL_USER) {
+      return res.status(500).json({
+        success: false,
+        message: "Email service is not configured. Teacher was not deleted.",
+      });
+    }
 
-    // unassign courses
-    await Course.updateMany(
-      { teacher: teacherId },
-      { $unset: { teacher: 1 }, approvalStatus: "approved" },
-    );
+    try {
+      const { Resend } = await import("resend");
+      const resend = new Resend(process.env.RESEND_API_KEY);
+      const safeName = escapeHtml(teacher.name);
+      const safeReason = escapeHtml(reason).replace(/\n/g, "<br />");
+
+      await resend.emails.send({
+        from: `Vidhgrow <${process.env.EMAIL_USER}>`,
+        to: teacher.email,
+        subject: "Your Vidhgrow teacher account has been removed",
+        text: `Hi ${teacher.name},\n\nYour Vidhgrow teacher account has been removed.\n\nReason:\n${reason}\n\nIf you believe this was a mistake, please contact support.\n\nRegards,\nThe Vidhgrow Team`,
+        html: `<!DOCTYPE html>
+<html>
+<body style="margin:0;padding:0;background:#f8fafc;font-family:Arial,sans-serif;color:#111827;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="padding:24px;background:#f8fafc;">
+    <tr>
+      <td align="center">
+        <table width="600" cellpadding="0" cellspacing="0" style="max-width:100%;background:#fff;border:1px solid #e5e7eb;border-radius:12px;overflow:hidden;">
+          <tr>
+            <td style="padding:28px 32px;border-bottom:1px solid #e5e7eb;">
+              <h1 style="margin:0;font-size:20px;color:#111827;">Teacher account removed</h1>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:28px 32px;">
+              <p style="margin:0 0 16px;font-size:14px;line-height:1.7;">Hi <strong>${safeName}</strong>,</p>
+              <p style="margin:0 0 16px;font-size:14px;line-height:1.7;">Your Vidhgrow teacher account has been removed.</p>
+              <div style="margin:18px 0;padding:14px 16px;background:#fef2f2;border:1px solid #fecaca;border-radius:10px;">
+                <p style="margin:0 0 6px;font-size:12px;font-weight:700;color:#991b1b;">Reason</p>
+                <p style="margin:0;font-size:14px;line-height:1.7;color:#374151;">${safeReason}</p>
+              </div>
+              <p style="margin:0;font-size:13px;line-height:1.7;color:#6b7280;">If you believe this was a mistake, please contact support.</p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`,
+      });
+    } catch (emailError) {
+      console.error("Teacher deletion email failed:", emailError);
+      return res.status(502).json({
+        success: false,
+        message: "Failed to email teacher. Teacher was not deleted.",
+      });
+    }
+
+    const courses = await Course.find({ teacher: teacherId })
+      .select("_id image questions.image")
+      .lean();
+    const courseIds = courses.map((course) => course._id);
+
+    await destroyTeacherOwnedAssets(teacher, courses);
+
+    await Promise.allSettled([
+      Course.deleteMany({ teacher: teacherId }),
+      Coupon.deleteMany({
+        $or: [{ createdByTeacher: teacherId }, { course: { $in: courseIds } }],
+      }),
+      CourseReview.deleteMany({
+        $or: [{ teacher: teacherId }, { course: { $in: courseIds } }],
+      }),
+    ]);
 
     await Teacher.findByIdAndDelete(teacherId);
-    await invalidateTeacherCache(teacherId);
-    await redisClient.del(publicProfileCacheKey(teacher.username));
+    await Promise.allSettled([
+      invalidateTeacherCache(teacherId),
+      redisClient.del(publicProfileCacheKey(teacher.username)),
+      invalidateCache.allCourses(),
+      invalidateCache.leaderboard(),
+      ...courseIds.map((courseId) => invalidateCache.course(courseId)),
+    ]);
 
-    return res.status(200).json({ success: true, message: "Teacher deleted" });
+    return res.status(200).json({
+      success: true,
+      message: "Teacher, courses, documents, coupons, and reviews deleted. Email sent.",
+      data: {
+        deletedCourses: courseIds.length,
+      },
+    });
   } catch (error) {
     res.status(500).json({ success: false, message: "Delete failed" });
   }
@@ -2024,29 +2355,69 @@ export const teacherCreateCourse = async (req, res) => {
       return res.status(404).json({ success: false, message: "Not found" });
     }
 
-    // security: block if access blocked
-    if (teacher.accessBlocked) {
+    // route middleware already blocks this, but keep the controller defensive.
+    if (teacher.accessBlocked || teacher.documentStatus !== "verified") {
       return res.status(403).json({
         success: false,
         code: "ACCESS_BLOCKED",
-        message:
-          "Account access is restricted. Please upload required documents.",
+        message: "Document verification is required before creating courses.",
       });
     }
 
-    const { name, description, difficulties, isPaid, price } = req.body;
+    const { name, description, difficulties, isPaid, price, videoContent } =
+      req.body;
 
     const isPaidBool = isPaid === "true" || isPaid === true;
+    const hasPdfExport =
+      req.body.hasPdfExport === "true" || req.body.hasPdfExport === true;
 
     let parsedDifficulties = difficulties;
     if (typeof difficulties === "string") {
       parsedDifficulties = JSON.parse(difficulties);
     }
 
-    const processedDifficulties = parsedDifficulties.map((d) => ({
-      ...d,
-      totalMarks: d.marksPerQuestion * d.maxQuestions,
-    }));
+    if (!Array.isArray(parsedDifficulties) || parsedDifficulties.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: "At least one difficulty level is required",
+      });
+    }
+
+    const seenDifficulties = new Set();
+    const processedDifficulties = parsedDifficulties.map((d) => {
+      if (!["Easy", "Medium", "Hard"].includes(d.name)) {
+        throw new Error("Invalid difficulty level");
+      }
+      if (seenDifficulties.has(d.name)) {
+        throw new Error("Duplicate difficulty level");
+      }
+      seenDifficulties.add(d.name);
+
+      const marksPerQuestion = Number(d.marksPerQuestion);
+      const maxQuestions = Number(d.maxQuestions);
+      const minTime = Number(d.timerSettings?.minTime);
+      const maxTime = Number(d.timerSettings?.maxTime);
+
+      if (
+        marksPerQuestion < 1 ||
+        maxQuestions < 1 ||
+        minTime < 1 ||
+        maxTime < minTime
+      ) {
+        throw new Error("Invalid difficulty settings");
+      }
+
+      return {
+        name: d.name,
+        marksPerQuestion,
+        maxQuestions,
+        totalMarks: marksPerQuestion * maxQuestions,
+        timerSettings: {
+          minTime,
+          maxTime,
+        },
+      };
+    });
 
     const maxQuestions = processedDifficulties.reduce(
       (t, d) => t + (d.maxQuestions || 0),
@@ -2073,6 +2444,7 @@ export const teacherCreateCourse = async (req, res) => {
       isActive: true,
       approvedAt: new Date(),
       geoRestriction: isPaidBool ? teacher.country : null,
+      hasPdfExport,
       questions: [],
       totalQuestions: 0,
       ...(image && { image }),
@@ -2082,19 +2454,41 @@ export const teacherCreateCourse = async (req, res) => {
       courseData.price = parseFloat(price);
     }
 
+    if (isPaidBool && videoContent) {
+      try {
+        const parsedVideoContent =
+          typeof videoContent === "string"
+            ? JSON.parse(videoContent)
+            : videoContent;
+        if (
+          parsedVideoContent &&
+          ["none", "course", "difficulty"].includes(parsedVideoContent.type)
+        ) {
+          courseData.videoContent = parsedVideoContent;
+        }
+      } catch {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid video content configuration",
+        });
+      }
+    }
+
     const course = await Course.create(courseData);
 
-    // invalidate teacher cache
-    await invalidateTeacherCache(teacherId);
+    await invalidateTeacherPublicCaches(teacher);
 
     return res.status(201).json({
       success: true,
-      message: "Course submitted for admin approval",
+      message: "Course created",
       data: { course },
     });
   } catch (error) {
     console.error("Teacher create course error:", error);
-    res.status(500).json({ success: false, message: "Failed to create" });
+    res.status(400).json({
+      success: false,
+      message: error.message || "Failed to create",
+    });
   }
 };
 
@@ -2104,11 +2498,11 @@ export const teacherUpdateCourse = async (req, res) => {
     const { courseId } = req.params;
 
     const teacher = await Teacher.findById(teacherId);
-    if (!teacher || teacher.accessBlocked) {
+    if (!teacher || teacher.accessBlocked || teacher.documentStatus !== "verified") {
       return res.status(403).json({
         success: false,
         code: "ACCESS_BLOCKED",
-        message: "Account restricted",
+        message: "Document verification is required before deleting questions.",
       });
     }
 
@@ -2156,7 +2550,7 @@ export const teacherUpdateCourse = async (req, res) => {
       new: true,
     });
 
-    await invalidateTeacherCache(teacherId);
+    await invalidateTeacherPublicCaches(teacher);
 
     return res.status(200).json({
       success: true,
@@ -2174,10 +2568,14 @@ export const teacherAddQuestion = async (req, res) => {
     const { courseId } = req.params;
 
     const teacher = await Teacher.findById(teacherId);
-    if (!teacher || teacher.accessBlocked) {
+    if (!teacher || teacher.accessBlocked || teacher.documentStatus !== "verified") {
       return res
         .status(403)
-        .json({ success: false, message: "Account restricted" });
+        .json({
+          success: false,
+          code: "ACCESS_BLOCKED",
+          message: "Document verification is required before adding questions.",
+        });
     }
 
     const course = await Course.findOne({ _id: courseId, teacher: teacherId });
@@ -2240,7 +2638,7 @@ export const teacherAddQuestion = async (req, res) => {
     }
 
     await course.save();
-    await invalidateTeacherCache(teacherId);
+    await invalidateTeacherPublicCaches(teacher);
 
     return res.status(201).json({
       success: true,

@@ -984,7 +984,34 @@ const CreateCourseModal = ({ teacher, onClose, onCreated }) => {
     description: "",
     isPaid: "false",
     price: "",
+    hasPdfExport: false,
   });
+  const [difficulties, setDifficulties] = useState([
+    {
+      name: "Easy",
+      enabled: true,
+      marksPerQuestion: 5,
+      maxQuestions: 10,
+      minTime: 30,
+      maxTime: 60,
+    },
+    {
+      name: "Medium",
+      enabled: true,
+      marksPerQuestion: 7,
+      maxQuestions: 7,
+      minTime: 45,
+      maxTime: 90,
+    },
+    {
+      name: "Hard",
+      enabled: true,
+      marksPerQuestion: 10,
+      maxQuestions: 5,
+      minTime: 60,
+      maxTime: 120,
+    },
+  ]);
   const [image, setImage] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -998,6 +1025,12 @@ const CreateCourseModal = ({ teacher, onClose, onCreated }) => {
     }
     setImage(f);
     setImagePreview(URL.createObjectURL(f));
+  };
+
+  const updateDifficulty = (name, patch) => {
+    setDifficulties((prev) =>
+      prev.map((diff) => (diff.name === name ? { ...diff, ...patch } : diff)),
+    );
   };
 
   const handleSubmit = async (e) => {
@@ -1017,36 +1050,57 @@ const CreateCourseModal = ({ teacher, onClose, onCreated }) => {
       toast.error("Price required for paid courses");
       return;
     }
+
+    const activeDifficulties = difficulties.filter((diff) => diff.enabled);
+    if (activeDifficulties.length === 0) {
+      toast.error("Select at least one difficulty level");
+      return;
+    }
+
+    const invalidDifficulty = activeDifficulties.find((diff) => {
+      const marks = Number(diff.marksPerQuestion);
+      const questions = Number(diff.maxQuestions);
+      const minTime = Number(diff.minTime);
+      const maxTime = Number(diff.maxTime);
+      return (
+        !Number.isFinite(marks) ||
+        !Number.isFinite(questions) ||
+        !Number.isFinite(minTime) ||
+        !Number.isFinite(maxTime) ||
+        marks < 1 ||
+        questions < 1 ||
+        minTime < 1 ||
+        maxTime < minTime
+      );
+    });
+
+    if (invalidDifficulty) {
+      toast.error(`Check ${invalidDifficulty.name} difficulty settings`);
+      return;
+    }
+
     setLoading(true);
     try {
       const fd = new FormData();
       fd.append("name", form.name.trim());
       fd.append("description", form.description.trim());
       fd.append("isPaid", form.isPaid);
+      fd.append("hasPdfExport", form.hasPdfExport ? "true" : "false");
       if (form.isPaid === "true") fd.append("price", form.price);
       if (image) fd.append("image", image);
       fd.append(
         "difficulties",
-        JSON.stringify([
-          {
-            name: "Easy",
-            marksPerQuestion: 5,
-            maxQuestions: 10,
-            timerSettings: { minTime: 30, maxTime: 60 },
-          },
-          {
-            name: "Medium",
-            marksPerQuestion: 7,
-            maxQuestions: 7,
-            timerSettings: { minTime: 45, maxTime: 90 },
-          },
-          {
-            name: "Hard",
-            marksPerQuestion: 10,
-            maxQuestions: 5,
-            timerSettings: { minTime: 60, maxTime: 120 },
-          },
-        ]),
+        JSON.stringify(
+          activeDifficulties.map((diff) => ({
+            name: diff.name,
+            marksPerQuestion: Number(diff.marksPerQuestion),
+            maxQuestions: Number(diff.maxQuestions),
+            timerSettings: {
+              minTime: Number(diff.minTime),
+              maxTime: Number(diff.maxTime),
+            },
+          })),
+        ),
       );
       const res = await teacherApi.courses.create(fd);
       toast.success("Course created");
@@ -1067,124 +1121,136 @@ const CreateCourseModal = ({ teacher, onClose, onCreated }) => {
   };
 
   return (
-    <Modal onClose={onClose} maxWidth={520}>
+    <Modal onClose={onClose} maxWidth={720}>
       <ModalHeader
         title="Create Course"
-        subtitle="Goes live immediately"
+        subtitle="Set the structure students will use for practice tests"
         onClose={onClose}
       />
       <form
         onSubmit={handleSubmit}
-        style={{ display: "flex", flexDirection: "column", gap: 14 }}
+        style={{ display: "flex", flexDirection: "column", gap: 18 }}
       >
-        <div>
-          <FieldLabel required>Course Name</FieldLabel>
-          <input
-            style={inputS}
-            value={form.name}
-            onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
-            placeholder="Introduction to Mathematics"
-            required
-            onFocus={focus}
-            onBlur={blur}
-          />
-        </div>
-        <div>
-          <FieldLabel required>Description</FieldLabel>
-          <textarea
-            style={{
-              ...inputS,
-              height: "auto",
-              padding: "10px 12px",
-              resize: "vertical",
-              lineHeight: 1.5,
-            }}
-            rows={3}
-            value={form.description}
-            onChange={(e) =>
-              setForm((p) => ({ ...p, description: e.target.value }))
-            }
-            placeholder="What will students learn?"
-            required
-            onFocus={focus}
-            onBlur={blur}
-          />
-        </div>
-        <div>
-          <FieldLabel>Course Image</FieldLabel>
-          {imagePreview ? (
-            <div style={{ position: "relative" }}>
-              <img
-                src={imagePreview}
-                alt=""
-                style={{
-                  width: "100%",
-                  height: 130,
-                  objectFit: "cover",
-                  borderRadius: 10,
-                  border: "1.5px solid #e2e8f0",
-                }}
-              />
-              <button
-                type="button"
-                onClick={() => {
-                  setImage(null);
-                  setImagePreview(null);
-                }}
-                style={{
-                  position: "absolute",
-                  top: 6,
-                  right: 6,
-                  width: 22,
-                  height: 22,
-                  borderRadius: "50%",
-                  background: "#ef4444",
-                  border: "none",
-                  color: "#fff",
-                  cursor: "pointer",
-                  fontSize: 13,
-                }}
-              >
-                ×
-              </button>
-            </div>
-          ) : (
-            <label
-              style={{
-                display: "block",
-                border: "2px dashed #e2e8f0",
-                borderRadius: 10,
-                padding: "18px",
-                textAlign: "center",
-                cursor: "pointer",
-              }}
-              onMouseEnter={(e) =>
-                (e.currentTarget.style.borderColor = "#2563eb")
-              }
-              onMouseLeave={(e) =>
-                (e.currentTarget.style.borderColor = "#e2e8f0")
-              }
-            >
-              <p style={{ fontSize: 13, color: "#64748b", margin: 0 }}>
-                Click to upload (PNG, JPG up to 5MB)
-              </p>
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "minmax(0,1.2fr) minmax(220px,0.8fr)",
+            gap: 16,
+          }}
+          className="teacher-course-create-grid"
+        >
+          <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+            <div>
+              <FieldLabel required>Course Name</FieldLabel>
               <input
-                type="file"
-                accept="image/*"
-                onChange={handleImage}
-                style={{ display: "none" }}
+                style={inputS}
+                value={form.name}
+                onChange={(e) =>
+                  setForm((p) => ({ ...p, name: e.target.value }))
+                }
+                placeholder="Introduction to Mathematics"
+                required
+                onFocus={focus}
+                onBlur={blur}
               />
-            </label>
-          )}
+            </div>
+            <div>
+              <FieldLabel required>Description</FieldLabel>
+              <textarea
+                style={textareaS}
+                rows={5}
+                value={form.description}
+                onChange={(e) =>
+                  setForm((p) => ({ ...p, description: e.target.value }))
+                }
+                placeholder="What students will practice and what level this course is for."
+                required
+                onFocus={focus}
+                onBlur={blur}
+              />
+            </div>
+          </div>
+          <div>
+            <FieldLabel>Course Image</FieldLabel>
+            {imagePreview ? (
+              <div style={{ position: "relative" }}>
+                <img
+                  src={imagePreview}
+                  alt=""
+                  style={{
+                    width: "100%",
+                    height: 178,
+                    objectFit: "cover",
+                    borderRadius: 10,
+                    border: "1.5px solid #e2e8f0",
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    setImage(null);
+                    setImagePreview(null);
+                  }}
+                  style={{
+                    position: "absolute",
+                    top: 6,
+                    right: 6,
+                    width: 24,
+                    height: 24,
+                    borderRadius: "50%",
+                    background: "#ef4444",
+                    border: "none",
+                    color: "#fff",
+                    cursor: "pointer",
+                    fontSize: 13,
+                  }}
+                >
+                  ×
+                </button>
+              </div>
+            ) : (
+              <label
+                style={{
+                  height: 178,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  border: "2px dashed #e2e8f0",
+                  borderRadius: 10,
+                  padding: "18px",
+                  textAlign: "center",
+                  cursor: "pointer",
+                  background: "#f8fafc",
+                }}
+                onMouseEnter={(e) =>
+                  (e.currentTarget.style.borderColor = "#2563eb")
+                }
+                onMouseLeave={(e) =>
+                  (e.currentTarget.style.borderColor = "#e2e8f0")
+                }
+              >
+                <p style={{ fontSize: 13, color: "#64748b", margin: 0 }}>
+                  Upload PNG or JPG, up to 5MB
+                </p>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImage}
+                  style={{ display: "none" }}
+                />
+              </label>
+            )}
+          </div>
         </div>
+
         <div>
-          <FieldLabel>Course Type</FieldLabel>
+          <FieldLabel>Pricing</FieldLabel>
           <div
             style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}
           >
             {[
-              ["false", "🆓 Free"],
-              ["true", "💰 Paid"],
+              ["false", "Free"],
+              ["true", "Paid"],
             ].map(([v, label]) => (
               <button
                 key={v}
@@ -1212,6 +1278,7 @@ const CreateCourseModal = ({ teacher, onClose, onCreated }) => {
             ))}
           </div>
         </div>
+
         {form.isPaid === "true" && (
           <div>
             <FieldLabel required>
@@ -1231,12 +1298,147 @@ const CreateCourseModal = ({ teacher, onClose, onCreated }) => {
               onBlur={blur}
             />
             {teacher?.country === "nepal" && (
-              <p style={{ fontSize: 11, color: "#7c3aed", marginTop: 3 }}>
-                🇳🇵 Nepal-only course (Khalti payment)
+              <p style={{ fontSize: 11, color: "#7c3aed", marginTop: 4 }}>
+                Nepal-only course with Khalti payment.
               </p>
             )}
           </div>
         )}
+
+        <div>
+          <FieldLabel required>Difficulty Setup</FieldLabel>
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            {difficulties.map((diff) => {
+              const active = diff.enabled;
+              return (
+                <div
+                  key={diff.name}
+                  style={{
+                    border: `1.5px solid ${active ? DIFF_COLORS[diff.name].border : "#e5e7eb"}`,
+                    background: active ? DIFF_COLORS[diff.name].bg : "#f9fafb",
+                    borderRadius: 12,
+                    padding: 12,
+                    opacity: active ? 1 : 0.65,
+                  }}
+                >
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      gap: 10,
+                      marginBottom: active ? 12 : 0,
+                    }}
+                  >
+                    <button
+                      type="button"
+                      onClick={() =>
+                        updateDifficulty(diff.name, { enabled: !active })
+                      }
+                      style={{
+                        border: "none",
+                        background: "transparent",
+                        color: active ? DIFF_COLORS[diff.name].color : "#64748b",
+                        fontSize: 14,
+                        fontWeight: 700,
+                        cursor: "pointer",
+                        padding: 0,
+                      }}
+                    >
+                      {diff.name}
+                    </button>
+                    <span
+                      style={{
+                        fontSize: 11,
+                        color: active ? DIFF_COLORS[diff.name].color : "#94a3b8",
+                        fontWeight: 700,
+                      }}
+                    >
+                      {active ? "Enabled" : "Disabled"}
+                    </span>
+                  </div>
+
+                  {active && (
+                    <div
+                      style={{
+                        display: "grid",
+                        gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
+                        gap: 8,
+                      }}
+                      className="teacher-difficulty-grid"
+                    >
+                      {[
+                        ["marksPerQuestion", "Marks"],
+                        ["maxQuestions", "Questions"],
+                        ["minTime", "Min sec"],
+                        ["maxTime", "Max sec"],
+                      ].map(([key, label]) => (
+                        <label key={key} style={{ minWidth: 0 }}>
+                          <span
+                            style={{
+                              display: "block",
+                              fontSize: 10,
+                              color: "#64748b",
+                              fontWeight: 600,
+                              marginBottom: 4,
+                            }}
+                          >
+                            {label}
+                          </span>
+                          <input
+                            type="number"
+                            min="1"
+                            value={diff[key]}
+                            onChange={(e) =>
+                              updateDifficulty(diff.name, {
+                                [key]: e.target.value,
+                              })
+                            }
+                            style={{ ...inputS, height: 36 }}
+                            onFocus={focus}
+                            onBlur={blur}
+                          />
+                        </label>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        <label
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 12,
+            padding: "12px 14px",
+            border: "1px solid #e2e8f0",
+            borderRadius: 12,
+            background: "#fff",
+            cursor: "pointer",
+          }}
+        >
+          <div>
+            <p style={{ fontSize: 13, fontWeight: 700, color: "#0f172a" }}>
+              Enable result PDF export
+            </p>
+            <p style={{ fontSize: 11, color: "#64748b", marginTop: 2 }}>
+              Students can download their completed test report when enabled.
+            </p>
+          </div>
+          <input
+            type="checkbox"
+            checked={form.hasPdfExport}
+            onChange={(e) =>
+              setForm((p) => ({ ...p, hasPdfExport: e.target.checked }))
+            }
+            style={{ width: 18, height: 18 }}
+          />
+        </label>
+
         <div style={{ display: "flex", gap: 10 }}>
           <button
             type="button"
@@ -1263,6 +1465,12 @@ const CreateCourseModal = ({ teacher, onClose, onCreated }) => {
           </PrimaryBtn>
         </div>
       </form>
+      <style>{`
+        @media(max-width:720px){
+          .teacher-course-create-grid{grid-template-columns:1fr!important;}
+          .teacher-difficulty-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important;}
+        }
+      `}</style>
     </Modal>
   );
 };
@@ -1543,7 +1751,32 @@ const CoursesTab = () => {
             border: "1.5px dashed #e2e8f0",
           }}
         >
-          <p style={{ fontSize: 32, marginBottom: 12 }}>📚</p>
+          <div
+            style={{
+              width: 44,
+              height: 44,
+              margin: "0 auto 12px",
+              borderRadius: 12,
+              background: "#eff6ff",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            <svg
+              width="22"
+              height="22"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="#2563eb"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2z" />
+              <path d="M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z" />
+            </svg>
+          </div>
           <p
             style={{
               fontSize: 15,
@@ -1636,7 +1869,19 @@ const CoursesTab = () => {
                         flexShrink: 0,
                       }}
                     >
-                      📖
+                      <svg
+                        width="24"
+                        height="24"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="#2563eb"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2z" />
+                        <path d="M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z" />
+                      </svg>
                     </div>
                   )}
 
@@ -1796,7 +2041,7 @@ const CoursesTab = () => {
                         }}
                       >
                         <SectionBtn
-                          label="📚 Questions"
+                          label="Questions"
                           active={activeSection === "questions"}
                           onClick={() => toggleSection(course._id, "questions")}
                           count={totalQs}
@@ -1804,7 +2049,7 @@ const CoursesTab = () => {
                         {course.isPaid && (
                           <>
                             <SectionBtn
-                              label="🏷 Coupons"
+                              label="Coupons"
                               active={activeSection === "coupons"}
                               onClick={() =>
                                 toggleSection(course._id, "coupons")
@@ -1812,7 +2057,7 @@ const CoursesTab = () => {
                               count={courseCoupons.length}
                             />
                             <SectionBtn
-                              label="🎬 Videos"
+                              label="Videos"
                               active={activeSection === "videos"}
                               onClick={() =>
                                 toggleSection(course._id, "videos")
