@@ -29,6 +29,10 @@ export const ContentProvider = ({ children }) => {
   // Add request interceptor to sign requests
   api.interceptors.request.use(
     (config) => {
+      if (config._skipInterceptor) {
+        return config;
+      }
+
       // Load secret if not in memory
       if (!adminRequestSigner.isSecretValid()) {
         adminRequestSigner.loadSigningSecret();
@@ -90,12 +94,19 @@ export const ContentProvider = ({ children }) => {
           adminRequestSigner.clearSigningSecret();
 
           // Fetch new secret
+          const apiBase = (
+            import.meta.env.VITE_API_URL || "http://localhost:7000/api"
+          ).replace(/\/$/, "");
           const secretResponse = await axios.get(
-            `${
-              import.meta.env.VITE_API_URL || "http://localhost:7000/api"
-            }/security/signing-secret`,
+            `${apiBase}/security/signing-secret`,
             {
               withCredentials: true,
+              headers: {
+                "Cache-Control": "no-cache",
+                Pragma: "no-cache",
+              },
+              params: { _ts: Date.now() },
+              _skipInterceptor: true,
             },
           );
 
@@ -110,10 +121,8 @@ export const ContentProvider = ({ children }) => {
             "[CONTENT_CONTEXT] Signing secret refreshed successfully",
           );
 
-          // Remove retry flag
-          delete originalRequest._signatureRetry;
-
-          // Re-sign and retry with the CONTENT api instance
+          // Keep _signatureRetry on the retried request so a permanent
+          // mismatch fails once instead of starting a refresh loop.
           const signedRequest = adminRequestSigner.signRequest(originalRequest);
           return api(signedRequest);
         } catch (signatureError) {

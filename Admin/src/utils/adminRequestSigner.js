@@ -1,4 +1,5 @@
 import crypto from "crypto-js";
+import axios from "axios";
 
 /**
  * Admin Request Signer
@@ -112,6 +113,26 @@ class AdminRequestSigner {
   }
 
   /**
+   * Build the exact path Axios will send, including query params.
+   *
+   * Axios drops null/undefined params from the real request URL. Using
+   * URLSearchParams directly turns undefined into "undefined", which breaks
+   * HMAC checks for optional params such as excludeId.
+   */
+  buildSignedPath(config) {
+    const baseURL = config.baseURL || axios.defaults.baseURL || window.location.origin;
+    const requestUri = axios.getUri({ ...config, baseURL });
+
+    try {
+      const parsedUrl = new URL(requestUri, baseURL || window.location.origin);
+      return parsedUrl.pathname + parsedUrl.search;
+    } catch (error) {
+      console.error("[ADMIN_SIGNER] Failed to build signed path:", error);
+      return config.url || "/";
+    }
+  }
+
+  /**
    * Sign axios request config with HMAC-SHA256 signature
    *
    * CRITICAL PATH CONSTRUCTION LOGIC:
@@ -141,63 +162,8 @@ class AdminRequestSigner {
 
     const timestamp = Date.now().toString();
     const nonce = this.generateNonce();
-    const method = config.method.toUpperCase();
-
-    /**
-     * CRITICAL PATH RECONSTRUCTION
-     *
-     * Step 1: Determine if URL is relative or absolute
-     * Step 2: Extract pathname and search params
-     * Step 3: Add query params from config.params if present
-     * Step 4: Ensure path matches backend's req.path exactly
-     */
-    let path = config.url;
-
-    // Case 1: Absolute URL (http://localhost:7000/api/content/settings)
-    if (path.startsWith("http")) {
-      try {
-        const urlObj = new URL(path);
-        // Extract pathname (includes /api prefix) + search params
-        path = urlObj.pathname + urlObj.search;
-      } catch (e) {
-        console.error("[ADMIN_SIGNER] Failed to parse absolute URL:", path, e);
-        // Fallback to original path
-      }
-    }
-    // Case 2: Relative URL (/content/settings)
-    // Backend sees: /api/content/settings
-    // We must prepend /api to match backend's req.path
-    else if (!path.startsWith("/api")) {
-      // Extract base path from baseURL to get /api prefix
-      try {
-        if (config.baseURL) {
-          const baseUrlObj = new URL(config.baseURL);
-          const basePathname = baseUrlObj.pathname; // "/api"
-
-          // Combine basePathname + relative path
-          // Remove trailing slash from base, leading slash from path handled
-          const cleanBasePath = basePathname.endsWith("/")
-            ? basePathname.slice(0, -1)
-            : basePathname;
-          const cleanPath = path.startsWith("/") ? path : `/${path}`;
-
-          path = cleanBasePath + cleanPath;
-        }
-      } catch (e) {
-        console.error("[ADMIN_SIGNER] Failed to construct full path:", e);
-      }
-    }
-
-    // Step 3: Append query parameters from config.params
-    if (config.params && Object.keys(config.params).length > 0) {
-      const searchParams = new URLSearchParams(config.params);
-      const queryString = searchParams.toString();
-
-      // Add query string with proper separator
-      path = path.includes("?")
-        ? `${path}&${queryString}`
-        : `${path}?${queryString}`;
-    }
+    const method = (config.method || "get").toUpperCase();
+    const path = this.buildSignedPath(config);
 
     const body = config.data || {};
 
