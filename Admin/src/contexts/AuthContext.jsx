@@ -19,12 +19,37 @@ const API_URL = import.meta.env.VITE_API_URL || "http://localhost:7000";
 axios.defaults.baseURL = API_URL;
 axios.defaults.withCredentials = true;
 
+let signingSecretRefreshPromise = null;
+
+const refreshAdminSigningSecret = async () => {
+  if (!signingSecretRefreshPromise) {
+    signingSecretRefreshPromise = axios
+      .get("/security/signing-secret", {
+        _skipInterceptor: true,
+        headers: {
+          "Cache-Control": "no-cache",
+          Pragma: "no-cache",
+        },
+        params: { _ts: Date.now() },
+      })
+      .finally(() => {
+        signingSecretRefreshPromise = null;
+      });
+  }
+
+  return signingSecretRefreshPromise;
+};
+
 /**
  * Request interceptor - Add signatures to admin requests
  * Runs before every axios request
  */
 axios.interceptors.request.use(
   async (config) => {
+    if (config._skipInterceptor) {
+      return config;
+    }
+
     // Public endpoints that don't need signatures
     const publicEndpoints = [
       "/admin/login",
@@ -96,10 +121,8 @@ axios.interceptors.response.use(
         // Clear old secret
         adminRequestSigner.clearSigningSecret();
 
-        // Fetch new secret using base axios instance (avoid interceptor recursion)
-        const secretResponse = await axios.get("/security/signing-secret", {
-          _skipInterceptor: true, // Custom flag to skip signing
-        });
+        // Fetch new secret without cache/ETag reuse.
+        const secretResponse = await refreshAdminSigningSecret();
 
         if (!secretResponse.data.success) {
           throw new Error("Failed to get signing secret");
@@ -110,10 +133,8 @@ axios.interceptors.response.use(
 
         console.log("[ADMIN_AUTH] Signing secret refreshed successfully");
 
-        // Remove retry flag before re-signing
-        delete originalRequest._signatureRetry;
-
-        // Re-sign and retry
+        // Keep _signatureRetry on the retried request. If this still fails,
+        // the next response stops instead of refreshing forever.
         const signedRequest = adminRequestSigner.signRequest(originalRequest);
         return axios(signedRequest);
       } catch (signatureError) {
@@ -308,6 +329,11 @@ export const AuthProvider = ({ children }) => {
             "/security/signing-secret",
             {
               withCredentials: true,
+              headers: {
+                "Cache-Control": "no-cache",
+                Pragma: "no-cache",
+              },
+              params: { _ts: Date.now() },
             }
           );
 

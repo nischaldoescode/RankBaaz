@@ -354,6 +354,13 @@ export const verifyRequestSignature = async (req, res, next) => {
  */
 export const getSigningSecretEndpoint = async (req, res) => {
   try {
+    res.set({
+      "Cache-Control": "no-store, no-cache, must-revalidate, private",
+      Pragma: "no-cache",
+      Expires: "0",
+      "Surrogate-Control": "no-store",
+    });
+
     // CRITICAL: Detect admin from multiple possible fields
     const userId = req.admin?.adminId || req.admin?.userId || req.user?.userId;
     const isAdmin = !!(req.admin || req.user?.isAdmin);
