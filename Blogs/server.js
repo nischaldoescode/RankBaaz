@@ -58,6 +58,13 @@ const stripHtml = (html = "") =>
     .replace(/\s+/g, " ")
     .trim();
 
+const sanitizeSearchQuery = (value = "") =>
+  stripHtml(value)
+    .replace(/[^\p{L}\p{N}\s._-]/gu, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 80);
+
 const formatDate = (date) =>
   date
     ? new Intl.DateTimeFormat("en", {
@@ -104,10 +111,16 @@ const pageShell = ({
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#3b82f6" />
   <title>${escapeHtml(title)}</title>
   <meta name="description" content="${escapeHtml(description)}" />
   <meta name="robots" content="${escapeHtml(robots)}" />
   <link rel="canonical" href="${escapeHtml(canonical)}" />
+  <link rel="icon" href="/favicon.ico" sizes="any" />
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+  <link rel="manifest" href="/site.webmanifest" />
   <meta property="og:type" content="article" />
   <meta property="og:site_name" content="Vidhgrow Blog" />
   <meta property="og:title" content="${escapeHtml(title)}" />
@@ -136,10 +149,14 @@ const pageShell = ({
 </html>`;
 
 const header = () => `<header class="site-header">
-  <a class="wordmark" href="/">Vidhgrow Blog</a>
+  <a class="wordmark" href="/">
+    <img src="/logo.png" alt="" width="40" height="40" />
+    <span>Vidhgrow <em>Newsroom</em></span>
+  </a>
   <nav aria-label="Primary">
-    <a href="/">Stories</a>
-    <a href="/sitemap.xml">Sitemap</a>
+    <a href="/">Latest</a>
+    <a href="/?q=feature">Features</a>
+    <a href="/?q=teacher">Teachers</a>
     <a href="https://vidhgrow.online">Vidhgrow</a>
   </nav>
 </header>`;
@@ -150,7 +167,7 @@ const footer = (settings = {}) => {
   return `<footer class="site-footer">
     <div>
       <strong>Vidhgrow Blog</strong>
-      <p>Readable notes on learning, exams, practice, and building better study habits.</p>
+      <p>Platform news, feature releases, teaching workflows, and product decisions from the Vidhgrow team.</p>
     </div>
     ${
       links.length
@@ -178,7 +195,8 @@ const postCard = (post) => `<article class="post-card">
 </article>`;
 
 const renderHome = async (url) => {
-  const query = url.searchParams.get("q")?.trim().toLowerCase() || "";
+  const query = sanitizeSearchQuery(url.searchParams.get("q") || "");
+  const queryNeedle = query.toLowerCase();
   const [postsRes, settingsRes] = await Promise.all([
     fetchJson("/api/blogs/public?limit=24"),
     fetchJson("/api/blogs/settings/share").catch(() => ({ data: {} })),
@@ -190,7 +208,7 @@ const renderHome = async (url) => {
       [post.title, post.excerpt, post.author?.name, ...(post.tags || [])]
         .join(" ")
         .toLowerCase()
-        .includes(query),
+        .includes(queryNeedle),
     );
   }
 
@@ -198,24 +216,36 @@ const renderHome = async (url) => {
   const body = `${header()}
 <main id="main" class="home-shell">
   <section class="home-intro">
-    <div>
-      <p class="eyebrow">Learning notes</p>
-      <h1>Useful writing for people who are practicing seriously.</h1>
-      <p class="lede">Simple essays, course notes, exam strategy, and calm explanations from the Vidhgrow team.</p>
+    <div class="home-copy">
+      <p class="eyebrow">Vidhgrow Newsroom</p>
+      <h1>Updates from the platform we are building for serious practice.</h1>
+      <p class="lede">Feature releases, teacher workflows, course improvements, assessment design, and product decisions from the Vidhgrow team.</p>
+      <div class="topic-links" aria-label="Editorial topics">
+        <a href="/?q=feature">Product releases</a>
+        <a href="/?q=teacher">Teacher portal</a>
+        <a href="/?q=course">Course builder</a>
+        <a href="/?q=exam">Assessment notes</a>
+      </div>
     </div>
     <form class="search-form" method="get" action="/">
       <label for="q">Search posts</label>
       <div>
-        <input id="q" name="q" value="${escapeHtml(query)}" placeholder="Search learning, exams, focus..." />
+        <input id="q" name="q" value="${escapeHtml(query)}" placeholder="Search updates..." maxlength="80" autocomplete="off" />
         <button type="submit">Search</button>
       </div>
     </form>
+  </section>
+  <section class="news-strip" aria-label="What we publish">
+    <article><span>01</span><strong>Product releases</strong><p>Clear notes on what changed, why it matters, and where it helps students or teachers.</p></article>
+    <article><span>02</span><strong>Platform decisions</strong><p>Short explanations of the design, security, and workflow choices behind Vidhgrow.</p></article>
+    <article><span>03</span><strong>Practice guidance</strong><p>Useful exam, course, and feedback ideas tied to real activity on the platform.</p></article>
   </section>
   ${
     latest && !query
       ? `<section class="featured-post">
           <a href="/${escapeHtml(latest.slug)}"><img src="${escapeHtml(latest.coverImage?.url || "")}" alt="${escapeHtml(latest.coverImage?.alt || latest.title)}" /></a>
           <div>
+            <p class="section-kicker">Latest story</p>
             <time datetime="${escapeHtml(latest.publishedAt || latest.createdAt)}">${formatDate(latest.publishedAt || latest.createdAt)}</time>
             <h2><a href="/${escapeHtml(latest.slug)}">${escapeHtml(latest.title)}</a></h2>
             <p>${escapeHtml(latest.excerpt)}</p>
@@ -223,6 +253,10 @@ const renderHome = async (url) => {
         </section>`
       : ""
   }
+  <div class="section-heading">
+    <p class="eyebrow">${query ? "Search results" : "Platform notes"}</p>
+    <h2>${query ? `Posts matching "${escapeHtml(query)}"` : "News, features, and practical decisions from Vidhgrow."}</h2>
+  </div>
   <section class="post-list" aria-label="Blog posts">
     ${posts.map(postCard).join("") || `<div class="empty-state">No posts found.</div>`}
   </section>
@@ -231,7 +265,7 @@ ${footer(settingsRes.data)}`;
 
   return pageShell({
     title: "Vidhgrow Blog",
-    description: "Readable Vidhgrow notes on learning, exam practice, study planning, and better test preparation.",
+    description: "Platform news, feature releases, teacher workflows, course improvements, and product decisions from Vidhgrow.",
     canonical: BLOG_PUBLIC_URL,
     image: latest?.coverImage?.url,
     body,
@@ -422,7 +456,7 @@ const renderFeed = async () => {
   <channel>
     <title>Vidhgrow Blog</title>
     <link>${BLOG_PUBLIC_URL}</link>
-    <description>Vidhgrow learning notes and study essays.</description>
+    <description>Platform news, feature releases, teacher workflows, course improvements, and product decisions from Vidhgrow.</description>
     ${posts
       .map(
         (post) => `<item>
@@ -457,6 +491,33 @@ const server = http.createServer(async (req, res) => {
     }
     if (pathname === "/assets/app.js") {
       return serveStatic(res, "public/app.js", "application/javascript; charset=utf-8");
+    }
+    if (pathname === "/logo.png") {
+      return serveStatic(res, "public/logo.png", "image/png");
+    }
+    if (pathname === "/favicon.ico") {
+      return serveStatic(res, "public/favicon.ico", "image/x-icon");
+    }
+    if (pathname === "/favicon-32x32.png") {
+      return serveStatic(res, "public/favicon-32x32.png", "image/png");
+    }
+    if (pathname === "/favicon-16x16.png") {
+      return serveStatic(res, "public/favicon-16x16.png", "image/png");
+    }
+    if (pathname === "/apple-touch-icon.png") {
+      return serveStatic(res, "public/apple-touch-icon.png", "image/png");
+    }
+    if (pathname === "/android-chrome-192x192.png") {
+      return serveStatic(res, "public/android-chrome-192x192.png", "image/png");
+    }
+    if (pathname === "/android-chrome-512x512.png") {
+      return serveStatic(res, "public/android-chrome-512x512.png", "image/png");
+    }
+    if (pathname === "/site.webmanifest") {
+      return serveStatic(res, "public/site.webmanifest", "application/manifest+json; charset=utf-8");
+    }
+    if (pathname === "/browserconfig.xml") {
+      return serveStatic(res, "public/browserconfig.xml", "application/xml; charset=utf-8");
     }
     if (pathname === "/google71d3fdc4e5a7d6ef.html") {
       res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });

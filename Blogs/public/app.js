@@ -13,6 +13,23 @@ const randomHex = (byteLength) => {
     .join("");
 };
 
+const sanitizeSearchInput = (value = "") =>
+  value
+    .replace(/<script[\s\S]*?>[\s\S]*?<\/script>/gi, " ")
+    .replace(/<style[\s\S]*?>[\s\S]*?<\/style>/gi, " ")
+    .replace(/<[^>]*>/g, " ")
+    .replace(/[^\p{L}\p{N}\s._-]/gu, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 80);
+
+const syncSearchForm = (form) => {
+  const input = form?.querySelector("input[name='q']");
+  const button = form?.querySelector("button[type='submit']");
+  if (!input || !button) return;
+  button.disabled = !input.value.trim();
+};
+
 const signRequest = async (url, method, body) => {
   const config = window.__BLOG_CONFIG__;
   const secretResponse = await fetch(`${config.apiBase}/api/security/signing-secret`, {
@@ -63,9 +80,30 @@ document.addEventListener("input", (event) => {
     const counter = form?.querySelector("[data-counter]");
     if (counter) counter.textContent = `${event.target.value.length}/100`;
   }
+
+  if (event.target.matches(".search-form input[name='q']")) {
+    syncSearchForm(event.target.closest(".search-form"));
+  }
 });
 
 document.addEventListener("submit", async (event) => {
+  const searchForm = event.target.closest(".search-form");
+  if (searchForm) {
+    event.preventDefault();
+
+    const input = searchForm.querySelector("input[name='q']");
+    const query = sanitizeSearchInput(input?.value || "");
+
+    if (!query) {
+      window.location.href = "/";
+      return;
+    }
+
+    input.value = query;
+    window.location.href = `/?q=${encodeURIComponent(query)}`;
+    return;
+  }
+
   const form = event.target.closest(".comment-form");
   if (!form) return;
 
@@ -103,6 +141,8 @@ document.addEventListener("submit", async (event) => {
     }
   }
 });
+
+document.querySelectorAll(".search-form").forEach(syncSearchForm);
 
 document.addEventListener("click", async (event) => {
   const copyButton = event.target.closest("[data-share-copy]");
