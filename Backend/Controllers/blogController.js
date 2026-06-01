@@ -19,6 +19,43 @@ const BLOG_VIDEO_LIMIT = 10 * 1024 * 1024;
 const BLOG_PENDING_MEDIA_TTL_MS = 12 * 60 * 60 * 1000;
 const BLOG_BASE_URL =
   process.env.BLOGS_SITE_URL || "https://blogs.vidhgrow.online";
+const BLOG_LIST_CACHE_TTL = 30;
+
+const BLOG_TOPIC_OPTIONS = [
+  {
+    slug: "product-updates",
+    terms: ["product-updates", "product", "feature", "release", "platform"],
+  },
+  {
+    slug: "teaching-workflows",
+    terms: ["teaching-workflows", "teacher", "teaching", "workflow", "portal"],
+  },
+  {
+    slug: "course-news",
+    terms: ["course-news", "course", "builder", "lesson", "curriculum"],
+  },
+  {
+    slug: "assessment-notes",
+    terms: ["assessment-notes", "exam", "test", "assessment", "practice"],
+  },
+  {
+    slug: "security-updates",
+    terms: ["security-updates", "security", "verification", "privacy", "backend"],
+  },
+  {
+    slug: "student-progress",
+    terms: ["student-progress", "student", "progress", "practice", "completion"],
+  },
+  {
+    slug: "admin-workflows",
+    terms: ["admin-workflows", "admin", "approval", "workflow", "management"],
+  },
+  {
+    slug: "feedback-notes",
+    terms: ["feedback-notes", "feedback", "rating", "review", "comment"],
+  },
+];
+const BLOG_TOPIC_SLUGS = new Set(BLOG_TOPIC_OPTIONS.map((topic) => topic.slug));
 
 const allowedVideoHosts = [
   "youtube.com",
@@ -146,6 +183,26 @@ const normaliseTags = (tags = []) =>
     .slice(0, 12))]
     .map((tag) => tag.slice(0, 40));
 
+const normaliseTopics = (topics = []) =>
+  [...new Set((Array.isArray(topics) ? topics : String(topics).split(","))
+    .map(toSlug)
+    .filter((topic) => BLOG_TOPIC_SLUGS.has(topic))
+    .slice(0, 6))];
+
+const getBlogTopic = (topic = "") =>
+  BLOG_TOPIC_OPTIONS.find((item) => item.slug === toSlug(topic));
+
+const applyTopicQuery = (query, topicSlug = "") => {
+  const topic = getBlogTopic(topicSlug);
+  if (!topic) return false;
+  query.$or = [
+    { topics: topic.slug },
+    { tags: { $in: topic.terms } },
+    { category: { $in: topic.terms } },
+  ];
+  return true;
+};
+
 const calculateStats = (contentHtml = "") => {
   const plainText = stripHtml(contentHtml);
   const words = plainText ? plainText.split(/\s+/).length : 0;
@@ -196,6 +253,7 @@ const serializePost = (post, { includeContent = false } = {}) => {
     status: doc.status,
     author: serializeAuthor(doc.author),
     coverImage: doc.coverImage,
+    topics: doc.topics || [],
     tags: doc.tags || [],
     category: doc.category || "learning",
     h1: doc.h1 || doc.title,
@@ -426,15 +484,26 @@ export const listPublishedBlogs = async (req, res) => {
     const page = Math.max(1, Number(req.query.page || 1));
     const limit = Math.min(24, Math.max(1, Number(req.query.limit || 10)));
     const tag = req.query.tag ? String(req.query.tag).toLowerCase() : null;
-    const cacheKey = `blogs:list:${page}:${limit}:${tag || "all"}`;
+    const topic = req.query.topic ? toSlug(req.query.topic) : null;
+    const fresh = req.query.fresh === "1" || req.query.fresh === "true";
+    const cacheKey = `blogs:v2:list:${page}:${limit}:${tag || "all"}:${topic || "all"}`;
 
-    const cached = await redisClient.get(cacheKey).catch(() => null);
+    const cached = fresh ? null : await redisClient.get(cacheKey).catch(() => null);
     if (cached) {
       return res.status(200).json(JSON.parse(cached));
     }
 
     const query = getPublishedQuery();
     if (tag) query.tags = tag;
+    if (topic && !applyTopicQuery(query, topic)) {
+      return res.status(200).json({
+        success: true,
+        data: {
+          posts: [],
+          pagination: { page, limit, total: 0, totalPages: 0 },
+        },
+      });
+    }
 
     const [posts, total] = await Promise.all([
       BlogPost.find(query)
@@ -460,7 +529,7 @@ export const listPublishedBlogs = async (req, res) => {
       },
     };
 
-    await redisClient.setex(cacheKey, BLOG_CACHE_TTL, JSON.stringify(response)).catch(() => {});
+    await redisClient.setex(cacheKey, BLOG_LIST_CACHE_TTL, JSON.stringify(response)).catch(() => {});
     return res.status(200).json(response);
   } catch (error) {
     console.error("List published blogs error:", error);
@@ -517,6 +586,7 @@ export const getPublishedBlogBySlug = async (req, res) => {
       ...getPublishedQuery(),
       _id: { $ne: post._id },
       $or: [
+        ...(post.topics?.length ? [{ topics: { $in: post.topics } }] : []),
         ...(post.tags?.length ? [{ tags: { $in: post.tags } }] : []),
         ...(post.category ? [{ category: post.category }] : []),
         ...(post.author?._id ? [{ author: post.author._id }] : []),
@@ -1043,6 +1113,7 @@ const buildPostPayload = async (body, adminId, existingPost = null) => {
     h1: stats.h1 || title,
     wordCount: stats.wordCount,
     readingTimeMinutes: stats.readingTimeMinutes,
+    topics: normaliseTopics(body.topics),
     tags: normaliseTags(body.tags),
     category: String(body.category || "learning").trim().slice(0, 60),
     seo: {

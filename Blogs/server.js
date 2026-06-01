@@ -44,7 +44,7 @@ const BLOG_PUBLIC_URL = (process.env.BLOGS_PUBLIC_URL || "https://blogs.vidhgrow
 const DEFAULT_OG_IMAGE = `${BLOG_PUBLIC_URL}/android-chrome-512x512.png`;
 const HOME_SEO_TITLE = "Vidhgrow Blogs | Product Updates, Teaching & Course News";
 const HOME_SEO_DESCRIPTION =
-  "Read Vidhgrow blogs on product updates, teaching workflows, course news, student practice, and platform improvements.";
+  "The official Vidhgrow blog for product news, teaching workflows, course updates, student practice ideas, and clear platform notes from the team.";
 const TOPIC_LINKS = [
   {
     slug: "product-updates",
@@ -96,12 +96,49 @@ const TOPIC_LINKS = [
     title: "Security Updates and Trust Notes",
     description: "Security updates covering verification, signed requests, protected media, admin controls, and backend hardening for the Vidhgrow platform.",
   },
+  {
+    slug: "student-progress",
+    navLabel: "Students",
+    introLabel: "Student progress notes",
+    browseLabel: "Follow student progress",
+    footerLabel: "Student progress",
+    terms: ["student", "progress", "practice", "completion"],
+    title: "Student Progress and Practice Notes",
+    description: "Student progress articles about practice, completion signals, feedback, learning habits, and clearer course outcomes on Vidhgrow.",
+  },
+  {
+    slug: "admin-workflows",
+    navLabel: "Admin",
+    introLabel: "Admin workflow updates",
+    browseLabel: "Review admin workflows",
+    footerLabel: "Admin workflows",
+    terms: ["admin", "approval", "workflow", "management"],
+    title: "Admin Workflows and Platform Operations",
+    description: "Admin workflow notes covering approvals, publishing, moderation, authors, comments, teacher management, and platform operations.",
+  },
+  {
+    slug: "feedback-notes",
+    navLabel: "Feedback",
+    introLabel: "Feedback and rating notes",
+    browseLabel: "Read feedback notes",
+    footerLabel: "Feedback notes",
+    terms: ["feedback", "rating", "review", "comment"],
+    title: "Feedback, Ratings, and Reader Notes",
+    description: "Feedback notes about course ratings, teacher reviews, reader comments, quality signals, and useful responses from the Vidhgrow community.",
+  },
 ];
 const INTRO_LINKS = TOPIC_LINKS.map((topic) => [topic.introLabel, `/topic/${topic.slug}`]);
 const BROWSE_LINKS = [["Start with the latest writing", "/"], ...TOPIC_LINKS.map((topic) => [topic.browseLabel, `/topic/${topic.slug}`])];
 const ROOT_LINKS = [["Latest Vidhgrow blogs", "/"], ...TOPIC_LINKS.map((topic) => [topic.footerLabel, `/topic/${topic.slug}`])];
+const EXTERNAL_READING_LINKS = [
+  ["Google Search Central", "https://developers.google.com/search/docs"],
+  ["Schema.org BlogPosting", "https://schema.org/BlogPosting"],
+  ["Web.dev SEO guide", "https://web.dev/learn/seo"],
+];
 const API_CACHE_TTL_MS = 5 * 60 * 1000;
 const PAGE_CACHE_TTL_MS = 5 * 60 * 1000;
+const LIST_API_CACHE_TTL_MS = 30 * 1000;
+const HOME_PAGE_CACHE_TTL_MS = 30 * 1000;
 
 const escapeHtml = (value = "") =>
   String(value)
@@ -135,6 +172,9 @@ const normalizeTopicSlug = (value = "") =>
 
 const getTopic = (slug = "") =>
   TOPIC_LINKS.find((topic) => topic.slug === normalizeTopicSlug(slug));
+
+const topicLabel = (slug = "") =>
+  getTopic(slug)?.navLabel || String(slug).replace(/-/g, " ");
 
 const absoluteUrl = (value = "") => {
   const raw = String(value || "").trim();
@@ -177,6 +217,19 @@ const metaDescription = (value = "", fallback = HOME_SEO_DESCRIPTION) => {
 const wordCountFromHtml = (html = "") => {
   const text = stripHtml(html);
   return text ? text.split(/\s+/).filter(Boolean).length : 0;
+};
+
+const readingTimeMinutes = (post = {}, html = "") => {
+  const bodyWords = html ? wordCountFromHtml(html) : 0;
+  const storedWords = Number(post.wordCount || 0);
+  const previewWords = wordCountFromHtml(`${post.title || ""} ${post.excerpt || ""} ${(post.tags || []).join(" ")}`);
+  const words = bodyWords || storedWords || previewWords;
+  return Math.max(1, Math.ceil(words / 220));
+};
+
+const readingTimeLabel = (post = {}, html = "") => {
+  const minutes = readingTimeMinutes(post, html);
+  return `${minutes} min read`;
 };
 
 const paragraphCountFromHtml = (html = "") =>
@@ -273,7 +326,7 @@ const cached = async (cache, key, ttlMs, loader) => {
   return writeTimedCache(cache, key, value, ttlMs);
 };
 
-const fetchJson = async (apiPath) => {
+const fetchJson = async (apiPath, options = {}) => {
   const cachedJson = readTimedCache(apiCache, apiPath);
   if (cachedJson) return cachedJson;
 
@@ -298,7 +351,7 @@ const fetchJson = async (apiPath) => {
   }
 
   const json = await response.json();
-  return writeTimedCache(apiCache, apiPath, json, API_CACHE_TTL_MS);
+  return writeTimedCache(apiCache, apiPath, json, options.ttlMs ?? API_CACHE_TTL_MS);
 };
 
 const pageShell = ({
@@ -354,6 +407,7 @@ const pageShell = ({
     window.__BLOG_CONFIG__ = ${JSON.stringify({
       apiBase: PUBLIC_API_BASE,
       loginUrl: "https://vidhgrow.online/login",
+      profileUrl: `${PUBLIC_API_BASE}/api/auth/profile`,
     })};
   </script>
   <script src="/assets/app.js" defer></script>
@@ -406,7 +460,7 @@ const postCard = (post) => `<article class="post-card">
     <p>${escapeHtml(post.excerpt)}</p>
     <div class="post-meta">
       <span>${escapeHtml(post.author?.name || "Vidhgrow Editorial")}</span>
-      <span>${post.readingTimeMinutes || 1} min read</span>
+      <span>${escapeHtml(readingTimeLabel(post))}</span>
     </div>
   </div>
 </article>`;
@@ -415,7 +469,7 @@ const filterPostsForTopic = (posts = [], topic) => {
   if (!topic) return posts;
   const terms = topic.terms.map((term) => term.toLowerCase());
   return posts.filter((post) =>
-    [post.title, post.excerpt, post.category, post.author?.name, ...(post.tags || [])]
+    [post.title, post.excerpt, post.category, post.author?.name, ...(post.topics || []), ...(post.tags || [])]
       .join(" ")
       .toLowerCase()
       .split(/\s+/)
@@ -427,7 +481,7 @@ const renderHome = async (url) => {
   const query = sanitizeSearchQuery(url.searchParams.get("q") || "");
   const queryNeedle = query.toLowerCase();
   const [postsRes, settingsRes] = await Promise.all([
-    fetchJson("/api/blogs/public?limit=24"),
+    fetchJson("/api/blogs/public?limit=24&fresh=1", { ttlMs: LIST_API_CACHE_TTL_MS }),
     fetchJson("/api/blogs/settings/share").catch(() => ({ data: {} })),
   ]);
   let posts = postsRes.data.posts || [];
@@ -445,6 +499,7 @@ const renderHome = async (url) => {
   const listedPosts = latest && !query ? posts.slice(1) : posts;
   const body = `${header()}
 <main id="main" class="home-shell">
+  ${renderArticleAmbient()}
   <section class="home-intro">
     <div class="home-copy">
       <p class="eyebrow">Vidhgrow Blogs</p>
@@ -504,6 +559,18 @@ const renderHome = async (url) => {
       ${BROWSE_LINKS.map(([label, href]) => `<a href="${href}">${escapeHtml(label)}</a>`).join("")}
     </nav>
   </section>
+  <section class="reference-links" aria-labelledby="reference-title">
+    <div>
+      <p class="eyebrow">References</p>
+      <h2 id="reference-title">Useful reading beyond Vidhgrow</h2>
+      <p>These external resources help readers understand how structured content, search visibility, and readable product writing fit together.</p>
+    </div>
+    <nav aria-label="External SEO and publishing resources">
+      ${EXTERNAL_READING_LINKS.map(
+        ([label, href]) => `<a href="${href}" target="_blank" rel="noopener noreferrer">${escapeHtml(label)}</a>`,
+      ).join("")}
+    </nav>
+  </section>
 </main>
 ${footer(settingsRes.data)}`;
 
@@ -532,12 +599,15 @@ const renderTopic = async (slug) => {
   }
 
   const [postsRes, settingsRes] = await Promise.all([
-    fetchJson("/api/blogs/public?limit=24"),
+    fetchJson(`/api/blogs/public?limit=24&topic=${encodeURIComponent(topic.slug)}&fresh=1`, { ttlMs: LIST_API_CACHE_TTL_MS }),
     fetchJson("/api/blogs/settings/share").catch(() => ({ data: {} })),
   ]);
-  const posts = filterPostsForTopic(postsRes.data.posts || [], topic);
+  const posts = postsRes.data.posts?.length
+    ? postsRes.data.posts
+    : filterPostsForTopic(postsRes.data.posts || [], topic);
   const body = `${header()}
 <main id="main" class="home-shell topic-shell">
+  ${renderArticleAmbient()}
   <section class="topic-hero">
     <p class="eyebrow">Vidhgrow topic</p>
     <h1>${escapeHtml(topic.title)}</h1>
@@ -589,10 +659,14 @@ const robotsString = (seo = {}) => {
 
 const renderComments = (post, comments = []) => `<section class="comments" aria-labelledby="comments-title">
   <h2 id="comments-title">Comments</h2>
-  <p class="comments-note">Log in with your Vidhgrow account to comment. One top-level comment per user, 100 characters max.</p>
+  <p class="comments-note">Comments use your existing Vidhgrow account. One top-level comment per user, 100 characters max.</p>
+  <div class="comment-auth" data-auth-panel>
+    <span data-auth-state>Checking Vidhgrow login...</span>
+    <a data-login-link href="https://vidhgrow.online/login">Log in to comment</a>
+  </div>
   <form class="comment-form" data-post-id="${escapeHtml(post._id)}">
-    <textarea name="content" maxlength="100" rows="3" placeholder="Write a short comment"></textarea>
-    <div class="comment-actions"><span data-counter>0/100</span><button type="submit">Post comment</button></div>
+    <textarea name="content" maxlength="100" rows="3" placeholder="Write a short comment" disabled></textarea>
+    <div class="comment-actions"><span data-counter>0/100</span><button type="submit" disabled>Post comment</button></div>
   </form>
   <div class="comment-list">
     ${comments
@@ -603,8 +677,8 @@ const renderComments = (post, comments = []) => `<section class="comments" aria-
           <strong>${escapeHtml(comment.user?.name || comment.user?.username || "Reader")}</strong>
           <p>${escapeHtml(comment.content)}</p>
           <form class="comment-form reply" data-post-id="${escapeHtml(post._id)}" data-parent-comment="${escapeHtml(comment._id)}">
-            <textarea name="content" maxlength="100" rows="2" placeholder="Reply to your comment"></textarea>
-            <div class="comment-actions"><span data-counter>0/100</span><button type="submit">Reply</button></div>
+            <textarea name="content" maxlength="100" rows="2" placeholder="Reply to your comment" disabled></textarea>
+            <div class="comment-actions"><span data-counter>0/100</span><button type="submit" disabled>Reply</button></div>
           </form>
           ${
             comment.replies?.length
@@ -650,6 +724,17 @@ const renderRelatedPosts = (posts = []) => {
   </section>`;
 };
 
+const renderTopicPills = (topics = []) => {
+  const cleanTopics = [...new Set((topics || []).map(normalizeTopicSlug).filter(Boolean))].filter(getTopic);
+  if (!cleanTopics.length) return "";
+
+  return `<nav class="article-topics" aria-label="Blog topics">
+    ${cleanTopics
+      .map((topic) => `<a href="/topic/${escapeHtml(topic)}">${escapeHtml(topicLabel(topic))}</a>`)
+      .join("")}
+  </nav>`;
+};
+
 const renderArticleContext = (post, contentHtml = "") => {
   const bodyWordCount = wordCountFromHtml(contentHtml);
   const bodyParagraphCount = paragraphCountFromHtml(contentHtml);
@@ -674,18 +759,30 @@ const renderArticleContext = (post, contentHtml = "") => {
   </section>`;
 };
 
-const renderArticleAmbient = () => `<div class="article-ambient" aria-hidden="true">
-  <span class="ambient-icon ambient-brain">
+const renderArticleAmbient = () => `<div class="article-ambient blog-ambient" aria-hidden="true">
+  <span class="ambient-icon ambient-brain" data-parallax="0.05">
     <svg viewBox="0 0 48 48" focusable="false"><path d="M18 10c-4 0-7 3-7 7 0 1 .2 2 .6 3A8 8 0 0 0 8 27c0 5 4 9 9 9h2V10h-1Zm12 0c4 0 7 3 7 7 0 1-.2 2-.6 3A8 8 0 0 1 40 27c0 5-4 9-9 9h-2V10h1ZM19 18h-4m4 8h-5m15-8h4m-4 8h5"/></svg>
   </span>
-  <span class="ambient-icon ambient-news">
+  <span class="ambient-icon ambient-news" data-parallax="-0.04">
     <svg viewBox="0 0 48 48" focusable="false"><path d="M10 14h24v22H10zM34 20h4v16c0 3-2 5-5 5H15M15 20h14M15 26h14M15 32h9"/></svg>
   </span>
-  <span class="ambient-icon ambient-pen">
+  <span class="ambient-icon ambient-pen" data-parallax="0.03">
     <svg viewBox="0 0 48 48" focusable="false"><path d="M12 36l4-11 16-16 7 7-16 16-11 4Zm18-25 7 7M16 25l7 7"/></svg>
   </span>
-  <span class="ambient-icon ambient-comment">
+  <span class="ambient-icon ambient-comment" data-parallax="-0.06">
     <svg viewBox="0 0 48 48" focusable="false"><path d="M12 14h24v18H20l-8 6V14Zm7 7h16M19 27h10"/></svg>
+  </span>
+  <span class="ambient-icon ambient-chart" data-parallax="0.08">
+    <svg viewBox="0 0 48 48" focusable="false"><path d="M10 38h28M15 34V22m9 12V14m9 20V26M12 12h24v26H12z"/></svg>
+  </span>
+  <span class="ambient-icon ambient-book" data-parallax="-0.03">
+    <svg viewBox="0 0 48 48" focusable="false"><path d="M12 12h11c3 0 5 2 5 5v21c0-3-2-5-5-5H12V12Zm24 0H25c-3 0-5 2-5 5v21c0-3 2-5 5-5h11V12Z"/></svg>
+  </span>
+  <span class="ambient-icon ambient-bell" data-parallax="0.04">
+    <svg viewBox="0 0 48 48" focusable="false"><path d="M18 37h12m-8 4h4m10-8H12l4-5v-7c0-5 3-9 8-9s8 4 8 9v7l4 5Z"/></svg>
+  </span>
+  <span class="ambient-icon ambient-globe" data-parallax="-0.05">
+    <svg viewBox="0 0 48 48" focusable="false"><path d="M24 40a16 16 0 1 0 0-32 16 16 0 0 0 0 32Zm-14-16h28M24 8c4 4 6 9 6 16s-2 12-6 16M24 8c-4 4-6 9-6 16s2 12 6 16"/></svg>
   </span>
 </div>`;
 
@@ -718,6 +815,7 @@ const renderPost = async (slug) => {
   const coverUrl = seoImage(post.coverImage?.url);
   const coverAlt = imageAlt(post.coverImage, `${post.title} cover image`);
   const contentHtml = ensureContentImageAlts(post.contentHtml, post.title);
+  const readTime = readingTimeLabel(post, contentHtml);
   const articleContext = renderArticleContext(post, contentHtml);
 
   const body = `${header()}
@@ -731,12 +829,13 @@ const renderPost = async (slug) => {
     </nav>
     <p class="eyebrow">${escapeHtml(post.category || "learning")}</p>
     <h1>${escapeHtml(post.title)}</h1>
+    ${renderTopicPills(post.topics)}
     <p class="article-excerpt">${escapeHtml(post.excerpt)}</p>
     <div class="article-byline">
       ${renderAuthorAvatar(post.author)}
       <div>
         <a href="/author/${escapeHtml(post.author?.slug || "")}">${escapeHtml(post.author?.name || "Vidhgrow Editorial")}</a>
-        <span>${formatDate(post.publishedAt || post.createdAt)} · ${post.readingTimeMinutes || 1} min read</span>
+        <span>${formatDate(post.publishedAt || post.createdAt)} · ${escapeHtml(readTime)}</span>
       </div>
     </div>
     <img class="article-cover" src="${escapeHtml(coverUrl)}" alt="${escapeHtml(coverAlt)}" />
@@ -905,10 +1004,13 @@ const serveStatic = async (res, filePath, contentType, options = {}) => {
 
 const redirectToCanonicalHost = (req, res) => {
   const canonicalHost = new URL(BLOG_PUBLIC_URL).host.toLowerCase();
-  const requestHost = String(req.headers["x-forwarded-host"] || req.headers.host || "")
+  const forwardedHost = String(req.headers["x-forwarded-host"] || req.headers.host || "")
     .split(",")[0]
     .trim()
     .toLowerCase();
+  const requestHost = forwardedHost.startsWith("[")
+    ? forwardedHost
+    : forwardedHost.replace(/:\d+$/, "");
 
   if (!requestHost || requestHost.includes("localhost") || requestHost === canonicalHost) {
     return false;
@@ -1005,10 +1107,10 @@ Sitemap: ${BLOG_PUBLIC_URL}/sitemap.xml
 
     let html;
     if (pathname === "/") {
-      html = await cached(pageCache, `home:${url.search}`, PAGE_CACHE_TTL_MS, () => renderHome(url));
+      html = await cached(pageCache, `home:${url.search}`, HOME_PAGE_CACHE_TTL_MS, () => renderHome(url));
     } else if (pathname.startsWith("/topic/")) {
       const slug = pathname.replace("/topic/", "");
-      html = await cached(pageCache, `topic:${slug}`, PAGE_CACHE_TTL_MS, () => renderTopic(slug));
+      html = await cached(pageCache, `topic:${slug}`, HOME_PAGE_CACHE_TTL_MS, () => renderTopic(slug));
     } else if (pathname.startsWith("/author/")) {
       const slug = pathname.replace("/author/", "");
       html = await cached(pageCache, `author:${slug}`, PAGE_CACHE_TTL_MS, () => renderAuthor(slug));
@@ -1020,9 +1122,14 @@ Sitemap: ${BLOG_PUBLIC_URL}/sitemap.xml
       return res.end(render404());
     }
 
+    const htmlCacheControl =
+      pathname === "/" || pathname.startsWith("/topic/")
+        ? "public, max-age=30, stale-while-revalidate=120"
+        : "public, max-age=120, stale-while-revalidate=600";
+
     res.writeHead(200, {
       "Content-Type": "text/html; charset=utf-8",
-      "Cache-Control": "public, max-age=120, stale-while-revalidate=600",
+      "Cache-Control": htmlCacheControl,
       "X-Content-Type-Options": "nosniff",
       "Referrer-Policy": "strict-origin-when-cross-origin",
     });

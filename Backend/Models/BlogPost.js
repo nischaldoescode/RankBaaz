@@ -67,6 +67,7 @@ const blogPostSchema = new mongoose.Schema(
     h1: { type: String, trim: true, maxlength: 140, default: "" },
     wordCount: { type: Number, default: 0, min: 0 },
     readingTimeMinutes: { type: Number, default: 1, min: 1 },
+    topics: [{ type: String, trim: true, lowercase: true, maxlength: 60 }],
     tags: [{ type: String, trim: true, lowercase: true, maxlength: 40 }],
     category: { type: String, trim: true, maxlength: 60, default: "learning" },
     seo: {
@@ -108,6 +109,7 @@ const blogPostSchema = new mongoose.Schema(
 
 blogPostSchema.index({ status: 1, publishedAt: -1 });
 blogPostSchema.index({ tags: 1, status: 1 });
+blogPostSchema.index({ topics: 1, status: 1, publishedAt: -1 });
 blogPostSchema.index({ title: "text", excerpt: "text", plainTextPreview: "text" });
 
 export default mongoose.model("BlogPost", blogPostSchema);
