@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -23,6 +23,45 @@ import { apiMethods, handleApiError } from "../services/api";
 import { useSEO } from "../hooks/useSEO";
 import { useContent } from "../context/ContentContext";
 
+const allowedRedirectHosts = new Set([
+  "vidhgrow.online",
+  "www.vidhgrow.online",
+  "blogs.vidhgrow.online",
+]);
+
+const resolveLoginRedirect = (location) => {
+  const fallback = location.state?.from?.pathname || "/";
+  const queryRedirect = new URLSearchParams(location.search).get("redirect");
+
+  if (!queryRedirect) return { type: "internal", target: fallback };
+
+  try {
+    const parsed = new URL(queryRedirect, window.location.origin);
+    const sameOrigin = parsed.origin === window.location.origin;
+    const allowedExternal =
+      parsed.protocol === "https:" && allowedRedirectHosts.has(parsed.hostname.toLowerCase());
+
+    if (!sameOrigin && !allowedExternal) {
+      return { type: "internal", target: fallback };
+    }
+
+    const target = `${parsed.pathname}${parsed.search}${parsed.hash}`;
+    if (sameOrigin) return { type: "internal", target: target || "/" };
+    return { type: "external", target: parsed.href };
+  } catch {
+    return { type: "internal", target: fallback };
+  }
+};
+
+const completeLoginRedirect = (redirectTarget, navigate) => {
+  if (redirectTarget.type === "external") {
+    window.location.assign(redirectTarget.target);
+    return;
+  }
+
+  navigate(redirectTarget.target, { replace: true });
+};
+
 const Login = () => {
   const { login, isAuthenticated, loading: authLoading } = useAuth();
   const [loginStep, setLoginStep] = useState(1);
@@ -46,7 +85,10 @@ const Login = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const from = location.state?.from?.pathname || "/";
+  const redirectTarget = useMemo(
+    () => resolveLoginRedirect(location),
+    [location.search, location.state],
+  );
 
   const { contentSettings } = useContent();
 
@@ -80,9 +122,9 @@ const Login = () => {
   useEffect(() => {
     setMounted(true);
     if (isAuthenticated && !authLoading) {
-      navigate(from, { replace: true });
+      completeLoginRedirect(redirectTarget, navigate);
     }
-  }, [isAuthenticated, authLoading, navigate, from]);
+  }, [isAuthenticated, authLoading, navigate, redirectTarget]);
 
   useEffect(() => {
     let interval;
@@ -262,7 +304,7 @@ const Login = () => {
         } else {
           localStorage.removeItem("rememberMe");
         }
-        navigate(from, { replace: true });
+        completeLoginRedirect(redirectTarget, navigate);
       }
     } catch (error) {
       console.error("Login error:", error);
