@@ -2,6 +2,7 @@ import jwt from "jsonwebtoken";
 import User from "../Models/User.js";
 import Admin from "../Models/Admin.js";
 import CryptoJS from "crypto-js";
+import { verifyRequestSignature } from "./requestSignature.js";
 
 const decryptCookieData = (encryptedData) => {
   try {
@@ -21,6 +22,15 @@ const generateDeviceFingerprint = (req) => {
   return CryptoJS.SHA256(
     userAgent + acceptLanguage + acceptEncoding
   ).toString();
+};
+
+const isBootstrapProfileRequest = (req, type) => {
+  if (req.method !== "GET") return false;
+  const path = (req.originalUrl || req.path || "").split("?")[0];
+  return (
+    (type === "user" && path === "/api/auth/profile") ||
+    (type === "admin" && path === "/api/admin/profile")
+  );
 };
 
 /**
@@ -124,7 +134,10 @@ export const authenticateUser = async (req, res, next) => {
     }
 
     req.user = { userId: user._id, ...user.toObject() };
-    next();
+    if (isBootstrapProfileRequest(req, "user")) {
+      return next();
+    }
+    return verifyRequestSignature(req, res, next);
   } catch (error) {
     console.error("[AUTH_USER] Error:", error.message);
 
@@ -232,7 +245,11 @@ export const authenticateAdmin = async (req, res, next) => {
       ...admin.toObject(),
     };
 
-    next();
+    if (isBootstrapProfileRequest(req, "admin")) {
+      return next();
+    }
+
+    return verifyRequestSignature(req, res, next);
   } catch (error) {
     console.error("[ADMIN_AUTH] Error:", error.message);
 

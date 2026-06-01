@@ -3,6 +3,7 @@ import User from "../Models/User.js";
 import Admin from "../Models/Admin.js";
 import CryptoJS from "crypto-js";
 import redisClient from "../Config/redis.js";
+import { verifyRequestSignature } from "./requestSignature.js";
 
 // Cache decoded cookie data to avoid repeated decryption
 const cookieCache = new Map();
@@ -172,7 +173,7 @@ export const authenticateUser = async (req, res, next) => {
     }
 
     req.user = user;
-    next();
+    return verifyRequestSignature(req, res, next);
   } catch (error) {
     console.error("Auth middleware error:", error);
     res.status(401).json({
@@ -214,7 +215,7 @@ export const authenticateAdmin = async (req, res, next) => {
     }
 
     req.admin = { userId: admin._id, isAdmin: true, ...admin };
-    next();
+    return verifyRequestSignature(req, res, next);
   } catch (error) {
     console.error("Admin auth middleware error:", error);
     res.status(401).json({

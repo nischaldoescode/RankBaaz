@@ -39,19 +39,16 @@ api.interceptors.request.use((config) => {
     return config;
   }
 
+  if (!teacherRequestSigner.isSecretValid()) {
+    teacherRequestSigner.loadSigningSecret();
+  }
+
   // only sign if we actually have a secret
-  if (!teacherRequestSigner.hasSecret()) {
+  if (!teacherRequestSigner.isSecretValid()) {
     return config;
   }
 
-  const { signature, timestamp, nonce } = teacherRequestSigner.sign(
-    config.data ? JSON.stringify(config.data) : "",
-  );
-  config.headers["x-signature"] = signature;
-  config.headers["x-timestamp"] = timestamp;
-  config.headers["x-nonce"] = nonce;
-
-  return config;
+  return teacherRequestSigner.signRequest(config);
 });
 
 // list of endpoints that are allowed to return 401 without triggering session expiry

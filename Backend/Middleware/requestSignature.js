@@ -64,6 +64,10 @@ const getSigningSecret = async (userId, isAdmin = false) => {
  */
 export const verifyRequestSignature = async (req, res, next) => {
   try {
+    if (req.signatureVerified) {
+      return next();
+    }
+
     const signature = req.headers["x-request-signature"];
     const timestamp = req.headers["x-request-timestamp"];
     const nonce = req.headers["x-request-nonce"];
@@ -95,6 +99,18 @@ export const verifyRequestSignature = async (req, res, next) => {
         success: false,
         message: "Invalid request format.",
         code: "INVALID_NONCE",
+      });
+    }
+
+    if (!/^[0-9a-f]{64}$/i.test(signature)) {
+      console.warn("[SIGNATURE] Invalid signature format:", {
+        path: req.originalUrl,
+      });
+
+      return res.status(403).json({
+        success: false,
+        message: "Invalid request format.",
+        code: "SIGNATURE_INVALID",
       });
     }
 
@@ -283,6 +299,7 @@ export const verifyRequestSignature = async (req, res, next) => {
       });
     }
 
+    req.signatureVerified = true;
     next();
   } catch (error) {
     console.error("[SIGNATURE] Verification error:", error);

@@ -31,6 +31,7 @@ import trackingRoutes from "./Routes/trackingRoutes.js";
 import { checkIpBlock } from "./Middleware/ipBlockMiddleware.js";
 import teacherRoutes from "./Routes/teacherRoutes.js";
 import khaltiRoutes from "./Routes/khaltiRoutes.js";
+import blogRoutes from "./Routes/blogRoutes.js";
 
 // Load environment variables
 dotenv.config();
@@ -44,6 +45,11 @@ cloudinary.config({
 // Create Express app
 const app = express();
 const PORT = process.env.PORT || 5000;
+app.disable("x-powered-by");
+app.set(
+  "trust proxy",
+  process.env.TRUST_PROXY_COUNT ? Number(process.env.TRUST_PROXY_COUNT) : false,
+);
 
 const mongoOptions = {
   maxPoolSize: 100, // Increased for production
@@ -150,7 +156,11 @@ const corsOptions = {
       "http://localhost:5175",
       "https://teachers.vidhgrow.online",
       "https://www.teachers.vidhgrow.online",
-      "http://localhost:5174"
+      "https://blogs.vidhgrow.online",
+      "https://www.blogs.vidhgrow.online",
+      "http://localhost:5174",
+      "http://localhost:5176",
+      "http://localhost:8080"
     ];
 
     // Handle requests without origin header (server-to-server, curl, etc.)
@@ -283,6 +293,22 @@ app.use(cors(corsOptions));
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 app.use(cookieParser(process.env.JWT_SECRET));
+
+app.use((req, res, next) => {
+  const host = req.get("Host") || "";
+  const forwardedHost = req.get("X-Forwarded-Host") || "";
+  const forwardedProto = req.get("X-Forwarded-Proto") || "";
+
+  if (host.length > 255 || forwardedHost.length > 255) {
+    return res.status(400).json({ success: false, message: "Invalid request" });
+  }
+
+  if (forwardedProto && !/^(https?|wss?)$/i.test(forwardedProto.split(",")[0].trim())) {
+    return res.status(400).json({ success: false, message: "Invalid request" });
+  }
+
+  next();
+});
 
 app.use(
   session({
@@ -502,6 +528,7 @@ app.use("/api/devtools", devToolsRoutes);
 app.use("/track", trackingRoutes);
 app.use("/api/teachers", teacherRoutes);
 app.use("/api/payments/khalti", khaltiRoutes);
+app.use("/api/blogs", blogRoutes);
 /**
  * Root endpoint - Minimal response for security
  */
@@ -577,6 +604,9 @@ const publicRoutes = [
   "/api/teachers/signup",
   "/api/teachers/verify-invite",
   "/api/teachers/waitlist-count",
+  "/api/blogs/public",
+  "/api/blogs/settings/share",
+  "/api/blogs/sitemap.xml",
 ];
 
 
@@ -630,6 +660,14 @@ app.use((req, res, next) => {
     if (!/^[0-9a-f]{32}$/i.test(nonce)) {
       console.warn("Invalid nonce format:", {
         nonce: nonce.substring(0, 10) + "...",
+        path: req.path,
+      });
+
+      return res.status(403).send(getSimple403HTML());
+    }
+
+    if (!/^[0-9a-f]{64}$/i.test(signature)) {
+      console.warn("Invalid signature format:", {
         path: req.path,
       });
 
@@ -713,6 +751,10 @@ app.use((req, res, next) => {
     "/api/teachers/waitlist-count",
     "/api/teachers/profile",
     "/api/teachers/verify-invite",
+    "/api/blogs/public",
+    "/api/blogs/authors",
+    "/api/blogs/settings/share",
+    "/api/blogs/sitemap.xml",
   ];
 
   // Check if path is EXACTLY a public endpoint or a subpath of one

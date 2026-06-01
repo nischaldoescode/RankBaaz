@@ -26,7 +26,11 @@ const ALLOWED_ORIGINS = [
   "http://localhost:4173",
   "https://teachers.vidhgrow.online",
   "https://www.teachers.vidhgrow.online",
-  "http://localhost:5174"
+  "https://blogs.vidhgrow.online",
+  "https://www.blogs.vidhgrow.online",
+  "http://localhost:5174",
+  "http://localhost:5176",
+  "http://localhost:8080"
 ];
 
 /**
