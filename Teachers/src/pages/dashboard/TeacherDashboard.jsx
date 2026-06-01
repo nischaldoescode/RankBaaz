@@ -569,11 +569,13 @@ const TeacherDashboard = () => {
 
   return (
     <div
+      className="teacher-dashboard-shell"
       style={{
         display: "flex",
         minHeight: "100vh",
         background: "#f8fafc",
         fontFamily: "'Inter Variable', sans-serif",
+        overflowX: "hidden",
       }}
     >
       {/* desktop sidebar */}
@@ -614,6 +616,7 @@ const TeacherDashboard = () => {
               }}
             />
             <motion.aside
+              className="teacher-sidebar-mobile"
               initial={{ x: -SIDEBAR_W }}
               animate={{ x: 0 }}
               exit={{ x: -SIDEBAR_W }}
@@ -651,6 +654,7 @@ const TeacherDashboard = () => {
       >
         {/* topbar */}
         <header
+          className="teacher-topbar"
           style={{
             height: 60,
             background: "#fff",
@@ -701,11 +705,13 @@ const TeacherDashboard = () => {
 
         {/* content */}
         <div
+          className="teacher-content"
           style={{
             flex: 1,
-            padding: "24px 20px",
-            maxWidth: 980,
+            padding: "28px",
+            maxWidth: 1180,
             width: "100%",
+            margin: "0 auto",
           }}
         >
           <AnimatePresence mode="wait">

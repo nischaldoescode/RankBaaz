@@ -77,7 +77,7 @@ const PaymentTab = () => {
   };
 
   return (
-    <div style={{ maxWidth: 560 }}>
+    <div className="teacher-narrow-tab teacher-payment-tab" style={{ maxWidth: 760 }}>
       <h2 style={{ fontSize: 18, fontWeight: 700, color: "#0f172a", marginBottom: 4 }}>
         Payout Details
       </h2>
@@ -199,7 +199,7 @@ const PaymentTab = () => {
               />
             </div>
 
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+            <div className="teacher-payment-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
               <div style={fieldStyle}>
                 <label style={labelStyle}>IFSC Code</label>
                 <input
