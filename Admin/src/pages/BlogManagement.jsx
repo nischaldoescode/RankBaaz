@@ -42,6 +42,16 @@ import {
 const BLOG_URL = "https://blogs.vidhgrow.online";
 const MAX_IMAGE_SIZE = 5 * 1024 * 1024;
 const MAX_VIDEO_SIZE = 10 * 1024 * 1024;
+const BLOG_TOPIC_OPTIONS = [
+  { slug: "product-updates", label: "Product updates" },
+  { slug: "teaching-workflows", label: "Teaching workflows" },
+  { slug: "course-news", label: "Course news" },
+  { slug: "assessment-notes", label: "Assessment notes" },
+  { slug: "security-updates", label: "Security updates" },
+  { slug: "student-progress", label: "Student progress" },
+  { slug: "admin-workflows", label: "Admin workflows" },
+  { slug: "feedback-notes", label: "Feedback notes" },
+];
 
 const emptyAuthor = {
   name: "",
@@ -62,6 +72,7 @@ const emptyPost = {
   coverImage: { url: "", public_id: "", resource_type: "image", alt: "", placement: "hero" },
   contentHtml:
     "<h2>Start with the important update</h2><p>Write the opening like a clear product note: what changed, who it helps, and what the reader can do next.</p>",
+  topics: [],
   tags: [],
   category: "platform",
   seo: {
@@ -121,6 +132,13 @@ const splitList = (value) =>
         .split(",")
         .map((item) => item.trim())
         .filter(Boolean);
+
+const normaliseTopics = (topics = []) => {
+  const allowed = new Set(BLOG_TOPIC_OPTIONS.map((topic) => topic.slug));
+  return [...new Set((Array.isArray(topics) ? topics : String(topics || "").split(","))
+    .map(slugify)
+    .filter((topic) => allowed.has(topic)))];
+};
 
 const formatBytes = (bytes = 0) => {
   if (!bytes) return "";
@@ -246,16 +264,19 @@ const normaliseVideoEmbedUrl = (value = "") => {
 const buildRelatedPreviewPosts = (post, posts = []) => {
   const currentSlug = post.slug;
   const postTags = new Set(splitList(post.tags).map((tag) => tag.toLowerCase()));
+  const postTopics = new Set(normaliseTopics(post.topics));
 
   const scored = posts
     .filter((item) => item.slug && item.slug !== currentSlug)
     .map((item) => {
       const itemTags = Array.isArray(item.tags) ? item.tags : [];
+      const itemTopics = Array.isArray(item.topics) ? item.topics : [];
+      const topicScore = itemTopics.filter((topic) => postTopics.has(String(topic).toLowerCase())).length * 2;
       const tagScore = itemTags.filter((tag) => postTags.has(String(tag).toLowerCase())).length;
       const authorScore =
         item.author?._id && post.author && item.author._id === post.author ? 2 : 0;
       const categoryScore = item.category && item.category === post.category ? 1 : 0;
-      return { item, score: tagScore + authorScore + categoryScore };
+      return { item, score: topicScore + tagScore + authorScore + categoryScore };
     })
     .sort((a, b) => b.score - a.score);
 
@@ -366,6 +387,7 @@ const buildPreviewHtml = (post, author, relatedPosts = []) => {
 const buildSnapshot = (post) =>
   JSON.stringify({
     ...post,
+    topics: normaliseTopics(post.topics),
     tags: splitList(post.tags),
     seo: { ...post.seo, keywords: splitList(post.seo.keywords) },
   });
@@ -1080,6 +1102,7 @@ const BlogManagement = () => {
           ...structuredClone(emptyPost),
           ...post,
           author: post.author?._id || post.author || "",
+          topics: normaliseTopics(post.topics || []),
           tags: post.tags || [],
           seo: {
             ...emptyPost.seo,
@@ -1150,6 +1173,7 @@ const BlogManagement = () => {
         status: mode,
         publish: mode === "published",
         mediaSessionId: mediaSessionRef.current,
+        topics: normaliseTopics(candidate.topics),
         tags: splitList(candidate.tags),
         seo: {
           ...candidate.seo,
@@ -1174,6 +1198,7 @@ const BlogManagement = () => {
         title: savedPost.title || candidate.title,
         slug: savedPost.slug || candidate.slug,
         excerpt: savedPost.excerpt ?? candidate.excerpt,
+        topics: payload.topics,
         seo: {
           ...candidate.seo,
           canonicalUrl: payload.seo.canonicalUrl,
@@ -1602,6 +1627,40 @@ const BlogManagement = () => {
               className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
             />
           </label>
+          <div className="space-y-2 lg:col-span-2">
+            <span className="text-xs font-bold uppercase tracking-wide text-gray-500">Blog topics</span>
+            <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+              {BLOG_TOPIC_OPTIONS.map((topic) => {
+                const selectedTopics = normaliseTopics(postForm.topics);
+                const checked = selectedTopics.includes(topic.slug);
+                return (
+                  <label
+                    key={topic.slug}
+                    className={`flex items-center gap-2 rounded-md border px-3 py-2 text-sm font-semibold transition ${
+                      checked
+                        ? "border-blue-300 bg-blue-50 text-blue-800"
+                        : "border-gray-200 bg-white text-gray-700 hover:border-blue-200"
+                    }`}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={checked}
+                      onChange={(event) => {
+                        const next = event.target.checked
+                          ? [...selectedTopics, topic.slug]
+                          : selectedTopics.filter((slug) => slug !== topic.slug);
+                        updatePost("topics", next);
+                      }}
+                    />
+                    {topic.label}
+                  </label>
+                );
+              })}
+            </div>
+            <p className="text-xs leading-5 text-gray-500">
+              Topics create public `/topic/...` pages and help related blogs match more accurately than loose tags.
+            </p>
+          </div>
         </div>
       </div>
 

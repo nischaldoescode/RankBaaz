@@ -74,6 +74,75 @@ const signRequest = async (url, method, body) => {
   };
 };
 
+const loginUrl = () => {
+  const config = window.__BLOG_CONFIG__;
+  return `${config.loginUrl}?redirect=${encodeURIComponent(window.location.href)}`;
+};
+
+const setCommentFormsEnabled = (enabled) => {
+  document.querySelectorAll(".comment-form textarea, .comment-form button[type='submit']").forEach((control) => {
+    control.disabled = !enabled;
+  });
+};
+
+const updateCommentAuthState = async () => {
+  const panel = document.querySelector("[data-auth-panel]");
+  if (!panel) return;
+
+  const config = window.__BLOG_CONFIG__;
+  const state = panel.querySelector("[data-auth-state]");
+  const loginLink = panel.querySelector("[data-login-link]");
+  if (loginLink) loginLink.href = loginUrl();
+
+  try {
+    const headers = await signRequest(config.profileUrl, "GET", "");
+    const response = await fetch(config.profileUrl, {
+      method: "GET",
+      credentials: "include",
+      headers,
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.message || "Not logged in");
+    const user = data?.data?.user || {};
+    const name = user.name || user.username || "your Vidhgrow account";
+    if (state) state.textContent = `Commenting as ${name}`;
+    panel.classList.add("is-logged-in");
+    setCommentFormsEnabled(true);
+  } catch {
+    if (state) state.textContent = "Log in on Vidhgrow to comment here.";
+    panel.classList.remove("is-logged-in");
+    setCommentFormsEnabled(false);
+  }
+};
+
+const setupParallax = () => {
+  const items = [...document.querySelectorAll("[data-parallax]")];
+  if (!items.length) return;
+  const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  if (reduceMotion) return;
+
+  let ticking = false;
+  const update = () => {
+    const scrollY = window.scrollY || 0;
+    items.forEach((item) => {
+      const speed = Number(item.dataset.parallax || 0);
+      const offset = Math.max(-90, Math.min(90, scrollY * speed));
+      item.style.setProperty("--parallax-y", `${offset.toFixed(1)}px`);
+    });
+    ticking = false;
+  };
+
+  const requestUpdate = () => {
+    if (ticking) return;
+    ticking = true;
+    window.requestAnimationFrame(update);
+  };
+
+  update();
+  window.addEventListener("scroll", requestUpdate, { passive: true });
+  window.addEventListener("resize", requestUpdate);
+};
+
 document.addEventListener("input", (event) => {
   if (event.target.matches(".comment-form textarea")) {
     const form = event.target.closest(".comment-form");
@@ -135,14 +204,15 @@ document.addEventListener("submit", async (event) => {
     if (!response.ok) throw new Error(data.message || "Comment failed");
     window.location.reload();
   } catch (error) {
-    const loginUrl = `${config.loginUrl}?redirect=${encodeURIComponent(window.location.href)}`;
     if (confirm(`${error.message}\n\nOpen Vidhgrow login?`)) {
-      window.location.href = loginUrl;
+      window.location.href = loginUrl();
     }
   }
 });
 
 document.querySelectorAll(".search-form").forEach(syncSearchForm);
+updateCommentAuthState();
+setupParallax();
 
 document.addEventListener("click", async (event) => {
   const copyButton = event.target.closest("[data-share-copy]");
