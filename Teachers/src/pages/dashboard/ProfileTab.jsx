@@ -79,7 +79,7 @@ const ProfileTab = () => {
     imageFile !== null;
 
   return (
-    <div style={{ maxWidth: 560 }}>
+    <div className="teacher-narrow-tab teacher-profile-tab" style={{ maxWidth: 760 }}>
       <h2 style={{ fontSize: 18, fontWeight: 700, color: "#0f172a", marginBottom: 4 }}>
         Public Profile
       </h2>
@@ -101,7 +101,7 @@ const ProfileTab = () => {
           Profile Photo
         </p>
 
-        <div style={{ display: "flex", alignItems: "flex-start", gap: 20, flexWrap: "wrap" }}>
+        <div className="teacher-profile-photo-row" style={{ display: "flex", alignItems: "flex-start", gap: 20, flexWrap: "wrap" }}>
           {/* preview */}
           <div style={{ position: "relative" }}>
             <div
@@ -214,6 +214,7 @@ const ProfileTab = () => {
       >
         {/* read-only info */}
         <div
+          className="teacher-profile-info-grid"
           style={{
             display: "grid",
             gridTemplateColumns: "1fr 1fr",

@@ -95,7 +95,7 @@ const DocumentsTab = () => {
   };
 
   return (
-    <div style={{ maxWidth: 560 }}>
+    <div className="teacher-narrow-tab teacher-documents-tab" style={{ maxWidth: 760 }}>
       <h2
         style={{
           fontSize: 18,

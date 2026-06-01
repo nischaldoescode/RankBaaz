@@ -122,3 +122,232 @@ a {
   background: #cbd5e1;
   border-radius: 3px;
 }
+
+/* Teacher portal responsive shell */
+.teacher-dashboard-shell,
+.teacher-main,
+.teacher-content,
+.teacher-courses-tab,
+.teacher-narrow-tab {
+  min-width: 0;
+}
+
+.teacher-content {
+  animation: teacherFadeIn 0.22s ease-out;
+}
+
+.teacher-courses-tab,
+.teacher-narrow-tab {
+  width: 100%;
+}
+
+.teacher-course-card,
+.teacher-modal-panel,
+.teacher-delete-panel {
+  min-width: 0;
+}
+
+.teacher-course-card *,
+.teacher-modal-panel *,
+.teacher-delete-panel * {
+  min-width: 0;
+}
+
+.teacher-modal-panel,
+.teacher-delete-panel {
+  max-height: calc(100vh - 40px);
+  overflow-y: auto;
+}
+
+.teacher-modal-panel input,
+.teacher-modal-panel textarea,
+.teacher-modal-panel select,
+.teacher-delete-panel input,
+.teacher-delete-panel textarea,
+.teacher-delete-panel select {
+  max-width: 100%;
+}
+
+.teacher-course-card button,
+.teacher-modal-panel button,
+.teacher-delete-panel button {
+  touch-action: manipulation;
+}
+
+.teacher-course-card:hover {
+  transform: translateY(-1px);
+}
+
+@keyframes teacherFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (min-width: 1280px) {
+  .teacher-content {
+    max-width: 1240px !important;
+  }
+}
+
+@media (max-width: 960px) {
+  .teacher-content {
+    max-width: none !important;
+    padding: 20px 16px 32px !important;
+  }
+
+  .teacher-modal-overlay,
+  .teacher-delete-overlay {
+    align-items: flex-start !important;
+    padding: 12px !important;
+  }
+
+  .teacher-modal-panel,
+  .teacher-delete-panel {
+    width: 100% !important;
+    max-width: calc(100vw - 24px) !important;
+    border-radius: 14px !important;
+    padding: 20px 16px !important;
+  }
+
+  .teacher-course-create-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+@media (max-width: 767px) {
+  .teacher-topbar {
+    height: 56px !important;
+    padding: 0 14px !important;
+  }
+
+  .teacher-sidebar-mobile {
+    width: min(86vw, 300px) !important;
+  }
+
+  .teacher-content {
+    padding: 16px 12px 28px !important;
+  }
+
+  .teacher-tab-header {
+    align-items: stretch !important;
+  }
+
+  .teacher-tab-header > div {
+    width: 100%;
+  }
+
+  .teacher-tab-header > button {
+    width: 100% !important;
+    justify-content: center !important;
+  }
+
+  .teacher-course-list {
+    gap: 14px !important;
+  }
+
+  .teacher-course-card {
+    border-radius: 12px !important;
+  }
+
+  .teacher-course-card-header {
+    flex-direction: column !important;
+    padding: 14px !important;
+  }
+
+  .teacher-course-card-header > img,
+  .teacher-course-card-header > div:first-child {
+    width: 100% !important;
+    height: auto !important;
+    aspect-ratio: 16 / 9 !important;
+    max-height: 180px;
+  }
+
+  .teacher-course-actions {
+    width: 100% !important;
+    flex-wrap: wrap !important;
+  }
+
+  .teacher-course-actions > button:first-child {
+    flex: 1 1 auto !important;
+    min-height: 34px;
+  }
+
+  .teacher-section-tabs {
+    padding: 12px 12px 0 !important;
+  }
+
+  .teacher-section-tabs > button {
+    flex: 1 1 calc(50% - 4px) !important;
+    justify-content: center !important;
+  }
+
+  .teacher-diff-header {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 10px !important;
+  }
+
+  .teacher-difficulty-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  .teacher-question-type-grid,
+  .teacher-profile-info-grid,
+  .teacher-payment-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .teacher-form-actions,
+  .teacher-link-row,
+  .teacher-profile-photo-row {
+    flex-direction: column !important;
+    align-items: stretch !important;
+  }
+
+  .teacher-form-actions > *,
+  .teacher-link-row > * {
+    width: 100% !important;
+    justify-content: center !important;
+  }
+
+  .teacher-narrow-tab > div {
+    padding: 18px !important;
+    border-radius: 14px !important;
+  }
+}
+
+@media (max-width: 420px) {
+  .teacher-content {
+    padding-left: 10px !important;
+    padding-right: 10px !important;
+  }
+
+  .teacher-section-tabs > button,
+  .teacher-difficulty-grid > button {
+    flex-basis: 100% !important;
+  }
+
+  .teacher-difficulty-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .teacher-modal-panel,
+  .teacher-delete-panel {
+    padding: 16px 12px !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .teacher-content,
+  .teacher-course-card {
+    animation: none !important;
+    transition: none !important;
+    transform: none !important;
+  }
+}

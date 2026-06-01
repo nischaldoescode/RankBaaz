@@ -448,7 +448,7 @@ const Signup = () => {
             >
               <strong>Email:</strong> {inviteData.email} &nbsp;·&nbsp;{" "}
               <strong>Country:</strong>{" "}
-              {inviteData.country === "india" ? "India 🇮🇳" : "Nepal 🇳🇵"}
+              {inviteData.country === "india" ? "India" : "Nepal"}
             </div>
           )}
 

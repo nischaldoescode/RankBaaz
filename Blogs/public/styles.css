@@ -432,6 +432,14 @@ button:disabled,
   flex: 0 0 auto;
 }
 
+.initial-avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+  font-weight: 850;
+}
+
 .article-byline a {
   display: block;
   color: var(--ink);
@@ -514,6 +522,14 @@ button:disabled,
   width: 100%;
   aspect-ratio: 16 / 9;
   border: 0;
+  border-radius: 6px;
+  margin: 30px 0;
+  background: #111827;
+}
+
+.article-content video {
+  width: 100%;
+  max-height: 540px;
   border-radius: 6px;
   margin: 30px 0;
   background: #111827;
@@ -639,6 +655,13 @@ button:disabled,
   height: 160px;
   border-radius: 999px;
   object-fit: cover;
+}
+
+.author-fallback {
+  width: 160px;
+  height: 160px;
+  border-radius: 999px;
+  font-size: 54px;
 }
 
 .author-title {

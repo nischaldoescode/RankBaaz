@@ -1,5 +1,6 @@
 import crypto from "crypto";
 import DOMPurify from "isomorphic-dompurify";
+import { v2 as cloudinary } from "cloudinary";
 import BlogAuthor from "../Models/BlogAuthor.js";
 import BlogPost from "../Models/BlogPost.js";
 import BlogComment from "../Models/BlogComment.js";
@@ -12,6 +13,8 @@ import {
 } from "../utils/blogCrypto.js";
 
 const BLOG_CACHE_TTL = 300;
+const BLOG_IMAGE_LIMIT = 5 * 1024 * 1024;
+const BLOG_VIDEO_LIMIT = 10 * 1024 * 1024;
 const BLOG_BASE_URL =
   process.env.BLOGS_SITE_URL || "https://blogs.vidhgrow.online";
 
@@ -24,6 +27,16 @@ const allowedVideoHosts = [
   "www.dailymotion.com",
   "dailymotion.com",
 ];
+
+const allowedImageTypes = [
+  "image/jpeg",
+  "image/jpg",
+  "image/png",
+  "image/webp",
+  "image/gif",
+];
+
+const allowedVideoTypes = ["video/mp4", "video/webm", "video/quicktime"];
 
 const toSlug = (value = "") =>
   String(value)
@@ -66,10 +79,19 @@ const isAllowedVideoUrl = (url = "") => {
   }
 };
 
+const isAllowedUploadedVideoUrl = (url = "") => {
+  try {
+    const parsed = new URL(url);
+    return parsed.protocol === "https:" && parsed.hostname === "res.cloudinary.com";
+  } catch {
+    return false;
+  }
+};
+
 const sanitizeBlogHtml = (html = "") => {
   const cleaned = DOMPurify.sanitize(String(html), {
     USE_PROFILES: { html: true },
-    ADD_TAGS: ["iframe"],
+    ADD_TAGS: ["iframe", "video", "source"],
     ADD_ATTR: [
       "target",
       "rel",
@@ -79,6 +101,16 @@ const sanitizeBlogHtml = (html = "") => {
       "allow",
       "allowfullscreen",
       "frameborder",
+      "controls",
+      "controlslist",
+      "disablepictureinpicture",
+      "playsinline",
+      "poster",
+      "preload",
+      "src",
+      "type",
+      "data-public-id",
+      "data-resource-type",
       "style",
     ],
     ALLOWED_URI_REGEXP:
@@ -90,6 +122,17 @@ const sanitizeBlogHtml = (html = "") => {
     (match, before, src, after) => {
       if (!isAllowedVideoUrl(src)) return "";
       return `<iframe${before} src="${src}"${after} loading="lazy" referrerpolicy="strict-origin-when-cross-origin"></iframe>`;
+    },
+  ).replace(
+    /<video\b([^>]*)>([\s\S]*?)<\/video>/gi,
+    (match, attrs, inner) => {
+      const videoSrc = String(attrs).match(/\bsrc=["']([^"']+)["']/i)?.[1];
+      const sourceSrc = String(inner).match(/<source\b[^>]*\bsrc=["']([^"']+)["']/i)?.[1];
+      const src = videoSrc || sourceSrc;
+
+      if (!src || !isAllowedUploadedVideoUrl(src)) return "";
+
+      return `<video${attrs} controls controlslist="nodownload noremoteplayback" disablepictureinpicture playsinline preload="metadata">${inner}</video>`;
     },
   );
 };
@@ -134,6 +177,7 @@ const serializeAuthor = (author) => {
     title: author.title || "",
     bio: author.bio || "",
     avatar: author.avatar || {},
+    avatarFallback: buildAuthorAvatarFallback(author.name),
     socialLinks: author.socialLinks || {},
   };
 };
@@ -194,6 +238,40 @@ const cleanComment = (value = "") =>
     .replace(/\s+/g, " ")
     .trim()
     .slice(0, 100);
+
+const getUploadedFile = (req) => {
+  const uploaded = req.files?.file || req.files?.media || req.files?.image || null;
+  return Array.isArray(uploaded) ? uploaded[0] : uploaded;
+};
+
+const normaliseOptionalUrl = (value = "") => {
+  const trimmed = String(value || "").trim();
+  if (!trimmed) return "";
+
+  try {
+    const parsed = new URL(trimmed);
+    if (parsed.protocol !== "https:") return "";
+    return parsed.toString();
+  } catch {
+    return "";
+  }
+};
+
+const buildAuthorAvatarFallback = (name = "") => {
+  const letter = String(name || "V").trim().charAt(0).toUpperCase() || "V";
+  const palette = [
+    { background: "#dbeafe", color: "#1d4ed8" },
+    { background: "#dcfce7", color: "#15803d" },
+    { background: "#fef3c7", color: "#b45309" },
+    { background: "#fae8ff", color: "#a21caf" },
+    { background: "#fee2e2", color: "#b91c1c" },
+    { background: "#e0f2fe", color: "#0369a1" },
+  ];
+  const code = letter.charCodeAt(0) || 0;
+  const colors = palette[code % palette.length];
+
+  return { letter, ...colors };
+};
 
 export const listPublishedBlogs = async (req, res) => {
   try {
@@ -508,6 +586,141 @@ ${urls
   }
 };
 
+export const adminCheckBlogSlug = async (req, res) => {
+  try {
+    const type = req.query.type === "author" ? "author" : "post";
+    const slug = toSlug(req.query.slug || "");
+    const excludeId = req.query.excludeId ? String(req.query.excludeId) : null;
+
+    if (!slug || slug.length < (type === "author" ? 2 : 5)) {
+      return res.status(200).json({
+        success: true,
+        data: {
+          slug,
+          available: false,
+          reason:
+            type === "author"
+              ? "Author slug must be at least 2 characters"
+              : "Blog slug must be at least 5 characters",
+        },
+      });
+    }
+
+    const Model = type === "author" ? BlogAuthor : BlogPost;
+    const query = { slug };
+    if (excludeId) query._id = { $ne: excludeId };
+
+    const existing = await Model.exists(query);
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        slug,
+        available: !existing,
+        reason: existing ? "This slug is already in use" : "",
+      },
+    });
+  } catch (error) {
+    console.error("Check blog slug error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to check slug",
+    });
+  }
+};
+
+export const adminUploadBlogMedia = async (req, res) => {
+  try {
+    const kind = req.query.kind === "video" ? "video" : "image";
+    const file = getUploadedFile(req);
+
+    if (!file) {
+      return res.status(400).json({
+        success: false,
+        message: "Upload a file before continuing",
+      });
+    }
+
+    const isVideo = kind === "video";
+    const allowedTypes = isVideo ? allowedVideoTypes : allowedImageTypes;
+    const limit = isVideo ? BLOG_VIDEO_LIMIT : BLOG_IMAGE_LIMIT;
+
+    if (!allowedTypes.includes(file.mimetype)) {
+      return res.status(400).json({
+        success: false,
+        message: isVideo
+          ? "Only MP4, WebM, and MOV videos are allowed"
+          : "Only JPEG, PNG, WebP, and GIF images are allowed",
+      });
+    }
+
+    if (file.size > limit) {
+      return res.status(400).json({
+        success: false,
+        message: isVideo
+          ? "Video is too large. Maximum size is 10MB"
+          : "Image is too large. Maximum size is 5MB",
+      });
+    }
+
+    const deliveryType =
+      isVideo && process.env.BLOG_VIDEO_DELIVERY_TYPE === "authenticated"
+        ? "authenticated"
+        : "upload";
+
+    const result = await cloudinary.uploader.upload(file.tempFilePath, {
+      resource_type: isVideo ? "video" : "image",
+      folder: isVideo ? "vidhgrow/blogs/videos" : "vidhgrow/blogs/images",
+      type: deliveryType,
+      allowed_formats: isVideo
+        ? ["mp4", "webm", "mov"]
+        : ["jpg", "jpeg", "png", "webp", "gif"],
+      transformation: isVideo
+        ? [{ quality: "auto" }]
+        : [{ quality: "auto", fetch_format: "auto" }],
+      context: {
+        uploaded_by: String(req.admin?.userId || ""),
+        purpose: String(req.query.purpose || "blog-media").slice(0, 60),
+      },
+    });
+
+    const signedVideoUrl =
+      isVideo && deliveryType === "authenticated"
+        ? cloudinary.url(result.public_id, {
+            resource_type: "video",
+            type: "authenticated",
+            secure: true,
+            sign_url: true,
+          })
+        : "";
+
+    return res.status(201).json({
+      success: true,
+      message: "Media uploaded",
+      data: {
+        media: {
+          url: signedVideoUrl || result.secure_url,
+          public_id: result.public_id,
+          resource_type: result.resource_type,
+          type: result.type,
+          format: result.format,
+          bytes: result.bytes,
+          width: result.width || null,
+          height: result.height || null,
+          duration: result.duration || null,
+          originalFilename: result.original_filename || file.name,
+        },
+      },
+    });
+  } catch (error) {
+    console.error("Admin upload blog media error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to upload media",
+    });
+  }
+};
+
 export const adminListBlogPosts = async (req, res) => {
   try {
     const posts = await BlogPost.find({})
@@ -549,49 +762,56 @@ export const adminGetBlogPost = async (req, res) => {
 };
 
 const buildPostPayload = async (body, adminId, existingPost = null) => {
-  const title = String(body.title || "").trim();
-  const slug = toSlug(body.slug || title);
+  const status = body.publish === true || body.status === "published" ? "published" : "draft";
+  const submittedTitle = String(body.title || "").trim();
+  const title =
+    submittedTitle || existingPost?.title || `Untitled draft ${new Date().toISOString().slice(0, 10)}`;
+  const slug = toSlug(body.slug || (submittedTitle ? title : existingPost?.slug) || `draft-${Date.now()}`);
   const excerpt = String(body.excerpt || "").trim();
-  const contentHtml = sanitizeBlogHtml(body.contentHtml || "");
+  const contentHtml = sanitizeBlogHtml(body.contentHtml || "<p></p>");
   const stats = calculateStats(contentHtml);
-  const status = ["draft", "scheduled", "published", "archived"].includes(
-    body.status,
-  )
-    ? body.status
-    : "draft";
+  const isPublishing = status === "published";
 
-  if (title.length < 5) throw new Error("Title must be at least 5 characters");
-  if (slug.length < 5) throw new Error("Slug must be at least 5 characters");
-  if (excerpt.length < 40) throw new Error("Excerpt must be at least 40 characters");
-  if (!stripHtml(contentHtml)) throw new Error("Blog content is required");
-  if (!body.author) throw new Error("Author is required");
-  if (!body.coverImage?.url || !body.coverImage?.alt) {
-    throw new Error("Cover image URL and alt text are required");
+  if (isPublishing) {
+    if (submittedTitle.length < 5) throw new Error("Title must be at least 5 characters");
+    if (slug.length < 5) throw new Error("Slug must be at least 5 characters");
+    if (excerpt.length < 40) throw new Error("Excerpt must be at least 40 characters");
+    if (!stripHtml(contentHtml)) throw new Error("Blog content is required");
+    if (!body.author) throw new Error("Author is required");
+    if (!body.coverImage?.url || !body.coverImage?.alt) {
+      throw new Error("Cover image URL and alt text are required");
+    }
+    if (!normaliseOptionalUrl(body.coverImage.url)) {
+      throw new Error("Cover image must be a valid HTTPS URL");
+    }
   }
 
-  const author = await BlogAuthor.findOne({ _id: body.author, isActive: true });
-  if (!author) throw new Error("Selected author was not found");
+  const author = body.author
+    ? await BlogAuthor.findOne({ _id: body.author, isActive: true })
+    : null;
+  if (body.author && !author) throw new Error("Selected author was not found");
 
   const seo = body.seo || {};
   const robots = seo.robots || {};
-  const scheduledFor = body.scheduledFor ? new Date(body.scheduledFor) : null;
+  const scheduledFor = null;
   const publishedAt =
     status === "published"
       ? existingPost?.publishedAt || new Date()
-      : status === "scheduled"
-        ? scheduledFor
-        : existingPost?.publishedAt || null;
+      : null;
+  const coverUrl = normaliseOptionalUrl(body.coverImage?.url);
 
   return {
     title,
     slug,
     excerpt,
     status,
-    author: author._id,
+    author: author?._id || undefined,
     coverImage: {
-      url: String(body.coverImage.url).trim(),
-      alt: String(body.coverImage.alt).trim(),
-      placement: ["hero", "inline", "wide"].includes(body.coverImage.placement)
+      url: coverUrl,
+      public_id: String(body.coverImage?.public_id || "").trim(),
+      resource_type: String(body.coverImage?.resource_type || "image").trim(),
+      alt: String(body.coverImage?.alt || "").trim(),
+      placement: ["hero", "inline", "wide"].includes(body.coverImage?.placement)
         ? body.coverImage.placement
         : "hero",
     },
@@ -690,6 +910,17 @@ export const adminDeleteBlogPost = async (req, res) => {
     if (!post) {
       return res.status(404).json({ success: false, message: "Post not found" });
     }
+
+    if (post.coverImage?.public_id) {
+      await cloudinary.uploader
+        .destroy(post.coverImage.public_id, {
+          resource_type: post.coverImage.resource_type || "image",
+        })
+        .catch((error) => {
+          console.warn("Failed to delete blog cover media:", error.message);
+        });
+    }
+
     await BlogComment.deleteMany({ post: post._id });
     await invalidateBlogCaches();
     return res.status(200).json({ success: true, message: "Blog post deleted" });
@@ -719,7 +950,11 @@ export const adminCreateAuthor = async (req, res) => {
       slug,
       title: String(req.body.title || "").trim(),
       bio: String(req.body.bio || "").trim(),
-      avatar: req.body.avatar || {},
+      avatar: {
+        url: normaliseOptionalUrl(req.body.avatar?.url),
+        public_id: String(req.body.avatar?.public_id || "").trim(),
+        alt: String(req.body.avatar?.alt || name).trim().slice(0, 140),
+      },
       socialLinks: req.body.socialLinks || {},
       isActive: req.body.isActive !== false,
       createdBy: req.admin.userId,
@@ -747,7 +982,11 @@ export const adminUpdateAuthor = async (req, res) => {
       slug: toSlug(req.body.slug || req.body.name),
       title: String(req.body.title || "").trim(),
       bio: String(req.body.bio || "").trim(),
-      avatar: req.body.avatar || {},
+      avatar: {
+        url: normaliseOptionalUrl(req.body.avatar?.url),
+        public_id: String(req.body.avatar?.public_id || "").trim(),
+        alt: String(req.body.avatar?.alt || req.body.name || "").trim().slice(0, 140),
+      },
       socialLinks: req.body.socialLinks || {},
       isActive: req.body.isActive !== false,
     };
@@ -759,6 +998,14 @@ export const adminUpdateAuthor = async (req, res) => {
 
     if (!author) {
       return res.status(404).json({ success: false, message: "Author not found" });
+    }
+
+    if (author.avatar?.public_id) {
+      await cloudinary.uploader
+        .destroy(author.avatar.public_id, { resource_type: "image" })
+        .catch((error) => {
+          console.warn("Failed to delete author avatar:", error.message);
+        });
     }
 
     await invalidateBlogCaches();

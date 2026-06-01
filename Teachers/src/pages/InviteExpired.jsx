@@ -14,7 +14,7 @@ const InviteExpired = ({ initialReason = "expired" }) => {
   // reasons: "expired" | "already_registered" | "invalid"
   const config = {
     expired: {
-      emoji: "⏱",
+      mark: "!",
       title: "Invite Link Expired",
       color: "#f59e0b",
       bg: "#fffbeb",
@@ -24,7 +24,7 @@ const InviteExpired = ({ initialReason = "expired" }) => {
       action: "Please contact admin to resend your invite.",
     },
     already_registered: {
-      emoji: "✅",
+      mark: "OK",
       title: "Already Registered",
       color: "#16a34a",
       bg: "#f0fdf4",
@@ -33,7 +33,7 @@ const InviteExpired = ({ initialReason = "expired" }) => {
       action: "You can sign in to your teacher dashboard.",
     },
     invalid: {
-      emoji: "❌",
+      mark: "!",
       title: "Invalid Link",
       color: "#dc2626",
       bg: "#fef2f2",
@@ -93,7 +93,16 @@ const InviteExpired = ({ initialReason = "expired" }) => {
               margin: "0 auto 24px",
             }}
           >
-            {c.emoji}
+            <span
+              style={{
+                fontSize: c.mark.length > 1 ? 18 : 30,
+                fontWeight: 800,
+                color: c.color,
+                letterSpacing: 0,
+              }}
+            >
+              {c.mark}
+            </span>
           </div>
 
           <h1

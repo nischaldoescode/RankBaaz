@@ -65,6 +65,29 @@ const sanitizeSearchQuery = (value = "") =>
     .trim()
     .slice(0, 80);
 
+const authorFallback = (name = "Vidhgrow") => {
+  const letter = String(name).trim().charAt(0).toUpperCase() || "V";
+  const palette = [
+    ["#dbeafe", "#1d4ed8"],
+    ["#dcfce7", "#15803d"],
+    ["#fef3c7", "#b45309"],
+    ["#fae8ff", "#a21caf"],
+    ["#fee2e2", "#b91c1c"],
+    ["#e0f2fe", "#0369a1"],
+  ];
+  const [background, color] = palette[(letter.charCodeAt(0) || 0) % palette.length];
+  return { letter, background, color };
+};
+
+const renderAuthorAvatar = (author = {}, className = "avatar-fallback") => {
+  const name = author?.name || "Vidhgrow Editorial";
+  if (author?.avatar?.url) {
+    return `<img src="${escapeHtml(author.avatar.url)}" alt="${escapeHtml(author.avatar.alt || name)}" />`;
+  }
+  const fallback = authorFallback(name);
+  return `<span class="${escapeHtml(className)} initial-avatar" style="background:${fallback.background};color:${fallback.color};">${escapeHtml(fallback.letter)}</span>`;
+};
+
 const formatDate = (date) =>
   date
     ? new Intl.DateTimeFormat("en", {
@@ -343,11 +366,7 @@ const renderPost = async (slug) => {
     <h1>${escapeHtml(post.title)}</h1>
     <p class="article-excerpt">${escapeHtml(post.excerpt)}</p>
     <div class="article-byline">
-      ${
-        post.author?.avatar?.url
-          ? `<img src="${escapeHtml(post.author.avatar.url)}" alt="${escapeHtml(post.author.avatar.alt || post.author.name)}" />`
-          : `<span class="avatar-fallback"></span>`
-      }
+      ${renderAuthorAvatar(post.author)}
       <div>
         <a href="/author/${escapeHtml(post.author?.slug || "")}">${escapeHtml(post.author?.name || "Vidhgrow Editorial")}</a>
         <span>${formatDate(post.publishedAt || post.createdAt)} · ${post.readingTimeMinutes || 1} min read</span>
@@ -415,11 +434,7 @@ const renderAuthor = async (slug) => {
   const body = `${header()}
 <main id="main" class="author-shell">
   <section class="author-card">
-    ${
-      author.avatar?.url
-        ? `<img src="${escapeHtml(author.avatar.url)}" alt="${escapeHtml(author.avatar.alt || author.name)}" />`
-        : ""
-    }
+    ${renderAuthorAvatar(author, "author-fallback")}
     <div>
       <p class="eyebrow">Author</p>
       <h1>${escapeHtml(author.name)}</h1>

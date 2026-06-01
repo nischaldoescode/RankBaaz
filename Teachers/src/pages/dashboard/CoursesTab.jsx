@@ -60,6 +60,7 @@ const FieldLabel = ({ children, required }) => (
 
 const Modal = ({ onClose, children, maxWidth = 560 }) => (
   <div
+    className="teacher-modal-overlay"
     style={{
       position: "fixed",
       inset: 0,
@@ -74,6 +75,7 @@ const Modal = ({ onClose, children, maxWidth = 560 }) => (
     onClick={(e) => e.target === e.currentTarget && onClose()}
   >
     <motion.div
+      className="teacher-modal-panel"
       initial={{ opacity: 0, y: 20, scale: 0.97 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
       exit={{ opacity: 0, y: 12, scale: 0.97 }}
@@ -296,6 +298,7 @@ const QuestionModal = ({
         <div>
           <FieldLabel>Question Type</FieldLabel>
           <div
+            className="teacher-question-type-grid"
             style={{
               display: "grid",
               gridTemplateColumns: "repeat(3,1fr)",
@@ -483,7 +486,7 @@ const QuestionModal = ({
                     cursor: "pointer",
                   }}
                 >
-                  {val === "True" ? "✅ True" : "❌ False"}
+                  {val}
                 </button>
               ))}
             </div>
@@ -506,7 +509,7 @@ const QuestionModal = ({
           />
         </div>
 
-        <div style={{ display: "flex", gap: 10 }}>
+        <div className="teacher-form-actions" style={{ display: "flex", gap: 10 }}>
           <button
             type="button"
             onClick={onClose}
@@ -670,7 +673,7 @@ const CouponForm = ({ courseId, onCreated, onCancel }) => {
           />
         </div>
       </div>
-      <div style={{ display: "flex", gap: 8 }}>
+      <div className="teacher-form-actions" style={{ display: "flex", gap: 8 }}>
         <button
           type="button"
           onClick={onCancel}
@@ -770,7 +773,7 @@ const VideoLinksManager = ({ course, onSaved }) => {
 
   const LinkRow = ({ link, index, links, setLinks }) => (
     <div style={{ marginBottom: 10 }}>
-      <div style={{ display: "flex", gap: 8 }}>
+      <div className="teacher-link-row" style={{ display: "flex", gap: 8 }}>
         <div
           style={{ flex: 1, display: "flex", flexDirection: "column", gap: 6 }}
         >
@@ -1121,7 +1124,7 @@ const CreateCourseModal = ({ teacher, onClose, onCreated }) => {
   };
 
   return (
-    <Modal onClose={onClose} maxWidth={720}>
+    <Modal onClose={onClose} maxWidth={840}>
       <ModalHeader
         title="Create Course"
         subtitle="Set the structure students will use for practice tests"
@@ -1439,7 +1442,7 @@ const CreateCourseModal = ({ teacher, onClose, onCreated }) => {
           />
         </label>
 
-        <div style={{ display: "flex", gap: 10 }}>
+        <div className="teacher-form-actions" style={{ display: "flex", gap: 10 }}>
           <button
             type="button"
             onClick={onClose}
@@ -1469,6 +1472,9 @@ const CreateCourseModal = ({ teacher, onClose, onCreated }) => {
         @media(max-width:720px){
           .teacher-course-create-grid{grid-template-columns:1fr!important;}
           .teacher-difficulty-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important;}
+        }
+        @media(max-width:420px){
+          .teacher-difficulty-grid{grid-template-columns:1fr!important;}
         }
       `}</style>
     </Modal>
@@ -1682,9 +1688,10 @@ const CoursesTab = () => {
   );
 
   return (
-    <div>
+    <div className="teacher-courses-tab">
       {/* header */}
       <div
+        className="teacher-tab-header"
         style={{
           display: "flex",
           alignItems: "center",
@@ -1807,7 +1814,7 @@ const CoursesTab = () => {
           </button>
         </div>
       ) : (
-        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+        <div className="teacher-course-list" style={{ display: "flex", flexDirection: "column", gap: 12 }}>
           {courses.map((course) => {
             const isExpanded = expandedId === course._id;
             const activeSection = expandedSection[course._id];
@@ -1819,6 +1826,7 @@ const CoursesTab = () => {
 
             return (
               <div
+                className="teacher-course-card"
                 key={course._id}
                 style={{
                   background: "#fff",
@@ -1835,6 +1843,7 @@ const CoursesTab = () => {
               >
                 {/* course header */}
                 <div
+                  className="teacher-course-card-header"
                   style={{
                     display: "flex",
                     alignItems: "flex-start",
@@ -1959,6 +1968,7 @@ const CoursesTab = () => {
                   </div>
 
                   <div
+                    className="teacher-course-actions"
                     style={{
                       display: "flex",
                       gap: 6,
@@ -2033,6 +2043,7 @@ const CoursesTab = () => {
                     >
                       {/* section tabs */}
                       <div
+                        className="teacher-section-tabs"
                         style={{
                           display: "flex",
                           gap: 8,
@@ -2100,6 +2111,7 @@ const CoursesTab = () => {
 
                                 return (
                                   <div
+                                    className="teacher-diff-card"
                                     key={diff.name}
                                     style={{
                                       marginBottom: 8,
@@ -2110,6 +2122,7 @@ const CoursesTab = () => {
                                   >
                                     {/* diff header */}
                                     <div
+                                      className="teacher-diff-header"
                                       style={{
                                         display: "flex",
                                         alignItems: "center",
@@ -2620,6 +2633,7 @@ const CoursesTab = () => {
       {/* delete confirm */}
       {deleteConfirm && (
         <div
+          className="teacher-delete-overlay"
           style={{
             position: "fixed",
             inset: 0,
@@ -2632,6 +2646,7 @@ const CoursesTab = () => {
           }}
         >
           <div
+            className="teacher-delete-panel"
             style={{
               background: "#fff",
               borderRadius: 14,
@@ -2654,7 +2669,7 @@ const CoursesTab = () => {
             <p style={{ fontSize: 13, color: "#6b7280", marginBottom: 20 }}>
               This cannot be undone.
             </p>
-            <div style={{ display: "flex", gap: 10 }}>
+            <div className="teacher-form-actions" style={{ display: "flex", gap: 10 }}>
               <button
                 onClick={() => setDeleteConfirm(null)}
                 style={{

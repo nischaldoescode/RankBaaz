@@ -2,12 +2,14 @@ import express from "express";
 import {
   adminCreateAuthor,
   adminCreateBlogPost,
+  adminCheckBlogSlug,
   adminDeleteAuthor,
   adminDeleteBlogPost,
   adminGetBlogPost,
   adminListAuthors,
   adminListBlogPosts,
   adminListComments,
+  adminUploadBlogMedia,
   adminUpdateAuthor,
   adminUpdateBlogPost,
   adminUpdateCommentStatus,
@@ -40,6 +42,8 @@ router.post(
 
 // Admin blog workspace.
 router.get("/admin/posts", authenticateAdmin, verifyRequestSignature, adminListBlogPosts);
+router.get("/admin/slugs/check", authenticateAdmin, verifyRequestSignature, adminCheckBlogSlug);
+router.post("/admin/media", authenticateAdmin, verifyRequestSignature, adminUploadBlogMedia);
 router.post("/admin/posts", authenticateAdmin, verifyRequestSignature, adminCreateBlogPost);
 router.get(
   "/admin/posts/:postId",

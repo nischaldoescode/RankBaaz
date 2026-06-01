@@ -32,10 +32,9 @@ const blogPostSchema = new mongoose.Schema(
     },
     excerpt: {
       type: String,
-      required: true,
       trim: true,
-      minlength: 40,
       maxlength: 320,
+      default: "",
     },
     status: {
       type: String,
@@ -46,12 +45,13 @@ const blogPostSchema = new mongoose.Schema(
     author: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "BlogAuthor",
-      required: true,
       index: true,
     },
     coverImage: {
-      url: { type: String, required: true, trim: true },
-      alt: { type: String, required: true, trim: true, maxlength: 180 },
+      url: { type: String, trim: true, default: "" },
+      public_id: { type: String, trim: true, default: "" },
+      resource_type: { type: String, trim: true, default: "image" },
+      alt: { type: String, trim: true, maxlength: 180, default: "" },
       placement: {
         type: String,
         enum: ["hero", "inline", "wide"],
