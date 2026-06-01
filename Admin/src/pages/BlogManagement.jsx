@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import axios from "axios";
 import { toast } from "react-toastify";
 import {
@@ -14,8 +14,10 @@ import {
   Heading1,
   Heading2,
   Heading3,
+  HelpCircle,
   Image,
   Italic,
+  Keyboard,
   Link as LinkIcon,
   List,
   ListOrdered,
@@ -29,6 +31,7 @@ import {
   Smartphone,
   Tablet,
   Trash2,
+  Type,
   Underline,
   UploadCloud,
   UserRound,
@@ -138,6 +141,32 @@ const isCanceledRequest = (error) =>
   error?.name === "AbortError";
 
 const SLUG_CHECK_TIMEOUT_MS = 3500;
+const TEXT_SIZE_OPTIONS = [
+  { label: "16", value: "16px" },
+  { label: "18", value: "18px" },
+  { label: "20", value: "20px" },
+  { label: "24", value: "24px" },
+  { label: "30", value: "30px" },
+  { label: "36", value: "36px" },
+];
+
+const emptyEditorState = {
+  bold: false,
+  italic: false,
+  underline: false,
+  block: "p",
+  fontSize: "18px",
+  inQuote: false,
+  hasLineBreak: false,
+};
+
+const makeMediaSessionId = () =>
+  `blog:${Date.now()}:${Math.random().toString(36).slice(2, 10)}`;
+
+const cleanEditorHtml = (html = "") =>
+  String(html)
+    .replace(/\sdata-editor-line-break=["'][^"']*["']/gi, "")
+    .replace(/\sdata-editor-helper=["'][^"']*["']/gi, "");
 
 const authorFallback = (name = "Vidhgrow") => {
   const letter = String(name).trim().charAt(0).toUpperCase() || "V";
@@ -349,6 +378,7 @@ const BlogManagement = () => {
   const originalPostSlugRef = useRef("");
   const originalAuthorSlugRef = useRef("");
   const editorInitialHtmlRef = useRef(emptyPost.contentHtml);
+  const mediaSessionRef = useRef(makeMediaSessionId());
   const [tab, setTab] = useState("posts");
   const [step, setStep] = useState(0);
   const [editorResetKey, setEditorResetKey] = useState(0);
@@ -376,6 +406,8 @@ const BlogManagement = () => {
   const [videoDraft, setVideoDraft] = useState({ file: null, url: "", title: "" });
   const [textColor, setTextColor] = useState("#111827");
   const [highlightColor, setHighlightColor] = useState("#dbeafe");
+  const [editorState, setEditorState] = useState(emptyEditorState);
+  const [showShortcutModal, setShowShortcutModal] = useState(false);
   const [uploading, setUploading] = useState("");
   const [confirmModal, setConfirmModal] = useState(false);
 
@@ -609,23 +641,150 @@ const BlogManagement = () => {
     });
   };
 
+  const getSelectionElement = useCallback(() => {
+    const selection = window.getSelection();
+    if (!selection || selection.rangeCount === 0 || !editorRef.current) return null;
+    const node = selection.anchorNode;
+    if (!node || !editorRef.current.contains(node)) return null;
+    return node.nodeType === Node.TEXT_NODE ? node.parentElement : node;
+  }, []);
+
+  const getClosestBlock = useCallback((element) => {
+    if (!element || !editorRef.current) return null;
+    return element.closest("h1,h2,h3,blockquote,p,li,div") || editorRef.current;
+  }, []);
+
+  const updateEditorState = useCallback(() => {
+    if (!editorRef.current) return;
+    const element = getSelectionElement();
+    if (!element) {
+      setEditorState((prev) => ({ ...prev, bold: false, italic: false, underline: false }));
+      return;
+    }
+
+    const block = getClosestBlock(element);
+    const blockTag = block?.tagName?.toLowerCase() || "p";
+    const computed = window.getComputedStyle(element);
+    setEditorState({
+      bold: document.queryCommandState("bold"),
+      italic: document.queryCommandState("italic"),
+      underline: document.queryCommandState("underline"),
+      block: ["h1", "h2", "h3", "blockquote", "li"].includes(blockTag) ? blockTag : "p",
+      fontSize: computed.fontSize || "18px",
+      inQuote: !!element.closest("blockquote"),
+      hasLineBreak: !!block?.querySelector?.("br[data-editor-line-break='true']"),
+    });
+  }, [getClosestBlock, getSelectionElement]);
+
   const syncEditor = () => {
     if (editorRef.current) {
-      const html = editorRef.current.innerHTML;
+      const html = cleanEditorHtml(editorRef.current.innerHTML);
       editorInitialHtmlRef.current = html;
       updatePost("contentHtml", html);
+      updateEditorState();
     }
   };
 
   useEffect(() => {
     if (step !== 1 || !editorRef.current) return;
     editorRef.current.innerHTML = editorInitialHtmlRef.current || "";
-  }, [editorResetKey, step]);
+    window.setTimeout(updateEditorState, 0);
+  }, [editorResetKey, step, updateEditorState]);
+
+  useEffect(() => {
+    const handleSelectionChange = () => updateEditorState();
+    document.addEventListener("selectionchange", handleSelectionChange);
+    return () => document.removeEventListener("selectionchange", handleSelectionChange);
+  }, [updateEditorState]);
 
   const command = (name, value = null) => {
     editorRef.current?.focus();
     document.execCommand(name, false, value);
     syncEditor();
+    window.setTimeout(updateEditorState, 0);
+  };
+
+  const activeToolClass = (active) =>
+    `rounded border p-2 transition ${
+      active
+        ? "border-blue-600 bg-blue-600 text-white"
+        : "border-gray-200 text-gray-700 hover:border-blue-300 hover:bg-blue-50 hover:text-blue-700"
+    }`;
+
+  const blockButtonClass = (block) =>
+    `rounded border px-3 py-2 text-xs font-bold transition ${
+      editorState.block === block
+        ? "border-blue-600 bg-blue-600 text-white"
+        : "border-gray-200 text-gray-700 hover:border-blue-300 hover:bg-blue-50"
+    }`;
+
+  const setTextSize = (fontSize) => {
+    editorRef.current?.focus();
+    const selection = window.getSelection();
+    if (!selection || selection.rangeCount === 0 || selection.isCollapsed) {
+      toast.info("Select text first, then choose a size");
+      return;
+    }
+
+    const range = selection.getRangeAt(0);
+    if (!editorRef.current.contains(range.commonAncestorContainer)) return;
+
+    const span = document.createElement("span");
+    span.style.fontSize = fontSize;
+    span.appendChild(range.extractContents());
+    range.insertNode(span);
+    selection.removeAllRanges();
+    const nextRange = document.createRange();
+    nextRange.selectNodeContents(span);
+    selection.addRange(nextRange);
+    syncEditor();
+  };
+
+  const placeCaretInside = (node) => {
+    const range = document.createRange();
+    range.selectNodeContents(node);
+    range.collapse(true);
+    const selection = window.getSelection();
+    selection.removeAllRanges();
+    selection.addRange(range);
+  };
+
+  const exitQuoteBlock = () => {
+    const element = getSelectionElement();
+    const quote = element?.closest("blockquote");
+    if (!quote) return false;
+
+    const paragraph = document.createElement("p");
+    paragraph.innerHTML = "<br>";
+    quote.insertAdjacentElement("afterend", paragraph);
+    placeCaretInside(paragraph);
+    syncEditor();
+    return true;
+  };
+
+  const insertVisibleLineBreak = () => {
+    command("insertHTML", '<br data-editor-line-break="true">');
+  };
+
+  const handleEditorKeyDown = (event) => {
+    if (event.key === "?" && (event.ctrlKey || event.metaKey)) {
+      event.preventDefault();
+      setShowShortcutModal(true);
+      return;
+    }
+
+    if (event.key !== "Enter") return;
+
+    if (event.shiftKey) {
+      event.preventDefault();
+      insertVisibleLineBreak();
+      return;
+    }
+
+    if (editorState.inQuote || getSelectionElement()?.closest("blockquote")) {
+      event.preventDefault();
+      exitQuoteBlock();
+    }
   };
 
   const guardUnsaved = (action) => {
@@ -645,8 +804,30 @@ const BlogManagement = () => {
     action?.();
   };
 
+  const resetMediaSession = () => {
+    mediaSessionRef.current = makeMediaSessionId();
+  };
+
+  const discardPendingMedia = async () => {
+    const sessionId = mediaSessionRef.current;
+    resetMediaSession();
+    try {
+      await axios.delete("/blogs/admin/media", {
+        data: { sessionId },
+      });
+    } catch (error) {
+      console.warn("Pending blog media cleanup failed:", error.response?.data?.message || error.message);
+    }
+  };
+
+  const discardAndRunPendingAction = async () => {
+    await discardPendingMedia();
+    runPendingAction();
+  };
+
   const resetPostForm = (authorId = authors[0]?._id || "") => {
     const next = { ...structuredClone(emptyPost), author: authorId };
+    resetMediaSession();
     postSlugRequestRef.current?.abort();
     originalPostSlugRef.current = "";
     editorInitialHtmlRef.current = next.contentHtml || "";
@@ -678,6 +859,7 @@ const BlogManagement = () => {
           social: { ...emptyPost.social, ...(post.social || {}) },
           coverImage: { ...emptyPost.coverImage, ...(post.coverImage || {}) },
         };
+        resetMediaSession();
         postSlugRequestRef.current?.abort();
         originalPostSlugRef.current = next.slug || "";
         editorInitialHtmlRef.current = next.contentHtml || "";
@@ -723,7 +905,7 @@ const BlogManagement = () => {
 
     const candidate = {
       ...postForm,
-      contentHtml: editorRef.current?.innerHTML || postForm.contentHtml,
+      contentHtml: cleanEditorHtml(editorRef.current?.innerHTML || postForm.contentHtml),
     };
     const validationMessage = validatePost(mode, candidate);
     if (validationMessage) {
@@ -737,6 +919,7 @@ const BlogManagement = () => {
         ...candidate,
         status: mode,
         publish: mode === "published",
+        mediaSessionId: mediaSessionRef.current,
         tags: splitList(candidate.tags),
         seo: {
           ...candidate.seo,
@@ -748,6 +931,7 @@ const BlogManagement = () => {
         : axios.post("/blogs/admin/posts", payload);
       const res = await request;
       const savedPost = res.data.data.post || {};
+      resetMediaSession();
       const savedId = editingPostId || savedPost._id;
       const next = {
         ...candidate,
@@ -813,9 +997,13 @@ const BlogManagement = () => {
       setUploading(purpose);
       const fd = new FormData();
       fd.append("file", file);
-      const res = await axios.post(`/blogs/admin/media?kind=${kind}&purpose=${purpose}`, fd, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
+      const res = await axios.post(
+        `/blogs/admin/media?kind=${kind}&purpose=${purpose}&sessionId=${encodeURIComponent(mediaSessionRef.current)}`,
+        fd,
+        {
+          headers: { "Content-Type": "multipart/form-data" },
+        },
+      );
       return res.data.data.media;
     } catch (error) {
       toast.error(error.response?.data?.message || "Upload failed");
@@ -943,6 +1131,7 @@ const BlogManagement = () => {
       const payload = {
         ...authorForm,
         slug: slugify(authorForm.slug || authorForm.name),
+        mediaSessionId: mediaSessionRef.current,
       };
       setSavingAuthor(true);
       const request = editingAuthorId
@@ -950,6 +1139,7 @@ const BlogManagement = () => {
         : axios.post("/blogs/admin/authors", payload);
       await request;
       toast.success(editingAuthorId ? "Author saved" : "Author created");
+      resetMediaSession();
       originalAuthorSlugRef.current = "";
       slugCheckCacheRef.current.clear();
       setAuthorForm(emptyAuthor);
@@ -966,6 +1156,7 @@ const BlogManagement = () => {
   };
 
   const editAuthor = (author) => {
+    resetMediaSession();
     authorSlugRequestRef.current?.abort();
     originalAuthorSlugRef.current = author.slug || "";
     setEditingAuthorId(author._id);
@@ -981,6 +1172,7 @@ const BlogManagement = () => {
   };
 
   const startCreateAuthor = () => {
+    resetMediaSession();
     authorSlugRequestRef.current?.abort();
     originalAuthorSlugRef.current = "";
     setEditingAuthorId(null);
@@ -1221,26 +1413,39 @@ const BlogManagement = () => {
       <div className="border-b border-gray-200 p-3">
         <div className="flex flex-wrap items-center gap-2">
           {[
-            [Bold, () => command("bold"), "Bold"],
-            [Italic, () => command("italic"), "Italic"],
-            [Underline, () => command("underline"), "Underline"],
-            [Heading1, () => command("formatBlock", "h1"), "H1"],
-            [Heading2, () => command("formatBlock", "h2"), "H2"],
-            [Heading3, () => command("formatBlock", "h3"), "H3"],
-            [Quote, () => command("formatBlock", "blockquote"), "Quote"],
+            [Bold, () => command("bold"), "Bold", editorState.bold],
+            [Italic, () => command("italic"), "Italic", editorState.italic],
+            [Underline, () => command("underline"), "Underline", editorState.underline],
             [List, () => command("insertUnorderedList"), "Bullet list"],
             [ListOrdered, () => command("insertOrderedList"), "Numbered list"],
             [AlignLeft, () => command("justifyLeft"), "Align left"],
             [AlignCenter, () => command("justifyCenter"), "Align center"],
-          ].map(([Icon, action, label]) => (
+          ].map(([Icon, action, label, active]) => (
             <button
               key={label}
               type="button"
               onClick={action}
               title={label}
-              className="rounded border border-gray-200 p-2 text-gray-700 hover:border-blue-300 hover:bg-blue-50 hover:text-blue-700"
+              className={activeToolClass(active)}
             >
               {React.createElement(Icon, { className: "h-4 w-4" })}
+            </button>
+          ))}
+          {[
+            ["p", "P", () => command("formatBlock", "p")],
+            ["h1", "H1", () => command("formatBlock", "h1")],
+            ["h2", "H2", () => command("formatBlock", "h2")],
+            ["h3", "H3", () => command("formatBlock", "h3")],
+            ["blockquote", "Quote", () => command("formatBlock", "blockquote")],
+          ].map(([block, label, action]) => (
+            <button
+              key={block}
+              type="button"
+              onClick={action}
+              className={blockButtonClass(block)}
+              title={label === "Quote" ? "Quote block. Press Enter once to exit it." : label}
+            >
+              {label}
             </button>
           ))}
           <button
@@ -1250,6 +1455,22 @@ const BlogManagement = () => {
           >
             Clear
           </button>
+          <label className="inline-flex items-center gap-2 rounded border border-gray-200 px-2 py-1.5 text-xs font-bold text-gray-700">
+            <Type className="h-4 w-4" />
+            <select
+              value={TEXT_SIZE_OPTIONS.some((option) => option.value === editorState.fontSize) ? editorState.fontSize : ""}
+              onChange={(event) => event.target.value && setTextSize(event.target.value)}
+              className="bg-transparent outline-none"
+              title="Text size applies to selected text"
+            >
+              <option value="">Size</option>
+              {TEXT_SIZE_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}px
+                </option>
+              ))}
+            </select>
+          </label>
           <select
             onChange={(event) => command("fontName", event.target.value)}
             className="rounded border border-gray-200 px-2 py-2 text-sm"
@@ -1298,6 +1519,20 @@ const BlogManagement = () => {
               <LinkIcon className="h-4 w-4" />
             </button>
           </div>
+          <button
+            type="button"
+            onClick={() => setShowShortcutModal(true)}
+            className="rounded border border-gray-200 p-2 text-gray-700 hover:border-blue-300 hover:bg-blue-50 hover:text-blue-700"
+            title="Keyboard shortcuts"
+          >
+            <HelpCircle className="h-4 w-4" />
+          </button>
+        </div>
+        <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-gray-500">
+          <span className="rounded-full bg-gray-100 px-2 py-1">Block: {editorState.block.toUpperCase()}</span>
+          <span className="rounded-full bg-gray-100 px-2 py-1">Size: {editorState.fontSize}</span>
+          {editorState.inQuote && <span className="rounded-full bg-blue-50 px-2 py-1 text-blue-700">Inside quote</span>}
+          {editorState.hasLineBreak && <span className="rounded-full bg-amber-50 px-2 py-1 text-amber-700">Line break in this block</span>}
         </div>
       </div>
 
@@ -1307,6 +1542,10 @@ const BlogManagement = () => {
           contentEditable
           suppressContentEditableWarning
           onInput={syncEditor}
+          onKeyDown={handleEditorKeyDown}
+          onKeyUp={updateEditorState}
+          onMouseUp={updateEditorState}
+          onFocus={updateEditorState}
           className="blog-editor min-h-[680px] overflow-auto px-6 py-6 font-serif text-[18px] leading-8 outline-none"
         />
         <aside className="space-y-5 border-t border-gray-200 p-4 xl:border-l xl:border-t-0">
@@ -1860,7 +2099,8 @@ const BlogManagement = () => {
                 <button
                   type="button"
                   disabled={savingAuthor}
-                  onClick={() => {
+                  onClick={async () => {
+                    await discardPendingMedia();
                     authorSlugRequestRef.current?.abort();
                     originalAuthorSlugRef.current = "";
                     setEditingAuthorId(null);
@@ -1993,12 +2233,54 @@ const BlogManagement = () => {
               </button>
               <button
                 type="button"
-                onClick={runPendingAction}
+                onClick={discardAndRunPendingAction}
                 disabled={saving}
                 className="rounded bg-gray-950 px-3 py-2 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-60"
               >
                 Leave
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showShortcutModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="w-full max-w-lg rounded-xl bg-white p-5 shadow-2xl">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h2 className="flex items-center gap-2 text-lg font-bold text-gray-950">
+                  <Keyboard className="h-5 w-5" />
+                  Editor shortcuts
+                </h2>
+                <p className="mt-2 text-sm leading-6 text-gray-600">
+                  These shortcuts work inside the body editor and keep the saved blog HTML clean.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowShortcutModal(false)}
+                className="rounded border border-gray-200 p-2 text-gray-600 hover:bg-gray-50"
+                title="Close shortcuts"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <div className="mt-5 grid gap-2 text-sm">
+              {[
+                ["Ctrl/Cmd + B", "Bold selected text"],
+                ["Ctrl/Cmd + I", "Italic selected text"],
+                ["Ctrl/Cmd + U", "Underline selected text"],
+                ["Ctrl/Cmd + ?", "Open this helper"],
+                ["Shift + Enter", "Insert a visible line break"],
+                ["Enter inside quote", "Exit the quote block and continue in a normal paragraph"],
+                ["Select text + Size", "Apply text size only to the selection"],
+              ].map(([keys, description]) => (
+                <div key={keys} className="grid grid-cols-[140px_minmax(0,1fr)] gap-3 rounded border border-gray-100 p-3">
+                  <kbd className="rounded bg-gray-100 px-2 py-1 text-xs font-bold text-gray-700">{keys}</kbd>
+                  <span className="text-gray-600">{description}</span>
+                </div>
+              ))}
             </div>
           </div>
         </div>
@@ -2015,6 +2297,7 @@ const BlogManagement = () => {
         .blog-editor h3 { font-size: 1.25rem; line-height: 1.25; font-family: Inter, ui-sans-serif, system-ui; font-weight: 750; margin: 1.1rem 0 .5rem; }
         .blog-editor { caret-color: #2563eb; }
         .blog-editor:empty::before { content: "Start writing the blog body..."; color: #94a3b8; }
+        .blog-editor br[data-editor-line-break="true"]::after { content: " line break"; color: #94a3b8; font-family: Inter, ui-sans-serif, system-ui; font-size: 11px; font-style: normal; }
         .blog-editor p { margin: .75rem 0; }
         .blog-editor blockquote { border-left: 4px solid #3b82f6; background: #eff6ff; padding: .7rem 1rem; margin: 1.2rem 0; font-style: italic; }
         .blog-editor a { color: #2563eb; text-decoration: underline; text-underline-offset: 4px; }

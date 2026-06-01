@@ -4,6 +4,7 @@ import { v2 as cloudinary } from "cloudinary";
 import BlogAuthor from "../Models/BlogAuthor.js";
 import BlogPost from "../Models/BlogPost.js";
 import BlogComment from "../Models/BlogComment.js";
+import BlogMedia from "../Models/BlogMedia.js";
 import ContactInfo from "../Models/ContactInfo.js";
 import redisClient from "../Config/redis.js";
 import {
@@ -15,6 +16,7 @@ import {
 const BLOG_CACHE_TTL = 300;
 const BLOG_IMAGE_LIMIT = 5 * 1024 * 1024;
 const BLOG_VIDEO_LIMIT = 10 * 1024 * 1024;
+const BLOG_PENDING_MEDIA_TTL_MS = 12 * 60 * 60 * 1000;
 const BLOG_BASE_URL =
   process.env.BLOGS_SITE_URL || "https://blogs.vidhgrow.online";
 
@@ -242,6 +244,152 @@ const cleanComment = (value = "") =>
 const getUploadedFile = (req) => {
   const uploaded = req.files?.file || req.files?.media || req.files?.image || null;
   return Array.isArray(uploaded) ? uploaded[0] : uploaded;
+};
+
+const cleanMediaSessionId = (value = "") =>
+  String(value || "")
+    .replace(/[^a-zA-Z0-9:_-]/g, "")
+    .slice(0, 120);
+
+const normalisePublicId = (value = "") =>
+  String(value || "")
+    .trim()
+    .replace(/[^\w./:-]/g, "")
+    .slice(0, 260);
+
+const isBlogManagedPublicId = (publicId = "") =>
+  String(publicId).startsWith("vidhgrow/blogs/");
+
+const collectPublicIdsFromHtml = (html = "") => {
+  const ids = new Set();
+  String(html).replace(/\bdata-public-id=["']([^"']+)["']/gi, (match, publicId) => {
+    const clean = normalisePublicId(publicId);
+    if (clean) ids.add(clean);
+    return match;
+  });
+  return ids;
+};
+
+const collectPostMediaPublicIds = (post = {}, contentHtml = "") => {
+  const ids = collectPublicIdsFromHtml(contentHtml);
+  const coverId = normalisePublicId(post.coverImage?.public_id);
+  if (coverId) ids.add(coverId);
+  return ids;
+};
+
+const destroyCloudinaryMedia = async (media) => {
+  const publicId = normalisePublicId(media?.public_id || media?.publicId || media);
+  if (!publicId) return;
+
+  await cloudinary.uploader
+    .destroy(publicId, {
+      resource_type: media?.resource_type || media?.resourceType || "image",
+      type: media?.type || "upload",
+      invalidate: true,
+    })
+    .catch((error) => {
+      console.warn("Failed to delete blog media:", publicId, error.message);
+    });
+};
+
+const cleanupStalePendingBlogMedia = async () => {
+  const cutoff = new Date(Date.now() - BLOG_PENDING_MEDIA_TTL_MS);
+  const stale = await BlogMedia.find({
+    status: "pending",
+    createdAt: { $lt: cutoff },
+  })
+    .limit(30)
+    .lean()
+    .catch(() => []);
+
+  if (!stale.length) return;
+
+  await Promise.all(stale.map(destroyCloudinaryMedia));
+  await BlogMedia.updateMany(
+    { _id: { $in: stale.map((item) => item._id) } },
+    { status: "deleted", deletedAt: new Date() },
+  ).catch(() => {});
+};
+
+const discardPendingBlogMedia = async ({ adminId, sessionId, publicIds = [] }) => {
+  const query = {
+    createdBy: adminId,
+    status: "pending",
+  };
+  const cleanSessionId = cleanMediaSessionId(sessionId);
+  const cleanIds = [...new Set(publicIds.map(normalisePublicId).filter(Boolean))];
+
+  if (cleanSessionId) query.sessionId = cleanSessionId;
+  if (cleanIds.length) query.public_id = { $in: cleanIds };
+  if (!cleanSessionId && !cleanIds.length) return { deleted: 0 };
+
+  const pendingMedia = await BlogMedia.find(query).lean();
+  await Promise.all(pendingMedia.map(destroyCloudinaryMedia));
+  if (pendingMedia.length) {
+    await BlogMedia.updateMany(
+      { _id: { $in: pendingMedia.map((media) => media._id) } },
+      { status: "deleted", deletedAt: new Date() },
+    );
+  }
+
+  return { deleted: pendingMedia.length };
+};
+
+const attachBlogMedia = async ({ adminId, sessionId, publicIds, kind, attachedId }) => {
+  const ids = [...new Set([...publicIds].map(normalisePublicId).filter(Boolean))];
+  const cleanSessionId = cleanMediaSessionId(sessionId);
+  if (!ids.length) {
+    if (cleanSessionId) await discardPendingBlogMedia({ adminId, sessionId: cleanSessionId });
+    return;
+  }
+
+  await BlogMedia.updateMany(
+    {
+      createdBy: adminId,
+      public_id: { $in: ids },
+      status: { $ne: "deleted" },
+    },
+    {
+      status: "attached",
+      attachedTo: { kind, id: attachedId },
+      attachedAt: new Date(),
+    },
+  );
+
+  if (cleanSessionId) {
+    const unusedPending = await BlogMedia.find({
+      createdBy: adminId,
+      sessionId: cleanSessionId,
+      status: "pending",
+      public_id: { $nin: ids },
+    }).lean();
+
+    await Promise.all(unusedPending.map(destroyCloudinaryMedia));
+    if (unusedPending.length) {
+      await BlogMedia.updateMany(
+        { _id: { $in: unusedPending.map((media) => media._id) } },
+        { status: "deleted", deletedAt: new Date() },
+      );
+    }
+  }
+};
+
+const deleteRemovedAttachedMedia = async ({ ownerKind, ownerId, keepPublicIds }) => {
+  const keep = [...keepPublicIds].map(normalisePublicId).filter(Boolean);
+  const removed = await BlogMedia.find({
+    status: "attached",
+    "attachedTo.kind": ownerKind,
+    "attachedTo.id": ownerId,
+    ...(keep.length ? { public_id: { $nin: keep } } : {}),
+  }).lean();
+
+  await Promise.all(removed.map(destroyCloudinaryMedia));
+  if (removed.length) {
+    await BlogMedia.updateMany(
+      { _id: { $in: removed.map((media) => media._id) } },
+      { status: "deleted", deletedAt: new Date() },
+    );
+  }
 };
 
 const normaliseOptionalUrl = (value = "") => {
@@ -653,6 +801,8 @@ export const adminCheckBlogSlug = async (req, res) => {
 
 export const adminUploadBlogMedia = async (req, res) => {
   try {
+    await cleanupStalePendingBlogMedia();
+
     const kind = req.query.kind === "video" ? "video" : "image";
     const file = getUploadedFile(req);
 
@@ -689,6 +839,8 @@ export const adminUploadBlogMedia = async (req, res) => {
       isVideo && process.env.BLOG_VIDEO_DELIVERY_TYPE === "authenticated"
         ? "authenticated"
         : "upload";
+    const sessionId = cleanMediaSessionId(req.body?.sessionId || req.query.sessionId);
+    const purpose = String(req.query.purpose || "blog-media").slice(0, 60);
 
     const result = await cloudinary.uploader.upload(file.tempFilePath, {
       resource_type: isVideo ? "video" : "image",
@@ -702,7 +854,9 @@ export const adminUploadBlogMedia = async (req, res) => {
         : [{ quality: "auto", fetch_format: "auto" }],
       context: {
         uploaded_by: String(req.admin?.userId || ""),
-        purpose: String(req.query.purpose || "blog-media").slice(0, 60),
+        purpose,
+        session_id: sessionId,
+        lifecycle: "pending",
       },
     });
 
@@ -715,12 +869,25 @@ export const adminUploadBlogMedia = async (req, res) => {
             sign_url: true,
           })
         : "";
+    const media = await BlogMedia.create({
+      public_id: result.public_id,
+      url: signedVideoUrl || result.secure_url,
+      resource_type: result.resource_type,
+      type: result.type || deliveryType,
+      purpose,
+      sessionId,
+      originalFilename: result.original_filename || file.name,
+      bytes: result.bytes || file.size || 0,
+      status: "pending",
+      createdBy: req.admin.userId,
+    });
 
     return res.status(201).json({
       success: true,
-      message: "Media uploaded",
+      message: "Media uploaded as pending. It will be kept only after the blog or author is saved.",
       data: {
         media: {
+          _id: media._id,
           url: signedVideoUrl || result.secure_url,
           public_id: result.public_id,
           resource_type: result.resource_type,
@@ -731,6 +898,7 @@ export const adminUploadBlogMedia = async (req, res) => {
           height: result.height || null,
           duration: result.duration || null,
           originalFilename: result.original_filename || file.name,
+          status: "pending",
         },
       },
     });
@@ -743,8 +911,34 @@ export const adminUploadBlogMedia = async (req, res) => {
   }
 };
 
+export const adminDiscardBlogMedia = async (req, res) => {
+  try {
+    const publicIds = Array.isArray(req.body?.publicIds) ? req.body.publicIds : [];
+    const sessionId = req.body?.sessionId || req.query.sessionId || "";
+    const result = await discardPendingBlogMedia({
+      adminId: req.admin.userId,
+      sessionId,
+      publicIds,
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: "Pending media discarded",
+      data: result,
+    });
+  } catch (error) {
+    console.error("Discard blog media error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to discard pending media",
+    });
+  }
+};
+
 export const adminListBlogPosts = async (req, res) => {
   try {
+    await cleanupStalePendingBlogMedia();
+
     const posts = await BlogPost.find({})
       .populate("author", "name slug avatar title")
       .select("-contentEncrypted")
@@ -821,8 +1015,14 @@ const buildPostPayload = async (body, adminId, existingPost = null) => {
       ? existingPost?.publishedAt || new Date()
       : null;
   const coverUrl = normaliseOptionalUrl(body.coverImage?.url);
+  const mediaPublicIds = collectPostMediaPublicIds(
+    { coverImage: body.coverImage || {} },
+    contentHtml,
+  );
 
   return {
+    mediaPublicIds,
+    mediaSessionId: cleanMediaSessionId(body.mediaSessionId),
     title,
     slug,
     excerpt,
@@ -877,10 +1077,20 @@ const buildPostPayload = async (body, adminId, existingPost = null) => {
 
 export const adminCreateBlogPost = async (req, res) => {
   try {
-    const payload = await buildPostPayload(req.body, req.admin.userId);
+    const { mediaPublicIds, mediaSessionId, ...payload } = await buildPostPayload(
+      req.body,
+      req.admin.userId,
+    );
     const post = await BlogPost.create({
       ...payload,
       createdBy: req.admin.userId,
+    });
+    await attachBlogMedia({
+      adminId: req.admin.userId,
+      sessionId: mediaSessionId,
+      publicIds: mediaPublicIds,
+      kind: "post",
+      attachedId: post._id,
     });
 
     await invalidateBlogCaches();
@@ -905,11 +1115,44 @@ export const adminUpdateBlogPost = async (req, res) => {
       return res.status(404).json({ success: false, message: "Post not found" });
     }
 
-    const payload = await buildPostPayload(req.body, req.admin.userId, existingPost);
+    const previousPublicIds = collectPostMediaPublicIds(
+      existingPost,
+      decryptPostContent(existingPost),
+    );
+    const { mediaPublicIds, mediaSessionId, ...payload } = await buildPostPayload(
+      req.body,
+      req.admin.userId,
+      existingPost,
+    );
     const post = await BlogPost.findByIdAndUpdate(req.params.postId, payload, {
       new: true,
       runValidators: true,
     });
+    await attachBlogMedia({
+      adminId: req.admin.userId,
+      sessionId: mediaSessionId,
+      publicIds: mediaPublicIds,
+      kind: "post",
+      attachedId: post._id,
+    });
+    await deleteRemovedAttachedMedia({
+      ownerKind: "post",
+      ownerId: post._id,
+      keepPublicIds: mediaPublicIds,
+    });
+    const removedLegacyIds = [...previousPublicIds].filter(
+      (publicId) => !mediaPublicIds.has(publicId) && isBlogManagedPublicId(publicId),
+    );
+    const removedLegacyMedia = await BlogMedia.find({
+      public_id: { $in: removedLegacyIds },
+      status: { $ne: "deleted" },
+    }).lean();
+    const trackedLegacyIds = new Set(removedLegacyMedia.map((media) => media.public_id));
+    for (const publicId of removedLegacyIds) {
+      if (!trackedLegacyIds.has(publicId)) {
+        await destroyCloudinaryMedia({ public_id: publicId, resource_type: "image" });
+      }
+    }
 
     await invalidateBlogCaches();
     return res.status(200).json({
@@ -933,14 +1176,32 @@ export const adminDeleteBlogPost = async (req, res) => {
       return res.status(404).json({ success: false, message: "Post not found" });
     }
 
-    if (post.coverImage?.public_id) {
-      await cloudinary.uploader
-        .destroy(post.coverImage.public_id, {
-          resource_type: post.coverImage.resource_type || "image",
-        })
-        .catch((error) => {
-          console.warn("Failed to delete blog cover media:", error.message);
+    const contentHtml = decryptPostContent(post);
+    const publicIds = collectPostMediaPublicIds(post, contentHtml);
+    const trackedMedia = await BlogMedia.find({
+      $or: [
+        { "attachedTo.kind": "post", "attachedTo.id": post._id },
+        { public_id: { $in: [...publicIds] } },
+      ],
+      status: { $ne: "deleted" },
+    }).lean();
+    const trackedIds = new Set(trackedMedia.map((media) => media.public_id));
+    await Promise.all(trackedMedia.map(destroyCloudinaryMedia));
+
+    for (const publicId of publicIds) {
+      if (!trackedIds.has(publicId)) {
+        await destroyCloudinaryMedia({
+          public_id: publicId,
+          resource_type: publicId === post.coverImage?.public_id ? post.coverImage.resource_type : "image",
         });
+      }
+    }
+
+    if (trackedMedia.length) {
+      await BlogMedia.updateMany(
+        { _id: { $in: trackedMedia.map((media) => media._id) } },
+        { status: "deleted", deletedAt: new Date() },
+      );
     }
 
     await BlogComment.deleteMany({ post: post._id });
@@ -964,6 +1225,8 @@ export const adminCreateAuthor = async (req, res) => {
   try {
     const name = String(req.body.name || "").trim();
     const slug = toSlug(req.body.slug || name);
+    const avatarPublicId = normalisePublicId(req.body.avatar?.public_id);
+    const mediaSessionId = cleanMediaSessionId(req.body.mediaSessionId);
     if (name.length < 2) throw new Error("Author name is required");
     if (slug.length < 2) throw new Error("Author slug is required");
 
@@ -974,12 +1237,19 @@ export const adminCreateAuthor = async (req, res) => {
       bio: String(req.body.bio || "").trim(),
       avatar: {
         url: normaliseOptionalUrl(req.body.avatar?.url),
-        public_id: String(req.body.avatar?.public_id || "").trim(),
+        public_id: avatarPublicId,
         alt: String(req.body.avatar?.alt || name).trim().slice(0, 140),
       },
       socialLinks: req.body.socialLinks || {},
       isActive: req.body.isActive !== false,
       createdBy: req.admin.userId,
+    });
+    await attachBlogMedia({
+      adminId: req.admin.userId,
+      sessionId: mediaSessionId,
+      publicIds: avatarPublicId ? new Set([avatarPublicId]) : new Set(),
+      kind: "author",
+      attachedId: author._id,
     });
 
     await invalidateBlogCaches();
@@ -999,6 +1269,13 @@ export const adminCreateAuthor = async (req, res) => {
 
 export const adminUpdateAuthor = async (req, res) => {
   try {
+    const existingAuthor = await BlogAuthor.findById(req.params.authorId).lean();
+    if (!existingAuthor) {
+      return res.status(404).json({ success: false, message: "Author not found" });
+    }
+
+    const avatarPublicId = normalisePublicId(req.body.avatar?.public_id);
+    const mediaSessionId = cleanMediaSessionId(req.body.mediaSessionId);
     const updates = {
       name: String(req.body.name || "").trim(),
       slug: toSlug(req.body.slug || req.body.name),
@@ -1006,7 +1283,7 @@ export const adminUpdateAuthor = async (req, res) => {
       bio: String(req.body.bio || "").trim(),
       avatar: {
         url: normaliseOptionalUrl(req.body.avatar?.url),
-        public_id: String(req.body.avatar?.public_id || "").trim(),
+        public_id: avatarPublicId,
         alt: String(req.body.avatar?.alt || req.body.name || "").trim().slice(0, 140),
       },
       socialLinks: req.body.socialLinks || {},
@@ -1018,16 +1295,26 @@ export const adminUpdateAuthor = async (req, res) => {
       runValidators: true,
     });
 
-    if (!author) {
-      return res.status(404).json({ success: false, message: "Author not found" });
-    }
+    await attachBlogMedia({
+      adminId: req.admin.userId,
+      sessionId: mediaSessionId,
+      publicIds: avatarPublicId ? new Set([avatarPublicId]) : new Set(),
+      kind: "author",
+      attachedId: author._id,
+    });
 
-    if (author.avatar?.public_id) {
-      await cloudinary.uploader
-        .destroy(author.avatar.public_id, { resource_type: "image" })
-        .catch((error) => {
-          console.warn("Failed to delete author avatar:", error.message);
-        });
+    if (
+      existingAuthor.avatar?.public_id &&
+      existingAuthor.avatar.public_id !== avatarPublicId
+    ) {
+      await destroyCloudinaryMedia({
+        public_id: existingAuthor.avatar.public_id,
+        resource_type: "image",
+      });
+      await BlogMedia.updateOne(
+        { public_id: existingAuthor.avatar.public_id },
+        { status: "deleted", deletedAt: new Date() },
+      ).catch(() => {});
     }
 
     await invalidateBlogCaches();
@@ -1058,6 +1345,17 @@ export const adminDeleteAuthor = async (req, res) => {
     const author = await BlogAuthor.findByIdAndDelete(req.params.authorId);
     if (!author) {
       return res.status(404).json({ success: false, message: "Author not found" });
+    }
+
+    if (author.avatar?.public_id) {
+      await destroyCloudinaryMedia({
+        public_id: author.avatar.public_id,
+        resource_type: "image",
+      });
+      await BlogMedia.updateOne(
+        { public_id: author.avatar.public_id },
+        { status: "deleted", deletedAt: new Date() },
+      ).catch(() => {});
     }
 
     await invalidateBlogCaches();
