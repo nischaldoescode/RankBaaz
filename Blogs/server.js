@@ -40,7 +40,21 @@ const PORT = Number(process.env.PORT || 8080);
 const API_BASE = (process.env.BLOG_API_BASE_URL || "http://localhost:7000").replace(/\/$/, "");
 const PUBLIC_API_BASE = (process.env.PUBLIC_API_BASE_URL || API_BASE).replace(/\/$/, "");
 const BLOG_ORIGIN = process.env.BLOGS_SITE_URL || "http://localhost:8080";
-const BLOG_PUBLIC_URL = process.env.BLOGS_PUBLIC_URL || "https://blogs.vidhgrow.online";
+const BLOG_PUBLIC_URL = (process.env.BLOGS_PUBLIC_URL || "https://blogs.vidhgrow.online").replace(/\/$/, "");
+const DEFAULT_OG_IMAGE = `${BLOG_PUBLIC_URL}/android-chrome-512x512.png`;
+const HOME_SEO_TITLE = "Vidhgrow Blogs | Product Updates, Teaching & Course News";
+const HOME_SEO_DESCRIPTION =
+  "Read Vidhgrow blogs about product updates, teacher workflows, course creation, assessment tools, student practice, and platform improvements for online learning.";
+const ROOT_LINKS = [
+  ["Latest blogs", "/"],
+  ["Product releases", "/?q=feature"],
+  ["Teacher workflows", "/?q=teacher"],
+  ["Course builder", "/?q=course"],
+  ["Assessment notes", "/?q=exam"],
+  ["Student practice", "/?q=student"],
+  ["Security updates", "/?q=security"],
+  ["Feedback and ratings", "/?q=feedback"],
+];
 
 const escapeHtml = (value = "") =>
   String(value)
@@ -64,6 +78,50 @@ const sanitizeSearchQuery = (value = "") =>
     .replace(/\s+/g, " ")
     .trim()
     .slice(0, 80);
+
+const absoluteUrl = (value = "") => {
+  const raw = String(value || "").trim();
+  if (!raw) return "";
+  try {
+    return new URL(raw, BLOG_PUBLIC_URL).href;
+  } catch {
+    return "";
+  }
+};
+
+const seoImage = (value = "") => absoluteUrl(value) || DEFAULT_OG_IMAGE;
+
+const imageAlt = (image = {}, fallback = "Vidhgrow blog image") =>
+  String(image?.alt || fallback).trim() || fallback;
+
+const truncateMeta = (value = "", maxLength = 165) => {
+  const text = stripHtml(value);
+  if (text.length <= maxLength) return text;
+  const trimmed = text.slice(0, maxLength - 3).replace(/\s+\S*$/, "");
+  return `${trimmed || text.slice(0, maxLength - 3)}...`;
+};
+
+const metaTitle = (value = "", fallback = "Vidhgrow Blogs") => {
+  const base = truncateMeta(value || fallback, 68);
+  if (base.length >= 30) return base;
+  return truncateMeta(`${base} | Vidhgrow Blogs`, 68);
+};
+
+const metaDescription = (value = "", fallback = HOME_SEO_DESCRIPTION) => {
+  const base = truncateMeta(value || fallback, 165);
+  if (base.length >= 135) return base;
+  return truncateMeta(
+    `${base} Read more Vidhgrow blogs on online learning, teacher workflows, course creation, student practice, and platform updates.`,
+    165,
+  );
+};
+
+const ensureContentImageAlts = (html = "", fallback = "Vidhgrow blog illustration") => {
+  const alt = escapeHtml(fallback);
+  return String(html)
+    .replace(/<img\b(?![^>]*\balt=)([^>]*)>/gi, `<img alt="${alt}"$1>`)
+    .replace(/<img\b([^>]*?)\s+alt=(["'])\s*\2([^>]*)>/gi, `<img$1 alt="${alt}"$3>`);
+};
 
 const authorFallback = (name = "Vidhgrow") => {
   const letter = String(name).trim().charAt(0).toUpperCase() || "V";
@@ -126,10 +184,13 @@ const pageShell = ({
   description,
   canonical,
   image,
+  ogType = "website",
   robots = "index,follow,max-image-preview:large",
   body,
   jsonLd,
-}) => `<!doctype html>
+}) => {
+  const shareImage = seoImage(image);
+  return `<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />
@@ -144,17 +205,23 @@ const pageShell = ({
   <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
   <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
   <link rel="manifest" href="/site.webmanifest" />
-  <meta property="og:type" content="article" />
-  <meta property="og:site_name" content="Vidhgrow Blog" />
+  <meta property="og:locale" content="en_US" />
+  <meta property="og:type" content="${escapeHtml(ogType)}" />
+  <meta property="og:site_name" content="Vidhgrow Blogs" />
   <meta property="og:title" content="${escapeHtml(title)}" />
   <meta property="og:description" content="${escapeHtml(description)}" />
   <meta property="og:url" content="${escapeHtml(canonical)}" />
-  ${image ? `<meta property="og:image" content="${escapeHtml(image)}" />` : ""}
+  <meta property="og:image" content="${escapeHtml(shareImage)}" />
+  <meta property="og:image:secure_url" content="${escapeHtml(shareImage)}" />
+  <meta property="og:image:alt" content="${escapeHtml(title)}" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content="${escapeHtml(title)}" />
   <meta name="twitter:description" content="${escapeHtml(description)}" />
-  ${image ? `<meta name="twitter:image" content="${escapeHtml(image)}" />` : ""}
-  <link rel="alternate" type="application/rss+xml" title="Vidhgrow Blog" href="${BLOG_PUBLIC_URL}/feed.xml" />
+  <meta name="twitter:image" content="${escapeHtml(shareImage)}" />
+  <meta name="twitter:image:alt" content="${escapeHtml(title)}" />
+  <link rel="alternate" type="application/rss+xml" title="Vidhgrow Blogs" href="${BLOG_PUBLIC_URL}/feed.xml" />
   <link rel="stylesheet" href="/assets/styles.css" />
   ${jsonLd ? `<script type="application/ld+json">${JSON.stringify(jsonLd)}</script>` : ""}
 </head>
@@ -170,10 +237,11 @@ const pageShell = ({
   <script src="/assets/app.js" defer></script>
 </body>
 </html>`;
+};
 
 const header = () => `<header class="site-header">
   <a class="wordmark" href="/">
-    <img src="/logo.png" alt="" width="40" height="40" />
+    <img src="/logo.png" alt="Vidhgrow Blogs logo" width="40" height="40" />
     <span>Vidhgrow <em>Blogs</em></span>
   </a>
   <nav aria-label="Primary">
@@ -188,9 +256,12 @@ const footer = (settings = {}) => {
   const social = settings.socialMedia || {};
   const links = Object.entries(social).filter(([, url]) => url);
   return `<footer class="site-footer">
-    <div>
-      <strong>Vidhgrow Blog</strong>
-      <p>Platform news, feature releases, teaching workflows, and product decisions from the Vidhgrow team.</p>
+    <div class="footer-copy">
+      <strong>Vidhgrow Blogs</strong>
+      <p>Product updates, teacher workflows, course builder notes, student practice improvements, and platform decisions from the Vidhgrow team.</p>
+      <nav class="footer-nav" aria-label="Blog topics">
+        ${ROOT_LINKS.map(([label, href]) => `<a href="${href}">${escapeHtml(label)}</a>`).join("")}
+      </nav>
     </div>
     ${
       links.length
@@ -204,7 +275,7 @@ const footer = (settings = {}) => {
 
 const postCard = (post) => `<article class="post-card">
   <a href="/${escapeHtml(post.slug)}" class="post-card-image">
-    <img src="${escapeHtml(post.coverImage?.url || "")}" alt="${escapeHtml(post.coverImage?.alt || post.title)}" loading="lazy" />
+    <img src="${escapeHtml(seoImage(post.coverImage?.url))}" alt="${escapeHtml(imageAlt(post.coverImage, post.title))}" loading="lazy" />
   </a>
   <div class="post-card-copy">
     <time datetime="${escapeHtml(post.publishedAt || post.createdAt)}">${formatDate(post.publishedAt || post.createdAt)}</time>
@@ -248,6 +319,8 @@ const renderHome = async (url) => {
         <a href="/?q=teacher">Teacher portal</a>
         <a href="/?q=course">Course builder</a>
         <a href="/?q=exam">Assessment notes</a>
+        <a href="/?q=student">Student practice</a>
+        <a href="/?q=security">Security updates</a>
       </div>
     </div>
     <form class="search-form" method="get" action="/">
@@ -266,7 +339,7 @@ const renderHome = async (url) => {
   ${
     latest && !query
       ? `<section class="featured-post">
-          <a href="/${escapeHtml(latest.slug)}"><img src="${escapeHtml(latest.coverImage?.url || "")}" alt="${escapeHtml(latest.coverImage?.alt || latest.title)}" /></a>
+          <a href="/${escapeHtml(latest.slug)}"><img src="${escapeHtml(seoImage(latest.coverImage?.url))}" alt="${escapeHtml(imageAlt(latest.coverImage, latest.title))}" /></a>
           <div>
             <p class="section-kicker">Latest story</p>
             <time datetime="${escapeHtml(latest.publishedAt || latest.createdAt)}">${formatDate(latest.publishedAt || latest.createdAt)}</time>
@@ -283,19 +356,29 @@ const renderHome = async (url) => {
   <section class="post-list" aria-label="Blog posts">
     ${posts.map(postCard).join("") || `<div class="empty-state">No posts found.</div>`}
   </section>
+  <section class="browse-links" aria-labelledby="browse-title">
+    <div>
+      <p class="eyebrow">Browse</p>
+      <h2 id="browse-title">Explore Vidhgrow blog topics</h2>
+    </div>
+    <nav aria-label="More blog topics">
+      ${ROOT_LINKS.map(([label, href]) => `<a href="${href}">${escapeHtml(label)}</a>`).join("")}
+    </nav>
+  </section>
 </main>
 ${footer(settingsRes.data)}`;
 
   return pageShell({
-    title: "Vidhgrow Blog",
-    description: "Platform news, feature releases, teacher workflows, course improvements, and product decisions from Vidhgrow.",
+    title: HOME_SEO_TITLE,
+    description: HOME_SEO_DESCRIPTION,
     canonical: BLOG_PUBLIC_URL,
     image: latest?.coverImage?.url,
     body,
     jsonLd: {
       "@context": "https://schema.org",
       "@type": "Blog",
-      name: "Vidhgrow Blog",
+      name: "Vidhgrow Blogs",
+      description: HOME_SEO_DESCRIPTION,
       url: BLOG_PUBLIC_URL,
     },
   });
@@ -362,7 +445,7 @@ const renderRelatedPosts = (posts = []) => {
         .map(
           (post) => `<article class="related-card">
             <a href="/${escapeHtml(post.slug)}" class="related-image">
-              <img src="${escapeHtml(post.coverImage?.url || "")}" alt="${escapeHtml(post.coverImage?.alt || post.title)}" loading="lazy" />
+              <img src="${escapeHtml(seoImage(post.coverImage?.url))}" alt="${escapeHtml(imageAlt(post.coverImage, post.title))}" loading="lazy" />
             </a>
             <time datetime="${escapeHtml(post.publishedAt || post.createdAt)}">${formatDate(post.publishedAt || post.createdAt)}</time>
             <h3><a href="/${escapeHtml(post.slug)}">${escapeHtml(post.title)}</a></h3>
@@ -381,9 +464,14 @@ const renderPost = async (slug) => {
   ]);
   const { post, comments, relatedPosts } = postRes.data;
   const canonical = post.seo?.canonicalUrl || `${BLOG_PUBLIC_URL}/${post.slug}`;
+  const title = metaTitle(post.seo?.metaTitle || post.title, post.title);
+  const description = metaDescription(post.seo?.metaDescription || post.excerpt, post.excerpt || post.plainTextPreview);
   const social = settingsRes.data?.socialMedia || {};
   const shareUrl = `${BLOG_PUBLIC_URL}/${post.slug}`;
   const shareTitle = post.social?.shareTitle || post.title;
+  const coverUrl = seoImage(post.coverImage?.url);
+  const coverAlt = imageAlt(post.coverImage, `${post.title} cover image`);
+  const contentHtml = ensureContentImageAlts(post.contentHtml, post.title);
 
   const body = `${header()}
 <main id="main" class="article-shell">
@@ -398,8 +486,8 @@ const renderPost = async (slug) => {
         <span>${formatDate(post.publishedAt || post.createdAt)} · ${post.readingTimeMinutes || 1} min read</span>
       </div>
     </div>
-    <img class="article-cover" src="${escapeHtml(post.coverImage?.url || "")}" alt="${escapeHtml(post.coverImage?.alt || post.title)}" />
-    <div class="article-content">${post.contentHtml}</div>
+    <img class="article-cover" src="${escapeHtml(coverUrl)}" alt="${escapeHtml(coverAlt)}" />
+    <div class="article-content">${contentHtml}</div>
     <div class="share-panel">
       <span>Share</span>
       <button data-share-copy="${escapeHtml(shareUrl)}">Copy link</button>
@@ -422,18 +510,19 @@ const renderPost = async (slug) => {
 ${footer(settingsRes.data)}`;
 
   return pageShell({
-    title: post.seo?.metaTitle || post.title,
-    description: post.seo?.metaDescription || post.excerpt,
+    title,
+    description,
     canonical,
-    image: post.coverImage?.url,
+    image: coverUrl,
+    ogType: "article",
     robots: robotsString(post.seo),
     body,
     jsonLd: {
       "@context": "https://schema.org",
       "@type": "BlogPosting",
       headline: post.title,
-      description: post.excerpt,
-      image: post.coverImage?.url,
+      description,
+      image: coverUrl,
       datePublished: post.publishedAt,
       dateModified: post.updatedAt,
       author: {
@@ -471,12 +560,16 @@ const renderAuthor = async (slug) => {
   </section>
   <section class="post-list">${posts.map(postCard).join("")}</section>
 </main>
-${footer(settingsRes.data)}`;
+  ${footer(settingsRes.data)}`;
   return pageShell({
-    title: `${author.name} - Vidhgrow Blog`,
-    description: author.bio || `Posts by ${author.name} on Vidhgrow Blog.`,
+    title: metaTitle(`${author.name} - Vidhgrow Blogs`, author.name),
+    description: metaDescription(
+      author.bio,
+      `Read posts by ${author.name} on Vidhgrow Blogs, including product updates, teacher workflows, course notes, and online learning insights.`,
+    ),
     canonical: `${BLOG_PUBLIC_URL}/author/${author.slug}`,
     image: author.avatar?.url,
+    ogType: "profile",
     body,
   });
 };
@@ -496,9 +589,9 @@ const renderFeed = async () => {
   return `<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0">
   <channel>
-    <title>Vidhgrow Blog</title>
+    <title>Vidhgrow Blogs</title>
     <link>${BLOG_PUBLIC_URL}</link>
-    <description>Platform news, feature releases, teacher workflows, course improvements, and product decisions from Vidhgrow.</description>
+    <description>${escapeHtml(HOME_SEO_DESCRIPTION)}</description>
     ${posts
       .map(
         (post) => `<item>
@@ -514,25 +607,83 @@ const renderFeed = async () => {
 </rss>`;
 };
 
-const serveStatic = async (res, filePath, contentType) => {
-  const content = await fs.readFile(path.join(__dirname, filePath));
+const assetCache = new Map();
+
+const minifyCss = (content) =>
+  String(content)
+    .replace(/\/\*[\s\S]*?\*\//g, "")
+    .replace(/\s+/g, " ")
+    .replace(/\s*([{}:;,>])\s*/g, "$1")
+    .replace(/;}/g, "}")
+    .trim();
+
+const minifyJs = (content) =>
+  String(content)
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .join(" ")
+    .replace(/\s*([{}()[\];,:])\s*/g, "$1")
+    .trim();
+
+const readAsset = async (filePath, transform) => {
+  const cacheKey = `${filePath}:${transform || "raw"}`;
+  if (assetCache.has(cacheKey)) return assetCache.get(cacheKey);
+
+  const raw = await fs.readFile(path.join(__dirname, filePath), "utf8");
+  const content = transform === "css" ? minifyCss(raw) : transform === "js" ? minifyJs(raw) : raw;
+  assetCache.set(cacheKey, content);
+  return content;
+};
+
+const serveStatic = async (res, filePath, contentType, options = {}) => {
+  const content = options.transform
+    ? await readAsset(filePath, options.transform)
+    : await fs.readFile(path.join(__dirname, filePath));
   res.writeHead(200, {
     "Content-Type": contentType,
     "Cache-Control": "public, max-age=86400",
+    "X-Content-Type-Options": "nosniff",
   });
   res.end(content);
 };
 
+const redirectToCanonicalHost = (req, res) => {
+  const canonicalHost = new URL(BLOG_PUBLIC_URL).host.toLowerCase();
+  const requestHost = String(req.headers["x-forwarded-host"] || req.headers.host || "")
+    .split(",")[0]
+    .trim()
+    .toLowerCase();
+
+  if (!requestHost || requestHost.includes("localhost") || requestHost === canonicalHost) {
+    return false;
+  }
+
+  if (requestHost === `www.${canonicalHost}` || requestHost.replace(/^www\./, "") === canonicalHost) {
+    const target = `${BLOG_PUBLIC_URL}${req.url || "/"}`;
+    res.writeHead(301, {
+      Location: target,
+      "Cache-Control": "public, max-age=3600",
+    });
+    res.end();
+    return true;
+  }
+
+  return false;
+};
+
 const server = http.createServer(async (req, res) => {
   try {
+    if (redirectToCanonicalHost(req, res)) return;
+
     const url = new URL(req.url, BLOG_ORIGIN);
     const pathname = decodeURIComponent(url.pathname);
 
     if (pathname === "/assets/styles.css") {
-      return serveStatic(res, "public/styles.css", "text/css; charset=utf-8");
+      return serveStatic(res, "public/styles.css", "text/css; charset=utf-8", { transform: "css" });
     }
     if (pathname === "/assets/app.js") {
-      return serveStatic(res, "public/app.js", "application/javascript; charset=utf-8");
+      return serveStatic(res, "public/app.js", "application/javascript; charset=utf-8", { transform: "js" });
     }
     if (pathname === "/logo.png") {
       return serveStatic(res, "public/logo.png", "image/png");
