@@ -132,6 +132,13 @@ const isHttpUrl = (value = "") => {
   }
 };
 
+const isCanceledRequest = (error) =>
+  error?.code === "ERR_CANCELED" ||
+  error?.name === "CanceledError" ||
+  error?.name === "AbortError";
+
+const SLUG_CHECK_TIMEOUT_MS = 3500;
+
 const authorFallback = (name = "Vidhgrow") => {
   const letter = String(name).trim().charAt(0).toUpperCase() || "V";
   const palette = [
@@ -205,7 +212,26 @@ const normaliseVideoEmbedUrl = (value = "") => {
   return "";
 };
 
-const buildPreviewHtml = (post, author) => {
+const buildRelatedPreviewPosts = (post, posts = []) => {
+  const currentSlug = post.slug;
+  const postTags = new Set(splitList(post.tags).map((tag) => tag.toLowerCase()));
+
+  const scored = posts
+    .filter((item) => item.slug && item.slug !== currentSlug)
+    .map((item) => {
+      const itemTags = Array.isArray(item.tags) ? item.tags : [];
+      const tagScore = itemTags.filter((tag) => postTags.has(String(tag).toLowerCase())).length;
+      const authorScore =
+        item.author?._id && post.author && item.author._id === post.author ? 2 : 0;
+      const categoryScore = item.category && item.category === post.category ? 1 : 0;
+      return { item, score: tagScore + authorScore + categoryScore };
+    })
+    .sort((a, b) => b.score - a.score);
+
+  return scored.slice(0, 3).map(({ item }) => item);
+};
+
+const buildPreviewHtml = (post, author, relatedPosts = []) => {
   const title = post.title || "Untitled draft";
   const excerpt = post.excerpt || "Add a concise summary before publishing.";
   const cover = post.coverImage?.url || "";
@@ -241,12 +267,24 @@ const buildPreviewHtml = (post, author) => {
     .content img{max-width:100%;border-radius:6px;display:block;margin:30px auto}
     .content figure{margin:34px 0}.content figcaption{font-size:14px;color:#64748b;text-align:center;margin-top:10px}
     .content iframe,.content video{width:100%;aspect-ratio:16/9;border:0;border-radius:6px;margin:30px 0;background:#111827}
+    .related{max-width:980px;margin:64px auto 0;border-top:1px solid #e5e7eb;padding-top:30px}
+    .related-head{display:flex;align-items:end;justify-content:space-between;gap:18px;margin-bottom:18px}
+    .related-head h2{font-size:24px;line-height:1.2;margin:0;color:#111827}
+    .related-head p{margin:6px 0 0;color:#64748b;font-size:14px}
+    .related-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px}
+    .related-card{border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;background:#fff}
+    .related-card img,.related-card .related-empty{width:100%;aspect-ratio:16/10;object-fit:cover;background:#eef2ff;display:block}
+    .related-card div{padding:14px}
+    .related-card h3{font-size:16px;line-height:1.35;margin:0 0 8px;color:#111827}
+    .related-card p{font-size:13px;line-height:1.55;margin:0;color:#64748b}
+    .related-card a{color:inherit;text-decoration:none}
     @media(max-width:640px){.shell{padding:20px 16px 56px}.content{font-size:18px}header{align-items:flex-start;flex-direction:column}}
+    @media(max-width:760px){.related-head{display:block}.related-grid{grid-template-columns:1fr}}
   </style>
 </head>
 <body>
   <div class="shell">
-    <header><div class="brand">Vidhgrow <em>Newsroom</em></div><div class="meta">${post.category || "platform"}</div></header>
+    <header><div class="brand">Vidhgrow <em>Blogs</em></div><div class="meta">${post.category || "platform"}</div></header>
     <article>
       <h1>${title}</h1>
       <p class="excerpt">${excerpt}</p>
@@ -254,6 +292,40 @@ const buildPreviewHtml = (post, author) => {
       ${cover ? `<img class="cover" src="${cover}" alt="${post.coverImage?.alt || title}" />` : ""}
       <div class="content">${post.contentHtml || ""}</div>
     </article>
+    <section class="related" aria-labelledby="related-title">
+      <div class="related-head">
+        <div>
+          <h2 id="related-title">Related blogs</h2>
+          <p>Shown after the article to keep readers moving through useful platform updates.</p>
+        </div>
+      </div>
+      <div class="related-grid">
+        ${
+          (relatedPosts.length
+            ? relatedPosts
+            : [
+                { title: "Related platform update", excerpt: "A matching blog card will appear here after more posts are published.", coverImage: {} },
+                { title: "Course builder note", excerpt: "Related cards use shared tags, category, or author when possible.", coverImage: {} },
+                { title: "Teacher workflow story", excerpt: "This preview shows the final page structure even for a draft.", coverImage: {} },
+              ]
+          )
+            .map(
+              (item) => `<article class="related-card">
+                ${
+                  item.coverImage?.url
+                    ? `<img src="${item.coverImage.url}" alt="${item.coverImage.alt || item.title}" />`
+                    : `<span class="related-empty"></span>`
+                }
+                <div>
+                  <h3>${item.slug ? `<a href="/${item.slug}">${item.title}</a>` : item.title}</h3>
+                  <p>${item.excerpt || "Related blog summary."}</p>
+                </div>
+              </article>`,
+            )
+            .join("")
+        }
+      </div>
+    </section>
   </div>
 </body>
 </html>`;
@@ -269,22 +341,35 @@ const buildSnapshot = (post) =>
 const BlogManagement = () => {
   const editorRef = useRef(null);
   const pendingActionRef = useRef(null);
+  const postSlugRequestRef = useRef(null);
+  const authorSlugRequestRef = useRef(null);
+  const postSlugSeqRef = useRef(0);
+  const authorSlugSeqRef = useRef(0);
+  const slugCheckCacheRef = useRef(new Map());
+  const originalPostSlugRef = useRef("");
+  const originalAuthorSlugRef = useRef("");
+  const editorInitialHtmlRef = useRef(emptyPost.contentHtml);
   const [tab, setTab] = useState("posts");
   const [step, setStep] = useState(0);
+  const [editorResetKey, setEditorResetKey] = useState(0);
   const [posts, setPosts] = useState([]);
   const [authors, setAuthors] = useState([]);
   const [comments, setComments] = useState([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [savingAuthor, setSavingAuthor] = useState(false);
+  const [showAuthorForm, setShowAuthorForm] = useState(false);
   const [postForm, setPostForm] = useState(emptyPost);
   const [editingPostId, setEditingPostId] = useState(null);
   const [baseline, setBaseline] = useState(buildSnapshot(emptyPost));
   const [slugTouched, setSlugTouched] = useState(false);
   const [slugState, setSlugState] = useState({ status: "idle", message: "" });
+  const [slugRetryKey, setSlugRetryKey] = useState(0);
   const [authorForm, setAuthorForm] = useState(emptyAuthor);
   const [editingAuthorId, setEditingAuthorId] = useState(null);
   const [authorSlugTouched, setAuthorSlugTouched] = useState(false);
   const [authorSlugState, setAuthorSlugState] = useState({ status: "idle", message: "" });
+  const [authorSlugRetryKey, setAuthorSlugRetryKey] = useState(0);
   const [previewSize, setPreviewSize] = useState("desktop");
   const [linkUrl, setLinkUrl] = useState("");
   const [imageDraft, setImageDraft] = useState({ file: null, url: "", alt: "", align: "wide" });
@@ -302,6 +387,9 @@ const BlogManagement = () => {
     const h1Count = (postForm.contentHtml.match(/<h1[\s>]/gi) || []).length;
     const metaTitle = postForm.seo.metaTitle || postForm.title;
     const metaDescription = postForm.seo.metaDescription || postForm.excerpt;
+    const slugReady =
+      slugState.status === "available" ||
+      (editingPostId && !["checking", "taken", "error"].includes(slugState.status));
 
     return [
       ["Exactly one H1 in the article body", h1Count === 1],
@@ -309,7 +397,7 @@ const BlogManagement = () => {
       ["Meta description between 70 and 170 characters", metaDescription.length >= 70 && metaDescription.length <= 170],
       ["At least 300 words for long-form ranking", wordCount >= 300],
       ["Cover image and meaningful alt text", !!postForm.coverImage.url && postForm.coverImage.alt.length >= 8],
-      ["Slug checked and available", slugState.status === "available" || !!editingPostId],
+      ["Slug checked and available", slugReady],
       ["Author selected", !!postForm.author],
     ];
   }, [editingPostId, postForm, slugState.status]);
@@ -343,34 +431,70 @@ const BlogManagement = () => {
   }, [postForm.title, slugTouched]);
 
   useEffect(() => {
-    if (!postForm.slug || postForm.slug.length < 5) {
+    const slug = postForm.slug.trim();
+    postSlugRequestRef.current?.abort();
+    const requestId = ++postSlugSeqRef.current;
+
+    if (!slug || slug.length < 5) {
       setSlugState({ status: "idle", message: "Use at least 5 characters" });
       return;
     }
 
+    if (editingPostId && originalPostSlugRef.current && slug === originalPostSlugRef.current) {
+      setSlugState({ status: "available", message: "Current blog slug" });
+      return;
+    }
+
+    const cacheKey = `post:${editingPostId || "new"}:${slug}`;
+    const cached = slugCheckCacheRef.current.get(cacheKey);
+    if (cached) {
+      setSlugState(cached);
+      return;
+    }
+
+    setSlugState((prev) =>
+      prev.status === "checking" ? prev : { status: "idle", message: `${BLOG_URL}/${slug}` },
+    );
+
     const timer = window.setTimeout(async () => {
+      const controller = new AbortController();
+      postSlugRequestRef.current = controller;
+
       try {
         setSlugState({ status: "checking", message: "Checking slug..." });
         const res = await axios.get("/blogs/admin/slugs/check", {
           params: {
             type: "post",
-            slug: postForm.slug,
+            slug,
             excludeId: editingPostId || undefined,
           },
+          signal: controller.signal,
+          timeout: SLUG_CHECK_TIMEOUT_MS,
         });
         const data = res.data.data;
-        setPostForm((prev) => (prev.slug === data.slug ? prev : { ...prev, slug: data.slug }));
-        setSlugState({
+        if (controller.signal.aborted || requestId !== postSlugSeqRef.current) return;
+        const nextState = {
           status: data.available ? "available" : "taken",
           message: data.available ? "Slug is available" : data.reason || "Slug is already in use",
-        });
+        };
+        slugCheckCacheRef.current.set(cacheKey, nextState);
+        setSlugState(nextState);
       } catch (error) {
-        setSlugState({ status: "error", message: "Could not check slug" });
+        if (isCanceledRequest(error) || requestId !== postSlugSeqRef.current) return;
+        setSlugState({
+          status: "error",
+          message:
+            error.response?.data?.message ||
+            "Slug check did not respond. You can retry, or save draft and the backend will still validate it.",
+        });
       }
-    }, 450);
+    }, 350);
 
-    return () => window.clearTimeout(timer);
-  }, [editingPostId, postForm.slug]);
+    return () => {
+      window.clearTimeout(timer);
+      postSlugRequestRef.current?.abort();
+    };
+  }, [editingPostId, postForm.slug, slugRetryKey]);
 
   useEffect(() => {
     if (!authorSlugTouched && authorForm.name) {
@@ -379,34 +503,72 @@ const BlogManagement = () => {
   }, [authorForm.name, authorSlugTouched]);
 
   useEffect(() => {
-    if (!authorForm.slug || authorForm.slug.length < 2) {
+    const slug = authorForm.slug.trim();
+    authorSlugRequestRef.current?.abort();
+    const requestId = ++authorSlugSeqRef.current;
+
+    if (!slug || slug.length < 2) {
       setAuthorSlugState({ status: "idle", message: "Use at least 2 characters" });
       return;
     }
 
+    if (editingAuthorId && originalAuthorSlugRef.current && slug === originalAuthorSlugRef.current) {
+      setAuthorSlugState({ status: "available", message: "Current author slug" });
+      return;
+    }
+
+    const cacheKey = `author:${editingAuthorId || "new"}:${slug}`;
+    const cached = slugCheckCacheRef.current.get(cacheKey);
+    if (cached) {
+      setAuthorSlugState(cached);
+      return;
+    }
+
+    setAuthorSlugState((prev) =>
+      prev.status === "checking"
+        ? prev
+        : { status: "idle", message: `${BLOG_URL}/author/${slug}` },
+    );
+
     const timer = window.setTimeout(async () => {
+      const controller = new AbortController();
+      authorSlugRequestRef.current = controller;
+
       try {
         setAuthorSlugState({ status: "checking", message: "Checking slug..." });
         const res = await axios.get("/blogs/admin/slugs/check", {
           params: {
             type: "author",
-            slug: authorForm.slug,
+            slug,
             excludeId: editingAuthorId || undefined,
           },
+          signal: controller.signal,
+          timeout: SLUG_CHECK_TIMEOUT_MS,
         });
         const data = res.data.data;
-        setAuthorForm((prev) => (prev.slug === data.slug ? prev : { ...prev, slug: data.slug }));
-        setAuthorSlugState({
+        if (controller.signal.aborted || requestId !== authorSlugSeqRef.current) return;
+        const nextState = {
           status: data.available ? "available" : "taken",
           message: data.available ? "Author slug is available" : data.reason || "Author slug is already in use",
+        };
+        slugCheckCacheRef.current.set(cacheKey, nextState);
+        setAuthorSlugState(nextState);
+      } catch (error) {
+        if (isCanceledRequest(error) || requestId !== authorSlugSeqRef.current) return;
+        setAuthorSlugState({
+          status: "error",
+          message:
+            error.response?.data?.message ||
+            "Author slug check did not respond. You can retry, or save and the backend will still validate it.",
         });
-      } catch {
-        setAuthorSlugState({ status: "error", message: "Could not check slug" });
       }
-    }, 450);
+    }, 350);
 
-    return () => window.clearTimeout(timer);
-  }, [authorForm.slug, editingAuthorId]);
+    return () => {
+      window.clearTimeout(timer);
+      authorSlugRequestRef.current?.abort();
+    };
+  }, [authorForm.slug, editingAuthorId, authorSlugRetryKey]);
 
   useEffect(() => {
     const handleBeforeUnload = (event) => {
@@ -449,9 +611,16 @@ const BlogManagement = () => {
 
   const syncEditor = () => {
     if (editorRef.current) {
-      updatePost("contentHtml", editorRef.current.innerHTML);
+      const html = editorRef.current.innerHTML;
+      editorInitialHtmlRef.current = html;
+      updatePost("contentHtml", html);
     }
   };
+
+  useEffect(() => {
+    if (step !== 1 || !editorRef.current) return;
+    editorRef.current.innerHTML = editorInitialHtmlRef.current || "";
+  }, [editorResetKey, step]);
 
   const command = (name, value = null) => {
     editorRef.current?.focus();
@@ -478,17 +647,17 @@ const BlogManagement = () => {
 
   const resetPostForm = (authorId = authors[0]?._id || "") => {
     const next = { ...structuredClone(emptyPost), author: authorId };
+    postSlugRequestRef.current?.abort();
+    originalPostSlugRef.current = "";
+    editorInitialHtmlRef.current = next.contentHtml || "";
     setEditingPostId(null);
     setPostForm(next);
     setBaseline(buildSnapshot(next));
     setSlugTouched(false);
+    setSlugState({ status: "idle", message: "Use at least 5 characters" });
     setStep(0);
-    window.setTimeout(() => {
-      if (editorRef.current) editorRef.current.innerHTML = next.contentHtml;
-    }, 0);
+    setEditorResetKey((value) => value + 1);
   };
-
-  const startNewPost = () => guardUnsaved(() => resetPostForm());
 
   const editPost = (postId) =>
     guardUnsaved(async () => {
@@ -509,14 +678,16 @@ const BlogManagement = () => {
           social: { ...emptyPost.social, ...(post.social || {}) },
           coverImage: { ...emptyPost.coverImage, ...(post.coverImage || {}) },
         };
+        postSlugRequestRef.current?.abort();
+        originalPostSlugRef.current = next.slug || "";
+        editorInitialHtmlRef.current = next.contentHtml || "";
         setEditingPostId(postId);
         setPostForm(next);
         setBaseline(buildSnapshot(next));
         setSlugTouched(true);
+        setSlugState({ status: "available", message: "Current blog slug" });
         setStep(0);
-        window.setTimeout(() => {
-          if (editorRef.current) editorRef.current.innerHTML = next.contentHtml || "";
-        }, 0);
+        setEditorResetKey((value) => value + 1);
       } catch (error) {
         toast.error(error.response?.data?.message || "Failed to open post");
       } finally {
@@ -525,6 +696,9 @@ const BlogManagement = () => {
     });
 
   const validatePost = (mode, candidate = postForm) => {
+    const slugIsChecking = slugState.status === "checking";
+    if (slugIsChecking) return "Wait for the slug check to finish";
+
     if (mode !== "published") {
       if (candidate.slug && candidate.slug.trim().length < 5) return "Slug must be at least 5 characters";
       if (slugState.status === "taken") return "Choose an available slug";
@@ -545,6 +719,8 @@ const BlogManagement = () => {
   };
 
   const savePost = async (mode = "draft", options = {}) => {
+    if (saving) return false;
+
     const candidate = {
       ...postForm,
       contentHtml: editorRef.current?.innerHTML || postForm.contentHtml,
@@ -581,9 +757,13 @@ const BlogManagement = () => {
         coverImage: { ...candidate.coverImage, ...(savedPost.coverImage || {}) },
         status: mode,
       };
+      originalPostSlugRef.current = next.slug || "";
+      editorInitialHtmlRef.current = next.contentHtml || "";
+      slugCheckCacheRef.current.clear();
       setPostForm(next);
       setEditingPostId(savedId || editingPostId);
       setBaseline(buildSnapshot(next));
+      setSlugState({ status: "available", message: "Current blog slug" });
       toast.success(mode === "published" ? "Blog published" : "Draft saved");
       await fetchAll();
       options.after?.();
@@ -740,8 +920,18 @@ const BlogManagement = () => {
   };
 
   const saveAuthor = async () => {
+    if (savingAuthor) return;
+
     if (authorForm.name.trim().length < 2) {
       toast.error("Author name is required");
+      return;
+    }
+    if (!authorForm.slug.trim()) {
+      toast.error("Author slug is required");
+      return;
+    }
+    if (authorSlugState.status === "checking") {
+      toast.error("Wait for the author slug check to finish");
       return;
     }
     if (authorSlugState.status === "taken") {
@@ -754,29 +944,50 @@ const BlogManagement = () => {
         ...authorForm,
         slug: slugify(authorForm.slug || authorForm.name),
       };
+      setSavingAuthor(true);
       const request = editingAuthorId
         ? axios.put(`/blogs/admin/authors/${editingAuthorId}`, payload)
         : axios.post("/blogs/admin/authors", payload);
       await request;
       toast.success(editingAuthorId ? "Author saved" : "Author created");
+      originalAuthorSlugRef.current = "";
+      slugCheckCacheRef.current.clear();
       setAuthorForm(emptyAuthor);
       setEditingAuthorId(null);
       setAuthorSlugTouched(false);
+      setAuthorSlugState({ status: "idle", message: "" });
+      setShowAuthorForm(false);
       await fetchAll();
     } catch (error) {
       toast.error(error.response?.data?.message || "Failed to save author");
+    } finally {
+      setSavingAuthor(false);
     }
   };
 
   const editAuthor = (author) => {
+    authorSlugRequestRef.current?.abort();
+    originalAuthorSlugRef.current = author.slug || "";
     setEditingAuthorId(author._id);
     setAuthorSlugTouched(true);
+    setAuthorSlugState({ status: "available", message: "Current author slug" });
+    setShowAuthorForm(true);
     setAuthorForm({
       ...emptyAuthor,
       ...author,
       avatar: { ...emptyAuthor.avatar, ...(author.avatar || {}) },
       socialLinks: { ...emptyAuthor.socialLinks, ...(author.socialLinks || {}) },
     });
+  };
+
+  const startCreateAuthor = () => {
+    authorSlugRequestRef.current?.abort();
+    originalAuthorSlugRef.current = "";
+    setEditingAuthorId(null);
+    setAuthorForm(emptyAuthor);
+    setAuthorSlugTouched(false);
+    setAuthorSlugState({ status: "idle", message: "Use at least 2 characters" });
+    setShowAuthorForm(true);
   };
 
   const deleteAuthor = async (authorId) => {
@@ -802,6 +1013,10 @@ const BlogManagement = () => {
 
   const stepIsReady = (index) => {
     if (index === 0) {
+      const slugReady =
+        slugState.status === "available" ||
+        (editingPostId && !["checking", "taken", "error"].includes(slugState.status));
+
       return (
         postForm.title.trim().length >= 5 &&
         postForm.slug.trim().length >= 5 &&
@@ -809,7 +1024,7 @@ const BlogManagement = () => {
         postForm.excerpt.trim().length >= 40 &&
         postForm.coverImage.url &&
         postForm.coverImage.alt.trim().length >= 8 &&
-        slugState.status !== "taken"
+        slugReady
       );
     }
     if (index === 1) return !!stripHtml(postForm.contentHtml);
@@ -817,27 +1032,37 @@ const BlogManagement = () => {
     return true;
   };
 
+  const canGoNext = step < steps.length - 1 && stepIsReady(step);
+  const saveDisabled = saving || loading || slugState.status === "checking" || !!uploading;
+  const publishDisabled = saveDisabled || seoChecks.some(([, ok]) => !ok);
+  const authorSaveDisabled =
+    savingAuthor || loading || authorSlugState.status === "checking" || uploading === "author-avatar";
+
   const previewWidth =
     previewSize === "mobile" ? "390px" : previewSize === "tablet" ? "760px" : "100%";
 
   const StepButton = ({ index }) => {
     const active = step === index;
+    const ready = stepIsReady(index);
     return (
-      <button
-        type="button"
-        onClick={() => setStep(index)}
-        className={`min-w-[160px] flex-1 rounded-lg border p-3 text-left transition ${
+      <div
+        aria-current={active ? "step" : undefined}
+        aria-disabled="true"
+        className={`step-status min-w-[160px] flex-1 cursor-default select-none rounded-lg border p-3 text-left transition ${
           active
             ? "border-blue-600 bg-blue-50 text-blue-900"
-            : "border-gray-200 bg-white text-gray-600 hover:border-gray-300"
+            : ready
+              ? "border-gray-200 bg-white text-gray-600"
+              : "border-gray-200 bg-gray-50 text-gray-400"
         }`}
+        title="Use the Back and Next buttons to move through the editor"
       >
         <span className="flex items-center justify-between gap-3">
           <span className="text-sm font-bold">{steps[index].label}</span>
-          {stepIsReady(index) && <Check className="h-4 w-4 text-emerald-600" />}
+          {ready && <Check className="h-4 w-4 text-emerald-600" />}
         </span>
         <span className="mt-1 block text-xs">{steps[index].description}</span>
-      </button>
+      </div>
     );
   };
 
@@ -876,6 +1101,18 @@ const BlogManagement = () => {
             >
               {slugState.message || `${BLOG_URL}/${postForm.slug || "slug"}`}
             </p>
+            {slugState.status === "error" && (
+              <button
+                type="button"
+                onClick={() => {
+                  slugCheckCacheRef.current.delete(`post:${editingPostId || "new"}:${postForm.slug.trim()}`);
+                  setSlugRetryKey((value) => value + 1);
+                }}
+                className="text-xs font-bold text-blue-700 underline underline-offset-4"
+              >
+                Retry slug check
+              </button>
+            )}
           </label>
           <label className="space-y-1">
             <span className="text-xs font-bold uppercase tracking-wide text-gray-500">Author</span>
@@ -1003,7 +1240,7 @@ const BlogManagement = () => {
               title={label}
               className="rounded border border-gray-200 p-2 text-gray-700 hover:border-blue-300 hover:bg-blue-50 hover:text-blue-700"
             >
-              <Icon className="h-4 w-4" />
+              {React.createElement(Icon, { className: "h-4 w-4" })}
             </button>
           ))}
           <button
@@ -1071,7 +1308,6 @@ const BlogManagement = () => {
           suppressContentEditableWarning
           onInput={syncEditor}
           className="blog-editor min-h-[680px] overflow-auto px-6 py-6 font-serif text-[18px] leading-8 outline-none"
-          dangerouslySetInnerHTML={{ __html: postForm.contentHtml }}
         />
         <aside className="space-y-5 border-t border-gray-200 p-4 xl:border-l xl:border-t-0">
           <div>
@@ -1279,7 +1515,7 @@ const BlogManagement = () => {
             Full page preview
           </h2>
           <p className="mt-1 text-sm text-gray-500">
-            Desktop preview is intentionally wide here so layout, media, and line length are easier to judge.
+            This is the full article page, including the related blogs section that appears after the body.
           </p>
         </div>
         <div className="flex gap-2">
@@ -1299,7 +1535,7 @@ const BlogManagement = () => {
               }`}
               title={`${size} preview`}
             >
-              <Icon className="h-4 w-4" />
+              {React.createElement(Icon, { className: "h-4 w-4" })}
             </button>
           ))}
         </div>
@@ -1307,8 +1543,12 @@ const BlogManagement = () => {
       <div className="mt-4 overflow-auto rounded border border-gray-200 bg-gray-100 p-3">
         <iframe
           title="Blog preview"
-          srcDoc={buildPreviewHtml(postForm, selectedAuthor)}
-          style={{ width: previewWidth, height: 860, margin: "0 auto", display: "block" }}
+          srcDoc={buildPreviewHtml(
+            postForm,
+            selectedAuthor,
+            buildRelatedPreviewPosts(postForm, posts),
+          )}
+          style={{ width: previewWidth, height: 1100, margin: "0 auto", display: "block" }}
           className="rounded bg-white shadow-sm"
         />
       </div>
@@ -1316,7 +1556,7 @@ const BlogManagement = () => {
   );
 
   return (
-    <div className="space-y-6 text-gray-900">
+    <div className="blog-admin space-y-6 text-gray-900">
       <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
         <div>
           <p className="text-sm font-semibold uppercase tracking-[0.18em] text-blue-700">
@@ -1326,20 +1566,21 @@ const BlogManagement = () => {
             Editorial, SEO, authors, comments
           </h1>
           <p className="mt-2 max-w-3xl text-sm leading-6 text-gray-600">
-            Create server-rendered platform news and product stories for blogs.vidhgrow.online.
+            Create server-rendered blog posts, product updates, guides, and platform stories for blogs.vidhgrow.online.
             Drafts stay private until you choose Publish.
           </p>
         </div>
 
         <div className="flex flex-wrap gap-2">
           {[
-            ["posts", FileText, "Posts"],
+            ["posts", FileText, "Blogs"],
             ["authors", UserRound, "Authors"],
             ["comments", MessageSquare, "Comments"],
           ].map(([id, Icon, label]) => (
             <button
               key={id}
               type="button"
+              disabled={saving || savingAuthor || !!uploading}
               onClick={() => {
                 if (id === tab) return;
                 if (tab === "posts") guardUnsaved(() => setTab(id));
@@ -1349,9 +1590,9 @@ const BlogManagement = () => {
                 tab === id
                   ? "border-gray-950 bg-gray-950 text-white"
                   : "border-gray-300 bg-white text-gray-700 hover:border-gray-500"
-              }`}
+              } disabled:cursor-not-allowed disabled:opacity-60`}
             >
-              <Icon className="h-4 w-4" />
+              {React.createElement(Icon, { className: "h-4 w-4" })}
               {label}
             </button>
           ))}
@@ -1361,18 +1602,9 @@ const BlogManagement = () => {
       {tab === "posts" && (
         <div className="grid gap-6 xl:grid-cols-[340px_minmax(0,1fr)]">
           <aside className="space-y-4">
-            <button
-              type="button"
-              onClick={startNewPost}
-              className="flex w-full items-center justify-center gap-2 rounded-md bg-blue-600 px-4 py-3 text-sm font-bold text-white shadow-sm hover:bg-blue-700"
-            >
-              <Plus className="h-4 w-4" />
-              New blog post
-            </button>
-
             <div className="rounded-md border border-gray-200 bg-white">
               <div className="border-b border-gray-200 px-4 py-3">
-                <h2 className="font-semibold">Posts</h2>
+                <h2 className="font-semibold">Blogs</h2>
               </div>
               <div className="max-h-[720px] divide-y divide-gray-100 overflow-auto">
                 {posts.map((post) => (
@@ -1396,8 +1628,9 @@ const BlogManagement = () => {
                       <span>{post.author?.name || "No author"}</span>
                       <button
                         type="button"
+                        disabled={loading || saving}
                         onClick={() => deletePost(post._id)}
-                        className="inline-flex items-center gap-1 text-red-600 hover:text-red-700"
+                        className="inline-flex items-center gap-1 text-red-600 hover:text-red-700 disabled:cursor-not-allowed disabled:opacity-50"
                       >
                         <Trash2 className="h-3.5 w-3.5" />
                         Delete
@@ -1432,8 +1665,8 @@ const BlogManagement = () => {
                   <button
                     type="button"
                     onClick={() => setStep((value) => Math.max(0, value - 1))}
-                    disabled={step === 0}
-                    className="inline-flex items-center gap-2 rounded border border-gray-300 px-4 py-2 text-sm font-bold text-gray-700 disabled:opacity-40"
+                    disabled={step === 0 || saving || loading}
+                    className="inline-flex items-center gap-2 rounded border border-gray-300 px-4 py-2 text-sm font-bold text-gray-700 disabled:cursor-not-allowed disabled:opacity-40"
                   >
                     <ChevronLeft className="h-4 w-4" />
                     Back
@@ -1441,8 +1674,8 @@ const BlogManagement = () => {
                   <button
                     type="button"
                     onClick={() => setStep((value) => Math.min(steps.length - 1, value + 1))}
-                    disabled={step === steps.length - 1}
-                    className="inline-flex items-center gap-2 rounded border border-gray-300 px-4 py-2 text-sm font-bold text-gray-700 disabled:opacity-40"
+                    disabled={!canGoNext || saving || loading}
+                    className="inline-flex items-center gap-2 rounded border border-gray-300 px-4 py-2 text-sm font-bold text-gray-700 disabled:cursor-not-allowed disabled:opacity-40"
                   >
                     Next
                     <ChevronRight className="h-4 w-4" />
@@ -1450,8 +1683,8 @@ const BlogManagement = () => {
                   <button
                     type="button"
                     onClick={() => savePost("draft")}
-                    disabled={saving || loading}
-                    className="inline-flex items-center gap-2 rounded bg-gray-900 px-4 py-2 text-sm font-bold text-white disabled:opacity-60"
+                    disabled={saveDisabled}
+                    className="inline-flex items-center gap-2 rounded bg-gray-900 px-4 py-2 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     <Save className="h-4 w-4" />
                     {postForm.status === "published" ? "Move to draft" : "Save draft"}
@@ -1459,8 +1692,8 @@ const BlogManagement = () => {
                   <button
                     type="button"
                     onClick={() => savePost("published")}
-                    disabled={saving || loading}
-                    className="inline-flex items-center gap-2 rounded bg-blue-600 px-4 py-2 text-sm font-bold text-white disabled:opacity-60"
+                    disabled={publishDisabled}
+                    className="inline-flex items-center gap-2 rounded bg-blue-600 px-4 py-2 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     <Check className="h-4 w-4" />
                     Publish
@@ -1473,7 +1706,31 @@ const BlogManagement = () => {
       )}
 
       {tab === "authors" && (
-        <div className="grid gap-6 lg:grid-cols-[420px_minmax(0,1fr)]">
+        <div className="space-y-4">
+          <div className="flex flex-col gap-3 rounded-md border border-gray-200 bg-white p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h2 className="font-bold">Authors</h2>
+              <p className="mt-1 text-sm text-gray-500">
+                Existing public authors are listed here. Open the form only when you need to create or edit one.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={startCreateAuthor}
+              disabled={savingAuthor || loading || !!uploading || showAuthorForm}
+              className="inline-flex items-center justify-center gap-2 rounded bg-blue-600 px-4 py-3 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              <Plus className="h-4 w-4" />
+              Create author
+            </button>
+          </div>
+
+          <div
+            className={`grid gap-6 ${
+              showAuthorForm || editingAuthorId ? "lg:grid-cols-[420px_minmax(0,1fr)]" : ""
+            }`}
+          >
+            {(showAuthorForm || editingAuthorId) && (
           <div className="rounded-md border border-gray-200 bg-white p-4 shadow-sm">
             <h2 className="font-bold">{editingAuthorId ? "Edit author" : "Create author"}</h2>
             <p className="mt-1 text-sm leading-6 text-gray-500">
@@ -1516,6 +1773,20 @@ const BlogManagement = () => {
                 >
                   {authorSlugState.message}
                 </p>
+                {authorSlugState.status === "error" && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      slugCheckCacheRef.current.delete(
+                        `author:${editingAuthorId || "new"}:${authorForm.slug.trim()}`,
+                      );
+                      setAuthorSlugRetryKey((value) => value + 1);
+                    }}
+                    className="text-xs font-bold text-blue-700 underline underline-offset-4"
+                  >
+                    Retry slug check
+                  </button>
+                )}
               </label>
               <label className="block space-y-1">
                 <span className="text-xs font-bold uppercase tracking-wide text-gray-500">Title</span>
@@ -1577,23 +1848,35 @@ const BlogManagement = () => {
               ))}
             </div>
             <div className="mt-4 flex gap-2">
-              <button onClick={saveAuthor} className="flex-1 rounded bg-gray-950 px-4 py-3 text-sm font-bold text-white">
-                {editingAuthorId ? "Save author" : "Create author"}
+              <button
+                type="button"
+                onClick={saveAuthor}
+                disabled={authorSaveDisabled}
+                className="flex-1 rounded bg-gray-950 px-4 py-3 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {savingAuthor ? "Saving..." : editingAuthorId ? "Save author" : "Create author"}
               </button>
-              {editingAuthorId && (
+              {(editingAuthorId || showAuthorForm) && (
                 <button
+                  type="button"
+                  disabled={savingAuthor}
                   onClick={() => {
+                    authorSlugRequestRef.current?.abort();
+                    originalAuthorSlugRef.current = "";
                     setEditingAuthorId(null);
                     setAuthorForm(emptyAuthor);
                     setAuthorSlugTouched(false);
+                    setAuthorSlugState({ status: "idle", message: "Use at least 2 characters" });
+                    setShowAuthorForm(false);
                   }}
-                  className="rounded border border-gray-300 px-4 py-3 text-sm font-bold"
+                  className="rounded border border-gray-300 px-4 py-3 text-sm font-bold disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   Cancel
                 </button>
               )}
             </div>
           </div>
+            )}
 
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
             {authors.map((author) => (
@@ -1608,15 +1891,31 @@ const BlogManagement = () => {
                 <p className="mt-1 text-sm font-semibold text-blue-700">{author.title || "No title"}</p>
                 <p className="mt-3 line-clamp-3 text-sm leading-6 text-gray-600">{author.bio || "No bio yet."}</p>
                 <div className="mt-4 flex gap-2">
-                  <button onClick={() => editAuthor(author)} className="rounded border border-gray-300 px-3 py-2 text-sm font-semibold">
+                  <button
+                    type="button"
+                    onClick={() => editAuthor(author)}
+                    disabled={savingAuthor || loading}
+                    className="rounded border border-gray-300 px-3 py-2 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-50"
+                  >
                     Edit
                   </button>
-                  <button onClick={() => deleteAuthor(author._id)} className="rounded border border-red-200 px-3 py-2 text-sm font-semibold text-red-700">
+                  <button
+                    type="button"
+                    onClick={() => deleteAuthor(author._id)}
+                    disabled={savingAuthor || loading}
+                    className="rounded border border-red-200 px-3 py-2 text-sm font-semibold text-red-700 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
                     Delete
                   </button>
                 </div>
               </div>
             ))}
+            {!authors.length && (
+              <div className="rounded-md border border-dashed border-gray-300 bg-white p-8 text-sm text-gray-500">
+                No authors yet. Create the first author before publishing blogs.
+              </div>
+            )}
+          </div>
           </div>
         </div>
       )}
@@ -1639,8 +1938,10 @@ const BlogManagement = () => {
                   {["visible", "hidden", "removed"].map((commentStatus) => (
                     <button
                       key={commentStatus}
+                      type="button"
+                      disabled={loading || comment.status === commentStatus}
                       onClick={() => updateComment(comment._id, commentStatus)}
-                      className={`rounded border px-3 py-2 text-xs font-bold capitalize ${
+                      className={`rounded border px-3 py-2 text-xs font-bold capitalize disabled:cursor-not-allowed disabled:opacity-60 ${
                         comment.status === commentStatus
                           ? "border-gray-950 bg-gray-950 text-white"
                           : "border-gray-300 text-gray-600"
@@ -1675,23 +1976,26 @@ const BlogManagement = () => {
               <button
                 type="button"
                 onClick={() => setConfirmModal(false)}
-                className="rounded border border-gray-300 px-3 py-2 text-sm font-bold text-gray-700"
+                disabled={saving}
+                className="rounded border border-gray-300 px-3 py-2 text-sm font-bold text-gray-700 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 Continue editing
               </button>
               <button
                 type="button"
+                disabled={saveDisabled}
                 onClick={async () => {
                   await savePost("draft", { after: runPendingAction });
                 }}
-                className="rounded bg-blue-600 px-3 py-2 text-sm font-bold text-white"
+                className="rounded bg-blue-600 px-3 py-2 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-60"
               >
-                Save draft
+                {saving ? "Saving..." : "Save draft"}
               </button>
               <button
                 type="button"
                 onClick={runPendingAction}
-                className="rounded bg-gray-950 px-3 py-2 text-sm font-bold text-white"
+                disabled={saving}
+                className="rounded bg-gray-950 px-3 py-2 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-60"
               >
                 Leave
               </button>
@@ -1701,9 +2005,16 @@ const BlogManagement = () => {
       )}
 
       <style>{`
+        .blog-admin button:not(:disabled) { cursor: pointer; }
+        .blog-admin button:disabled { cursor: not-allowed; }
+        .blog-admin input:disabled,
+        .blog-admin textarea:disabled,
+        .blog-admin select:disabled { cursor: not-allowed; background: #f9fafb; color: #9ca3af; }
         .blog-editor h1 { font-size: 2.25rem; line-height: 1.15; font-family: Inter, ui-sans-serif, system-ui; font-weight: 800; margin: 1.4rem 0 .7rem; }
         .blog-editor h2 { font-size: 1.65rem; line-height: 1.2; font-family: Inter, ui-sans-serif, system-ui; font-weight: 750; margin: 1.25rem 0 .6rem; }
         .blog-editor h3 { font-size: 1.25rem; line-height: 1.25; font-family: Inter, ui-sans-serif, system-ui; font-weight: 750; margin: 1.1rem 0 .5rem; }
+        .blog-editor { caret-color: #2563eb; }
+        .blog-editor:empty::before { content: "Start writing the blog body..."; color: #94a3b8; }
         .blog-editor p { margin: .75rem 0; }
         .blog-editor blockquote { border-left: 4px solid #3b82f6; background: #eff6ff; padding: .7rem 1rem; margin: 1.2rem 0; font-style: italic; }
         .blog-editor a { color: #2563eb; text-decoration: underline; text-underline-offset: 4px; }

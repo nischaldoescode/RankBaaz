@@ -174,7 +174,7 @@ const pageShell = ({
 const header = () => `<header class="site-header">
   <a class="wordmark" href="/">
     <img src="/logo.png" alt="" width="40" height="40" />
-    <span>Vidhgrow <em>Newsroom</em></span>
+    <span>Vidhgrow <em>Blogs</em></span>
   </a>
   <nav aria-label="Primary">
     <a href="/">Latest</a>
@@ -240,7 +240,7 @@ const renderHome = async (url) => {
 <main id="main" class="home-shell">
   <section class="home-intro">
     <div class="home-copy">
-      <p class="eyebrow">Vidhgrow Newsroom</p>
+      <p class="eyebrow">Vidhgrow Blogs</p>
       <h1>Updates from the platform we are building for serious practice.</h1>
       <p class="lede">Feature releases, teacher workflows, course improvements, assessment design, and product decisions from the Vidhgrow team.</p>
       <div class="topic-links" aria-label="Editorial topics">
@@ -278,7 +278,7 @@ const renderHome = async (url) => {
   }
   <div class="section-heading">
     <p class="eyebrow">${query ? "Search results" : "Platform notes"}</p>
-    <h2>${query ? `Posts matching "${escapeHtml(query)}"` : "News, features, and practical decisions from Vidhgrow."}</h2>
+    <h2>${query ? `Posts matching "${escapeHtml(query)}"` : "Blog updates, features, and practical decisions from Vidhgrow."}</h2>
   </div>
   <section class="post-list" aria-label="Blog posts">
     ${posts.map(postCard).join("") || `<div class="empty-state">No posts found.</div>`}
@@ -348,12 +348,38 @@ const renderComments = (post, comments = []) => `<section class="comments" aria-
   </div>
 </section>`;
 
+const renderRelatedPosts = (posts = []) => {
+  if (!posts.length) return "";
+
+  return `<section class="related-posts" aria-labelledby="related-title">
+    <div class="section-heading compact">
+      <p class="eyebrow">Read next</p>
+      <h2 id="related-title">Related blogs</h2>
+    </div>
+    <div class="related-grid">
+      ${posts
+        .slice(0, 3)
+        .map(
+          (post) => `<article class="related-card">
+            <a href="/${escapeHtml(post.slug)}" class="related-image">
+              <img src="${escapeHtml(post.coverImage?.url || "")}" alt="${escapeHtml(post.coverImage?.alt || post.title)}" loading="lazy" />
+            </a>
+            <time datetime="${escapeHtml(post.publishedAt || post.createdAt)}">${formatDate(post.publishedAt || post.createdAt)}</time>
+            <h3><a href="/${escapeHtml(post.slug)}">${escapeHtml(post.title)}</a></h3>
+            <p>${escapeHtml(post.excerpt || "")}</p>
+          </article>`,
+        )
+        .join("")}
+    </div>
+  </section>`;
+};
+
 const renderPost = async (slug) => {
   const [postRes, settingsRes] = await Promise.all([
     fetchJson(`/api/blogs/public/${encodeURIComponent(slug)}`),
     fetchJson("/api/blogs/settings/share").catch(() => ({ data: {} })),
   ]);
-  const { post, comments } = postRes.data;
+  const { post, comments, relatedPosts } = postRes.data;
   const canonical = post.seo?.canonicalUrl || `${BLOG_PUBLIC_URL}/${post.slug}`;
   const social = settingsRes.data?.socialMedia || {};
   const shareUrl = `${BLOG_PUBLIC_URL}/${post.slug}`;
@@ -390,6 +416,7 @@ const renderPost = async (slug) => {
         : ""
     }
   </article>
+  ${renderRelatedPosts(relatedPosts || [])}
   ${renderComments(post, comments || [])}
 </main>
 ${footer(settingsRes.data)}`;

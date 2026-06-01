@@ -6,7 +6,10 @@ import helmet from "helmet";
 import compression from "compression";
 import connectDB from "./Config/mongodb.js";
 import { v2 as cloudinary } from "cloudinary";
-import redisClient from "./Config/redis.js";
+import redisClient, {
+  isRedisConnectionError,
+  summarizeRedisError,
+} from "./Config/redis.js";
 import fileUpload from "express-fileupload";
 import mongoose from "mongoose";
 import ioredisRatelimit from "ioredis-ratelimit";
@@ -106,6 +109,14 @@ const createRateLimiter = (options) => {
       await limiter(req);
       next();
     } catch (error) {
+      if (isRedisConnectionError(error)) {
+        console.warn(
+          `[RATE_LIMIT:${options.prefix}] Redis unavailable; allowing request:`,
+          summarizeRedisError(error),
+        );
+        return next();
+      }
+
       return res.status(429).json(options.message);
     }
   };
@@ -315,7 +326,7 @@ app.use(
     store: store,
     secret: process.env.SESSION_SECRET || process.env.JWT_SECRET,
     resave: false,
-    saveUninitialized: true,
+    saveUninitialized: false,
     rolling: true,
     proxy: process.env.NODE_ENV === "production",
     cookie: {
@@ -443,7 +454,10 @@ app.get("/sitemap-profiles.xml", async (req, res) => {
         return res.send(cached);
       }
     } catch (cacheError) {
-      console.warn("Cache read failed, generating fresh:", cacheError);
+      console.warn(
+        "Cache read failed, generating fresh:",
+        summarizeRedisError(cacheError),
+      );
     }
 
     const users = await User.find({ isVerified: true })
@@ -471,7 +485,7 @@ app.get("/sitemap-profiles.xml", async (req, res) => {
     try {
       await redisClient.setex(cacheKey, 3600, sitemap);
     } catch (cacheError) {
-      console.warn("Cache write failed:", cacheError);
+      console.warn("Cache write failed:", summarizeRedisError(cacheError));
     }
 
     res.header("Content-Type", "application/xml");
@@ -1033,6 +1047,23 @@ if (process.env.NODE_ENV === "development") {
 
 // Error handling middleware
 app.use((error, req, res, next) => {
+  if (isRedisConnectionError(error)) {
+    console.warn("[REDIS] Request failed because Redis is unavailable:", {
+      path: req.path,
+      ...summarizeRedisError(error),
+    });
+
+    if (res.headersSent) {
+      return next(error);
+    }
+
+    return res.status(503).json({
+      success: false,
+      message: "Service temporarily unavailable. Please try again.",
+      code: "REDIS_UNAVAILABLE",
+    });
+  }
+
   console.error("Error:", error);
 
   const acceptsJson = req.get("Accept")?.includes("application/json");

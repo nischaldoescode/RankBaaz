@@ -1,6 +1,9 @@
 // rateLimiters.js
 import ioredisRatelimit from "ioredis-ratelimit";
-import redisClient from "../Config/redis.js"; // your redis client
+import redisClient, {
+  isRedisConnectionError,
+  summarizeRedisError,
+} from "../Config/redis.js"; // your redis client
 
 const createRateLimiter = (options) => {
   const limiter = ioredisRatelimit({
@@ -17,6 +20,14 @@ const createRateLimiter = (options) => {
       await limiter(req);
       next();
     } catch (err) {
+      if (isRedisConnectionError(err)) {
+        console.warn(
+          `[RATE_LIMIT:${options.prefix}] Redis unavailable; allowing request:`,
+          summarizeRedisError(err),
+        );
+        return next();
+      }
+
       return res.status(429).json(options.message);
     }
   };

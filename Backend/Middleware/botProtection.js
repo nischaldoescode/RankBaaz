@@ -1,4 +1,7 @@
-import redisClient from "../Config/redis.js";
+import redisClient, {
+  isRedisConnectionError,
+  summarizeRedisError,
+} from "../Config/redis.js";
 import crypto from "crypto";
 import { botBlockedPage } from "./ErrorsPages/errorPages.js";
 
@@ -512,7 +515,14 @@ export const botProtection = async (req, res, next) => {
 
     return res.status(403).send(botBlockedPage("Automated access detected."));
   } catch (err) {
-    console.error("[BOT_PROTECTION] Error:", err);
+    if (isRedisConnectionError(err)) {
+      console.warn(
+        "[BOT_PROTECTION] Redis unavailable; allowing request:",
+        summarizeRedisError(err),
+      );
+    } else {
+      console.error("[BOT_PROTECTION] Error:", err);
+    }
     // Allow request on error to prevent blocking legitimate traffic
     next();
   }
@@ -548,7 +558,14 @@ export const verifyChallenge = async (req, res) => {
       message: "Challenge completed successfully",
     });
   } catch (err) {
-    console.error("[BOT_PROTECTION] Challenge verify error:", err);
+    if (isRedisConnectionError(err)) {
+      console.warn(
+        "[BOT_PROTECTION] Challenge Redis unavailable:",
+        summarizeRedisError(err),
+      );
+    } else {
+      console.error("[BOT_PROTECTION] Challenge verify error:", err);
+    }
     res.status(500).json({
       success: false,
       message: "Challenge verification failed",
@@ -626,7 +643,14 @@ export const advancedRateLimit = (maxReq = 100, windowMs = 60000) => {
 
       next();
     } catch (err) {
-      console.error("[RATE_LIMIT] Error:", err);
+      if (isRedisConnectionError(err)) {
+        console.warn(
+          "[RATE_LIMIT] Redis unavailable; allowing request:",
+          summarizeRedisError(err),
+        );
+      } else {
+        console.error("[RATE_LIMIT] Error:", err);
+      }
       // Allow request on error to prevent blocking legitimate traffic
       next();
     }

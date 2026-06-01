@@ -365,11 +365,33 @@ export const getPublishedBlogBySlug = async (req, res) => {
         })),
     }));
 
+    const relatedQuery = {
+      ...getPublishedQuery(),
+      _id: { $ne: post._id },
+      $or: [
+        ...(post.tags?.length ? [{ tags: { $in: post.tags } }] : []),
+        ...(post.category ? [{ category: post.category }] : []),
+        ...(post.author?._id ? [{ author: post.author._id }] : []),
+      ],
+    };
+
+    const relatedPosts = await BlogPost.find(
+      relatedQuery.$or.length
+        ? relatedQuery
+        : { ...getPublishedQuery(), _id: { $ne: post._id } },
+    )
+      .populate("author", "name slug avatar title")
+      .select("-contentEncrypted -contentHash")
+      .sort({ publishedAt: -1, updatedAt: -1 })
+      .limit(3)
+      .lean();
+
     const response = {
       success: true,
       data: {
         post: serializePost(post, { includeContent: true }),
         comments: commentTree,
+        relatedPosts: relatedPosts.map((item) => serializePost(item)),
       },
     };
 
