@@ -1,6 +1,7 @@
 import jwt from "jsonwebtoken";
 import Teacher from "../Models/Teacher.js";
 import redisClient from "../Config/redis.js";
+import { verifyRequestSignature } from "./requestSignature.js";
 
 /**
  * authenticate teacher via jwt cookie
@@ -72,6 +73,15 @@ export const authenticateTeacher = async (req, res, next) => {
       teacherId: teacherData._id,
       ...teacherData,
     };
+
+    const shouldVerifySignature =
+      ["POST", "PUT", "PATCH", "DELETE"].includes(req.method) &&
+      !String(req.get("Content-Type") || "").includes("multipart/form-data");
+
+    if (shouldVerifySignature) {
+      req.user = { userId: teacherData._id };
+      return verifyRequestSignature(req, res, next);
+    }
 
     next();
   } catch (error) {

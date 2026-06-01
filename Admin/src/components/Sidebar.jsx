@@ -12,7 +12,8 @@ import {
   TicketPercent,
   ShieldAlert,
   Medal,
-  GraduationCap
+  GraduationCap,
+  Newspaper
 } from "lucide-react";
 
 const Sidebar = ({ isOpen, onClose }) => {
@@ -61,6 +62,12 @@ const Sidebar = ({ isOpen, onClose }) => {
       href: "/content",
       icon: FileText,
       color: "from-indigo-500 to-indigo-600",
+    },
+    {
+      name: "Blogs",
+      href: "/blogs",
+      icon: Newspaper,
+      color: "from-teal-500 to-teal-600",
     },
     {
       name: "Coupons",

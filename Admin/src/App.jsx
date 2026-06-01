@@ -27,6 +27,7 @@ import ContentManagement from "./pages/ContentManagement.jsx";
 import CouponManagement from "./pages/UniversalCoupons.jsx";
 import Violations from "./pages/Violations.jsx";
 import GlobalLeaderboard from "./pages/GlobalLeaderBoard.jsx";
+import BlogManagement from "./pages/BlogManagement.jsx";
 const TeacherManagement = React.lazy(() => import("./pages/TeacherManagement"));
 
 function App() {
@@ -115,6 +116,10 @@ function App() {
                                 <Route
                                   path="/content"
                                   element={<ContentManagement />}
+                                />
+                                <Route
+                                  path="/blogs"
+                                  element={<BlogManagement />}
                                 />
                                 <Route
                                   path="/coupons"
