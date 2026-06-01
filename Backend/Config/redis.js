@@ -3,6 +3,65 @@ import dotenv from "dotenv";
 
 dotenv.config();
 
+const redisConnectionUrl =
+  process.env.REDIS_URL ||
+  process.env.REDIS_PRIVATE_URL ||
+  "redis://127.0.0.1:6379";
+
+const REDIS_CONNECT_TIMEOUT_MS = Number(
+  process.env.REDIS_CONNECT_TIMEOUT_MS || 5000,
+);
+const REDIS_COMMAND_TIMEOUT_MS = Number(
+  process.env.REDIS_COMMAND_TIMEOUT_MS || 1500,
+);
+const REDIS_CIRCUIT_OPEN_MS = Number(
+  process.env.REDIS_CIRCUIT_OPEN_MS || 15000,
+);
+const REDIS_ERROR_LOG_INTERVAL_MS = Number(
+  process.env.REDIS_ERROR_LOG_INTERVAL_MS || 30000,
+);
+
+let redisReady = false;
+let redisCircuitOpenUntil = 0;
+let lastRedisErrorLog = 0;
+
+export const isRedisConnectionError = (error) => {
+  const message = String(error?.message || "");
+  const code = String(error?.code || "");
+
+  return (
+    code === "REDIS_CIRCUIT_OPEN" ||
+    /Command timed out/i.test(message) ||
+    /Connection is closed/i.test(message) ||
+    /Connection timeout/i.test(message) ||
+    /max retries per request/i.test(message) ||
+    /Stream isn't writeable/i.test(message) ||
+    /enableOfflineQueue/i.test(message) ||
+    ["ECONNREFUSED", "ECONNRESET", "ETIMEDOUT", "EAI_AGAIN", "ENOTFOUND"].includes(code)
+  );
+};
+
+export const summarizeRedisError = (error) => ({
+  message: error?.message || "Redis unavailable",
+  code: error?.code,
+  address: error?.address,
+  port: error?.port,
+});
+
+const logRedisWarning = (label, error) => {
+  const now = Date.now();
+  if (now - lastRedisErrorLog < REDIS_ERROR_LOG_INTERVAL_MS) return;
+
+  lastRedisErrorLog = now;
+  console.warn(label, summarizeRedisError(error));
+};
+
+if (process.env.NODE_ENV === "production" && !process.env.REDIS_URL && !process.env.REDIS_PRIVATE_URL) {
+  console.warn(
+    "[REDIS] REDIS_URL is not set in production. Falling back to localhost will fail on Render unless Redis runs in the same service.",
+  );
+}
+
 /**
  * Redis client configuration for production-grade caching
  * Features:
@@ -11,34 +70,75 @@ dotenv.config();
  * - Command timeout protection
  * - Pipeline support for bulk operations
  */
-const redisClient = new Redis(process.env.REDIS_URL || "redis://localhost:6379", {
+const redisClient = new Redis(redisConnectionUrl, {
   // Connection pool settings
-  maxRetriesPerRequest: 3,
+  maxRetriesPerRequest: 1,
   enableReadyCheck: true,
-  enableOfflineQueue: true,
+  enableOfflineQueue: false,
   
   // Retry strategy with exponential backoff
-  // Waits: 50ms, 100ms, 150ms, 200ms, ... up to 2000ms
   retryStrategy: (times) => {
-    const delay = Math.min(times * 50, 2000);
-    console.log(`Redis reconnection attempt ${times}, waiting ${delay}ms`);
+    const delay = Math.min(500 + times * 250, 10000);
+    if (times <= 3 || times % 10 === 0) {
+      console.warn(`Redis reconnection attempt ${times}, waiting ${delay}ms`);
+    }
     return delay;
   },
   
   // Connection timeout protection
-  connectTimeout: 10000,
+  connectTimeout: REDIS_CONNECT_TIMEOUT_MS,
   
   // Command timeout (prevent hung requests)
-  commandTimeout: 5000,
+  commandTimeout: REDIS_COMMAND_TIMEOUT_MS,
   
   // Keep-alive to prevent connection drops
   keepAlive: 30000,
   
-  // Automatic pipeline for performance
-  enableAutoPipelining: true,
+  // Keep command failure paths predictable when Redis is unavailable.
+  enableAutoPipelining: false,
   
   // Lazy connection (connect on first command)
   lazyConnect: false,
+
+  ...(redisConnectionUrl.startsWith("rediss://") ||
+  process.env.REDIS_TLS === "true"
+    ? {
+        tls: {
+          rejectUnauthorized:
+            process.env.REDIS_TLS_REJECT_UNAUTHORIZED !== "false",
+        },
+      }
+    : {}),
+});
+
+const sendCommand = redisClient.sendCommand.bind(redisClient);
+redisClient.sendCommand = (command, stream) => {
+  if (Date.now() < redisCircuitOpenUntil) {
+    const error = new Error("Redis circuit open after recent connection failure");
+    error.code = "REDIS_CIRCUIT_OPEN";
+    return Promise.reject(error);
+  }
+
+  return sendCommand(command, stream).catch((error) => {
+    if (isRedisConnectionError(error)) {
+      redisReady = false;
+      redisCircuitOpenUntil = Date.now() + REDIS_CIRCUIT_OPEN_MS;
+      logRedisWarning("[REDIS] Command failed; opening short circuit breaker:", error);
+    }
+
+    throw error;
+  });
+};
+
+export const isRedisReady = () =>
+  redisReady && redisClient.status === "ready" && Date.now() >= redisCircuitOpenUntil;
+
+export const getRedisHealth = () => ({
+  ready: isRedisReady(),
+  status: redisClient.status,
+  circuitOpenUntil: redisCircuitOpenUntil || null,
+  commandTimeoutMs: REDIS_COMMAND_TIMEOUT_MS,
+  connectTimeoutMs: REDIS_CONNECT_TIMEOUT_MS,
 });
 
 /**
@@ -49,15 +149,24 @@ redisClient.on("connect", () => {
 });
 
 redisClient.on("ready", () => {
+  redisReady = true;
+  redisCircuitOpenUntil = 0;
   console.log("Redis is ready to accept commands");
 });
 
 redisClient.on("error", (err) => {
-  console.error("Redis connection error:", err.message);
+  redisReady = false;
+  logRedisWarning("[REDIS] Connection error:", err);
 });
 
 redisClient.on("close", () => {
+  redisReady = false;
   console.warn("Redis connection closed");
+});
+
+redisClient.on("end", () => {
+  redisReady = false;
+  console.warn("Redis connection ended");
 });
 
 redisClient.on("reconnecting", (delay) => {

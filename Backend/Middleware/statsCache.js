@@ -1,4 +1,7 @@
-import redisClient from "../Config/redis.js";
+import redisClient, {
+  isRedisConnectionError,
+  summarizeRedisError,
+} from "../Config/redis.js";
 
 const CACHE_TTL = {
   STATS: 300,       // 5 minutes
@@ -18,14 +21,24 @@ export const cacheStats = (keyPrefix, ttl = CACHE_TTL.STATS) => {
       res.json = (data) => {
         if (data.success) {
           redisClient.setex(cacheKey, ttl, JSON.stringify(data))
-            .catch(err => console.error("Cache set error:", err));
+            .catch((err) => {
+              if (isRedisConnectionError(err)) {
+                console.warn("Cache set skipped:", summarizeRedisError(err));
+              } else {
+                console.error("Cache set error:", err);
+              }
+            });
         }
         return originalJson(data);
       };
 
       next();
     } catch (err) {
-      console.error("Cache middleware error:", err);
+      if (isRedisConnectionError(err)) {
+        console.warn("Cache middleware skipped:", summarizeRedisError(err));
+      } else {
+        console.error("Cache middleware error:", err);
+      }
       next();
     }
   };

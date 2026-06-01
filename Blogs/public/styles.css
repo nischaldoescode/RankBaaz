@@ -355,6 +355,14 @@ button:disabled,
   letter-spacing: 0;
 }
 
+.section-heading.compact {
+  margin-bottom: 18px;
+}
+
+.section-heading.compact h2 {
+  font-size: clamp(24px, 3vw, 34px);
+}
+
 .post-card {
   display: grid;
   grid-template-columns: 260px minmax(0, 1fr);
@@ -402,6 +410,73 @@ button:disabled,
 .post-card h2 a:hover {
   color: var(--accent-deep);
   text-decoration-color: var(--accent-line);
+}
+
+.related-posts {
+  max-width: 960px;
+  margin: 58px auto 0;
+  padding-top: 28px;
+  border-top: 1px solid var(--line);
+}
+
+.related-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.related-card {
+  min-width: 0;
+}
+
+.related-image {
+  display: block;
+  margin-bottom: 12px;
+}
+
+.related-image img {
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  object-fit: cover;
+  border-radius: 6px;
+  background: #e2e8f0;
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+
+.related-image:hover img {
+  transform: translateY(-2px);
+  box-shadow: 0 14px 34px rgba(15, 23, 42, 0.12);
+}
+
+.related-card time {
+  display: block;
+  color: var(--muted);
+  font-size: 12px;
+  margin-bottom: 8px;
+}
+
+.related-card h3 {
+  margin: 0 0 8px;
+  font-size: 19px;
+  line-height: 1.2;
+  letter-spacing: 0;
+}
+
+.related-card h3 a {
+  color: var(--ink);
+  text-decoration-color: transparent;
+}
+
+.related-card h3 a:hover {
+  color: var(--accent-deep);
+  text-decoration-color: var(--accent-line);
+}
+
+.related-card p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.6;
+  font-size: 14px;
 }
 
 .article {

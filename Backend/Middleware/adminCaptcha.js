@@ -1,5 +1,8 @@
 import crypto from "crypto";
-import redisClient from "../Config/redis.js";
+import redisClient, {
+  isRedisConnectionError,
+  summarizeRedisError,
+} from "../Config/redis.js";
 
 /**
  * Admin Login Captcha Protection
@@ -160,7 +163,14 @@ export const requireAdminCaptcha = async (req, res, next) => {
     // Captcha valid - proceed
     next();
   } catch (error) {
-    console.error("[ADMIN_CAPTCHA] Error:", error);
+    if (isRedisConnectionError(error)) {
+      console.warn(
+        "[ADMIN_CAPTCHA] Redis unavailable; allowing request:",
+        summarizeRedisError(error),
+      );
+    } else {
+      console.error("[ADMIN_CAPTCHA] Error:", error);
+    }
     // Fail open to avoid lockout
     next();
   }

@@ -1,5 +1,8 @@
 import crypto from "crypto";
-import redisClient from "../Config/redis.js";
+import redisClient, {
+  isRedisConnectionError,
+  summarizeRedisError,
+} from "../Config/redis.js";
 
 /**
  * Generate signing secret for authenticated session
@@ -176,7 +179,10 @@ export const verifyRequestSignature = async (req, res, next) => {
     try {
       nonceExists = await redisClient.get(nonceKey);
     } catch (redisError) {
-      console.error("[SIGNATURE] Redis error checking nonce:", redisError);
+      console.error(
+        "[SIGNATURE] Redis error checking nonce:",
+        summarizeRedisError(redisError),
+      );
       // SECURITY: Reject request if Redis is down (fail secure)
       return res.status(503).json({
         success: false,
@@ -204,7 +210,10 @@ export const verifyRequestSignature = async (req, res, next) => {
     try {
       await redisClient.setex(nonceKey, 5 * 60, "used");
     } catch (redisError) {
-      console.error("[SIGNATURE] Redis error storing nonce:", redisError);
+      console.error(
+        "[SIGNATURE] Redis error storing nonce:",
+        summarizeRedisError(redisError),
+      );
       // SECURITY: Reject if we can't store nonce (fail secure)
       return res.status(503).json({
         success: false,
@@ -302,6 +311,18 @@ export const verifyRequestSignature = async (req, res, next) => {
     req.signatureVerified = true;
     next();
   } catch (error) {
+    if (isRedisConnectionError(error)) {
+      console.error(
+        "[SIGNATURE] Redis unavailable during verification:",
+        summarizeRedisError(error),
+      );
+      return res.status(503).json({
+        success: false,
+        message: "Service temporarily unavailable",
+        code: "SERVICE_ERROR",
+      });
+    }
+
     console.error("[SIGNATURE] Verification error:", error);
     res.status(500).json({
       success: false,
@@ -389,6 +410,18 @@ export const getSigningSecretEndpoint = async (req, res) => {
       },
     });
   } catch (error) {
+    if (isRedisConnectionError(error)) {
+      console.error(
+        "[SIGNING_SECRET] Redis unavailable:",
+        summarizeRedisError(error),
+      );
+      return res.status(503).json({
+        success: false,
+        message: "Service temporarily unavailable",
+        code: "SERVICE_ERROR",
+      });
+    }
+
     console.error("[SIGNING_SECRET] Get secret error:", error);
     res.status(500).json({
       success: false,
