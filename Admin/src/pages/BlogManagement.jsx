@@ -170,12 +170,6 @@ const cleanEditorHtml = (html = "") =>
     .replace(/\sdata-editor-line-break=["'][^"']*["']/gi, "")
     .replace(/\sdata-editor-helper=["'][^"']*["']/gi, "");
 
-const countHeadingTags = (html = "", level = 1) => {
-  const tag = `h${level}`;
-  const pattern = new RegExp(`<${tag}(?:\\s[^>]*)?>`, "gi");
-  return (String(html).match(pattern) || []).length;
-};
-
 const authorFallback = (name = "Vidhgrow") => {
   const letter = String(name).trim().charAt(0).toUpperCase() || "V";
   const palette = [
@@ -431,8 +425,6 @@ const BlogManagement = () => {
     (candidate = postForm) => {
       const contentHtml = cleanEditorHtml(candidate.contentHtml || "");
       const wordCount = countWords(contentHtml);
-      const bodyH1Count = countHeadingTags(contentHtml, 1);
-      const finalPageH1Count = candidate.title?.trim() ? 1 + bodyH1Count : bodyH1Count;
       const metaTitle = candidate.seo.metaTitle || candidate.title;
       const metaDescription = candidate.seo.metaDescription || candidate.excerpt;
       const slugReady =
@@ -440,8 +432,6 @@ const BlogManagement = () => {
         (editingPostId && !["checking", "taken", "error"].includes(slugState.status));
 
       return [
-        ["Final page has exactly one H1", finalPageH1Count === 1],
-        ["Use H2/H3 inside the body after the title H1", bodyH1Count === 0],
         ["Meta title between 35 and 70 characters", metaTitle.length >= 35 && metaTitle.length <= 70],
         ["Meta description between 70 and 170 characters", metaDescription.length >= 70 && metaDescription.length <= 170],
         ["At least 250 words for long-form ranking", wordCount >= 250],
