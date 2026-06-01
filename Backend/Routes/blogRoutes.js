@@ -5,6 +5,7 @@ import {
   adminCheckBlogSlug,
   adminDeleteAuthor,
   adminDeleteBlogPost,
+  adminDiscardBlogMedia,
   adminGetBlogPost,
   adminListAuthors,
   adminListBlogPosts,
@@ -44,6 +45,7 @@ router.post(
 router.get("/admin/posts", authenticateAdmin, verifyRequestSignature, adminListBlogPosts);
 router.get("/admin/slugs/check", authenticateAdmin, verifyRequestSignature, adminCheckBlogSlug);
 router.post("/admin/media", authenticateAdmin, verifyRequestSignature, adminUploadBlogMedia);
+router.delete("/admin/media", authenticateAdmin, verifyRequestSignature, adminDiscardBlogMedia);
 router.post("/admin/posts", authenticateAdmin, verifyRequestSignature, adminCreateBlogPost);
 router.get(
   "/admin/posts/:postId",
