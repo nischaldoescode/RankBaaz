@@ -61,7 +61,7 @@ const emptyPost = {
   author: "",
   coverImage: { url: "", public_id: "", resource_type: "image", alt: "", placement: "hero" },
   contentHtml:
-    "<h1>Start with the important update</h1><p>Write the opening like a clear product note: what changed, who it helps, and what the reader can do next.</p>",
+    "<h2>Start with the important update</h2><p>Write the opening like a clear product note: what changed, who it helps, and what the reader can do next.</p>",
   tags: [],
   category: "platform",
   seo: {
@@ -111,6 +111,8 @@ const countWords = (html = "") => {
   const text = stripHtml(html);
   return text ? text.split(/\s+/).length : 0;
 };
+
+const blogPostUrl = (slug = "") => `${BLOG_URL}/${slugify(slug) || "slug"}`;
 
 const splitList = (value) =>
   Array.isArray(value)
@@ -167,6 +169,12 @@ const cleanEditorHtml = (html = "") =>
   String(html)
     .replace(/\sdata-editor-line-break=["'][^"']*["']/gi, "")
     .replace(/\sdata-editor-helper=["'][^"']*["']/gi, "");
+
+const countHeadingTags = (html = "", level = 1) => {
+  const tag = `h${level}`;
+  const pattern = new RegExp(`<${tag}(?:\\s[^>]*)?>`, "gi");
+  return (String(html).match(pattern) || []).length;
+};
 
 const authorFallback = (name = "Vidhgrow") => {
   const letter = String(name).trim().charAt(0).toUpperCase() || "V";
@@ -293,6 +301,7 @@ const buildPreviewHtml = (post, author, relatedPosts = []) => {
     .content h1{font-size:38px}.content h2{font-size:30px}.content h3{font-size:24px}
     .content a{color:#2563eb;text-decoration-thickness:2px;text-underline-offset:4px}
     .content blockquote{border-left:4px solid #3b82f6;margin:34px 0;padding:8px 0 8px 22px;color:#334155;font-style:italic;background:#eff6ff}
+    .content ul,.content ol{padding-left:1.45em;margin:22px 0}.content li{margin:8px 0;padding-left:.25em}
     .content img{max-width:100%;border-radius:6px;display:block;margin:30px auto}
     .content figure{margin:34px 0}.content figcaption{font-size:14px;color:#64748b;text-align:center;margin-top:10px}
     .content iframe,.content video{width:100%;aspect-ratio:16/9;border:0;border-radius:6px;margin:30px 0;background:#111827}
@@ -379,6 +388,7 @@ const BlogManagement = () => {
   const originalAuthorSlugRef = useRef("");
   const editorInitialHtmlRef = useRef(emptyPost.contentHtml);
   const mediaSessionRef = useRef(makeMediaSessionId());
+  const selectionRangeRef = useRef(null);
   const [tab, setTab] = useState("posts");
   const [step, setStep] = useState(0);
   const [editorResetKey, setEditorResetKey] = useState(0);
@@ -413,26 +423,53 @@ const BlogManagement = () => {
 
   const selectedAuthor = authors.find((author) => author._id === postForm.author);
   const isDirty = buildSnapshot(postForm) !== baseline;
+  const automaticPostUrl = blogPostUrl(postForm.slug);
+  const automaticShareTitle = postForm.social.shareTitle || postForm.seo.metaTitle || postForm.title || "Vidhgrow blog";
+  const automaticShareDescription = postForm.social.shareDescription || postForm.seo.metaDescription || postForm.excerpt || "";
 
-  const seoChecks = useMemo(() => {
-    const wordCount = countWords(postForm.contentHtml);
-    const h1Count = (postForm.contentHtml.match(/<h1[\s>]/gi) || []).length;
-    const metaTitle = postForm.seo.metaTitle || postForm.title;
-    const metaDescription = postForm.seo.metaDescription || postForm.excerpt;
-    const slugReady =
-      slugState.status === "available" ||
-      (editingPostId && !["checking", "taken", "error"].includes(slugState.status));
+  const buildSeoChecks = useCallback(
+    (candidate = postForm) => {
+      const contentHtml = cleanEditorHtml(candidate.contentHtml || "");
+      const wordCount = countWords(contentHtml);
+      const bodyH1Count = countHeadingTags(contentHtml, 1);
+      const finalPageH1Count = candidate.title?.trim() ? 1 + bodyH1Count : bodyH1Count;
+      const metaTitle = candidate.seo.metaTitle || candidate.title;
+      const metaDescription = candidate.seo.metaDescription || candidate.excerpt;
+      const slugReady =
+        slugState.status === "available" ||
+        (editingPostId && !["checking", "taken", "error"].includes(slugState.status));
 
-    return [
-      ["Exactly one H1 in the article body", h1Count === 1],
-      ["Meta title between 35 and 70 characters", metaTitle.length >= 35 && metaTitle.length <= 70],
-      ["Meta description between 70 and 170 characters", metaDescription.length >= 70 && metaDescription.length <= 170],
-      ["At least 300 words for long-form ranking", wordCount >= 300],
-      ["Cover image and meaningful alt text", !!postForm.coverImage.url && postForm.coverImage.alt.length >= 8],
-      ["Slug checked and available", slugReady],
-      ["Author selected", !!postForm.author],
-    ];
-  }, [editingPostId, postForm, slugState.status]);
+      return [
+        ["Final page has exactly one H1", finalPageH1Count === 1],
+        ["Use H2/H3 inside the body after the title H1", bodyH1Count === 0],
+        ["Meta title between 35 and 70 characters", metaTitle.length >= 35 && metaTitle.length <= 70],
+        ["Meta description between 70 and 170 characters", metaDescription.length >= 70 && metaDescription.length <= 170],
+        ["At least 250 words for long-form ranking", wordCount >= 250],
+        ["Cover image and meaningful alt text", !!candidate.coverImage.url && candidate.coverImage.alt.length >= 8],
+        ["Slug checked and available", slugReady],
+        ["Author selected", !!candidate.author],
+      ];
+    },
+    [editingPostId, postForm, slugState.status],
+  );
+
+  const seoChecks = useMemo(() => buildSeoChecks(postForm), [buildSeoChecks, postForm]);
+
+  const syncEditorContentIntoForm = useCallback(() => {
+    if (!editorRef.current) return postForm.contentHtml;
+    const html = cleanEditorHtml(editorRef.current.innerHTML);
+    editorInitialHtmlRef.current = html;
+    setPostForm((prev) => (prev.contentHtml === html ? prev : { ...prev, contentHtml: html }));
+    return html;
+  }, [postForm.contentHtml]);
+
+  const currentSeoChecks = useCallback(
+    (candidate = postForm) => {
+      const html = editorRef.current ? cleanEditorHtml(editorRef.current.innerHTML) : candidate.contentHtml;
+      return buildSeoChecks({ ...candidate, contentHtml: html });
+    },
+    [buildSeoChecks, postForm],
+  );
 
   const fetchAll = async () => {
     try {
@@ -654,6 +691,31 @@ const BlogManagement = () => {
     return element.closest("h1,h2,h3,blockquote,p,li,div") || editorRef.current;
   }, []);
 
+  const saveEditorSelection = useCallback(() => {
+    const selection = window.getSelection();
+    if (!selection || selection.rangeCount === 0 || !editorRef.current) return;
+    const range = selection.getRangeAt(0);
+    if (!editorRef.current.contains(range.commonAncestorContainer)) return;
+    selectionRangeRef.current = range.cloneRange();
+  }, []);
+
+  const restoreEditorSelection = useCallback(() => {
+    if (!selectionRangeRef.current || !editorRef.current) return false;
+    if (!editorRef.current.contains(selectionRangeRef.current.commonAncestorContainer)) {
+      selectionRangeRef.current = null;
+      return false;
+    }
+    const selection = window.getSelection();
+    selection.removeAllRanges();
+    selection.addRange(selectionRangeRef.current);
+    return true;
+  }, []);
+
+  const holdEditorSelection = (event) => {
+    event.preventDefault();
+    restoreEditorSelection();
+  };
+
   const updateEditorState = useCallback(() => {
     if (!editorRef.current) return;
     const element = getSelectionElement();
@@ -681,6 +743,7 @@ const BlogManagement = () => {
       const html = cleanEditorHtml(editorRef.current.innerHTML);
       editorInitialHtmlRef.current = html;
       updatePost("contentHtml", html);
+      saveEditorSelection();
       updateEditorState();
     }
   };
@@ -692,14 +755,143 @@ const BlogManagement = () => {
   }, [editorResetKey, step, updateEditorState]);
 
   useEffect(() => {
-    const handleSelectionChange = () => updateEditorState();
+    const handleSelectionChange = () => {
+      saveEditorSelection();
+      updateEditorState();
+    };
     document.addEventListener("selectionchange", handleSelectionChange);
     return () => document.removeEventListener("selectionchange", handleSelectionChange);
-  }, [updateEditorState]);
+  }, [saveEditorSelection, updateEditorState]);
 
   const command = (name, value = null) => {
+    restoreEditorSelection();
     editorRef.current?.focus();
     document.execCommand(name, false, value);
+    syncEditor();
+    window.setTimeout(updateEditorState, 0);
+  };
+
+  const replaceBlockTag = (block, tag) => {
+    if (!block || block === editorRef.current) return null;
+    if (block.tagName?.toLowerCase() === tag) return block;
+
+    const next = document.createElement(tag);
+    Array.from(block.attributes || []).forEach((attr) => {
+      if (!["style", "class"].includes(attr.name)) return;
+      next.setAttribute(attr.name, attr.value);
+    });
+    next.innerHTML = block.innerHTML || "<br>";
+    block.replaceWith(next);
+    return next;
+  };
+
+  const currentRange = () => {
+    restoreEditorSelection();
+    const selection = window.getSelection();
+    if (!selection || selection.rangeCount === 0 || !editorRef.current) return null;
+    const range = selection.getRangeAt(0);
+    return editorRef.current.contains(range.commonAncestorContainer) ? range : null;
+  };
+
+  const selectedBlocks = (range) => {
+    if (!editorRef.current) return [];
+    const blocks = new Set();
+    const startElement =
+      range.startContainer.nodeType === Node.TEXT_NODE
+        ? range.startContainer.parentElement
+        : range.startContainer;
+    const endElement =
+      range.endContainer.nodeType === Node.TEXT_NODE
+        ? range.endContainer.parentElement
+        : range.endContainer;
+
+    [getClosestBlock(startElement), getClosestBlock(endElement)].forEach((block) => {
+      if (block && block !== editorRef.current) blocks.add(block);
+    });
+
+    editorRef.current
+      .querySelectorAll("p,h1,h2,h3,blockquote,li,div")
+      .forEach((block) => {
+        try {
+          if (range.intersectsNode(block)) blocks.add(block);
+        } catch {
+          // Ignore detached nodes while the editor is changing.
+        }
+      });
+
+    return [...blocks].filter((block) => editorRef.current.contains(block));
+  };
+
+  const formatSelectedBlocks = (tag) => {
+    editorRef.current?.focus();
+    const range = currentRange();
+    if (!range) return;
+
+    const blocks = selectedBlocks(range);
+    const changedBlocks = blocks
+      .map((block) => replaceBlockTag(block, tag))
+      .filter(Boolean);
+
+    if (changedBlocks.length) {
+      placeCaretInside(changedBlocks.at(-1));
+      saveEditorSelection();
+      syncEditor();
+      window.setTimeout(updateEditorState, 0);
+    }
+  };
+
+  const indentSelectedBlocks = (direction = 1) => {
+    editorRef.current?.focus();
+    const range = currentRange();
+    if (!range) return false;
+
+    const blocks = selectedBlocks(range);
+    if (!blocks.length || range.collapsed) return false;
+
+    blocks.forEach((block) => {
+      const current = Number.parseInt(block.style.marginLeft || "0", 10) || 0;
+      const next = Math.max(0, current + direction * 32);
+      block.style.marginLeft = next ? `${next}px` : "";
+    });
+    placeCaretInside(blocks.at(-1));
+    saveEditorSelection();
+    syncEditor();
+    return true;
+  };
+
+  const insertFourSpaces = () => {
+    command("insertHTML", "&nbsp;&nbsp;&nbsp;&nbsp;");
+  };
+
+  const toggleList = (type) => {
+    const commandName = type === "ordered" ? "insertOrderedList" : "insertUnorderedList";
+    const listTag = type === "ordered" ? "ol" : "ul";
+    editorRef.current?.focus();
+    const beforeRange = currentRange();
+    if (!beforeRange) return;
+
+    document.execCommand(commandName, false, null);
+    const element = getSelectionElement();
+
+    if (!element?.closest(listTag)) {
+      const block = getClosestBlock(element) || getClosestBlock(beforeRange.startContainer.parentElement);
+      if (block && block !== editorRef.current) {
+        const list = document.createElement(listTag);
+        const item = document.createElement("li");
+        item.innerHTML = block.innerHTML || "<br>";
+        list.appendChild(item);
+        block.replaceWith(list);
+        placeCaretInside(item);
+      } else if (editorRef.current) {
+        const list = document.createElement(listTag);
+        const item = document.createElement("li");
+        item.innerHTML = "<br>";
+        list.appendChild(item);
+        editorRef.current.appendChild(list);
+        placeCaretInside(item);
+      }
+    }
+
     syncEditor();
     window.setTimeout(updateEditorState, 0);
   };
@@ -718,19 +910,22 @@ const BlogManagement = () => {
         : "border-gray-200 text-gray-700 hover:border-blue-300 hover:bg-blue-50"
     }`;
 
-  const setTextSize = (fontSize) => {
+  const wrapSelectedText = (styles = {}, emptyMessage = "Select text first") => {
+    restoreEditorSelection();
     editorRef.current?.focus();
     const selection = window.getSelection();
     if (!selection || selection.rangeCount === 0 || selection.isCollapsed) {
-      toast.info("Select text first, then choose a size");
-      return;
+      toast.info(emptyMessage);
+      return false;
     }
 
     const range = selection.getRangeAt(0);
-    if (!editorRef.current.contains(range.commonAncestorContainer)) return;
+    if (!editorRef.current.contains(range.commonAncestorContainer)) return false;
 
     const span = document.createElement("span");
-    span.style.fontSize = fontSize;
+    Object.entries(styles).forEach(([key, value]) => {
+      span.style[key] = value;
+    });
     span.appendChild(range.extractContents());
     range.insertNode(span);
     selection.removeAllRanges();
@@ -738,9 +933,19 @@ const BlogManagement = () => {
     nextRange.selectNodeContents(span);
     selection.addRange(nextRange);
     syncEditor();
+    return true;
+  };
+
+  const setTextSize = (fontSize) => {
+    wrapSelectedText({ fontSize }, "Select text first, then choose a size");
+  };
+
+  const setFontFamily = (fontFamily) => {
+    wrapSelectedText({ fontFamily }, "Select text first, then choose a font");
   };
 
   const placeCaretInside = (node) => {
+    if (!node) return;
     const range = document.createRange();
     range.selectNodeContents(node);
     range.collapse(true);
@@ -749,17 +954,26 @@ const BlogManagement = () => {
     selection.addRange(range);
   };
 
-  const exitQuoteBlock = () => {
-    const element = getSelectionElement();
-    const quote = element?.closest("blockquote");
-    if (!quote) return false;
-
+  const insertParagraphAfterBlock = (block) => {
+    if (!editorRef.current) return false;
     const paragraph = document.createElement("p");
     paragraph.innerHTML = "<br>";
-    quote.insertAdjacentElement("afterend", paragraph);
+
+    if (!block || block === editorRef.current || !editorRef.current.contains(block)) {
+      editorRef.current.appendChild(paragraph);
+    } else {
+      block.insertAdjacentElement("afterend", paragraph);
+    }
+
     placeCaretInside(paragraph);
     syncEditor();
     return true;
+  };
+
+  const exitQuoteBlock = () => {
+    const element = getSelectionElement();
+    const quote = element?.closest("blockquote");
+    return quote ? insertParagraphAfterBlock(quote) : false;
   };
 
   const insertVisibleLineBreak = () => {
@@ -773,6 +987,16 @@ const BlogManagement = () => {
       return;
     }
 
+    if (event.key === "Tab") {
+      event.preventDefault();
+      if (event.shiftKey) {
+        if (!indentSelectedBlocks(-1)) command("outdent");
+        return;
+      }
+      if (!indentSelectedBlocks(1)) insertFourSpaces();
+      return;
+    }
+
     if (event.key !== "Enter") return;
 
     if (event.shiftKey) {
@@ -781,9 +1005,25 @@ const BlogManagement = () => {
       return;
     }
 
-    if (editorState.inQuote || getSelectionElement()?.closest("blockquote")) {
+    const element = getSelectionElement();
+    const block = getClosestBlock(element);
+    const blockTag = block?.tagName?.toLowerCase();
+
+    if (editorState.inQuote || element?.closest("blockquote")) {
       event.preventDefault();
       exitQuoteBlock();
+      return;
+    }
+
+    if (["h1", "h2", "h3"].includes(blockTag)) {
+      event.preventDefault();
+      insertParagraphAfterBlock(block);
+      return;
+    }
+
+    if ((!block || block === editorRef.current) && editorRef.current && !stripHtml(editorRef.current.innerHTML)) {
+      event.preventDefault();
+      insertParagraphAfterBlock(editorRef.current);
     }
   };
 
@@ -894,7 +1134,7 @@ const BlogManagement = () => {
     if (candidate.excerpt.trim().length < 40) return "Excerpt must be at least 40 characters";
     if (!candidate.coverImage.url || !candidate.coverImage.alt.trim()) return "Cover image and alt text are required";
     if (!stripHtml(candidate.contentHtml)) return "Body content is required";
-    if (mode === "published" && seoChecks.some(([, ok]) => !ok)) {
+    if (mode === "published" && currentSeoChecks(candidate).some(([, ok]) => !ok)) {
       return "Complete the SEO checks before publishing";
     }
     return "";
@@ -923,7 +1163,13 @@ const BlogManagement = () => {
         tags: splitList(candidate.tags),
         seo: {
           ...candidate.seo,
+          canonicalUrl: candidate.slug ? blogPostUrl(candidate.slug) : "",
           keywords: splitList(candidate.seo.keywords),
+        },
+        social: {
+          ...candidate.social,
+          shareTitle: candidate.social.shareTitle?.trim() || candidate.seo.metaTitle || candidate.title,
+          shareDescription: candidate.social.shareDescription?.trim() || candidate.seo.metaDescription || candidate.excerpt,
         },
       };
       const request = editingPostId
@@ -938,6 +1184,12 @@ const BlogManagement = () => {
         title: savedPost.title || candidate.title,
         slug: savedPost.slug || candidate.slug,
         excerpt: savedPost.excerpt ?? candidate.excerpt,
+        seo: {
+          ...candidate.seo,
+          canonicalUrl: payload.seo.canonicalUrl,
+          keywords: splitList(candidate.seo.keywords),
+        },
+        social: payload.social,
         coverImage: { ...candidate.coverImage, ...(savedPost.coverImage || {}) },
         status: mode,
       };
@@ -1204,6 +1456,7 @@ const BlogManagement = () => {
   };
 
   const stepIsReady = (index) => {
+    const checks = index === 2 ? currentSeoChecks() : seoChecks;
     if (index === 0) {
       const slugReady =
         slugState.status === "available" ||
@@ -1219,19 +1472,27 @@ const BlogManagement = () => {
         slugReady
       );
     }
-    if (index === 1) return !!stripHtml(postForm.contentHtml);
-    if (index === 2) return seoChecks.every(([, ok]) => ok);
+    if (index === 1) {
+      const html = editorRef.current ? cleanEditorHtml(editorRef.current.innerHTML) : postForm.contentHtml;
+      return !!stripHtml(html);
+    }
+    if (index === 2) return checks.every(([, ok]) => ok);
     return true;
   };
 
   const canGoNext = step < steps.length - 1 && stepIsReady(step);
   const saveDisabled = saving || loading || slugState.status === "checking" || !!uploading;
-  const publishDisabled = saveDisabled || seoChecks.some(([, ok]) => !ok);
+  const publishDisabled = saveDisabled || currentSeoChecks().some(([, ok]) => !ok);
   const authorSaveDisabled =
     savingAuthor || loading || authorSlugState.status === "checking" || uploading === "author-avatar";
 
   const previewWidth =
     previewSize === "mobile" ? "390px" : previewSize === "tablet" ? "760px" : "100%";
+
+  const goToNextStep = () => {
+    if (step === 1) syncEditorContentIntoForm();
+    setStep((value) => Math.min(steps.length - 1, value + 1));
+  };
 
   const StepButton = ({ index }) => {
     const active = step === index;
@@ -1416,14 +1677,15 @@ const BlogManagement = () => {
             [Bold, () => command("bold"), "Bold", editorState.bold],
             [Italic, () => command("italic"), "Italic", editorState.italic],
             [Underline, () => command("underline"), "Underline", editorState.underline],
-            [List, () => command("insertUnorderedList"), "Bullet list"],
-            [ListOrdered, () => command("insertOrderedList"), "Numbered list"],
+            [List, () => toggleList("unordered"), "Bullet list"],
+            [ListOrdered, () => toggleList("ordered"), "Numbered list"],
             [AlignLeft, () => command("justifyLeft"), "Align left"],
             [AlignCenter, () => command("justifyCenter"), "Align center"],
           ].map(([Icon, action, label, active]) => (
             <button
               key={label}
               type="button"
+              onMouseDown={holdEditorSelection}
               onClick={action}
               title={label}
               className={activeToolClass(active)}
@@ -1432,24 +1694,32 @@ const BlogManagement = () => {
             </button>
           ))}
           {[
-            ["p", "P", () => command("formatBlock", "p")],
-            ["h1", "H1", () => command("formatBlock", "h1")],
-            ["h2", "H2", () => command("formatBlock", "h2")],
-            ["h3", "H3", () => command("formatBlock", "h3")],
-            ["blockquote", "Quote", () => command("formatBlock", "blockquote")],
+            ["p", "P", () => formatSelectedBlocks("p")],
+            ["h1", "H1", () => formatSelectedBlocks("h1")],
+            ["h2", "H2", () => formatSelectedBlocks("h2")],
+            ["h3", "H3", () => formatSelectedBlocks("h3")],
+            ["blockquote", "Quote", () => formatSelectedBlocks("blockquote")],
           ].map(([block, label, action]) => (
             <button
               key={block}
               type="button"
+              onMouseDown={holdEditorSelection}
               onClick={action}
               className={blockButtonClass(block)}
-              title={label === "Quote" ? "Quote block. Press Enter once to exit it." : label}
+              title={
+                label === "Quote"
+                  ? "Quote block. Press Enter once to exit it."
+                  : label === "H1"
+                    ? "Body H1. Usually avoid this because the blog title is already the page H1."
+                    : label
+              }
             >
               {label}
             </button>
           ))}
           <button
             type="button"
+            onMouseDown={holdEditorSelection}
             onClick={() => command("removeFormat")}
             className="rounded border border-gray-200 px-3 py-2 text-xs font-bold text-gray-700 hover:border-blue-300 hover:bg-blue-50"
           >
@@ -1459,6 +1729,7 @@ const BlogManagement = () => {
             <Type className="h-4 w-4" />
             <select
               value={TEXT_SIZE_OPTIONS.some((option) => option.value === editorState.fontSize) ? editorState.fontSize : ""}
+              onMouseDown={saveEditorSelection}
               onChange={(event) => event.target.value && setTextSize(event.target.value)}
               className="bg-transparent outline-none"
               title="Text size applies to selected text"
@@ -1472,7 +1743,8 @@ const BlogManagement = () => {
             </select>
           </label>
           <select
-            onChange={(event) => command("fontName", event.target.value)}
+            onMouseDown={saveEditorSelection}
+            onChange={(event) => setFontFamily(event.target.value)}
             className="rounded border border-gray-200 px-2 py-2 text-sm"
             defaultValue="Inter"
           >
@@ -1486,6 +1758,7 @@ const BlogManagement = () => {
             <input
               type="color"
               value={textColor}
+              onMouseDown={saveEditorSelection}
               onChange={(event) => {
                 setTextColor(event.target.value);
                 command("foreColor", event.target.value);
@@ -1497,6 +1770,7 @@ const BlogManagement = () => {
             <input
               type="color"
               value={highlightColor}
+              onMouseDown={saveEditorSelection}
               onChange={(event) => {
                 setHighlightColor(event.target.value);
                 command("backColor", event.target.value);
@@ -1512,6 +1786,7 @@ const BlogManagement = () => {
             />
             <button
               type="button"
+              onMouseDown={holdEditorSelection}
               onClick={applyLink}
               className="rounded bg-gray-900 p-2 text-white"
               title="Add link"
@@ -1543,9 +1818,18 @@ const BlogManagement = () => {
           suppressContentEditableWarning
           onInput={syncEditor}
           onKeyDown={handleEditorKeyDown}
-          onKeyUp={updateEditorState}
-          onMouseUp={updateEditorState}
-          onFocus={updateEditorState}
+          onKeyUp={() => {
+            saveEditorSelection();
+            updateEditorState();
+          }}
+          onMouseUp={() => {
+            saveEditorSelection();
+            updateEditorState();
+          }}
+          onFocus={() => {
+            saveEditorSelection();
+            updateEditorState();
+          }}
           className="blog-editor min-h-[680px] overflow-auto px-6 py-6 font-serif text-[18px] leading-8 outline-none"
         />
         <aside className="space-y-5 border-t border-gray-200 p-4 xl:border-l xl:border-t-0">
@@ -1658,15 +1942,17 @@ const BlogManagement = () => {
               className="w-full rounded border border-gray-300 px-3 py-2 text-sm"
             />
           </label>
-          <label className="space-y-1">
-            <span className="text-xs font-bold uppercase tracking-wide text-gray-500">Canonical URL</span>
+          <div className="space-y-1">
+            <span className="text-xs font-bold uppercase tracking-wide text-gray-500">Canonical and share URL</span>
             <input
-              value={postForm.seo.canonicalUrl}
-              onChange={(event) => updatePost("seo.canonicalUrl", event.target.value)}
-              placeholder={`${BLOG_URL}/${postForm.slug || "slug"}`}
-              className="w-full rounded border border-gray-300 px-3 py-2 text-sm"
+              value={automaticPostUrl}
+              readOnly
+              className="w-full rounded border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-700"
             />
-          </label>
+            <p className="text-xs leading-5 text-gray-500">
+              Selected automatically from the slug and saved with the post, so SEO canonical, Open Graph URL, and share buttons stay aligned.
+            </p>
+          </div>
           <label className="space-y-1 lg:col-span-2">
             <span className="text-xs font-bold uppercase tracking-wide text-gray-500">Meta description</span>
             <textarea
@@ -1691,7 +1977,7 @@ const BlogManagement = () => {
             <input
               value={postForm.social.shareTitle}
               onChange={(event) => updatePost("social.shareTitle", event.target.value)}
-              placeholder={postForm.title}
+              placeholder={automaticShareTitle}
               className="w-full rounded border border-gray-300 px-3 py-2 text-sm"
             />
           </label>
@@ -1700,11 +1986,14 @@ const BlogManagement = () => {
             <textarea
               value={postForm.social.shareDescription}
               onChange={(event) => updatePost("social.shareDescription", event.target.value)}
-              placeholder={postForm.excerpt}
+              placeholder={automaticShareDescription}
               rows={3}
               className="w-full rounded border border-gray-300 px-3 py-2 text-sm"
             />
           </label>
+          <div className="rounded-md border border-blue-100 bg-blue-50 p-3 text-xs leading-5 text-blue-900 lg:col-span-2">
+            Sharing uses <strong>{automaticPostUrl}</strong>. Empty share title and description fields automatically fall back to the SEO title/description, then the blog title/excerpt.
+          </div>
           <div className="grid gap-2 text-sm sm:grid-cols-2">
             <label className="flex items-center gap-2 rounded border border-gray-200 p-2">
               <input
@@ -1912,7 +2201,7 @@ const BlogManagement = () => {
                   </button>
                   <button
                     type="button"
-                    onClick={() => setStep((value) => Math.min(steps.length - 1, value + 1))}
+                    onClick={goToNextStep}
                     disabled={!canGoNext || saving || loading}
                     className="inline-flex items-center gap-2 rounded border border-gray-300 px-4 py-2 text-sm font-bold text-gray-700 disabled:cursor-not-allowed disabled:opacity-40"
                   >
@@ -2272,8 +2561,12 @@ const BlogManagement = () => {
                 ["Ctrl/Cmd + I", "Italic selected text"],
                 ["Ctrl/Cmd + U", "Underline selected text"],
                 ["Ctrl/Cmd + ?", "Open this helper"],
+                ["Tab", "Insert four spaces at the cursor, or indent selected blocks"],
+                ["Shift + Tab", "Outdent selected blocks"],
                 ["Shift + Enter", "Insert a visible line break"],
+                ["Enter after heading", "Continue in a normal paragraph"],
                 ["Enter inside quote", "Exit the quote block and continue in a normal paragraph"],
+                ["List buttons", "Create a list at the cursor, or turn selected blocks into list items"],
                 ["Select text + Size", "Apply text size only to the selection"],
               ].map(([keys, description]) => (
                 <div key={keys} className="grid grid-cols-[140px_minmax(0,1fr)] gap-3 rounded border border-gray-100 p-3">
@@ -2299,6 +2592,9 @@ const BlogManagement = () => {
         .blog-editor:empty::before { content: "Start writing the blog body..."; color: #94a3b8; }
         .blog-editor br[data-editor-line-break="true"]::after { content: " line break"; color: #94a3b8; font-family: Inter, ui-sans-serif, system-ui; font-size: 11px; font-style: normal; }
         .blog-editor p { margin: .75rem 0; }
+        .blog-editor ul,
+        .blog-editor ol { margin: .9rem 0; padding-left: 1.5rem; }
+        .blog-editor li { margin: .35rem 0; padding-left: .25rem; }
         .blog-editor blockquote { border-left: 4px solid #3b82f6; background: #eff6ff; padding: .7rem 1rem; margin: 1.2rem 0; font-style: italic; }
         .blog-editor a { color: #2563eb; text-decoration: underline; text-underline-offset: 4px; }
         .blog-editor img { max-width: 100%; border-radius: 6px; }
