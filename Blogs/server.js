@@ -133,12 +133,18 @@ const ROOT_LINKS = [["Latest Vidhgrow blogs", "/"], ...TOPIC_LINKS.map((topic) =
 const EXTERNAL_READING_LINKS = [
   ["Google Search Central", "https://developers.google.com/search/docs"],
   ["Schema.org BlogPosting", "https://schema.org/BlogPosting"],
-  ["Web.dev SEO guide", "https://web.dev/learn/seo"],
+  ["Google SEO starter guide", "https://developers.google.com/search/docs/fundamentals/seo-starter-guide"],
 ];
 const API_CACHE_TTL_MS = 5 * 60 * 1000;
 const PAGE_CACHE_TTL_MS = 5 * 60 * 1000;
 const LIST_API_CACHE_TTL_MS = 30 * 1000;
 const HOME_PAGE_CACHE_TTL_MS = 30 * 1000;
+
+const securityHeaders = () => ({
+  "Strict-Transport-Security": "max-age=31536000; includeSubDomains",
+  "X-Content-Type-Options": "nosniff",
+  "Referrer-Policy": "strict-origin-when-cross-origin",
+});
 
 const escapeHtml = (value = "") =>
   String(value)
@@ -269,6 +275,34 @@ const ensureContentImageAlts = (html = "", fallback = "Vidhgrow blog illustratio
     .replace(/<img\b(?![^>]*\balt=)([^>]*)>/gi, `<img alt="${alt}"$1>`)
     .replace(/<img\b([^>]*?)\s+alt=(["'])\s*\2([^>]*)>/gi, `<img$1 alt="${alt}"$3>`);
 };
+
+const readableUrlLabel = (href = "") => {
+  try {
+    const parsed = new URL(String(href), BLOG_PUBLIC_URL);
+    const pathLabel = decodeURIComponent(parsed.pathname || "")
+      .replace(/^\/|\/$/g, "")
+      .replace(/[-_/]+/g, " ")
+      .trim();
+    const hostLabel = parsed.hostname.replace(/^www\./, "");
+    return pathLabel ? `${pathLabel} on ${hostLabel}` : hostLabel;
+  } catch {
+    return "Read linked page";
+  }
+};
+
+const ensureReadableArticleLinks = (html = "") =>
+  String(html).replace(/<a\b([^>]*\bhref=(["'])([^"']+)\2[^>]*)>([\s\S]*?)<\/a>/gi, (match, attrs, _quote, href, inner) => {
+    if (stripHtml(inner)) return match;
+
+    const label = escapeHtml(readableUrlLabel(href));
+    if (/<img\b/i.test(inner)) {
+      return `<a${attrs}>${inner}<span class="sr-only">${label}</span></a>`;
+    }
+    return `<a${attrs}>${label}</a>`;
+  });
+
+const prepareArticleContentHtml = (html = "", fallback = "Vidhgrow blog illustration") =>
+  ensureReadableArticleLinks(ensureContentImageAlts(html, fallback));
 
 const authorFallback = (name = "Vidhgrow") => {
   const letter = String(name).trim().charAt(0).toUpperCase() || "V";
@@ -450,6 +484,13 @@ const footer = (settings = {}) => {
   </footer>`;
 };
 
+const postCardAuthor = (post = {}) => {
+  const name = post.author?.name || "Vidhgrow Editorial";
+  return post.author?.slug
+    ? `<a href="/author/${escapeHtml(post.author.slug)}">${escapeHtml(name)}</a>`
+    : `<span>${escapeHtml(name)}</span>`;
+};
+
 const postCard = (post) => `<article class="post-card">
   <a href="/${escapeHtml(post.slug)}" class="post-card-image">
     <img src="${escapeHtml(seoImage(post.coverImage?.url))}" alt="${escapeHtml(imageAlt(post.coverImage, `Cover image for ${post.title}`))}" loading="lazy" />
@@ -459,7 +500,7 @@ const postCard = (post) => `<article class="post-card">
     <h2><a href="/${escapeHtml(post.slug)}">${escapeHtml(post.title)}</a></h2>
     <p>${escapeHtml(post.excerpt)}</p>
     <div class="post-meta">
-      <span>${escapeHtml(post.author?.name || "Vidhgrow Editorial")}</span>
+      ${postCardAuthor(post)}
       <span>${escapeHtml(readingTimeLabel(post))}</span>
     </div>
   </div>
@@ -539,6 +580,7 @@ const renderHome = async (url) => {
             <time datetime="${escapeHtml(latest.publishedAt || latest.createdAt)}">${formatDate(latest.publishedAt || latest.createdAt)}</time>
             <h2><a href="/${escapeHtml(latest.slug)}">${escapeHtml(latest.title)}</a></h2>
             <p>${escapeHtml(latest.excerpt)}</p>
+            <div class="post-meta">${postCardAuthor(latest)}<span>${escapeHtml(readingTimeLabel(latest))}</span></div>
           </div>
         </section>`
       : ""
@@ -590,6 +632,31 @@ ${footer(settingsRes.data)}`;
   });
 };
 
+const topicPageTitle = (topic) =>
+  metaTitle(`${topic.title} | Vidhgrow Topic Archive`, HOME_SEO_TITLE);
+
+const topicPageDescription = (topic) =>
+  metaDescription(
+    `${topic.description} Browse Vidhgrow blog articles about ${topic.navLabel.toLowerCase()}, platform news, teacher workflows, course updates, student practice, and product decisions.`,
+    HOME_SEO_DESCRIPTION,
+  );
+
+const renderTopicOverview = (topic, posts = []) => {
+  const focusTerms = topic.terms.slice(0, 4).join(", ");
+  const postSummary = posts.length
+    ? `The posts below are ordered by freshness, so readers can start with recent Vidhgrow notes and then move through older context without using filtered URLs or temporary query parameters.`
+    : `When new writing is published in this topic, it will appear here on a stable URL that can be linked from search, newsletters, product pages, and related Vidhgrow blog posts.`;
+
+  return `<section class="topic-overview" aria-labelledby="topic-overview-title">
+    <p class="eyebrow">Topic guide</p>
+    <h2 id="topic-overview-title">How to use this Vidhgrow topic archive</h2>
+    <p>The ${escapeHtml(topic.title)} archive brings together Vidhgrow writing about ${escapeHtml(focusTerms)} and the practical decisions behind the platform. It is designed for readers who want more than a headline: what changed, why the team made the change, and how the update affects teachers, students, course builders, and admins using Vidhgrow every day.</p>
+    <p>${escapeHtml(topic.description)} The page also gives crawlers a clean collection page for related blogs, with stable internal links to posts, other topic archives, and author pages. That keeps the browsing path simple for humans while making the structure easier for search engines and AI assistants to understand.</p>
+    <p>${postSummary} Each article should connect back to real product work, such as course creation, teacher verification, assessment quality, student progress, feedback, moderation, security, or publishing workflows. We avoid filler and keep the archive focused on notes that help someone understand the Vidhgrow product and learning experience.</p>
+    <p>Use this page as a starting point when comparing Vidhgrow feature releases, reading teacher portal updates, reviewing course builder changes, or following how the platform is improving online learning. For wider context, continue through the related topics below or open the linked author profiles from the article cards.</p>
+  </section>`;
+};
+
 const renderTopic = async (slug) => {
   const topic = getTopic(slug);
   if (!topic) {
@@ -614,6 +681,7 @@ const renderTopic = async (slug) => {
     <p class="lede">${escapeHtml(topic.description)}</p>
     <p>These articles collect related Vidhgrow blog updates in one clean place, without dynamic search parameters. The page helps readers and crawlers follow a stable topic path for ${escapeHtml(topic.navLabel.toLowerCase())}, platform improvements, and practical online learning decisions.</p>
   </section>
+  ${renderTopicOverview(topic, posts)}
   <section class="post-list" aria-label="${escapeHtml(topic.title)} posts">
     ${posts.map(postCard).join("") || `<div class="empty-state">No posts found for this topic yet.</div>`}
   </section>
@@ -632,8 +700,8 @@ const renderTopic = async (slug) => {
 ${footer(settingsRes.data)}`;
 
   return pageShell({
-    title: metaTitle(topic.title, HOME_SEO_TITLE),
-    description: metaDescription(topic.description, HOME_SEO_DESCRIPTION),
+    title: topicPageTitle(topic),
+    description: topicPageDescription(topic),
     canonical: `${BLOG_PUBLIC_URL}/topic/${topic.slug}`,
     image: posts[0]?.coverImage?.url,
     body,
@@ -760,29 +828,74 @@ const renderArticleContext = (post, contentHtml = "") => {
 };
 
 const renderArticleAmbient = () => `<div class="article-ambient blog-ambient" aria-hidden="true">
-  <span class="ambient-icon ambient-brain" data-parallax="0.05">
+  <span class="ambient-field ambient-field-one" data-parallax="0.015" data-parallax-x="-0.012"></span>
+  <span class="ambient-field ambient-field-two" data-parallax="-0.018" data-parallax-x="0.01"></span>
+  <span class="ambient-field ambient-field-three" data-parallax="0.022" data-parallax-x="-0.006"></span>
+  <span class="ambient-rule ambient-rule-one" data-parallax="-0.035" data-parallax-x="0.018"></span>
+  <span class="ambient-rule ambient-rule-two" data-parallax="0.04" data-parallax-x="-0.012"></span>
+  <span class="ambient-rule ambient-rule-three" data-parallax="-0.028" data-parallax-x="0.014"></span>
+  <span class="ambient-icon ambient-brain" data-parallax="0.05" data-parallax-x="-0.018">
     <svg viewBox="0 0 48 48" focusable="false"><path d="M18 10c-4 0-7 3-7 7 0 1 .2 2 .6 3A8 8 0 0 0 8 27c0 5 4 9 9 9h2V10h-1Zm12 0c4 0 7 3 7 7 0 1-.2 2-.6 3A8 8 0 0 1 40 27c0 5-4 9-9 9h-2V10h1ZM19 18h-4m4 8h-5m15-8h4m-4 8h5"/></svg>
   </span>
-  <span class="ambient-icon ambient-news" data-parallax="-0.04">
+  <span class="ambient-icon ambient-news" data-parallax="-0.04" data-parallax-x="0.012">
     <svg viewBox="0 0 48 48" focusable="false"><path d="M10 14h24v22H10zM34 20h4v16c0 3-2 5-5 5H15M15 20h14M15 26h14M15 32h9"/></svg>
   </span>
-  <span class="ambient-icon ambient-pen" data-parallax="0.03">
+  <span class="ambient-icon ambient-pen" data-parallax="0.03" data-parallax-x="-0.01">
     <svg viewBox="0 0 48 48" focusable="false"><path d="M12 36l4-11 16-16 7 7-16 16-11 4Zm18-25 7 7M16 25l7 7"/></svg>
   </span>
-  <span class="ambient-icon ambient-comment" data-parallax="-0.06">
+  <span class="ambient-icon ambient-comment" data-parallax="-0.06" data-parallax-x="0.02">
     <svg viewBox="0 0 48 48" focusable="false"><path d="M12 14h24v18H20l-8 6V14Zm7 7h16M19 27h10"/></svg>
   </span>
-  <span class="ambient-icon ambient-chart" data-parallax="0.08">
+  <span class="ambient-icon ambient-chart" data-parallax="0.08" data-parallax-x="-0.014">
     <svg viewBox="0 0 48 48" focusable="false"><path d="M10 38h28M15 34V22m9 12V14m9 20V26M12 12h24v26H12z"/></svg>
   </span>
-  <span class="ambient-icon ambient-book" data-parallax="-0.03">
+  <span class="ambient-icon ambient-book" data-parallax="-0.03" data-parallax-x="0.009">
     <svg viewBox="0 0 48 48" focusable="false"><path d="M12 12h11c3 0 5 2 5 5v21c0-3-2-5-5-5H12V12Zm24 0H25c-3 0-5 2-5 5v21c0-3 2-5 5-5h11V12Z"/></svg>
   </span>
-  <span class="ambient-icon ambient-bell" data-parallax="0.04">
+  <span class="ambient-icon ambient-bell" data-parallax="0.04" data-parallax-x="-0.016">
     <svg viewBox="0 0 48 48" focusable="false"><path d="M18 37h12m-8 4h4m10-8H12l4-5v-7c0-5 3-9 8-9s8 4 8 9v7l4 5Z"/></svg>
   </span>
-  <span class="ambient-icon ambient-globe" data-parallax="-0.05">
+  <span class="ambient-icon ambient-globe" data-parallax="-0.05" data-parallax-x="0.015">
     <svg viewBox="0 0 48 48" focusable="false"><path d="M24 40a16 16 0 1 0 0-32 16 16 0 0 0 0 32Zm-14-16h28M24 8c4 4 6 9 6 16s-2 12-6 16M24 8c-4 4-6 9-6 16s2 12 6 16"/></svg>
+  </span>
+  <span class="ambient-icon ambient-megaphone" data-parallax="0.072" data-parallax-x="-0.02">
+    <svg viewBox="0 0 48 48" focusable="false"><path d="M13 28h7l16 7V13l-16 7h-7v8Zm7 0 3 9h-6l-2-9m21-12 4-3m-4 19 4 3M38 24h5"/></svg>
+  </span>
+  <span class="ambient-icon ambient-rss" data-parallax="-0.07" data-parallax-x="0.018">
+    <svg viewBox="0 0 48 48" focusable="false"><path d="M14 34h.1M14 24c6 0 10 4 10 10M14 14c12 0 20 8 20 20"/></svg>
+  </span>
+  <span class="ambient-icon ambient-search" data-parallax="0.052" data-parallax-x="-0.012">
+    <svg viewBox="0 0 48 48" focusable="false"><path d="M22 34a12 12 0 1 0 0-24 12 12 0 0 0 0 24Zm9-3 9 9M17 22h10"/></svg>
+  </span>
+  <span class="ambient-icon ambient-calendar" data-parallax="-0.045" data-parallax-x="0.014">
+    <svg viewBox="0 0 48 48" focusable="false"><path d="M13 14h22v24H13zM13 20h22M18 10v8m12-8v8M18 27h4m6 0h4m-14 6h4m6 0h4"/></svg>
+  </span>
+  <span class="ambient-icon ambient-clipboard" data-parallax="0.065" data-parallax-x="-0.017">
+    <svg viewBox="0 0 48 48" focusable="false"><path d="M17 12h14l2 5H15l2-5Zm-3 5h20v23H14V17Zm6 9h10m-10 7h10"/></svg>
+  </span>
+  <span class="ambient-icon ambient-target" data-parallax="-0.058" data-parallax-x="0.02">
+    <svg viewBox="0 0 48 48" focusable="false"><path d="M24 40a16 16 0 1 0 0-32 16 16 0 0 0 0 32Zm0-6a10 10 0 1 0 0-20 10 10 0 0 0 0 20Zm0-6a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z"/></svg>
+  </span>
+  <span class="ambient-icon ambient-lightbulb" data-parallax="0.038" data-parallax-x="-0.01">
+    <svg viewBox="0 0 48 48" focusable="false"><path d="M18 34h12m-10 5h8m-4-31a12 12 0 0 0-7 22c1 1 1 2 1 4h12c0-2 0-3 1-4A12 12 0 0 0 24 8Zm0 0v5m-12 7H8m32 0h-4M14 12l-3-3m23 3 3-3"/></svg>
+  </span>
+  <span class="ambient-icon ambient-layers" data-parallax="-0.032" data-parallax-x="0.012">
+    <svg viewBox="0 0 48 48" focusable="false"><path d="M24 8 8 17l16 9 16-9-16-9Zm-12 17 12 7 12-7M12 33l12 7 12-7"/></svg>
+  </span>
+  <span class="ambient-icon ambient-checklist" data-parallax="0.09" data-parallax-x="-0.022">
+    <svg viewBox="0 0 48 48" focusable="false"><path d="M15 12h22v28H15zM11 16h4m-4 8h4m-4 8h4m10-14 4 4 7-8m-11 16h11"/></svg>
+  </span>
+  <span class="ambient-icon ambient-sparkline" data-parallax="-0.082" data-parallax-x="0.018">
+    <svg viewBox="0 0 48 48" focusable="false"><path d="M10 36h28M13 31l7-8 6 5 10-14m0 0v8m0-8h-8"/></svg>
+  </span>
+  <span class="ambient-icon ambient-compass" data-parallax="0.047" data-parallax-x="-0.016">
+    <svg viewBox="0 0 48 48" focusable="false"><path d="M24 40a16 16 0 1 0 0-32 16 16 0 0 0 0 32Zm6-22-4 10-10 4 4-10 10-4Z"/></svg>
+  </span>
+  <span class="ambient-icon ambient-window" data-parallax="-0.062" data-parallax-x="0.016">
+    <svg viewBox="0 0 48 48" focusable="false"><path d="M10 12h28v24H10zM10 19h28M16 15h.1M21 15h.1M26 15h.1M16 26h16M16 31h10"/></svg>
+  </span>
+  <span class="ambient-icon ambient-cap" data-parallax="0.055" data-parallax-x="-0.014">
+    <svg viewBox="0 0 48 48" focusable="false"><path d="M24 10 8 18l16 8 16-8-16-8Zm-10 12v8c5 5 15 5 20 0v-8M40 18v12"/></svg>
   </span>
 </div>`;
 
@@ -814,7 +927,7 @@ const renderPost = async (slug) => {
   const shareTitle = post.social?.shareTitle || post.title;
   const coverUrl = seoImage(post.coverImage?.url);
   const coverAlt = imageAlt(post.coverImage, `${post.title} cover image`);
-  const contentHtml = ensureContentImageAlts(post.contentHtml, post.title);
+  const contentHtml = prepareArticleContentHtml(post.contentHtml, post.title);
   const readTime = readingTimeLabel(post, contentHtml);
   const articleContext = renderArticleContext(post, contentHtml);
 
@@ -895,12 +1008,40 @@ ${footer(settingsRes.data)}`;
   });
 };
 
+const renderAuthorOverview = (author = {}, posts = []) => {
+  const name = author.name || "Vidhgrow Editorial";
+  const role = author.title || "Vidhgrow blog author";
+  const topicNames = [
+    ...new Set(
+      posts
+        .flatMap((post) => post.topics || [])
+        .map((topic) => topicLabel(topic))
+        .filter(Boolean),
+    ),
+  ].slice(0, 4);
+  const topicText = topicNames.length
+    ? topicNames.join(", ")
+    : "product updates, teaching workflows, course news, student practice, and platform operations";
+  const postCountText = posts.length
+    ? `${posts.length} published ${posts.length === 1 ? "blog" : "blogs"}`
+    : "upcoming Vidhgrow blogs";
+
+  return `<section class="author-overview" aria-labelledby="author-overview-title">
+    <p class="eyebrow">Author profile</p>
+    <h2 id="author-overview-title">Editorial notes from ${escapeHtml(name)}</h2>
+    <p>${escapeHtml(name)} is listed on Vidhgrow Blogs as ${escapeHtml(role)}, with writing connected to ${escapeHtml(topicText)}. This author page gives readers and search engines a clear place to understand the voice behind the posts, the subjects covered, and the way each article fits into the wider Vidhgrow learning platform.</p>
+    <p>The archive currently includes ${escapeHtml(postCountText)}. Each article should explain real platform work in plain language: what changed, why it matters, who it helps, and what teachers, students, admins, or course builders should notice next. That makes the page useful for readers who want product context instead of scattered updates.</p>
+    <p>Author pages are also part of the blog trust model. They connect post cards, related articles, topic archives, comments, and social sharing back to a stable profile. When Vidhgrow publishes product news, teacher portal changes, course builder notes, security updates, feedback improvements, or student progress stories, the author profile helps readers follow that work over time.</p>
+    <p>Use the article list below to move through recent writing from ${escapeHtml(name)}, then continue into the linked topic pages for broader Vidhgrow blog coverage. The page stays simple on purpose: a clear author identity, readable archive links, and enough context for search crawlers, AI assistants, and human readers to understand the publishing trail.</p>
+  </section>`;
+};
+
 const renderAuthor = async (slug) => {
   const [authorRes, settingsRes] = await Promise.all([
     fetchJson(`/api/blogs/authors/${encodeURIComponent(slug)}`),
     fetchJson("/api/blogs/settings/share").catch(() => ({ data: {} })),
   ]);
-  const { author, posts } = authorRes.data;
+  const { author, posts = [] } = authorRes.data;
   const body = `${header()}
 <main id="main" class="author-shell">
   <section class="author-card">
@@ -912,11 +1053,12 @@ const renderAuthor = async (slug) => {
       ${author.bio ? `<p>${escapeHtml(author.bio)}</p>` : ""}
     </div>
   </section>
+  ${renderAuthorOverview(author, posts || [])}
   <section class="post-list">${posts.map(postCard).join("")}</section>
 </main>
   ${footer(settingsRes.data)}`;
   return pageShell({
-    title: metaTitle(`${author.name} - Vidhgrow Blogs`, author.name),
+    title: metaTitle(`${author.name} - Vidhgrow Blog Author Archive`, author.name),
     description: metaDescription(
       author.bio,
       `Read posts by ${author.name} on Vidhgrow Blogs, including product updates, teacher workflows, course notes, and online learning insights.`,
@@ -961,6 +1103,21 @@ const renderFeed = async () => {
 </rss>`;
 };
 
+const renderLlmsTxt = () => `# Vidhgrow Blogs
+
+Official blog for Vidhgrow product updates, teaching workflows, course news, assessment notes, student progress, security updates, admin workflows, and feedback notes.
+
+Primary site: ${BLOG_PUBLIC_URL}
+Sitemap: ${BLOG_PUBLIC_URL}/sitemap.xml
+RSS feed: ${BLOG_PUBLIC_URL}/feed.xml
+Robots: ${BLOG_PUBLIC_URL}/robots.txt
+
+Important public sections:
+${TOPIC_LINKS.map((topic) => `- ${topic.title}: ${BLOG_PUBLIC_URL}/topic/${topic.slug}`).join("\n")}
+
+Use the canonical URLs on each page. Public blog pages are server-rendered HTML with article content, topic links, author links, structured data, Open Graph metadata, and readable comments. Admin-only blog APIs, unpublished drafts, upload URLs, encrypted records, and private Vidhgrow application APIs are not intended for model ingestion.
+`;
+
 const assetCache = new Map();
 
 const minifyCss = (content) =>
@@ -997,7 +1154,7 @@ const serveStatic = async (res, filePath, contentType, options = {}) => {
   res.writeHead(200, {
     "Content-Type": contentType,
     "Cache-Control": "public, max-age=86400",
-    "X-Content-Type-Options": "nosniff",
+    ...securityHeaders(),
   });
   res.end(content);
 };
@@ -1021,6 +1178,7 @@ const redirectToCanonicalHost = (req, res) => {
     res.writeHead(301, {
       Location: target,
       "Cache-Control": "public, max-age=3600",
+      ...securityHeaders(),
     });
     res.end();
     return true;
@@ -1070,15 +1228,19 @@ const server = http.createServer(async (req, res) => {
       return serveStatic(res, "public/browserconfig.xml", "application/xml; charset=utf-8");
     }
     if (pathname === "/google71d3fdc4e5a7d6ef.html") {
-      res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
+      res.writeHead(200, { "Content-Type": "text/html; charset=utf-8", ...securityHeaders() });
       return res.end("google-site-verification: google71d3fdc4e5a7d6ef.html");
     }
     if (pathname === "/robots.txt") {
-      res.writeHead(200, { "Content-Type": "text/plain; charset=utf-8" });
+      res.writeHead(200, { "Content-Type": "text/plain; charset=utf-8", ...securityHeaders() });
       return res.end(`User-agent: *
 Allow: /
 Sitemap: ${BLOG_PUBLIC_URL}/sitemap.xml
 `);
+    }
+    if (pathname === "/llms.txt") {
+      res.writeHead(200, { "Content-Type": "text/plain; charset=utf-8", ...securityHeaders() });
+      return res.end(renderLlmsTxt());
     }
     if (pathname === "/sitemap.xml") {
       const sitemap = await cached(pageCache, "sitemap", PAGE_CACHE_TTL_MS, async () => {
@@ -1097,11 +1259,11 @@ Sitemap: ${BLOG_PUBLIC_URL}/sitemap.xml
           ? upstream.replace("</urlset>", `${topicUrls}\n</urlset>`)
           : upstream;
       });
-      res.writeHead(200, { "Content-Type": "application/xml; charset=utf-8" });
+      res.writeHead(200, { "Content-Type": "application/xml; charset=utf-8", ...securityHeaders() });
       return res.end(sitemap);
     }
     if (pathname === "/feed.xml") {
-      res.writeHead(200, { "Content-Type": "application/rss+xml; charset=utf-8" });
+      res.writeHead(200, { "Content-Type": "application/rss+xml; charset=utf-8", ...securityHeaders() });
       return res.end(await renderFeed());
     }
 
@@ -1118,7 +1280,7 @@ Sitemap: ${BLOG_PUBLIC_URL}/sitemap.xml
       const slug = pathname.slice(1);
       html = await cached(pageCache, `post:${slug}`, PAGE_CACHE_TTL_MS, () => renderPost(slug));
     } else {
-      res.writeHead(404, { "Content-Type": "text/html; charset=utf-8" });
+      res.writeHead(404, { "Content-Type": "text/html; charset=utf-8", ...securityHeaders() });
       return res.end(render404());
     }
 
@@ -1130,17 +1292,16 @@ Sitemap: ${BLOG_PUBLIC_URL}/sitemap.xml
     res.writeHead(200, {
       "Content-Type": "text/html; charset=utf-8",
       "Cache-Control": htmlCacheControl,
-      "X-Content-Type-Options": "nosniff",
-      "Referrer-Policy": "strict-origin-when-cross-origin",
+      ...securityHeaders(),
     });
     res.end(html);
   } catch (error) {
     if (error.status === 404) {
-      res.writeHead(404, { "Content-Type": "text/html; charset=utf-8" });
+      res.writeHead(404, { "Content-Type": "text/html; charset=utf-8", ...securityHeaders() });
       return res.end(render404());
     }
     console.error("[BLOGS_SSR] Render error:", error);
-    res.writeHead(500, { "Content-Type": "text/html; charset=utf-8" });
+    res.writeHead(500, { "Content-Type": "text/html; charset=utf-8", ...securityHeaders() });
     res.end(
       pageShell({
         title: "Temporarily unavailable - Vidhgrow Blog",

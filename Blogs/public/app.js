@@ -125,9 +125,14 @@ const setupParallax = () => {
   const update = () => {
     const scrollY = window.scrollY || 0;
     items.forEach((item) => {
-      const speed = Number(item.dataset.parallax || 0);
-      const offset = Math.max(-90, Math.min(90, scrollY * speed));
-      item.style.setProperty("--parallax-y", `${offset.toFixed(1)}px`);
+      const ySpeed = Number(item.dataset.parallax || 0);
+      const xSpeed = Number(item.dataset.parallaxX || 0);
+      const yOffset = Math.max(-130, Math.min(130, scrollY * ySpeed));
+      const xOffset = Math.max(-60, Math.min(60, scrollY * xSpeed));
+      const rotation = Math.max(-5, Math.min(5, scrollY * xSpeed * 0.08));
+      item.style.setProperty("--parallax-y", `${yOffset.toFixed(1)}px`);
+      item.style.setProperty("--parallax-x", `${xOffset.toFixed(1)}px`);
+      item.style.setProperty("--parallax-r", `${rotation.toFixed(2)}deg`);
     });
     ticking = false;
   };
