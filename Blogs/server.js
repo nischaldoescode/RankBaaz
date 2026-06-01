@@ -70,9 +70,14 @@ const formatDate = (date) =>
 const fetchJson = async (apiPath) => {
   const response = await fetch(`${API_BASE}${apiPath}`, {
     headers: {
-      Accept: "application/json",
+      Accept: "text/html,application/json;q=0.9,*/*;q=0.8",
+      "Accept-Language": "en-US,en;q=0.9",
+      "Accept-Encoding": "gzip, deflate, br",
       Origin: BLOG_ORIGIN,
       Referer: `${BLOG_ORIGIN}/`,
+      "Sec-Fetch-Site": "same-site",
+      "Sec-Fetch-Mode": "cors",
+      "Sec-Fetch-Dest": "empty",
       "User-Agent": "VidhgrowBlogsSSR/1.0",
     },
   });

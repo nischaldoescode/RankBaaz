@@ -33,6 +33,21 @@ const ALLOWED_ORIGINS = [
   "http://localhost:8080"
 ];
 
+const PUBLIC_BLOG_READ_PATHS = [
+  "/api/blogs/public",
+  "/api/blogs/authors",
+  "/api/blogs/settings/share",
+  "/api/blogs/sitemap.xml",
+];
+
+const isPublicBlogReadRequest = (req) => {
+  if (req.method !== "GET") return false;
+
+  return PUBLIC_BLOG_READ_PATHS.some(
+    (path) => req.path === path || req.path.startsWith(`${path}/`),
+  );
+};
+
 /**
  * PRODUCTION SECURITY: Simple 403 Forbidden HTML page
  * Displayed when requests have no valid origin/referer headers
@@ -388,6 +403,16 @@ export const botProtection = async (req, res, next) => {
 
     if (req.path === "/track/admin/view") {
       return next();
+    }
+
+    if (isPublicBlogReadRequest(req)) {
+      if (isLegitimateOrigin(origin, referer)) {
+        return next();
+      }
+
+      if (req.path === "/api/blogs/sitemap.xml" && !origin && !referer) {
+        return next();
+      }
     }
 
     // LAYER 2: Bypass protection for authenticated requests with valid signatures
