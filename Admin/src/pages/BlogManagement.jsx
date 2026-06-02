@@ -11,6 +11,7 @@ import {
   ChevronRight,
   Eye,
   FileText,
+  Globe,
   Heading1,
   Heading2,
   Heading3,
@@ -26,8 +27,10 @@ import {
   Palette,
   Plus,
   Quote,
+  RefreshCw,
   Save,
   Search,
+  Send,
   Smartphone,
   Tablet,
   Trash2,
@@ -145,6 +148,16 @@ const formatBytes = (bytes = 0) => {
   if (bytes < 1024 * 1024) return `${Math.ceil(bytes / 1024)}KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)}MB`;
 };
+
+const formatDateTime = (value) => {
+  if (!value) return "Never";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "Unknown";
+  return date.toLocaleString();
+};
+
+const compactBlogUrl = (url = "") =>
+  String(url).replace(/^https:\/\/blogs\.vidhgrow\.online\/?/, "/");
 
 const isHttpUrl = (value = "") => {
   try {
@@ -436,6 +449,10 @@ const BlogManagement = () => {
   const [showShortcutModal, setShowShortcutModal] = useState(false);
   const [uploading, setUploading] = useState("");
   const [confirmModal, setConfirmModal] = useState(false);
+  const [showIndexingModal, setShowIndexingModal] = useState(false);
+  const [indexingStatus, setIndexingStatus] = useState(null);
+  const [indexingLoading, setIndexingLoading] = useState(false);
+  const [indexingAction, setIndexingAction] = useState("");
 
   const selectedAuthor = authors.find((author) => author._id === postForm.author);
   const isDirty = buildSnapshot(postForm) !== baseline;
@@ -498,6 +515,39 @@ const BlogManagement = () => {
       toast.error(error.response?.data?.message || "Failed to load blog workspace");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchIndexingStatus = useCallback(async () => {
+    try {
+      setIndexingLoading(true);
+      const res = await axios.get("/blogs/admin/indexing");
+      setIndexingStatus(res.data.data);
+      return res.data.data;
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Failed to load indexing status");
+      return null;
+    } finally {
+      setIndexingLoading(false);
+    }
+  }, []);
+
+  const openIndexingModal = async () => {
+    setShowIndexingModal(true);
+    await fetchIndexingStatus();
+  };
+
+  const submitIndexNow = async () => {
+    try {
+      setIndexingAction("indexnow");
+      const res = await axios.post("/blogs/admin/indexing/indexnow");
+      toast.success(res.data.message || "IndexNow submission completed");
+      await fetchIndexingStatus();
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Failed to submit URLs to IndexNow");
+      await fetchIndexingStatus();
+    } finally {
+      setIndexingAction("");
     }
   };
 
@@ -2132,6 +2182,161 @@ const BlogManagement = () => {
     </div>
   );
 
+  const renderIndexingModal = () => {
+    if (!showIndexingModal) return null;
+
+    const sitemap = indexingStatus?.sitemap || {};
+    const indexNow = indexingStatus?.indexNow || {};
+    const logs = indexingStatus?.logs || [];
+    const newUrls = indexNow.newUrls || [];
+    const hasNewUrls = Number(indexNow.newCount || 0) > 0;
+    const busy = indexingLoading || !!indexingAction;
+
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+        <div className="flex max-h-[92vh] w-full max-w-5xl flex-col overflow-hidden rounded-xl bg-white shadow-2xl">
+          <div className="flex items-start justify-between gap-4 border-b border-gray-200 p-5">
+            <div>
+              <p className="text-xs font-bold uppercase tracking-[0.18em] text-blue-700">Search indexing</p>
+              <h2 className="mt-1 text-xl font-bold text-gray-950">Blogs sitemap and IndexNow submissions</h2>
+              <p className="mt-2 max-w-3xl text-sm leading-6 text-gray-600">
+                This checks the live blog sitemap URL set, compares it with successful IndexNow history, and keeps response logs for production debugging.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowIndexingModal(false)}
+              className="rounded border border-gray-200 p-2 text-gray-600 hover:bg-gray-50"
+              title="Close indexing modal"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+
+          <div className="overflow-auto p-5">
+            <div className="grid gap-3 md:grid-cols-2">
+              <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
+                <p className="text-xs font-bold uppercase tracking-wide text-gray-500">Sitemap URLs</p>
+                <p className="mt-2 text-3xl font-bold text-gray-950">{sitemap.count || 0}</p>
+                <p className="mt-1 truncate text-xs text-gray-500">{sitemap.url || `${BLOG_URL}/sitemap.xml`}</p>
+              </div>
+              <div className="rounded-lg border border-blue-100 bg-blue-50 p-4">
+                <p className="text-xs font-bold uppercase tracking-wide text-blue-700">New for IndexNow</p>
+                <p className="mt-2 text-3xl font-bold text-blue-900">{indexNow.newCount || 0}</p>
+                <p className="mt-1 text-xs text-blue-800">{indexNow.submittedCount || 0} already submitted successfully</p>
+              </div>
+            </div>
+
+            <div className="mt-5 grid gap-5 xl:grid-cols-[minmax(0,1fr)_360px]">
+              <section className="rounded-lg border border-gray-200 bg-white p-4">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <h3 className="flex items-center gap-2 font-bold text-gray-950">
+                      <Globe className="h-4 w-4" />
+                      IndexNow URL batch
+                    </h3>
+                    <p className="mt-1 text-sm leading-6 text-gray-600">
+                      Only URLs that have never had a successful IndexNow record are submitted. The backend enforces a cooldown to prevent repeated spam clicks.
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={fetchIndexingStatus}
+                      disabled={busy}
+                      className="inline-flex items-center gap-2 rounded border border-gray-300 px-3 py-2 text-sm font-bold text-gray-700 disabled:opacity-60"
+                    >
+                      <RefreshCw className={`h-4 w-4 ${indexingLoading ? "animate-spin" : ""}`} />
+                      Refresh
+                    </button>
+                    <button
+                      type="button"
+                      onClick={submitIndexNow}
+                      disabled={busy || !indexNow.configured || !hasNewUrls}
+                      className="inline-flex items-center gap-2 rounded bg-blue-600 px-3 py-2 text-sm font-bold text-white disabled:opacity-60"
+                    >
+                      <Send className="h-4 w-4" />
+                      {indexingAction === "indexnow" ? "Submitting..." : "Submit new URLs"}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="mt-4 grid gap-2 text-xs text-gray-600">
+                  <p><strong>Host:</strong> {indexNow.host || "blogs.vidhgrow.online"}</p>
+                  <p><strong>Key file:</strong> {indexNow.keyLocation || "Not configured"}</p>
+                  <p><strong>Cooldown:</strong> {indexNow.cooldownSeconds || 120} seconds</p>
+                </div>
+
+                <div className="mt-4 rounded-md border border-gray-100 bg-gray-50 p-3">
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="text-sm font-bold text-gray-800">URLs waiting to submit</p>
+                    <span className="rounded-full bg-white px-2 py-1 text-xs font-bold text-gray-600">{newUrls.length}</span>
+                  </div>
+                  <div className="mt-3 max-h-56 space-y-2 overflow-auto">
+                    {newUrls.slice(0, 30).map((url) => (
+                      <div key={url} className="truncate rounded border border-gray-200 bg-white px-3 py-2 text-xs text-gray-700">
+                        {compactBlogUrl(url)}
+                      </div>
+                    ))}
+                    {!newUrls.length && (
+                      <p className="rounded border border-emerald-100 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
+                        No new sitemap URLs are waiting for IndexNow.
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </section>
+
+              <section className="rounded-lg border border-amber-100 bg-amber-50 p-4">
+                <h3 className="flex items-center gap-2 font-bold text-gray-950">
+                  <Search className="h-4 w-4" />
+                  Google sitemap note
+                </h3>
+                <p className="mt-2 text-sm leading-6 text-gray-600">
+                  Search Console service-account access is hidden because Google is rejecting new service-account emails for this property. Submit the sitemap manually once in Google Search Console, then Google will continue recrawling it.
+                </p>
+                <div className="mt-4 space-y-2 text-xs text-gray-600">
+                  <p><strong>Property:</strong> {BLOG_URL}/</p>
+                  <p><strong>Sitemap:</strong> {sitemap.url || `${BLOG_URL}/sitemap.xml`}</p>
+                </div>
+                <p className="mt-4 rounded border border-amber-200 bg-white/70 p-3 text-xs leading-5 text-amber-900">
+                  Keep using IndexNow here for fresh URLs. For Google, manual sitemap submission is cleaner and avoids a broken button in production.
+                </p>
+              </section>
+            </div>
+
+            <section className="mt-5 rounded-lg border border-gray-200 bg-white p-4">
+              <h3 className="font-bold text-gray-950">Recent response logs</h3>
+              <div className="mt-3 divide-y divide-gray-100">
+                {logs.map((log) => (
+                  <div key={log.batchId} className="grid gap-3 py-3 lg:grid-cols-[180px_minmax(0,1fr)_120px]">
+                    <div>
+                      <p className="text-sm font-bold capitalize text-gray-900">{log.provider.replace(/_/g, " ")}</p>
+                      <p className="text-xs text-gray-500">{formatDateTime(log.submittedAt)}</p>
+                    </div>
+                    <div className="min-w-0">
+                      <p className={`text-sm font-bold ${log.status === "success" ? "text-emerald-700" : "text-red-700"}`}>
+                        {log.status} {log.responseStatus ? `- HTTP ${log.responseStatus}` : ""}
+                      </p>
+                      <p className="mt-1 truncate text-xs text-gray-500">{log.sampleUrls.map(compactBlogUrl).join(", ")}</p>
+                      {(log.responseBody || log.errorMessage) && (
+                        <p className="mt-1 line-clamp-2 text-xs leading-5 text-gray-600">
+                          {log.responseBody || log.errorMessage}
+                        </p>
+                      )}
+                    </div>
+                    <div className="text-right text-xs font-bold text-gray-500">{log.urlCount} URL{log.urlCount === 1 ? "" : "s"}</div>
+                  </div>
+                ))}
+                {!logs.length && <p className="py-6 text-sm text-gray-500">No indexing submissions have been logged yet.</p>}
+              </div>
+            </section>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="blog-admin space-y-6 text-gray-900">
       <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
@@ -2149,6 +2354,15 @@ const BlogManagement = () => {
         </div>
 
         <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={openIndexingModal}
+            disabled={saving || savingAuthor || !!uploading}
+            className="inline-flex items-center gap-2 rounded-md border border-blue-200 bg-blue-50 px-3 py-2 text-sm font-semibold text-blue-700 transition hover:bg-blue-100 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            <Globe className="h-4 w-4" />
+            Indexing
+          </button>
           {[
             ["posts", FileText, "Blogs"],
             ["authors", UserRound, "Authors"],
@@ -2535,6 +2749,8 @@ const BlogManagement = () => {
           </div>
         </div>
       )}
+
+      {renderIndexingModal()}
 
       {confirmModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">

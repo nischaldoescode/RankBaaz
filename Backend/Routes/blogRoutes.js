@@ -7,9 +7,11 @@ import {
   adminDeleteBlogPost,
   adminDiscardBlogMedia,
   adminGetBlogPost,
+  adminGetBlogIndexingStatus,
   adminListAuthors,
   adminListBlogPosts,
   adminListComments,
+  adminSubmitBlogIndexNow,
   adminUploadBlogMedia,
   adminUpdateAuthor,
   adminUpdateBlogPost,
@@ -43,6 +45,8 @@ router.post(
 
 // Admin blog workspace.
 router.get("/admin/posts", authenticateAdmin, verifyRequestSignature, adminListBlogPosts);
+router.get("/admin/indexing", authenticateAdmin, verifyRequestSignature, adminGetBlogIndexingStatus);
+router.post("/admin/indexing/indexnow", authenticateAdmin, verifyRequestSignature, adminSubmitBlogIndexNow);
 router.get("/admin/slugs/check", authenticateAdmin, verifyRequestSignature, adminCheckBlogSlug);
 router.post("/admin/media", authenticateAdmin, verifyRequestSignature, adminUploadBlogMedia);
 router.delete("/admin/media", authenticateAdmin, verifyRequestSignature, adminDiscardBlogMedia);

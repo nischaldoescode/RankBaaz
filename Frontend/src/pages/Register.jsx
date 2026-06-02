@@ -136,7 +136,7 @@ const Register = () => {
   const { contentSettings } = useContent();
 
   useSEO({
-    title: "Register",
+    title: "Create a Free Student Account for Courses and Tests",
     description: `Create your free ${
       contentSettings?.siteName || "Vidhgrow"
     } account and start your learning journey today. Access courses, take tests, and track your progress.`,
@@ -144,11 +144,11 @@ const Register = () => {
       "register, sign up, create account, student registration, free account, join now, new user",
     type: "website",
     noindex: false,
-    canonicalUrl: `${contentSettings?.siteUrl || window.location.origin}/login`,
+    canonicalUrl: `${contentSettings?.siteUrl || window.location.origin}/register`,
     structuredData: {
       "@context": "https://schema.org",
       "@type": "WebPage",
-      name: "Register",
+      name: "Create a Free Student Account for Courses and Tests",
       description: `Create a free account on ${
         contentSettings?.siteName || "Vidhgrow"
       }`,
