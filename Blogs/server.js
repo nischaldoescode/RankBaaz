@@ -41,6 +41,9 @@ const API_BASE = (process.env.BLOG_API_BASE_URL || "http://localhost:7000").repl
 const PUBLIC_API_BASE = (process.env.PUBLIC_API_BASE_URL || API_BASE).replace(/\/$/, "");
 const BLOG_ORIGIN = process.env.BLOGS_SITE_URL || "http://localhost:8080";
 const BLOG_PUBLIC_URL = (process.env.BLOGS_PUBLIC_URL || "https://blogs.vidhgrow.online").replace(/\/$/, "");
+const BLOG_INDEXNOW_KEY = String(
+  process.env.BLOG_INDEXNOW_KEY || "e52015b801f54ed398dec9c093f1405b",
+).trim();
 const DEFAULT_OG_IMAGE = `${BLOG_PUBLIC_URL}/android-chrome-512x512.png`;
 const HOME_SEO_TITLE = "Vidhgrow Blogs | Product Updates, Teaching & Course News";
 const HOME_SEO_DESCRIPTION =
@@ -1230,6 +1233,10 @@ const server = http.createServer(async (req, res) => {
     if (pathname === "/google71d3fdc4e5a7d6ef.html") {
       res.writeHead(200, { "Content-Type": "text/html; charset=utf-8", ...securityHeaders() });
       return res.end("google-site-verification: google71d3fdc4e5a7d6ef.html");
+    }
+    if (BLOG_INDEXNOW_KEY && pathname === `/${BLOG_INDEXNOW_KEY}.txt`) {
+      res.writeHead(200, { "Content-Type": "text/plain; charset=utf-8", ...securityHeaders() });
+      return res.end(BLOG_INDEXNOW_KEY);
     }
     if (pathname === "/robots.txt") {
       res.writeHead(200, { "Content-Type": "text/plain; charset=utf-8", ...securityHeaders() });

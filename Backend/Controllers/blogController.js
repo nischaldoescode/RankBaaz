@@ -5,6 +5,7 @@ import BlogAuthor from "../Models/BlogAuthor.js";
 import BlogPost from "../Models/BlogPost.js";
 import BlogComment from "../Models/BlogComment.js";
 import BlogMedia from "../Models/BlogMedia.js";
+import BlogIndexingSubmission from "../Models/BlogIndexingSubmission.js";
 import ContactInfo from "../Models/ContactInfo.js";
 import redisClient from "../Config/redis.js";
 import {
@@ -18,8 +19,21 @@ const BLOG_IMAGE_LIMIT = 5 * 1024 * 1024;
 const BLOG_VIDEO_LIMIT = 10 * 1024 * 1024;
 const BLOG_PENDING_MEDIA_TTL_MS = 12 * 60 * 60 * 1000;
 const BLOG_BASE_URL =
-  process.env.BLOGS_SITE_URL || "https://blogs.vidhgrow.online";
+  (process.env.BLOGS_SITE_URL || "https://blogs.vidhgrow.online").replace(/\/$/, "");
 const BLOG_LIST_CACHE_TTL = 30;
+const BLOG_INDEXNOW_KEY = String(
+  process.env.BLOG_INDEXNOW_KEY || "e52015b801f54ed398dec9c093f1405b",
+).trim();
+const BLOG_INDEXNOW_ENDPOINT =
+  process.env.BLOG_INDEXNOW_ENDPOINT || "https://api.indexnow.org/indexnow";
+const BLOG_INDEXNOW_MIN_INTERVAL_SECONDS = Math.max(
+  30,
+  Number(process.env.BLOG_INDEXNOW_MIN_INTERVAL_SECONDS || 120),
+);
+const BLOG_INDEXNOW_MAX_URLS = Math.min(
+  10000,
+  Math.max(1, Number(process.env.BLOG_INDEXNOW_MAX_URLS || 10000)),
+);
 
 const BLOG_TOPIC_OPTIONS = [
   {
@@ -291,6 +305,152 @@ const getPublishedQuery = () => ({
   status: "published",
   publishedAt: { $lte: new Date() },
 });
+
+const getBlogHost = () => new URL(BLOG_BASE_URL).host;
+
+const getIndexNowKeyLocation = () =>
+  BLOG_INDEXNOW_KEY ? `${BLOG_BASE_URL}/${BLOG_INDEXNOW_KEY}.txt` : "";
+
+const truncateLog = (value = "", limit = 1000) =>
+  String(value || "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, limit);
+
+const getBlogSitemapEntries = async () => {
+  const [posts, authors] = await Promise.all([
+    BlogPost.find(getPublishedQuery()).select("slug updatedAt publishedAt").lean(),
+    BlogAuthor.find({ isActive: true }).select("slug updatedAt").lean(),
+  ]);
+
+  return [
+    {
+      type: "home",
+      loc: BLOG_BASE_URL,
+      lastmod: new Date().toISOString(),
+    },
+    ...BLOG_TOPIC_OPTIONS.map((topic) => ({
+      type: "topic",
+      loc: `${BLOG_BASE_URL}/topic/${topic.slug}`,
+      lastmod: new Date().toISOString(),
+    })),
+    ...posts.map((post) => ({
+      type: "post",
+      loc: `${BLOG_BASE_URL}/${post.slug}`,
+      lastmod: new Date(post.updatedAt || post.publishedAt).toISOString(),
+    })),
+    ...authors.map((author) => ({
+      type: "author",
+      loc: `${BLOG_BASE_URL}/author/${author.slug}`,
+      lastmod: new Date(author.updatedAt).toISOString(),
+    })),
+  ];
+};
+
+const isBlogOwnedUrl = (url = "") => {
+  try {
+    const parsed = new URL(url);
+    return parsed.protocol === "https:" && parsed.host === getBlogHost();
+  } catch {
+    return false;
+  }
+};
+
+const getLatestSubmissionLogs = async () => {
+  const rows = await BlogIndexingSubmission.find({})
+    .sort({ submittedAt: -1 })
+    .limit(200)
+    .lean();
+
+  const grouped = new Map();
+  rows.forEach((row) => {
+    const key = row.batchId;
+    if (!grouped.has(key)) {
+      grouped.set(key, {
+        batchId: key,
+        provider: row.provider,
+        kind: row.kind,
+        status: row.status,
+        responseStatus: row.responseStatus,
+        responseBody: row.responseBody || "",
+        errorMessage: row.errorMessage || "",
+        submittedAt: row.submittedAt,
+        urlCount: 0,
+        sampleUrls: [],
+      });
+    }
+    const item = grouped.get(key);
+    item.urlCount += 1;
+    if (row.status === "failed") item.status = "failed";
+    if (item.sampleUrls.length < 4) item.sampleUrls.push(row.url);
+  });
+
+  return [...grouped.values()].slice(0, 12);
+};
+
+const getIndexNowUrlStates = async (entries) => {
+  const hashes = entries.map((entry) => hashValue(entry.loc));
+  const rows = await BlogIndexingSubmission.find({
+    provider: "indexnow",
+    urlHash: { $in: hashes },
+  })
+    .sort({ submittedAt: -1 })
+    .lean();
+
+  const latestByHash = new Map();
+  const successByHash = new Map();
+  rows.forEach((row) => {
+    if (!latestByHash.has(row.urlHash)) latestByHash.set(row.urlHash, row);
+    if (row.status === "success" && !successByHash.has(row.urlHash)) {
+      successByHash.set(row.urlHash, row);
+    }
+  });
+
+  return entries.map((entry) => {
+    const urlHash = hashValue(entry.loc);
+    const latest = latestByHash.get(urlHash);
+    const success = successByHash.get(urlHash);
+    return {
+      ...entry,
+      alreadySubmitted: !!success,
+      lastSubmittedAt: success?.submittedAt || latest?.submittedAt || null,
+      lastStatus: latest?.status || "new",
+      lastResponseStatus: latest?.responseStatus || null,
+    };
+  });
+};
+
+const createIndexingRecords = async ({
+  provider,
+  kind,
+  urls,
+  batchId,
+  status,
+  responseStatus,
+  responseBody,
+  errorMessage,
+  submittedBy,
+  sitemapUrl = "",
+}) => {
+  if (!urls.length) return;
+  await BlogIndexingSubmission.insertMany(
+    urls.map((url) => ({
+      provider,
+      kind,
+      url,
+      urlHash: hashValue(url),
+      batchId,
+      host: getBlogHost(),
+      sitemapUrl,
+      status,
+      responseStatus,
+      responseBody: truncateLog(responseBody, 4000),
+      errorMessage: truncateLog(errorMessage, 1000),
+      submittedBy,
+      submittedAt: new Date(),
+    })),
+  );
+};
 
 const cleanComment = (value = "") =>
   stripHtml(value)
@@ -776,43 +936,26 @@ export const generateBlogSitemap = async (req, res) => {
       return res.send(cached);
     }
 
-    const [posts, authors] = await Promise.all([
-      BlogPost.find(getPublishedQuery()).select("slug updatedAt publishedAt").lean(),
-      BlogAuthor.find({ isActive: true }).select("slug updatedAt").lean(),
-    ]);
-
-    const urls = [
-      {
-        loc: BLOG_BASE_URL,
-        lastmod: new Date().toISOString(),
-        changefreq: "daily",
-        priority: "1.0",
-      },
-      ...posts.map((post) => ({
-        loc: `${BLOG_BASE_URL}/${post.slug}`,
-        lastmod: new Date(post.updatedAt || post.publishedAt).toISOString(),
-        changefreq: "weekly",
-        priority: "0.8",
-      })),
-      ...authors.map((author) => ({
-        loc: `${BLOG_BASE_URL}/author/${author.slug}`,
-        lastmod: new Date(author.updatedAt).toISOString(),
-        changefreq: "monthly",
-        priority: "0.5",
-      })),
-    ];
+    const urls = await getBlogSitemapEntries();
+    const sitemapMeta = {
+      home: { changefreq: "daily", priority: "1.0" },
+      topic: { changefreq: "weekly", priority: "0.6" },
+      post: { changefreq: "weekly", priority: "0.8" },
+      author: { changefreq: "monthly", priority: "0.5" },
+    };
 
     const sitemap = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
 ${urls
-  .map(
-    (url) => `  <url>
+  .map((url) => {
+    const meta = sitemapMeta[url.type] || sitemapMeta.post;
+    return `  <url>
     <loc>${escapeXml(url.loc)}</loc>
     <lastmod>${escapeXml(url.lastmod)}</lastmod>
-    <changefreq>${url.changefreq}</changefreq>
-    <priority>${url.priority}</priority>
-  </url>`,
-  )
+    <changefreq>${meta.changefreq}</changefreq>
+    <priority>${meta.priority}</priority>
+  </url>`;
+  })
   .join("\n")}
 </urlset>`;
 
@@ -823,6 +966,162 @@ ${urls
   } catch (error) {
     console.error("Blog sitemap error:", error);
     return res.status(500).send("Failed to generate sitemap");
+  }
+};
+
+export const adminGetBlogIndexingStatus = async (req, res) => {
+  try {
+    const entries = await getBlogSitemapEntries();
+    const urlStates = await getIndexNowUrlStates(entries);
+    const newUrls = urlStates.filter((item) => !item.alreadySubmitted);
+    const recentLogs = await getLatestSubmissionLogs();
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        sitemap: {
+          url: `${BLOG_BASE_URL}/sitemap.xml`,
+          count: entries.length,
+          urls: urlStates,
+        },
+        indexNow: {
+          configured: !!BLOG_INDEXNOW_KEY,
+          endpoint: BLOG_INDEXNOW_ENDPOINT,
+          host: getBlogHost(),
+          keyLocation: getIndexNowKeyLocation(),
+          cooldownSeconds: BLOG_INDEXNOW_MIN_INTERVAL_SECONDS,
+          maxUrlsPerSubmission: BLOG_INDEXNOW_MAX_URLS,
+          submittedCount: urlStates.length - newUrls.length,
+          newCount: newUrls.length,
+          newUrls: newUrls.map((item) => item.loc),
+        },
+        logs: recentLogs,
+      },
+    });
+  } catch (error) {
+    console.error("Blog indexing status error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to load blog indexing status",
+    });
+  }
+};
+
+export const adminSubmitBlogIndexNow = async (req, res) => {
+  const batchId = crypto.randomUUID();
+  const submittedBy = req.admin?.userId || req.admin?.adminId || null;
+  let attemptedUrls = [];
+
+  try {
+    if (!BLOG_INDEXNOW_KEY) {
+      return res.status(400).json({
+        success: false,
+        message: "IndexNow key is not configured",
+      });
+    }
+
+    const recentCutoff = new Date(Date.now() - BLOG_INDEXNOW_MIN_INTERVAL_SECONDS * 1000);
+    const recentSubmission = await BlogIndexingSubmission.findOne({
+      provider: "indexnow",
+      submittedAt: { $gte: recentCutoff },
+    })
+      .sort({ submittedAt: -1 })
+      .lean();
+
+    if (recentSubmission) {
+      return res.status(429).json({
+        success: false,
+        message: `IndexNow was submitted recently. Wait ${BLOG_INDEXNOW_MIN_INTERVAL_SECONDS} seconds between submissions.`,
+        data: { lastSubmittedAt: recentSubmission.submittedAt },
+      });
+    }
+
+    const entries = await getBlogSitemapEntries();
+    const urlStates = await getIndexNowUrlStates(entries);
+    const newUrls = urlStates
+      .filter((item) => !item.alreadySubmitted)
+      .map((item) => item.loc)
+      .filter(isBlogOwnedUrl)
+      .slice(0, BLOG_INDEXNOW_MAX_URLS);
+    attemptedUrls = newUrls;
+
+    if (!newUrls.length) {
+      return res.status(409).json({
+        success: false,
+        message: "No new blog URLs are waiting for IndexNow submission",
+        data: { newCount: 0 },
+      });
+    }
+
+    const payload = {
+      host: getBlogHost(),
+      key: BLOG_INDEXNOW_KEY,
+      keyLocation: getIndexNowKeyLocation(),
+      urlList: newUrls,
+    };
+
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 15000);
+    let response;
+    let responseText = "";
+    try {
+      response = await fetch(BLOG_INDEXNOW_ENDPOINT, {
+        method: "POST",
+        headers: { "Content-Type": "application/json; charset=utf-8" },
+        body: JSON.stringify(payload),
+        signal: controller.signal,
+      });
+      responseText = await response.text();
+    } finally {
+      clearTimeout(timeout);
+    }
+
+    const succeeded = response.status >= 200 && response.status < 300;
+    await createIndexingRecords({
+      provider: "indexnow",
+      kind: "url",
+      urls: newUrls,
+      batchId,
+      status: succeeded ? "success" : "failed",
+      responseStatus: response.status,
+      responseBody: responseText || (succeeded ? "IndexNow accepted the URL batch" : ""),
+      errorMessage: succeeded ? "" : `IndexNow returned HTTP ${response.status}`,
+      submittedBy,
+      sitemapUrl: `${BLOG_BASE_URL}/sitemap.xml`,
+    });
+
+    return res.status(succeeded ? 200 : 502).json({
+      success: succeeded,
+      message: succeeded
+        ? `Submitted ${newUrls.length} blog URLs to IndexNow`
+        : "IndexNow did not accept the submission",
+      data: {
+        batchId,
+        submittedCount: newUrls.length,
+        responseStatus: response.status,
+        responseBody: truncateLog(responseText, 1000),
+      },
+    });
+  } catch (error) {
+    const isAbort = error.name === "AbortError";
+    await createIndexingRecords({
+      provider: "indexnow",
+      kind: "url",
+      urls: attemptedUrls,
+      batchId,
+      status: "failed",
+      responseStatus: null,
+      responseBody: "",
+      errorMessage: isAbort ? "IndexNow request timed out" : error.message,
+      submittedBy,
+      sitemapUrl: `${BLOG_BASE_URL}/sitemap.xml`,
+    }).catch(() => {});
+
+    console.error("Blog IndexNow submit error:", error);
+    return res.status(isAbort ? 504 : 500).json({
+      success: false,
+      message: isAbort ? "IndexNow request timed out" : "Failed to submit URLs to IndexNow",
+    });
   }
 };
 
