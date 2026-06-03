@@ -101,10 +101,6 @@ export const ContentProvider = ({ children }) => {
             `${apiBase}/security/signing-secret`,
             {
               withCredentials: true,
-              headers: {
-                "Cache-Control": "no-cache",
-                Pragma: "no-cache",
-              },
               params: { _ts: Date.now() },
               _skipInterceptor: true,
             },

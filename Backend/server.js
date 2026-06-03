@@ -144,36 +144,47 @@ const couponLimiter = createRateLimiter({
   skip: (req) => isBrowserRequest(req), // Skip for browsers
 });
 
+const DEFAULT_ALLOWED_ORIGINS = [
+  "http://localhost:3000",
+  "http://localhost:3001",
+  "http://127.0.0.1:3000",
+  "http://localhost:5173",
+  "http://localhost:7000",
+  "http://localhost:6000",
+  "https://api.vidhgrow.online",
+  "https://rankbaaz.onrender.com",
+  "https://rankbaaz-frontend.onrender.com",
+  "https://vidhgrow.online",
+  "https://www.vidhgrow.online",
+  "https://admin.vidhgrow.online",
+  "https://rankbaaz-admin.onrender.com",
+  "http://localhost:4173",
+  "http://localhost:5175",
+  "https://teachers.vidhgrow.online",
+  "https://www.teachers.vidhgrow.online",
+  "https://blogs.vidhgrow.online",
+  "https://www.blogs.vidhgrow.online",
+  
+  "http://localhost:5174",
+  "http://localhost:5176",
+  "http://localhost:8080",
+];
+
+const envAllowedOrigins = (process.env.ALLOWED_ORIGINS || "")
+  .split(",")
+  .map((origin) => origin.trim().replace(/\/$/, ""))
+  .filter(Boolean);
+
+const allowedOrigins = [
+  ...new Set(
+    [...DEFAULT_ALLOWED_ORIGINS, ...envAllowedOrigins].map((origin) =>
+      origin.replace(/\/$/, ""),
+    ),
+  ),
+];
+
 const corsOptions = {
   origin: function (origin, callback) {
-    const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(",") || [
-      "http://localhost:3000",
-      "http://localhost:3001",
-      "http://127.0.0.1:3000",
-      "http://localhost:5173",
-      "http://localhost:7000",
-      "http://localhost:6000",
-      "https://api.vidhgrow.online",
-      "https://rankbaaz.onrender.com",
-      "https://rankbaaz-frontend.onrender.com",
-      "https://vidhgrow.online",
-      "https://www.vidhgrow.online",
-      "https://admin.vidhgrow.online",
-      "https://rankbaaz-admin.onrender.com",
-      "https://rankbaaz.onrender.com",
-      "https://rankbaaz.onrender.com/",
-      "http://localhost:4173",
-      "https://rankbaaz-admin.onrender.com/",
-      "http://localhost:5175",
-      "https://teachers.vidhgrow.online",
-      "https://www.teachers.vidhgrow.online",
-      "https://blogs.vidhgrow.online",
-      "https://www.blogs.vidhgrow.online",
-      "http://localhost:5174",
-      "http://localhost:5176",
-      "http://localhost:8080"
-    ];
-
     // Handle requests without origin header (server-to-server, curl, etc.)
     if (!origin) {
       return callback(null, true);
@@ -225,6 +236,8 @@ const corsOptions = {
     "X-Request-Signature",
     "X-Request-Timestamp",
     "X-Request-Nonce",
+    "Cache-Control",
+    "Pragma",
     "Cookie",
   ],
   exposedHeaders: ["X-Total-Count", "Set-Cookie"],
@@ -1070,7 +1083,7 @@ app.use((error, req, res, next) => {
   const isApiRoute = req.path.startsWith("/api/");
 
   // CORS error - Enhanced security for production
-  if (error.message === "Not allowed by CORS") {
+  if (error.message?.startsWith("Not allowed by CORS")) {
     // Check if request has no origin/referer (suspicious)
     const hasNoOrigin = !req.get("Origin") && !req.get("Referer");
 

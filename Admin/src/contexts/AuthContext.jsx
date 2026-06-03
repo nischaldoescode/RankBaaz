@@ -26,10 +26,6 @@ const refreshAdminSigningSecret = async () => {
     signingSecretRefreshPromise = axios
       .get("/security/signing-secret", {
         _skipInterceptor: true,
-        headers: {
-          "Cache-Control": "no-cache",
-          Pragma: "no-cache",
-        },
         params: { _ts: Date.now() },
       })
       .finally(() => {
@@ -329,10 +325,6 @@ export const AuthProvider = ({ children }) => {
             "/security/signing-secret",
             {
               withCredentials: true,
-              headers: {
-                "Cache-Control": "no-cache",
-                Pragma: "no-cache",
-              },
               params: { _ts: Date.now() },
             }
           );
