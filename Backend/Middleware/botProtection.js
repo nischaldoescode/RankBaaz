@@ -12,7 +12,7 @@ const BOT_BAN_TTL = 3600;
 const CHALLENGE_DIFFICULTY = 4;
 
 // Whitelist of allowed origins for CORS validation
-const ALLOWED_ORIGINS = [
+const DEFAULT_ALLOWED_ORIGINS = [
   "http://localhost:3000",
   "http://localhost:3001",
   "http://127.0.0.1:3000",
@@ -33,7 +33,20 @@ const ALLOWED_ORIGINS = [
   "https://www.blogs.vidhgrow.online",
   "http://localhost:5174",
   "http://localhost:5176",
-  "http://localhost:8080"
+  "http://localhost:8080",
+];
+
+const envAllowedOrigins = (process.env.ALLOWED_ORIGINS || "")
+  .split(",")
+  .map((origin) => origin.trim().replace(/\/$/, ""))
+  .filter(Boolean);
+
+const ALLOWED_ORIGINS = [
+  ...new Set(
+    [...DEFAULT_ALLOWED_ORIGINS, ...envAllowedOrigins].map((origin) =>
+      origin.replace(/\/$/, ""),
+    ),
+  ),
 ];
 
 const PUBLIC_BLOG_READ_PATHS = [
@@ -391,8 +404,16 @@ export const botProtection = async (req, res, next) => {
     const origin = req.get("Origin") || "";
     const referer = req.get("Referer") || "";
 
-    // LAYER 1: Allow health check endpoint
-    if (req.path === "/health") {
+    // LAYER 1: Allow health and harmless browser/host probes.
+    if (req.path === "/health" || req.path === "/" || req.path === "/favicon.ico") {
+      return next();
+    }
+
+    const isSecurityBootstrapPath =
+      req.path === "/api/security/signing-secret" ||
+      req.path === "/api/security/verify-challenge";
+
+    if (isSecurityBootstrapPath && isLegitimateOrigin(origin, referer)) {
       return next();
     }
 
