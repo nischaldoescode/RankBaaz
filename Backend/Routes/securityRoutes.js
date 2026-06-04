@@ -10,6 +10,7 @@ import { authenticateUser, authenticateAdmin } from "../Middleware/auth.js";
 import jwt from "jsonwebtoken";
 import User from "../Models/User.js";
 import Admin from "../Models/Admin.js";
+import Teacher from "../Models/Teacher.js";
 import CryptoJS from "crypto-js";
 
 const router = express.Router();
@@ -27,6 +28,11 @@ const decryptCookieData = (encryptedData) => {
   }
 };
 
+const isTeacherSurface = (req) => {
+  const source = `${req.get("Origin") || ""} ${req.get("Referer") || ""}`.toLowerCase();
+  return req.query.surface === "teacher" || source.includes("teachers.vidhgrow.online");
+};
+
 /**
  * cookie-only authentication middleware for /signing-secret endpoint
  *
@@ -41,6 +47,44 @@ const decryptCookieData = (encryptedData) => {
  */
 const authCookieOnly = async (req, res, next) => {
   try {
+    if (isTeacherSurface(req) && req.cookies.teacherToken) {
+      try {
+        const decoded = jwt.verify(
+          req.cookies.teacherToken,
+          process.env.TEACHER_JWT_SECRET || process.env.JWT_SECRET,
+        );
+        const teacher = await Teacher.findById(decoded.teacherId).select(
+          "-password -otp",
+        );
+
+        if (!teacher || !teacher.isActive) {
+          return res.status(401).json({
+            success: false,
+            message: "Invalid teacher token",
+            code: "AUTH_INVALID",
+          });
+        }
+
+        req.teacher = {
+          teacherId: teacher._id,
+          ...teacher.toObject(),
+        };
+        req.user = {
+          userId: teacher._id,
+          role: "teacher",
+        };
+
+        return next();
+      } catch (jwtError) {
+        console.error("Teacher JWT verification failed:", jwtError.message);
+        return res.status(401).json({
+          success: false,
+          message: "Invalid teacher token",
+          code: "TOKEN_INVALID",
+        });
+      }
+    }
+
     // check for admin token first
     const adminToken = req.cookies.adminToken;
 
@@ -93,6 +137,44 @@ const authCookieOnly = async (req, res, next) => {
 
     // check for user token
     const encryptedUserCookie = req.signedCookies.auth_session;
+
+    if (!encryptedUserCookie && req.cookies.teacherToken) {
+      try {
+        const decoded = jwt.verify(
+          req.cookies.teacherToken,
+          process.env.TEACHER_JWT_SECRET || process.env.JWT_SECRET,
+        );
+        const teacher = await Teacher.findById(decoded.teacherId).select(
+          "-password -otp",
+        );
+
+        if (!teacher || !teacher.isActive) {
+          return res.status(401).json({
+            success: false,
+            message: "Invalid teacher token",
+            code: "AUTH_INVALID",
+          });
+        }
+
+        req.teacher = {
+          teacherId: teacher._id,
+          ...teacher.toObject(),
+        };
+        req.user = {
+          userId: teacher._id,
+          role: "teacher",
+        };
+
+        return next();
+      } catch (jwtError) {
+        console.error("Teacher JWT verification failed:", jwtError.message);
+        return res.status(401).json({
+          success: false,
+          message: "Invalid teacher token",
+          code: "TOKEN_INVALID",
+        });
+      }
+    }
 
     if (!encryptedUserCookie) {
       return res.status(401).json({

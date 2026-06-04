@@ -11,6 +11,27 @@ const api = axios.create({
   withCredentials: true,
 });
 
+const refreshTeacherSigningSecret = async () => {
+  const res = await axios.get(`${BASE}/security/signing-secret`, {
+    withCredentials: true,
+    headers: {
+      "Cache-Control": "no-cache",
+      Pragma: "no-cache",
+    },
+    params: { _ts: Date.now(), surface: "teacher" },
+  });
+
+  if (res.data?.success && res.data?.data?.signingSecret) {
+    teacherRequestSigner.setSigningSecret(
+      res.data.data.signingSecret,
+      res.data.data.expiresIn,
+    );
+    return true;
+  }
+
+  return false;
+};
+
 // public teacher routes do not have a signing secret yet.
 const UNSIGNED_ROUTES = [
   "/teachers/login",
@@ -27,7 +48,7 @@ const UNSIGNED_ROUTES = [
   "/teachers/application/status",
 ];
 
-api.interceptors.request.use((config) => {
+api.interceptors.request.use(async (config) => {
   const writeMethod = ["post", "put", "patch", "delete"].includes(
     config.method?.toLowerCase(),
   );
@@ -46,12 +67,13 @@ api.interceptors.request.use((config) => {
     teacherRequestSigner.loadSigningSecret();
   }
 
-  // only sign if we actually have a secret
   if (!teacherRequestSigner.isSecretValid()) {
-    return config;
+    await refreshTeacherSigningSecret().catch(() => false);
   }
 
-  return teacherRequestSigner.signRequest(config);
+  return teacherRequestSigner.isSecretValid()
+    ? teacherRequestSigner.signRequest(config)
+    : config;
 });
 
 // list of endpoints that are allowed to return 401 without triggering session expiry
@@ -72,7 +94,9 @@ api.interceptors.response.use(
   (res) => res,
   async (err) => {
     const url = err.config?.url || "";
-    const isPassthrough = AUTH_PASSTHROUGH_URLS.some((p) => url.includes(p));
+    const isPassthrough = AUTH_PASSTHROUGH_URLS.some(
+      (p) => url === p || url.startsWith(`${p}?`),
+    );
 
     if (
       err.response?.status === 403 &&
@@ -91,25 +115,23 @@ api.interceptors.response.use(
       }
     }
 
-    // only attempt token refresh for authenticated routes
+    const signatureCodes = [
+      "SIGNATURE_INVALID",
+      "SIGNATURE_EXPIRED",
+      "SIGNATURE_MISSING",
+      "INVALID_SIGNATURE",
+    ];
+
     if (
-      err.response?.status === 401 &&
-      err.response?.data?.code === "INVALID_SIGNATURE" &&
+      [401, 403].includes(err.response?.status) &&
+      signatureCodes.includes(err.response?.data?.code) &&
       !err.config._retried &&
       !isPassthrough
     ) {
       err.config._retried = true;
       try {
-        const refreshRes = await axios.post(
-          `${BASE}/auth/signing-secret`,
-          {},
-          { withCredentials: true },
-        );
-        if (refreshRes.data.success) {
-          teacherRequestSigner.setSigningSecret(
-            refreshRes.data.data.signingSecret,
-            refreshRes.data.data.expiresIn,
-          );
+        const refreshed = await refreshTeacherSigningSecret();
+        if (refreshed) {
           return api(err.config);
         }
       } catch {}
@@ -139,7 +161,7 @@ export const teacherApi = {
   profile: {
     get: () => api.get("/teachers/me"),
     getAnalytics: () => api.get("/teachers/me/analytics"),
-    update: (data) => api.put("/teachers/me/profile", data),
+    update: (data, config = {}) => api.put("/teachers/me/profile", data, config),
     updatePayment: (data) => api.put("/teachers/me/payment-details", data),
     uploadDocuments: (formData) =>
       api.post("/teachers/me/documents", formData, {

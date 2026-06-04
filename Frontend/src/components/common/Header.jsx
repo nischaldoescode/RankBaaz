@@ -13,6 +13,8 @@ import {
   BookOpen,
   FileText,
   Phone,
+  Moon,
+  Sun,
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import {
@@ -68,7 +70,7 @@ const Header = () => {
   const [scrolled, setScrolled] = useState(false);
 
   const { isAuthenticated, user, logout } = useAuth();
-  const { animations, reducedMotion } = useTheme();
+  const { theme, setTheme, animations, reducedMotion } = useTheme();
   const { contentSettings } = useContent();
   const location = useLocation();
   const navigate = useNavigate();
@@ -95,6 +97,11 @@ const Header = () => {
       : location.pathname.startsWith(path);
 
   const filteredLinks = navLinks.filter((l) => !l.protected || isAuthenticated);
+  const isDarkMode = theme === "dark";
+
+  const toggleTheme = () => {
+    setTheme(isDarkMode ? "light" : "dark");
+  };
 
   // desktop nav link
   const DesktopNavLink = ({ link }) => (
@@ -167,6 +174,22 @@ const Header = () => {
 
             {/* right side */}
             <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                onClick={toggleTheme}
+                className="h-9 w-9 border border-blue-100/70 bg-white/70 text-slate-700 hover:bg-blue-50 dark:border-white/10 dark:bg-white/5 dark:text-slate-100"
+                aria-label={isDarkMode ? "Switch to light mode" : "Switch to dark mode"}
+                title={isDarkMode ? "Light mode" : "Dark mode"}
+              >
+                {isDarkMode ? (
+                  <Sun className="h-4 w-4" />
+                ) : (
+                  <Moon className="h-4 w-4" />
+                )}
+              </Button>
+
               {isAuthenticated ? (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>

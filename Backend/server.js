@@ -515,12 +515,13 @@ app.get("/sitemap-profiles.xml", async (req, res) => {
 
 // apply express-fileupload only to routes that need it
 app.use((req, res, next) => {
-  // skip express-fileupload for course routes (they use multer)
-  if (req.path.startsWith("/api/courses")) {
+  // routes with multer need the raw multipart stream.
+  const multerRoutes = ["/api/courses", "/api/teachers"];
+  if (multerRoutes.some((route) => req.path.startsWith(route))) {
     return next();
   }
 
-  // apply express-fileupload to all other routes
+  // content and blog media routes still use express-fileupload.
   fileUpload({
     useTempFiles: true,
     tempFileDir: "/tmp/",

@@ -77,9 +77,9 @@ export const authenticateTeacher = async (req, res, next) => {
       ...teacherData,
     };
 
-    const shouldVerifySignature =
-      ["POST", "PUT", "PATCH", "DELETE"].includes(req.method) &&
-      !String(req.get("Content-Type") || "").includes("multipart/form-data");
+    const shouldVerifySignature = ["POST", "PUT", "PATCH", "DELETE"].includes(
+      req.method,
+    );
 
     if (shouldVerifySignature) {
       req.user = { userId: teacherData._id };

@@ -356,14 +356,14 @@ a {
 }
 
 :root {
-  --teacher-primary: #2563eb;
-  --teacher-primary-rgb: 37, 99, 235;
+  --teacher-primary: #3b82f6;
+  --teacher-primary-rgb: 59, 130, 246;
   --teacher-ink: #0f172a;
   --teacher-muted: #64748b;
   --teacher-bg: #f8fbff;
   --teacher-surface: rgba(255, 255, 255, 0.90);
   --teacher-line: rgba(148, 163, 184, 0.30);
-  --teacher-shadow: 0 1px 2px rgba(15, 23, 42, 0.08), 0 16px 44px rgba(37, 99, 235, 0.08);
+  --teacher-shadow: 0 1px 2px rgba(15, 23, 42, 0.08), 0 10px 30px rgba(15, 23, 42, 0.06);
 }
 
 body {
@@ -374,8 +374,7 @@ body {
 
 .teacher-dashboard-shell {
   background:
-    linear-gradient(180deg, rgba(248, 251, 255, 0.96), rgba(255, 255, 255, 0.92)),
-    radial-gradient(circle at 8% 12%, rgba(var(--teacher-primary-rgb), 0.08), transparent 34%) !important;
+    linear-gradient(180deg, rgba(248, 251, 255, 0.96), rgba(255, 255, 255, 0.92)) !important;
   color: var(--teacher-ink);
   position: relative;
   isolation: isolate;
@@ -459,6 +458,20 @@ body {
 .teacher-narrow-tab > div {
   border-radius: 8px !important;
   box-shadow: var(--teacher-shadow) !important;
+}
+
+.teacher-dashboard-shell [style*="position: fixed"],
+.teacher-modal-overlay {
+  align-items: flex-start !important;
+  overflow-y: auto !important;
+  padding-top: max(1.25rem, env(safe-area-inset-top)) !important;
+  padding-bottom: max(1.25rem, env(safe-area-inset-bottom)) !important;
+}
+
+.teacher-modal-panel,
+.teacher-delete-panel {
+  margin-top: 0 !important;
+  margin-bottom: auto !important;
 }
 
 .teacher-dashboard-shell [style*="#10b981"],

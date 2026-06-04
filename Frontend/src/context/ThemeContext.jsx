@@ -130,8 +130,23 @@ export const ThemeProvider = ({ children }) => {
   useEffect(() => {
     localStorage.setItem('theme-preferences', JSON.stringify(state));
 
-    // apply theme to document
-    document.documentElement.className = `theme-${state.theme} color-${state.primaryColor} font-${state.fontSize}`;
+    // keep theme classes in sync without dropping classes from other libraries
+    const root = document.documentElement;
+    Array.from(root.classList)
+      .filter(
+        (className) =>
+          className.startsWith('theme-') ||
+          className.startsWith('color-') ||
+          className.startsWith('font-')
+      )
+      .forEach((className) => root.classList.remove(className));
+
+    root.classList.add(
+      `theme-${state.theme}`,
+      `color-${state.primaryColor}`,
+      `font-${state.fontSize}`
+    );
+    root.classList.toggle('dark', state.theme === 'dark');
 
     // apply reduced motion
     if (state.reducedMotion || !state.animations) {
