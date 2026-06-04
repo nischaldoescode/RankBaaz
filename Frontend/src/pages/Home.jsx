@@ -155,28 +155,106 @@ const StoryImageSlot = ({ item }) => {
   );
 };
 
+const HomeParallaxStage = ({ scrollProgress, reducedMotion }) => {
+  const farY = useTransform(scrollProgress, [0, 1], [-160, 260]);
+  const midY = useTransform(scrollProgress, [0, 1], [120, -280]);
+  const nearY = useTransform(scrollProgress, [0, 1], [240, -520]);
+  const nearX = useTransform(scrollProgress, [0, 1], [-80, 90]);
+  const reverseX = useTransform(scrollProgress, [0, 1], [86, -110]);
+  const lineDraw = useTransform(scrollProgress, [0.02, 0.82], [0, 1]);
+  const lineOpacity = useTransform(scrollProgress, [0, 0.12, 0.9, 1], [0.25, 0.72, 0.58, 0.2]);
+  const brushScale = useTransform(scrollProgress, [0, 0.28, 0.62, 1], [0.9, 1.08, 0.98, 1.06]);
+
+  const activeStyle = (style) => (reducedMotion ? undefined : style);
+
+  return (
+    <div className="vg-home-parallax-stage" aria-hidden="true">
+      <motion.svg
+        className="vg-home-story-lines"
+        viewBox="0 0 1200 3600"
+        preserveAspectRatio="none"
+        style={activeStyle({ y: farY, opacity: lineOpacity })}
+      >
+        <motion.path
+          className="vg-home-story-line vg-home-story-line-main"
+          d="M642 70 C422 320 872 560 518 840 C210 1084 986 1180 632 1510 C244 1862 932 1976 534 2350 C274 2594 858 2806 652 3560"
+          fill="none"
+          style={activeStyle({ pathLength: lineDraw })}
+        />
+        <motion.path
+          className="vg-home-story-line vg-home-story-line-soft"
+          d="M304 220 C796 420 196 742 746 1004 C1110 1178 270 1554 792 1844 C1034 1980 382 2344 906 2600 C1130 2710 646 3100 892 3480"
+          fill="none"
+          style={activeStyle({ pathLength: lineDraw })}
+        />
+      </motion.svg>
+
+      <motion.div
+        className="vg-parallax-depth vg-parallax-depth-far vg-depth-grid vg-depth-grid-a"
+        style={activeStyle({ y: farY, x: reverseX })}
+      />
+      <motion.div
+        className="vg-parallax-depth vg-parallax-depth-mid vg-depth-sheet vg-depth-sheet-a"
+        style={activeStyle({ y: midY, x: nearX })}
+      />
+      <motion.div
+        className="vg-parallax-depth vg-parallax-depth-near vg-depth-brush vg-depth-brush-a"
+        style={activeStyle({ y: nearY, scale: brushScale })}
+      />
+      <motion.div
+        className="vg-parallax-depth vg-parallax-depth-mid vg-depth-ring vg-depth-ring-a"
+        style={activeStyle({ y: midY, x: reverseX })}
+      />
+      <motion.div
+        className="vg-parallax-depth vg-parallax-depth-near vg-depth-note vg-depth-note-a"
+        style={activeStyle({ y: nearY, x: nearX })}
+      >
+        read
+      </motion.div>
+      <motion.div
+        className="vg-parallax-depth vg-parallax-depth-far vg-depth-note vg-depth-note-b"
+        style={activeStyle({ y: farY, x: reverseX })}
+      >
+        test
+      </motion.div>
+      <motion.div
+        className="vg-parallax-depth vg-parallax-depth-mid vg-depth-note vg-depth-note-c"
+        style={activeStyle({ y: midY, x: nearX })}
+      >
+        review
+      </motion.div>
+    </div>
+  );
+};
+
 const StoryChapter = ({ item, index, animations, reducedMotion }) => {
   const chapterRef = useRef(null);
   const { scrollYProgress } = useScroll({
     target: chapterRef,
     offset: ["start end", "end start"],
   });
-  const copyY = useTransform(scrollYProgress, [0, 0.5, 1], [34, 0, -22]);
-  const imageY = useTransform(scrollYProgress, [0, 0.5, 1], [74, -8, -86]);
-  const imageScale = useTransform(scrollYProgress, [0, 0.5, 1], [0.96, 1.035, 0.98]);
-  const imageRotate = useTransform(scrollYProgress, [0, 0.5, 1], [-1.2, 0.4, 1.2]);
-  const chapterOpacity = useTransform(scrollYProgress, [0, 0.14, 0.86, 1], [0.45, 1, 1, 0.42]);
+  const copyY = useTransform(scrollYProgress, [0, 0.5, 1], [96, 0, -76]);
+  const imageY = useTransform(scrollYProgress, [0, 0.5, 1], [190, -24, -230]);
+  const imageX = useTransform(scrollYProgress, [0, 0.5, 1], [34, 0, -42]);
+  const imageScale = useTransform(scrollYProgress, [0, 0.5, 1], [0.9, 1.07, 0.94]);
+  const imageRotate = useTransform(scrollYProgress, [0, 0.5, 1], [-3, 0.8, 2.4]);
+  const chapterOpacity = useTransform(scrollYProgress, [0, 0.14, 0.86, 1], [0.25, 1, 1, 0.28]);
+  const ruleScale = useTransform(scrollYProgress, [0.08, 0.72], [0, 1]);
 
   return (
     <motion.article
       ref={chapterRef}
       style={reducedMotion ? undefined : { opacity: chapterOpacity }}
-      initial={animations && !reducedMotion ? { opacity: 0, y: 34 } : {}}
-      whileInView={animations && !reducedMotion ? { opacity: 1, y: 0 } : {}}
+      initial={animations && !reducedMotion ? { y: 34 } : {}}
+      whileInView={animations && !reducedMotion ? { y: 0 } : {}}
       viewport={{ once: true, margin: "-80px" }}
       transition={{ duration: 0.55, delay: index * 0.08 }}
       className={`vg-story-chapter vg-story-chapter-${index + 1}`}
     >
+      <motion.span
+        className="vg-story-section-rule"
+        style={reducedMotion ? undefined : { scaleX: ruleScale }}
+      />
       <motion.div
         style={reducedMotion ? undefined : { y: copyY }}
         className="vg-story-chapter-copy"
@@ -193,7 +271,7 @@ const StoryChapter = ({ item, index, animations, reducedMotion }) => {
         style={
           reducedMotion
             ? undefined
-            : { y: imageY, scale: imageScale, rotate: imageRotate }
+            : { y: imageY, x: imageX, scale: imageScale, rotate: imageRotate }
         }
         className="vg-story-image-frame"
       >
@@ -211,6 +289,9 @@ const LearningStorySection = ({ animations, reducedMotion, isAuthenticated }) =>
   });
   const textX = useTransform(scrollYProgress, [0, 0.5, 1], [-54, 0, 34]);
   const fade = useTransform(scrollYProgress, [0, 0.18, 0.78, 1], [0.4, 1, 1, 0.24]);
+  const connectorY = useTransform(scrollYProgress, [0, 1], [110, -180]);
+  const connectorDraw = useTransform(scrollYProgress, [0.06, 0.86], [0, 1]);
+  const markerY = useTransform(scrollYProgress, [0, 1], [70, -80]);
 
   const motionStyle = reducedMotion ? undefined : { x: textX, opacity: fade };
 
@@ -219,17 +300,40 @@ const LearningStorySection = ({ animations, reducedMotion, isAuthenticated }) =>
       ref={sectionRef}
       className="vg-story-horizontal relative px-4 py-16 sm:px-6 lg:px-8"
     >
+      <motion.svg
+        aria-hidden="true"
+        className="vg-story-connector"
+        viewBox="0 0 1200 1800"
+        preserveAspectRatio="none"
+        style={reducedMotion ? undefined : { y: connectorY }}
+      >
+        <motion.path
+          className="vg-story-connector-path"
+          d="M230 130 C650 250 260 430 720 610 C1040 735 390 930 760 1110 C1080 1264 420 1420 632 1700"
+          fill="none"
+          style={reducedMotion ? undefined : { pathLength: connectorDraw }}
+        />
+      </motion.svg>
+      <motion.span
+        className="vg-story-scroll-marker vg-story-scroll-marker-a"
+        style={reducedMotion ? undefined : { y: markerY }}
+      />
+      <motion.span
+        className="vg-story-scroll-marker vg-story-scroll-marker-b"
+        style={reducedMotion ? undefined : { y: connectorY }}
+      />
       <div className="mx-auto max-w-6xl">
         <motion.div
           style={motionStyle}
-          initial={animations && !reducedMotion ? { opacity: 0, y: 24 } : {}}
-          whileInView={animations && !reducedMotion ? { opacity: 1, y: 0 } : {}}
+          initial={animations && !reducedMotion ? { y: 24 } : {}}
+          whileInView={animations && !reducedMotion ? { y: 0 } : {}}
           viewport={{ once: true, margin: "-80px" }}
           className="mx-auto max-w-3xl space-y-5 text-center"
         >
           <SectionLabel>How the work moves</SectionLabel>
           <h2 className="text-3xl font-bold leading-tight text-foreground sm:text-4xl">
-            A study rhythm that feels easy to return to.
+            <span className="vg-story-brushed-word">A study rhythm</span>{" "}
+            that feels easy to return to.
           </h2>
           <p className="text-base leading-8 text-muted-foreground sm:text-lg">
             Learn from the course, test the idea, then use the result to choose
@@ -298,9 +402,10 @@ const Home = () => {
   });
   const pageDriftY = useTransform(pageScrollProgress, [0, 1], [-24, 42]);
   const pageDriftX = useTransform(pageScrollProgress, [0, 1], [18, -36]);
-  const pageArtifactStyle = reducedMotion
-    ? undefined
-    : { y: pageDriftY, x: pageDriftX };
+  const heroY = useTransform(pageScrollProgress, [0, 0.2], [0, -80]);
+  const heroScale = useTransform(pageScrollProgress, [0, 0.2], [1, 0.96]);
+  const heroGridY = useTransform(pageScrollProgress, [0, 0.24], [0, 92]);
+  const pageArtifactStyle = reducedMotion ? undefined : { y: pageDriftY, x: pageDriftX };
 
   useSEO({
     title:
@@ -468,7 +573,11 @@ const Home = () => {
   }
 
   return (
-    <div ref={pageRef} className="relative overflow-x-hidden">
+    <div ref={pageRef} className="vg-home-shell relative overflow-x-hidden">
+      <HomeParallaxStage
+        scrollProgress={pageScrollProgress}
+        reducedMotion={reducedMotion}
+      />
       <motion.div
         aria-hidden="true"
         className="vg-home-page-parallax vg-home-page-parallax-a"
@@ -480,22 +589,16 @@ const Home = () => {
         style={reducedMotion ? undefined : { y: pageDriftY }}
       />
       <section className="relative flex min-h-[calc(100vh-4rem)] items-center px-4 pb-16 pt-24 sm:px-6 sm:pb-20 lg:px-8">
-        <div
-          className="absolute inset-0 pointer-events-none"
-          style={{
-            backgroundImage: `
-      linear-gradient(hsl(var(--foreground)/0.04) 1px, transparent 1px),
-      linear-gradient(90deg, hsl(var(--foreground)/0.04) 1px, transparent 1px)
-            `,
-            backgroundSize: "40px 40px",
-            backgroundPosition: "0 0",
-          }}
+        <motion.div
+          className="absolute inset-0 pointer-events-none vg-hero-grid"
+          style={reducedMotion ? undefined : { y: heroGridY }}
         />
 
         <div className="relative mx-auto w-full max-w-6xl">
           <motion.div
-            initial={animations && !reducedMotion ? { opacity: 0, y: 30 } : {}}
-            animate={animations && !reducedMotion ? { opacity: 1, y: 0 } : {}}
+            style={reducedMotion ? undefined : { y: heroY, scale: heroScale }}
+            initial={animations && !reducedMotion ? { opacity: 0 } : {}}
+            animate={animations && !reducedMotion ? { opacity: 1 } : {}}
             transition={animations && !reducedMotion ? { duration: 0.7 } : {}}
             className="mx-auto max-w-4xl space-y-7 text-center"
           >
