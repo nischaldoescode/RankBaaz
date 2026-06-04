@@ -2,6 +2,7 @@
  * keeps the courses page focused and readable.
  */
 import React, { useState, useEffect, useMemo, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { useAdmin } from "../contexts/AdminContext";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
@@ -37,6 +38,26 @@ import {
 } from "lucide-react";
 
 import RichTextRenderer from "../components/plugins/RichTextRenderer";
+
+const AdminModalPortal = ({ children, className = "", onBackdropClick }) => {
+  if (typeof document === "undefined") return null;
+
+  const handleMouseDown = (event) => {
+    if (event.target === event.currentTarget) {
+      onBackdropClick?.();
+    }
+  };
+
+  return createPortal(
+    <div
+      className={`admin-course-modal fixed inset-0 z-[2147483000] flex items-start justify-center overflow-y-auto bg-slate-950/45 px-3 py-4 backdrop-blur-md sm:px-4 ${className}`}
+      onMouseDown={handleMouseDown}
+    >
+      {children}
+    </div>,
+    document.body,
+  );
+};
 
 // coupon form component with debounce
 const CouponForm = ({ courseId, onSuccess, onCancel }) => {
@@ -445,7 +466,7 @@ const VideoPlayerModal = ({ video, onClose }) => {
   };
 
   return (
-    <div className="fixed inset-0 bg-white/10 backdrop-blur-md flex items-center justify-center p-2 sm:p-4 z-50">
+    <AdminModalPortal className="p-2 sm:p-4" onBackdropClick={onClose}>
       <div className="bg-white rounded-xl shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-hidden flex flex-col">
         {/* header */}
         <div className="flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-200 bg-gray-50">
@@ -516,7 +537,7 @@ const VideoPlayerModal = ({ video, onClose }) => {
           </div>
         </div>
       </div>
-    </div>
+    </AdminModalPortal>
   );
 };
 
@@ -525,7 +546,7 @@ const ConfirmationModal = ({ modal, onClose }) => {
   if (!modal) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center p-3 sm:p-4 z-50">
+    <AdminModalPortal className="p-3 sm:p-4" onBackdropClick={onClose}>
       <div className="bg-white rounded-xl shadow-2xl w-full max-w-md">
         <div className="p-5 sm:p-6">
           <div className="flex items-center space-x-3 mb-4">
@@ -579,7 +600,7 @@ const ConfirmationModal = ({ modal, onClose }) => {
           </div>
         </div>
       </div>
-    </div>
+    </AdminModalPortal>
   );
 };
 
@@ -3121,7 +3142,10 @@ const Courses = () => {
 
                       {/* Video Content Management Modal */}
                       {editingVideoContent && (
-                        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+                        <AdminModalPortal
+                          className="p-4"
+                          onBackdropClick={() => setEditingVideoContent(null)}
+                        >
                           <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
                             <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 rounded-t-xl">
                               <div className="flex items-center justify-between">
@@ -3538,7 +3562,7 @@ const Courses = () => {
                               </div>
                             </div>
                           </div>
-                        </div>
+                        </AdminModalPortal>
                       )}
                     </div>
                   )}
@@ -3551,7 +3575,7 @@ const Courses = () => {
 
       {/* Edit Course Modal */}
       {editingCourse && (
-        <div className="fixed inset-0 flex items-center justify-center p-2 sm:p-4 z-50 bg-black/10 backdrop-blur-md border border-white/20 shadow-lg">
+        <AdminModalPortal className="p-2 sm:p-4" onBackdropClick={handleCancelEdit}>
           <div className="bg-white rounded-xl p-4 sm:p-6 w-full max-w-sm sm:max-w-md mx-2 sm:mx-0">
             <h3 className="text-lg font-semibold mb-4">Edit Course</h3>
             <div className="space-y-4">
@@ -3766,12 +3790,15 @@ const Courses = () => {
               </button>
             </div>
           </div>
-        </div>
+        </AdminModalPortal>
       )}
 
       {/* Delete Confirmation Modal */}
       {deleteConfirmCourse && (
-        <div className="fixed inset-0 bg-opacity-30 flex items-center justify-center p-2 sm:p-4 z-50 bg-black/10 backdrop-blur-md border border-white/20 shadow-lg">
+        <AdminModalPortal
+          className="p-2 sm:p-4"
+          onBackdropClick={() => setDeleteConfirmCourse(null)}
+        >
           <div className="bg-white rounded-xl p-6 w-full max-w-md">
             <div className="flex items-center space-x-3 mb-4">
               <div className="p-3 bg-red-100 rounded-full">
@@ -3804,12 +3831,15 @@ const Courses = () => {
               </button>
             </div>
           </div>
-        </div>
+        </AdminModalPortal>
       )}
 
       {/* Edit Question Modal */}
       {editingQuestion && (
-        <div className="fixed inset-0 bg-opacity-30 flex items-center justify-center p-2 sm:p-4 z-50 bg-black/10 backdrop-blur-md border border-white/20 shadow-lg">
+        <AdminModalPortal
+          className="p-2 sm:p-4"
+          onBackdropClick={() => setEditingQuestion(null)}
+        >
           <div className="bg-white rounded-xl p-4 sm:p-6 w-full max-w-sm sm:max-w-2xl max-h-[90vh] overflow-y-auto mx-2 sm:mx-0">
             <h3 className="text-lg font-semibold mb-4">Edit Question</h3>
             <div className="space-y-4">
@@ -4129,12 +4159,12 @@ const Courses = () => {
               </button>
             </div>
           </div>
-        </div>
+        </AdminModalPortal>
       )}
 
       {/* Add Question Modal with Glassmorphism Effect */}
       {addingQuestion && (
-        <div className="fixed inset-0 bg-opacity-50 flex items-center justify-center p-4 z-50 bg-black/10 backdrop-blur-md border border-white/20 shadow-lg">
+        <AdminModalPortal className="p-4" onBackdropClick={() => setAddingQuestion(null)}>
           <div className="bg-white rounded-xl shadow-2xl w-full max-w-sm sm:max-w-2xl lg:max-w-3xl max-h-[95vh] overflow-y-auto mx-2 sm:mx-0">
             <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 rounded-t-xl">
               <div className="flex items-center justify-between">
@@ -4508,10 +4538,13 @@ const Courses = () => {
               </div>
             </div>
           </div>
-        </div>
+        </AdminModalPortal>
       )}
       {deleteConfirmation && (
-        <div className="fixed inset-0 bg-opacity-50 flex items-center justify-center p-4 z-50">
+        <AdminModalPortal
+          className="p-4"
+          onBackdropClick={() => setDeleteConfirmation(null)}
+        >
           <div className="bg-white rounded-xl shadow-2xl w-full max-w-md">
             <div className="p-6">
               <h3 className="text-lg font-semibold text-gray-900 mb-2">
@@ -4537,11 +4570,11 @@ const Courses = () => {
               </div>
             </div>
           </div>
-        </div>
+        </AdminModalPortal>
       )}
       {/* Difficulty Edit Modal */}
       {editingDifficulty && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+        <AdminModalPortal className="p-4" onBackdropClick={handleCancelDifficultyEdit}>
           <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
             {/* Modal Header */}
             <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 rounded-t-xl z-10">
@@ -4809,11 +4842,14 @@ const Courses = () => {
               </div>
             </div>
           </div>
-        </div>
+        </AdminModalPortal>
       )}
 
       {bulkDeleteConfirmation && (
-        <div className="fixed inset-0 bg-opacity-50 flex items-center justify-center p-4 z-50">
+        <AdminModalPortal
+          className="p-4"
+          onBackdropClick={() => setBulkDeleteConfirmation(null)}
+        >
           <div className="bg-white rounded-xl shadow-2xl w-full max-w-md">
             <div className="p-6">
               <h3 className="text-lg font-semibold text-gray-900 mb-2">
@@ -4839,7 +4875,7 @@ const Courses = () => {
               </div>
             </div>
           </div>
-        </div>
+        </AdminModalPortal>
       )}
       {/* Video Player Modal */}
       {videoPlayerModal && (
@@ -4856,16 +4892,10 @@ const Courses = () => {
           onClose={() => setConfirmationModal(null)}
         />
       )}
-      {confirmationModal && (
-        <ConfirmationModal
-          modal={confirmationModal}
-          onClose={() => setConfirmationModal(null)}
-        />
-      )}
 
       {/* Add Coupon Modal */}
       {addingCoupon && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+        <AdminModalPortal className="p-4" onBackdropClick={() => setAddingCoupon(null)}>
           <div className="bg-white rounded-xl shadow-2xl w-full max-w-md">
             <div className="p-6">
               <div className="flex items-center justify-between mb-4">
@@ -4893,7 +4923,7 @@ const Courses = () => {
               />
             </div>
           </div>
-        </div>
+        </AdminModalPortal>
       )}
     </div>
   );

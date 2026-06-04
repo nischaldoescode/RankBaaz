@@ -14,6 +14,23 @@ import toast from "react-hot-toast";
 
 const TeacherContext = createContext(null);
 
+const normalizeProfilePayload = (payload) => {
+  const data = payload?.data?.data;
+  if (!data) return { teacher: null, courses: [] };
+
+  if (data.teacher) {
+    return {
+      teacher: data.teacher,
+      courses: Array.isArray(data.courses) ? data.courses : [],
+    };
+  }
+
+  return {
+    teacher: data,
+    courses: [],
+  };
+};
+
 export const TeacherProvider = ({ children }) => {
   const [teacher, setTeacher] = useState(null);
   const [courses, setCourses] = useState([]);
@@ -24,9 +41,19 @@ export const TeacherProvider = ({ children }) => {
     try {
       setLoading(true);
       const res = await teacherApi.profile.get();
-      setTeacher(res.data.data.teacher);
-      setCourses(res.data.data.courses || []);
-      localStorage.setItem("teacher", JSON.stringify(res.data.data.teacher));
+      const { teacher: profileTeacher, courses: profileCourses } =
+        normalizeProfilePayload(res);
+
+      if (!profileTeacher?._id && !profileTeacher?.id) {
+        localStorage.removeItem("teacher");
+        setTeacher(null);
+        setCourses([]);
+        return false;
+      }
+
+      setTeacher(profileTeacher);
+      setCourses(profileCourses);
+      localStorage.setItem("teacher", JSON.stringify(profileTeacher));
       return true;
     } catch (err) {
       // only clear session on 401.
