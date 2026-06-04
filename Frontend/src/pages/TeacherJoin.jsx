@@ -1,12 +1,16 @@
 /**
  * keeps the teacher join page focused and readable.
  */
-import React, { useState, useEffect, useRef } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import axios from "axios";
 
-const API = import.meta.env.VITE_API_URL || "http://localhost:7000/api";
+const RAW_API = (import.meta.env.VITE_API_URL || "http://localhost:7000").replace(
+  /\/$/,
+  ""
+);
+const API = RAW_API.endsWith("/api") ? RAW_API : `${RAW_API}/api`;
+const apiUrl = (path) => `${API}${path.startsWith("/") ? path : `/${path}`}`;
 
 // localstorage key
 const LS_KEY = "vg_teacher_application";
@@ -26,6 +30,22 @@ const setStored = (data) => {
   } catch {}
 };
 
+const clearStored = () => {
+  try {
+    localStorage.removeItem(LS_KEY);
+  } catch {}
+};
+
+const scrollToApply = () => {
+  if (typeof window === "undefined") return;
+
+  const target = document.getElementById("apply");
+  if (!target) return;
+
+  const top = target.getBoundingClientRect().top + window.scrollY - 88;
+  window.scrollTo({ top: Math.max(top, 0), behavior: "smooth" });
+};
+
 // ui primitives
 
 const inputCls =
@@ -33,74 +53,18 @@ const inputCls =
 
 const CountryFlag = ({ country }) =>
   country === "india" ? (
-    <span className="text-lg">🇮🇳</span>
+    <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-primary/10 text-xs font-bold text-primary">
+      IN
+    </span>
   ) : (
-    <span className="text-lg">🇳🇵</span>
+    <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-primary/10 text-xs font-bold text-primary">
+      NP
+    </span>
   );
-
-// waitlist count hook
-
-const useWaitlistCount = () => {
-  const [count, setCount] = useState(null);
-
-  useEffect(() => {
-    axios
-      .get(`${API}/api/teachers/waitlist-count`)
-      .then((r) => setCount(r.data.data?.count ?? 0))
-      .catch(() => {});
-  }, []);
-
-  return count;
-};
-
-// animated number
-const AnimatedNumber = ({ value }) => {
-  const [displayed, setDisplayed] = useState(0);
-  const prev = useRef(0);
-
-  useEffect(() => {
-    if (value === null || value === undefined) return;
-    const start = prev.current;
-    const end = value;
-    const diff = end - start;
-    if (diff === 0) return;
-
-    const duration = 800;
-    const startTime = performance.now();
-
-    const tick = (now) => {
-      const elapsed = now - startTime;
-      const progress = Math.min(elapsed / duration, 1);
-      const eased = 1 - Math.pow(1 - progress, 3);
-      setDisplayed(Math.round(start + diff * eased));
-      if (progress < 1) requestAnimationFrame(tick);
-      else prev.current = end;
-    };
-
-    requestAnimationFrame(tick);
-  }, [value]);
-
-  if (value === null) {
-    return (
-      <span
-        style={{
-          display: "inline-block",
-          width: 40,
-          height: 20,
-          background: "rgba(255,255,255,0.15)",
-          borderRadius: 6,
-          animation: "pulse 1.5s ease-in-out infinite",
-        }}
-      />
-    );
-  }
-
-  return <span>{displayed}</span>;
-};
 
 // status banners
 
-const ReviewInProgress = ({ email }) => (
+const ReviewInProgress = ({ email, onReset }) => (
   <motion.div
     initial={{ opacity: 0, y: 12 }}
     animate={{ opacity: 1, y: 0 }}
@@ -130,11 +94,18 @@ const ReviewInProgress = ({ email }) => (
         <strong className="text-foreground">{email}</strong>. Our team is
         reviewing it and will send an invite link to your email once approved.
       </p>
-      <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-xs text-amber-800 text-left space-y-1">
-        <p> Check your inbox (including spam folder)</p>
-        <p>⏱ Reviews typically take 24–48 hours</p>
-        <p> Invite links expire in 4 minutes. Register promptly.</p>
+      <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-xs text-amber-800 text-left space-y-1.5">
+        <p>Check your inbox, including the spam folder.</p>
+        <p>Reviews typically take 24-48 hours.</p>
+        <p>Invite links expire in 4 minutes. Register promptly.</p>
       </div>
+      <button
+        type="button"
+        onClick={onReset}
+        className="mt-4 text-xs font-semibold text-primary underline underline-offset-4 cursor-pointer"
+      >
+        Use a different email
+      </button>
     </div>
   </motion.div>
 );
@@ -233,7 +204,7 @@ const ApplicationForm = ({ onApplied }) => {
     }
     setLoading(true);
     try {
-      await axios.post(`${API}/api/teachers/apply`, form);
+      await axios.post(apiUrl("/teachers/apply"), form);
       // store in localstorage so user sees status on revisit
       setStored({
         email: form.email,
@@ -272,7 +243,7 @@ const ApplicationForm = ({ onApplied }) => {
   return (
     <form
       onSubmit={handleSubmit}
-      className="w-full max-w-lg mx-auto bg-background border border-border rounded-2xl p-6 sm:p-8 shadow-sm"
+      className="w-full max-w-lg mx-auto bg-background border border-border rounded-2xl p-4 sm:p-8 shadow-sm"
     >
       <h3 className="text-lg font-bold text-foreground mb-1">Apply to Teach</h3>
       <p className="text-sm text-muted-foreground mb-6">
@@ -327,7 +298,7 @@ const ApplicationForm = ({ onApplied }) => {
                   setForm((p) => ({ ...p, country: c }));
                   setErrors((p) => ({ ...p, country: undefined }));
                 }}
-                className={`flex items-center gap-3 px-4 py-3 rounded-xl border-2 transition-all text-sm font-medium cursor-pointer ${
+                className={`flex items-center justify-center sm:justify-start gap-3 px-4 py-3 rounded-xl border-2 transition-all text-sm font-medium cursor-pointer ${
                   form.country === c
                     ? "border-primary bg-primary/5 text-primary"
                     : "border-border bg-background text-foreground hover:border-primary/40"
@@ -442,23 +413,16 @@ const PERKS = [
 // main component
 
 const TeacherJoin = () => {
-  const [waitlistCount, setWaitlistCount] = useState(null);
   const [appStatus, setAppStatus] = useState(null); // null | "loading" | "none" | "pending" | "invited" | "registered"
   const [appliedEmail, setAppliedEmail] = useState(null);
   const PORTAL_URL =
     import.meta.env.VITE_TEACHER_PORTAL_URL || "http://localhost:5175";
 
-  // scroll to top on mount
+  // keep hash navigation focused on the form.
   useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (window.location.hash === "#apply") return;
     window.scrollTo({ top: 0, behavior: "smooth" });
-  }, []);
-
-  // waitlist count
-  useEffect(() => {
-    axios
-      .get(`${API}/api/teachers/waitlist-count`)
-      .then((r) => setWaitlistCount(r.data.data?.count ?? 0))
-      .catch(() => {});
   }, []);
 
   // check application status from storage and backend
@@ -474,7 +438,7 @@ const TeacherJoin = () => {
     setAppliedEmail(stored.email);
 
     axios
-      .post(`${API}/api/teachers/application/status`, { email: stored.email })
+      .post(apiUrl("/teachers/application/status"), { email: stored.email })
       .then((r) => {
         const { status } = r.data.data;
         setAppStatus(status);
@@ -492,9 +456,25 @@ const TeacherJoin = () => {
   const handleApplied = (email) => {
     setAppliedEmail(email);
     setAppStatus("pending");
-    // increment count optimistically
-    setWaitlistCount((p) => (p !== null ? p + 1 : p));
   };
+
+  const handleResetApplication = () => {
+    clearStored();
+    setAppliedEmail(null);
+    setAppStatus("none");
+    if (typeof window !== "undefined") {
+      window.setTimeout(scrollToApply, 50);
+    }
+  };
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (window.location.hash !== "#apply") return;
+    if (appStatus === null || appStatus === "loading") return;
+
+    const timer = window.setTimeout(scrollToApply, 80);
+    return () => window.clearTimeout(timer);
+  }, [appStatus]);
 
   const showForm = appStatus === "none";
   const showReview = appStatus === "pending" || appStatus === "invited";
@@ -527,14 +507,12 @@ const TeacherJoin = () => {
           }}
         />
 
-        <div className="relative z-10 max-w-5xl mx-auto px-4 sm:px-6 py-20 sm:py-28 text-center">
-          {/* waitlist badge */}
-
+        <div className="relative z-10 max-w-5xl mx-auto px-4 sm:px-6 py-12 sm:py-28 text-center">
           <motion.h1
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.08 }}
-            className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-foreground mb-5 leading-tight"
+            className="text-3xl sm:text-5xl lg:text-6xl font-extrabold text-foreground mb-4 sm:mb-5 leading-tight"
           >
             Teach. Earn. <span className="text-primary">Keep 80%.</span>
           </motion.h1>
@@ -543,7 +521,7 @@ const TeacherJoin = () => {
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.14 }}
-            className="text-base sm:text-lg text-muted-foreground mb-8 max-w-2xl mx-auto leading-relaxed"
+            className="text-base sm:text-lg text-muted-foreground mb-6 sm:mb-8 max-w-2xl mx-auto leading-relaxed"
           >
             Join Vidhgrow&apos;s invite-only teacher program. Create courses,
             reach thousands of students across India and Nepal, and get paid via
@@ -555,17 +533,15 @@ const TeacherJoin = () => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.2 }}
-            className="flex flex-col sm:flex-row items-center justify-center gap-3 mb-12"
+            className="flex flex-col sm:flex-row items-center justify-center gap-3 mb-6 sm:mb-12"
           >
             <a
               href="#apply"
               onClick={(e) => {
                 e.preventDefault();
-                document
-                  .getElementById("apply")
-                  ?.scrollIntoView({ behavior: "smooth", block: "start" });
+                scrollToApply();
               }}
-              className="px-6 py-3 bg-primary text-primary-foreground rounded-xl font-semibold text-sm hover:opacity-90 transition-opacity"
+              className="w-full sm:w-auto px-6 py-3 bg-primary text-primary-foreground rounded-xl font-semibold text-sm hover:opacity-90 transition-opacity"
             >
               Apply to Teach
             </a>
@@ -574,14 +550,14 @@ const TeacherJoin = () => {
               href={PORTAL_URL}
               target="_blank"
               rel="noreferrer"
-              className="px-6 py-3 border border-border rounded-xl text-sm font-semibold text-foreground hover:border-primary/40 transition-colors"
+              className="w-full sm:w-auto px-6 py-3 border border-border rounded-xl text-sm font-semibold text-foreground hover:border-primary/40 transition-colors"
             >
-              Already a teacher? Sign in →
+              Already a teacher? Sign in
             </a>
           </motion.div>
 
           {/* perks */}
-          <div className="grid grid-cols-2 sm:grid-cols-2 gap-3 sm:gap-4 max-w-3xl mx-auto">
+          <div className="hidden sm:grid grid-cols-2 gap-3 sm:gap-4 max-w-3xl mx-auto">
             {PERKS.map((p, i) => (
               <motion.div
                 key={i}
@@ -605,10 +581,10 @@ const TeacherJoin = () => {
       {/* apply section */}
       <section
         id="apply"
-        className="py-16 px-4 sm:px-6"
-        style={{ scrollMarginTop: 80 }}
+        className="py-8 px-4 sm:py-16 sm:px-6"
+        style={{ scrollMarginTop: 96 }}
       >
-        <div className="max-w-lg mx-auto">
+        <div className="max-w-xl mx-auto">
           <AnimatePresence mode="wait">
             {showLoader && (
               <motion.div
@@ -634,7 +610,11 @@ const TeacherJoin = () => {
             {showRegistered && <AlreadyRegistered key="registered" />}
 
             {showReview && (
-              <ReviewInProgress key="review" email={appliedEmail} />
+              <ReviewInProgress
+                key="review"
+                email={appliedEmail}
+                onReset={handleResetApplication}
+              />
             )}
 
             {showForm && (
