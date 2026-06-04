@@ -29,7 +29,7 @@ input[type=number]::-webkit-inner-spin-button {
   --admin-bg: #f8fbff;
   --admin-surface: rgba(255, 255, 255, 0.90);
   --admin-line: rgba(148, 163, 184, 0.30);
-  --admin-shadow: 0 1px 2px rgba(15, 23, 42, 0.08), 0 10px 30px rgba(15, 23, 42, 0.06);
+  --admin-shadow: 0 1px 2px rgba(15, 23, 42, 0.08), 0 8px 22px rgba(15, 23, 42, 0.05);
 }
 
 body {
@@ -75,12 +75,12 @@ body {
 .admin-material-shell input[type="submit"] {
   cursor: pointer;
   border-radius: 999px !important;
-  transition: transform 0.16s ease, box-shadow 0.16s ease, background 0.16s ease, border-color 0.16s ease !important;
+  transition: background 0.12s ease, border-color 0.12s ease, color 0.12s ease, box-shadow 0.12s ease !important;
 }
 
 .admin-material-shell button:active,
 .admin-material-shell a[role="button"]:active {
-  transform: scale(0.985);
+  transform: none;
 }
 
 .admin-material-shell button:disabled,
@@ -189,7 +189,7 @@ body {
 .admin-material-shell .bg-gray-50,
 .admin-material-shell .bg-gray-100 {
   background-color: var(--admin-surface) !important;
-  backdrop-filter: blur(16px);
+  backdrop-filter: blur(8px);
 }
 
 .admin-material-shell .bg-green-50,
@@ -239,6 +239,20 @@ body {
   box-shadow: var(--admin-shadow) !important;
 }
 
+.admin-material-shell .backdrop-blur-md,
+.admin-material-shell .backdrop-blur-sm,
+.admin-material-shell .transition-all {
+  transition-duration: 120ms !important;
+}
+
+.admin-material-shell .backdrop-blur-md {
+  backdrop-filter: blur(6px) !important;
+}
+
+.admin-material-shell .backdrop-blur-sm {
+  backdrop-filter: blur(4px) !important;
+}
+
 .admin-material-shell [class*="fixed"][class*="inset-0"] + div,
 .admin-material-shell [class*="modal"],
 .Toastify__toast {
@@ -250,11 +264,20 @@ body {
   overflow-y: auto !important;
   padding-top: max(1.5rem, env(safe-area-inset-top)) !important;
   padding-bottom: max(1.5rem, env(safe-area-inset-bottom)) !important;
+  z-index: 10000 !important;
 }
 
 .admin-material-shell [class*="fixed"][class*="inset-0"][class*="z-50"] > div {
   margin-top: 0 !important;
   margin-bottom: auto !important;
+}
+
+.admin-material-shell [style*="position: fixed"][style*="inset: 0"] {
+  align-items: flex-start !important;
+  overflow-y: auto !important;
+  padding-top: max(1.5rem, env(safe-area-inset-top)) !important;
+  padding-bottom: max(1.5rem, env(safe-area-inset-bottom)) !important;
+  z-index: 10000 !important;
 }
 
 .admin-auth-page {

@@ -309,34 +309,40 @@ a,
   grid-template-columns: minmax(0, 0.86fr) minmax(280px, 1fr);
   gap: clamp(1.25rem, 4vw, 4rem);
   align-items: center;
-  min-height: 24rem;
-  padding: clamp(1.4rem, 4vw, 3.5rem);
-  border: 1px solid rgba(148, 163, 184, 0.22);
-  border-radius: 12px;
+  min-height: clamp(28rem, 58vh, 38rem);
+  padding: clamp(2.25rem, 6vw, 5rem) clamp(0.25rem, 2vw, 1.5rem);
+  border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 0;
   background:
-    linear-gradient(135deg, rgba(255, 255, 255, 0.88), rgba(248, 250, 252, 0.72)),
-    radial-gradient(circle at 92% 12%, rgba(var(--vg-primary-rgb), 0.11), transparent 34%);
-  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
-  overflow: hidden;
+    linear-gradient(180deg, transparent, rgba(248, 250, 252, 0.72) 48%, transparent),
+    radial-gradient(circle at 86% 14%, rgba(var(--vg-primary-rgb), 0.09), transparent 32%);
+  box-shadow: none;
+  overflow: visible;
 }
 
 .vg-story-chapter::before {
   content: "";
   position: absolute;
-  inset: 0 auto 0 0;
-  width: 6px;
-  background: var(--chapter-accent, var(--vg-primary));
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--chapter-accent, #3b82f6) 38%, transparent), transparent);
 }
 
 .vg-story-chapter::after {
   content: "";
   position: absolute;
-  right: -6rem;
-  top: -6rem;
-  width: 16rem;
-  height: 16rem;
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--chapter-accent, #3b82f6) 18%, transparent);
+  right: clamp(-10rem, -8vw, -4rem);
+  top: 12%;
+  width: clamp(14rem, 30vw, 28rem);
+  height: clamp(14rem, 30vw, 28rem);
+  border-radius: 999px 48% 999px 42%;
+  background:
+    linear-gradient(90deg, color-mix(in srgb, var(--chapter-accent, #3b82f6) 12%, transparent) 1px, transparent 1px),
+    linear-gradient(180deg, color-mix(in srgb, var(--chapter-accent, #3b82f6) 10%, transparent) 1px, transparent 1px);
+  background-size: 30px 30px;
+  opacity: 0.65;
   pointer-events: none;
 }
 
@@ -387,16 +393,17 @@ a,
   position: relative;
   z-index: 1;
   min-height: clamp(15rem, 32vw, 22rem);
-  border: 1px solid rgba(148, 163, 184, 0.24);
-  border-radius: 12px;
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  border-radius: 16px;
   background:
     linear-gradient(135deg, rgba(255, 255, 255, 0.82), rgba(239, 246, 255, 0.58)),
     linear-gradient(90deg, rgba(var(--vg-primary-rgb), 0.07) 1px, transparent 1px),
     linear-gradient(180deg, rgba(var(--vg-primary-rgb), 0.07) 1px, transparent 1px);
   background-size: auto, 28px 28px, 28px 28px;
-  box-shadow: 0 18px 55px rgba(37, 99, 235, 0.1);
+  box-shadow: 0 18px 48px rgba(37, 99, 235, 0.09);
   overflow: hidden;
-  backdrop-filter: blur(18px);
+  transform-origin: center;
+  will-change: transform;
 }
 
 .vg-story-image-frame::after {
@@ -414,6 +421,12 @@ a,
   min-height: clamp(15rem, 32vw, 22rem);
   object-fit: cover;
   display: block;
+  transform: scale(1.04);
+  transition: transform 0.8s ease;
+}
+
+.vg-story-image-frame:hover .vg-story-image {
+  transform: scale(1.075);
 }
 
 .vg-story-image-fallback {
@@ -524,7 +537,7 @@ a,
   position: relative;
   min-height: clamp(18rem, 40vw, 32rem);
   border: 1px solid rgba(148, 163, 184, 0.24);
-  border-radius: 12px;
+  border-radius: 16px;
   background:
     linear-gradient(135deg, rgba(255, 255, 255, 0.82), rgba(239, 246, 255, 0.58)),
     linear-gradient(90deg, rgba(var(--vg-primary-rgb), 0.07) 1px, transparent 1px),
@@ -532,6 +545,8 @@ a,
   background-size: auto, 30px 30px, 30px 30px;
   box-shadow: 0 24px 70px rgba(37, 99, 235, 0.1);
   overflow: hidden;
+  transform-origin: center;
+  will-change: transform;
 }
 
 .vg-about-image-frame::before {
@@ -556,6 +571,12 @@ a,
   display: block;
   height: 100%;
   object-fit: cover;
+  transform: scale(1.04);
+  transition: transform 0.8s ease;
+}
+
+.vg-about-image-frame:hover .vg-about-image {
+  transform: scale(1.075);
 }
 
 .vg-about-image-fallback {
@@ -794,7 +815,7 @@ a,
 
   .vg-story-chapter {
     grid-template-columns: 1fr;
-    padding: 1.2rem;
+    padding: 2.25rem 0.35rem;
     min-height: auto;
   }
 

@@ -26,6 +26,8 @@ export const TeacherProvider = ({ children }) => {
       const res = await teacherApi.profile.get();
       setTeacher(res.data.data.teacher);
       setCourses(res.data.data.courses || []);
+      localStorage.setItem("teacher", JSON.stringify(res.data.data.teacher));
+      return true;
     } catch (err) {
       // only clear session on 401.
       if (err.response?.status === 401) {
@@ -34,14 +36,15 @@ export const TeacherProvider = ({ children }) => {
         setTeacher(null);
       }
       // protected routes handle redirection.
+      return false;
     } finally {
       setLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    // don't attempt auth on public signup/expired routes
-    const publicPaths = ["/signup", "/invite-expired", "/login"];
+    // signup and expired invite pages do not represent an active session.
+    const publicPaths = ["/signup", "/invite-expired"];
     const currentPath = window.location.pathname;
     const isPublicPath = publicPaths.some((p) => currentPath.startsWith(p));
 
@@ -52,10 +55,12 @@ export const TeacherProvider = ({ children }) => {
     }
 
     const stored = localStorage.getItem("teacher");
-    if (!stored) {
-      setInitializing(false);
-      setLoading(false);
-      return;
+    if (stored) {
+      try {
+        setTeacher(JSON.parse(stored));
+      } catch {
+        localStorage.removeItem("teacher");
+      }
     }
 
     teacherRequestSigner.loadSigningSecret();

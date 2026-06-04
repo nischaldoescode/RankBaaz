@@ -138,7 +138,7 @@ const Sidebar = ({ isOpen, onClose }) => {
       {/* mobile backdrop with blur effect */}
       {isOpen && (
         <div
-          className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[60] md:hidden transition-all duration-300"
+          className="fixed inset-0 bg-black/45 z-[60] md:hidden"
           onClick={onClose}
         />
       )}
@@ -150,12 +150,12 @@ const Sidebar = ({ isOpen, onClose }) => {
         transform ${
           isOpen ? "translate-x-0" : "-translate-x-full"
         } md:translate-x-0
-        transition-transform duration-300 ease-out md:transition-none
+        transition-transform duration-150 ease-out md:transition-none
         flex md:flex-shrink-0
       `}
       >
         <div className="flex flex-col w-64 sm:w-72 lg:w-80">
-          <div className="flex flex-col flex-grow h-screen pt-4 sm:pt-5 pb-4 bg-white/95 backdrop-blur-md border-r border-gray-200/80 shadow-2xl md:shadow-lg">
+          <div className="flex flex-col flex-grow h-screen pt-4 sm:pt-5 pb-4 bg-white/95 backdrop-blur-sm border-r border-gray-200/80 shadow-lg md:shadow-sm">
             {/* header with enhanced styling */}
             <div className="flex items-center justify-between flex-shrink-0 px-4 sm:px-6 mb-2">
               <div className="flex min-w-0 flex-1 items-center gap-3">
@@ -183,10 +183,9 @@ const Sidebar = ({ isOpen, onClose }) => {
                 </div>
               </div>
 
-              {/* enhanced mobile close button */}
               <button
                 onClick={onClose}
-                className="md:hidden p-2 rounded-xl text-gray-400 hover:text-gray-600 hover:bg-gray-100/80 transition-all duration-200 active:scale-95 flex-shrink-0"
+                className="md:hidden p-2 rounded-xl text-gray-400 hover:text-gray-600 hover:bg-gray-100/80 transition-colors duration-150 flex-shrink-0"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -195,7 +194,7 @@ const Sidebar = ({ isOpen, onClose }) => {
             {/* navigation with enhanced styling and proper scrolling */}
             <div className="mt-6 flex-grow flex flex-col min-h-0">
               <nav className="flex-1 px-3 sm:px-4 space-y-2 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100 hover:scrollbar-thumb-gray-400">
-                {navigation.map((item, index) => {
+                {navigation.map((item) => {
                   const isActive =
                     location.pathname === item.href ||
                     (item.href === "/courses" &&
@@ -207,16 +206,13 @@ const Sidebar = ({ isOpen, onClose }) => {
                       to={item.href}
                       className={`
                         group relative flex items-center px-4 py-3.5 text-sm font-medium rounded-2xl
-                        transition-all duration-300 ease-out hover:scale-[1.02] active:scale-[0.98]
+                        transition-colors duration-150 ease-out
                         ${
                           isActive
                             ? "bg-blue-50 text-blue-700 border border-blue-100"
                             : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
                         }
                       `}
-                      style={{
-                        animationDelay: `${index * 50}ms`,
-                      }}
                     >
                       {isActive && (
                         <div className="absolute inset-0 rounded-2xl bg-blue-500/5" />
@@ -226,7 +222,7 @@ const Sidebar = ({ isOpen, onClose }) => {
                       <div
                         className={`
                         relative mr-3 flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center
-                        transition-all duration-300
+                        transition-colors duration-150
                         ${
                           isActive
                             ? "bg-blue-500 text-white"
