@@ -155,18 +155,64 @@ const StoryImageSlot = ({ item }) => {
   );
 };
 
+const StoryChapter = ({ item, index, animations, reducedMotion }) => {
+  const chapterRef = useRef(null);
+  const { scrollYProgress } = useScroll({
+    target: chapterRef,
+    offset: ["start end", "end start"],
+  });
+  const copyY = useTransform(scrollYProgress, [0, 0.5, 1], [34, 0, -22]);
+  const imageY = useTransform(scrollYProgress, [0, 0.5, 1], [74, -8, -86]);
+  const imageScale = useTransform(scrollYProgress, [0, 0.5, 1], [0.96, 1.035, 0.98]);
+  const imageRotate = useTransform(scrollYProgress, [0, 0.5, 1], [-1.2, 0.4, 1.2]);
+  const chapterOpacity = useTransform(scrollYProgress, [0, 0.14, 0.86, 1], [0.45, 1, 1, 0.42]);
+
+  return (
+    <motion.article
+      ref={chapterRef}
+      style={reducedMotion ? undefined : { opacity: chapterOpacity }}
+      initial={animations && !reducedMotion ? { opacity: 0, y: 34 } : {}}
+      whileInView={animations && !reducedMotion ? { opacity: 1, y: 0 } : {}}
+      viewport={{ once: true, margin: "-80px" }}
+      transition={{ duration: 0.55, delay: index * 0.08 }}
+      className={`vg-story-chapter vg-story-chapter-${index + 1}`}
+    >
+      <motion.div
+        style={reducedMotion ? undefined : { y: copyY }}
+        className="vg-story-chapter-copy"
+      >
+        <span className="vg-story-index">
+          {String(index + 1).padStart(2, "0")}
+        </span>
+        <p className="vg-story-kicker">{item.kicker}</p>
+        <h3>{item.title}</h3>
+        <p>{item.description}</p>
+      </motion.div>
+
+      <motion.div
+        style={
+          reducedMotion
+            ? undefined
+            : { y: imageY, scale: imageScale, rotate: imageRotate }
+        }
+        className="vg-story-image-frame"
+      >
+        <StoryImageSlot item={item} />
+      </motion.div>
+    </motion.article>
+  );
+};
+
 const LearningStorySection = ({ animations, reducedMotion, isAuthenticated }) => {
   const sectionRef = useRef(null);
   const { scrollYProgress } = useScroll({
     target: sectionRef,
     offset: ["start end", "end start"],
   });
-  const textX = useTransform(scrollYProgress, [0, 0.5, 1], [-32, 0, 20]);
-  const imageY = useTransform(scrollYProgress, [0, 0.5, 1], [42, -8, -48]);
+  const textX = useTransform(scrollYProgress, [0, 0.5, 1], [-54, 0, 34]);
   const fade = useTransform(scrollYProgress, [0, 0.18, 0.78, 1], [0.4, 1, 1, 0.24]);
 
   const motionStyle = reducedMotion ? undefined : { x: textX, opacity: fade };
-  const imageStyle = reducedMotion ? undefined : { y: imageY };
 
   return (
     <section
@@ -193,30 +239,13 @@ const LearningStorySection = ({ animations, reducedMotion, isAuthenticated }) =>
 
         <div className="mt-12 space-y-10" aria-label="Vidhgrow learning flow">
           {platformHighlights.map((item, index) => (
-            <motion.article
+            <StoryChapter
               key={item.title}
-              initial={animations && !reducedMotion ? { opacity: 0, y: 28 } : {}}
-              whileInView={animations && !reducedMotion ? { opacity: 1, y: 0 } : {}}
-              viewport={{ once: true, margin: "-80px" }}
-              transition={{ duration: 0.55, delay: index * 0.08 }}
-              className={`vg-story-chapter vg-story-chapter-${index + 1}`}
-            >
-              <div className="vg-story-chapter-copy">
-                <span className="vg-story-index">
-                  {String(index + 1).padStart(2, "0")}
-                </span>
-                <p className="vg-story-kicker">{item.kicker}</p>
-                <h3>{item.title}</h3>
-                <p>{item.description}</p>
-              </div>
-
-              <motion.div
-                style={imageStyle}
-                className="vg-story-image-frame"
-              >
-                <StoryImageSlot item={item} />
-              </motion.div>
-            </motion.article>
+              item={item}
+              index={index}
+              animations={animations}
+              reducedMotion={reducedMotion}
+            />
           ))}
         </div>
 

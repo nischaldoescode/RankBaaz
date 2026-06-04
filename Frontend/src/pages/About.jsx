@@ -1,8 +1,8 @@
 /**
  * keeps the about page focused and readable.
  */
-import React, { useState } from "react";
-import { motion } from "framer-motion";
+import React, { useRef, useState } from "react";
+import { motion, useScroll, useTransform } from "framer-motion";
 import { Link } from "react-router-dom";
 import { ArrowRight } from "lucide-react";
 import { useTheme } from "../context/ThemeContext";
@@ -65,6 +65,14 @@ const AboutImageSlot = () => {
 const About = () => {
   const { animations, reducedMotion } = useTheme();
   const { contentSettings, loading } = useContent();
+  const heroRef = useRef(null);
+  const { scrollYProgress } = useScroll({
+    target: heroRef,
+    offset: ["start end", "end start"],
+  });
+  const imageY = useTransform(scrollYProgress, [0, 0.5, 1], [62, -10, -72]);
+  const imageScale = useTransform(scrollYProgress, [0, 0.5, 1], [0.97, 1.035, 0.99]);
+  const imageRotate = useTransform(scrollYProgress, [0, 0.5, 1], [-1.4, 0.3, 1.1]);
 
   useSEO({
     title: "About Us",
@@ -95,7 +103,7 @@ const About = () => {
   return (
     <div className="vg-static-page min-h-screen pb-16 pt-20">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <section className="vg-about-hero">
+        <section ref={heroRef} className="vg-about-hero">
           <motion.div {...motionProps} className="vg-about-copy">
             <p className="text-xs font-semibold uppercase tracking-[0.22em] text-primary/70">
               About {siteName}
@@ -122,6 +130,11 @@ const About = () => {
           <motion.div
             {...motionProps}
             transition={{ duration: 0.6, delay: 0.08 }}
+            style={
+              reducedMotion
+                ? undefined
+                : { y: imageY, scale: imageScale, rotate: imageRotate }
+            }
             className="vg-about-image-frame"
           >
             <AboutImageSlot />

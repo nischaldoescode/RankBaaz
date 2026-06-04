@@ -9,6 +9,7 @@ import ProfileTab from "./ProfileTab.jsx";
 import PaymentTab from "./PaymentTab.jsx";
 import DocumentsTab from "./DocumentTab.jsx";
 import AnalyticsTab from "./AnalyticsTab.jsx";
+import { teacherApi } from "../../services/api.js";
 import toast from "react-hot-toast";
 
 /**
@@ -257,10 +258,25 @@ const TeacherDashboard = () => {
   const [tab, setTab] = useState("analytics");
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
+  const [contentSettings, setContentSettings] = useState(null);
+  const [logoBroken, setLogoBroken] = useState(false);
   const SIDEBAR_W = 260;
+  const siteName = contentSettings?.siteName || "Vidhgrow";
+  const logoUrl = contentSettings?.logo?.url;
   const isRestricted =
     !!teacher &&
     (teacher.accessBlocked || teacher.documentStatus !== "verified");
+
+  useEffect(() => {
+    teacherApi.content
+      .settings()
+      .then((res) => setContentSettings(res.data.data.settings))
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    setLogoBroken(false);
+  }, [logoUrl]);
 
   useEffect(() => {
     if (isRestricted && !RESTRICTED_ALLOWED_TABS.has(tab)) {
@@ -330,26 +346,35 @@ const TeacherDashboard = () => {
         >
           <div
             style={{
-              width: 36,
-              height: 36,
-              background: "linear-gradient(135deg, #2563eb, #1d4ed8)",
-              borderRadius: 10,
+              width: 42,
+              height: 42,
+              background: "rgba(59,130,246,0.08)",
+              border: "1px solid rgba(59,130,246,0.16)",
+              borderRadius: 12,
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
               flexShrink: 0,
-              boxShadow: "0 2px 8px rgba(37,99,235,0.25)",
+              overflow: "hidden",
             }}
           >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-              <path
-                d="M12 3L1 9l11 6 11-6-11-6zM1 9v6m22-6v6"
-                stroke="white"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
+            {logoUrl && !logoBroken ? (
+              <img
+                src={logoUrl}
+                alt={siteName}
+                onError={() => setLogoBroken(true)}
+                style={{
+                  maxWidth: 36,
+                  maxHeight: 36,
+                  objectFit: "contain",
+                  display: "block",
+                }}
               />
-            </svg>
+            ) : (
+              <span style={{ color: "#2563eb", fontSize: 14, fontWeight: 800 }}>
+                {siteName.charAt(0).toUpperCase()}
+              </span>
+            )}
           </div>
           <div>
             <p
@@ -360,7 +385,7 @@ const TeacherDashboard = () => {
                 lineHeight: 1,
               }}
             >
-              Vidhgrow
+              {siteName}
             </p>
             <p style={{ fontSize: 11, color: "#94a3b8", marginTop: 2 }}>
               Teacher Portal

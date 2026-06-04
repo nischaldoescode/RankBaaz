@@ -363,7 +363,7 @@ a {
   --teacher-bg: #f8fbff;
   --teacher-surface: rgba(255, 255, 255, 0.90);
   --teacher-line: rgba(148, 163, 184, 0.30);
-  --teacher-shadow: 0 1px 2px rgba(15, 23, 42, 0.08), 0 10px 30px rgba(15, 23, 42, 0.06);
+  --teacher-shadow: 0 1px 2px rgba(15, 23, 42, 0.08), 0 8px 22px rgba(15, 23, 42, 0.05);
 }
 
 body {
@@ -416,17 +416,17 @@ body {
 .teacher-topbar {
   background: var(--teacher-surface) !important;
   border-color: var(--teacher-line) !important;
-  backdrop-filter: blur(18px);
+  backdrop-filter: blur(8px);
 }
 
 .teacher-dashboard-shell button {
   border-radius: 999px !important;
   cursor: pointer;
-  transition: transform 0.16s ease, box-shadow 0.16s ease, background 0.16s ease, border-color 0.16s ease !important;
+  transition: background 0.12s ease, border-color 0.12s ease, color 0.12s ease, box-shadow 0.12s ease !important;
 }
 
 .teacher-dashboard-shell button:active {
-  transform: scale(0.985);
+  transform: none;
 }
 
 .teacher-dashboard-shell button:disabled {
@@ -460,12 +460,13 @@ body {
   box-shadow: var(--teacher-shadow) !important;
 }
 
-.teacher-dashboard-shell [style*="position: fixed"],
-.teacher-modal-overlay {
+.teacher-modal-overlay,
+.teacher-delete-overlay {
   align-items: flex-start !important;
   overflow-y: auto !important;
   padding-top: max(1.25rem, env(safe-area-inset-top)) !important;
   padding-bottom: max(1.25rem, env(safe-area-inset-bottom)) !important;
+  z-index: 10000 !important;
 }
 
 .teacher-modal-panel,
