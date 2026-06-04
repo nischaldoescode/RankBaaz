@@ -1,10 +1,13 @@
+/**
+ * keeps the courses tab page focused and readable.
+ */
 import React, { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { teacherApi } from "../../services/api.js";
 import { useTeacher } from "../../context/TeacherContext.jsx";
 import toast from "react-hot-toast";
 
-// ── constants ──
+// constants
 
 const DICEBEAR = (seed) =>
   `https://api.dicebear.com/9.x/croodles-neutral/svg?seed=${encodeURIComponent(seed)}`;
@@ -15,7 +18,7 @@ const DIFF_COLORS = {
   Hard: { bg: "#fef2f2", color: "#dc2626", border: "#fecaca" },
 };
 
-// ── style helpers ──
+// style helpers
 
 const inputS = {
   width: "100%",
@@ -179,7 +182,7 @@ const PrimaryBtn = ({ children, onClick, loading, disabled, style = {} }) => (
   </button>
 );
 
-// ── add/edit question modal ──
+// edit question modal
 
 const QuestionModal = ({
   courseId,
@@ -427,7 +430,7 @@ const QuestionModal = ({
                     flexShrink: 0,
                   }}
                 >
-                  {form.correctAnswerIndex === i ? "✓ Correct" : ""}
+                  {form.correctAnswerIndex === i ? "correct" : ""}
                 </span>
               </div>
             ))}
@@ -540,7 +543,7 @@ const QuestionModal = ({
   );
 };
 
-// ── coupon form ──
+// coupon form
 
 const CouponForm = ({ courseId, onCreated, onCancel }) => {
   const [form, setForm] = useState({
@@ -702,7 +705,7 @@ const CouponForm = ({ courseId, onCreated, onCancel }) => {
   );
 };
 
-// ── video links manager ──
+// video links manager
 
 const VideoLinksManager = ({ course, onSaved }) => {
   const [videoType, setVideoType] = useState(
@@ -835,7 +838,7 @@ const VideoLinksManager = ({ course, onSaved }) => {
             border: "1px solid #bbf7d0",
           }}
         >
-          ✓ {detectPlatform(link.url)}
+          platform: {detectPlatform(link.url)}
         </span>
       )}
     </div>
@@ -979,7 +982,7 @@ const VideoLinksManager = ({ course, onSaved }) => {
   );
 };
 
-// ── create course modal ──
+// create course modal
 
 const CreateCourseModal = ({ teacher, onClose, onCreated }) => {
   const [form, setForm] = useState({
@@ -1481,7 +1484,7 @@ const CreateCourseModal = ({ teacher, onClose, onCreated }) => {
   );
 };
 
-// ── main CoursesTab ──
+// main courses tab
 
 const CoursesTab = () => {
   const { teacher } = useTeacher();
@@ -1492,11 +1495,11 @@ const CoursesTab = () => {
   const [questionsLoading, setQuestionsLoading] = useState({});
   const [coupons, setCoupons] = useState({});
   const [showCreate, setShowCreate] = useState(false);
-  const [questionModal, setQuestionModal] = useState(null); // { courseId, difficulty, marksPerQuestion, question? }
+  const [questionModal, setQuestionModal] = useState(null); // { courseid, difficulty, marksperquestion, question? }
   const [addingCoupon, setAddingCoupon] = useState(null);
-  const [expandedSection, setExpandedSection] = useState({}); // { courseId: "questions"|"coupons"|"videos" }
+  const [expandedSection, setExpandedSection] = useState({}); // { courseid: "questions"|"coupons"|"videos" }
   const [expandedDiff, setExpandedDiff] = useState({});
-  const [deleteConfirm, setDeleteConfirm] = useState(null); // { type: "question", courseId, questionId }
+  const [deleteConfirm, setDeleteConfirm] = useState(null); // { type: "question", courseid, questionid }
 
   const loadCourses = useCallback(async () => {
     setLoading(true);

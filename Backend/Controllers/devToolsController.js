@@ -1,15 +1,18 @@
+/**
+ * keeps the dev tools controller controller focused and readable.
+ */
 import User from "../Models/User.js";
 import Course from "../Models/Course.js";
 import pointsService from "../services/pointsService.js";
 import { invalidateCache } from "../Config/redis.js";
 
-// Record DevTools violation
+// record devtools violation
 export const recordViolation = async (req, res) => {
   try {
     const { courseId, courseName, detectionMethod } = req.body;
     const userId = req.user.userId;
 
-    // Validate inputs
+    // validate inputs
     if (!courseId || !detectionMethod) {
       return res.status(400).json({
         success: false,
@@ -17,7 +20,7 @@ export const recordViolation = async (req, res) => {
       });
     }
 
-    // Get user
+    // get user
     const user = await User.findById(userId);
     if (!user) {
       return res.status(404).json({
@@ -26,7 +29,7 @@ export const recordViolation = async (req, res) => {
       });
     }
 
-    // Check if already banned from this course
+    // check if already banned from this course
     const isBanned = user.bannedCourses.some(
       (ban) =>
         ban.courseId.toString() === courseId &&
@@ -41,7 +44,7 @@ export const recordViolation = async (req, res) => {
       });
     }
 
-    // Record violation
+    // record violation
     user.devToolsViolations.count += 1;
     user.devToolsViolations.lastViolation = new Date();
     user.devToolsViolations.violationDetails.push({
@@ -53,20 +56,20 @@ export const recordViolation = async (req, res) => {
       ipAddress: req.ip || req.connection.remoteAddress,
     });
 
-    // Deduct points (increased for severity)
-    const pointsDeduction = 10; // CHANGED: 5 → 10 points
+    // deduct points (increased for severity)
+    const pointsDeduction = 10; // d: 5 → 10 points
     await pointsService.updateUserPoints(
       userId,
       -pointsDeduction,
       "devtools_violation"
     );
 
-    // INSTANT BAN on first violation for this course
+    // instant ban on first violation for this course
     const courseViolations = user.devToolsViolations.violationDetails.filter(
       (v) => v.courseId.toString() === courseId
     );
 
-    // CHANGED: Check if this is first violation for this course (>= 1 instead of >= 3)
+    // d: check if this is first violation for this course (>= 1 instead of >= 3)
     if (courseViolations.length >= 1) {
       user.bannedCourses.push({
         courseId,
@@ -79,7 +82,7 @@ export const recordViolation = async (req, res) => {
 
       await user.save();
 
-      // Invalidate user cache
+      // invalidate user cache
       await invalidateCache.user(userId, user.username);
 
       return res.status(403).json({
@@ -93,13 +96,13 @@ export const recordViolation = async (req, res) => {
       });
     }
 
-    // This code will never execute now, but keep for safety
+    // this code will never execute now, but keep for safety
     await user.save();
 
-    // Invalidate user cache
+    // invalidate user cache
     await invalidateCache.user(userId, user.username);
 
-    // This response will never be sent since we ban on first violation
+    // this response will never be sent since we ban on first violation
     res.status(200).json({
       success: true,
       message: "Violation recorded",
@@ -107,7 +110,7 @@ export const recordViolation = async (req, res) => {
         violationCount: courseViolations.length,
         totalViolations: user.devToolsViolations.count,
         pointsDeducted: pointsDeduction,
-        warningsRemaining: 0, // CHANGED: No warnings
+        warningsRemaining: 0, // d: no warnings
       },
     });
   } catch (error) {
@@ -119,7 +122,7 @@ export const recordViolation = async (req, res) => {
   }
 };
 
-// Check if user is banned from a course
+// check if user is banned from a course
 export const checkCourseBan = async (req, res) => {
   try {
     const { courseId } = req.params;
@@ -165,7 +168,7 @@ export const checkCourseBan = async (req, res) => {
   }
 };
 
-// Admin: Get all users with violations
+// admin: get all users with violations
 export const getViolationStats = async (req, res) => {
   try {
     const users = await User.find({
@@ -210,7 +213,7 @@ export const getViolationStats = async (req, res) => {
   }
 };
 
-// Admin: Ban/Unban user from course
+// admin: ban/unban user from course
 export const adminBanUser = async (req, res) => {
   try {
     const { userId, courseId, reason, permanent } = req.body;
@@ -241,17 +244,17 @@ export const adminBanUser = async (req, res) => {
       });
     }
 
-    // Check if already banned
+    // check if already banned
     const existingBan = user.bannedCourses.findIndex(
       (b) => b.courseId.toString() === courseId
     );
 
     if (existingBan !== -1) {
-      // Remove existing ban
+      // remove existing ban
       user.bannedCourses.splice(existingBan, 1);
     }
 
-    // Add new ban
+    // ban
     user.bannedCourses.push({
       courseId,
       courseName: course.name,
@@ -263,7 +266,7 @@ export const adminBanUser = async (req, res) => {
 
     await user.save();
 
-    // Invalidate user cache
+    // invalidate user cache
     await invalidateCache.user(userId, user.username);
 
     res.status(200).json({
@@ -279,7 +282,7 @@ export const adminBanUser = async (req, res) => {
   }
 };
 
-// Admin: Unban user from course
+// admin: unban user from course
 export const adminUnbanUser = async (req, res) => {
   try {
     const { userId, courseId } = req.body;
@@ -308,7 +311,7 @@ export const adminUnbanUser = async (req, res) => {
 
     await user.save();
 
-    // Invalidate user cache
+    // invalidate user cache
     await invalidateCache.user(userId, user.username);
 
     res.status(200).json({

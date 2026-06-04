@@ -1,3 +1,6 @@
+/**
+ * keeps the user model focused and readable.
+ */
 import mongoose from "mongoose";
 
 const userSchema = new mongoose.Schema(
@@ -115,7 +118,7 @@ const userSchema = new mongoose.Schema(
       rankLastUpdated: { type: Date, default: null },
     },
 
-    // NEW: DevTools violation tracking
+    // devtools violation tracking
     devToolsViolations: {
       count: { type: Number, default: 0 },
       lastViolation: { type: Date, default: null },
@@ -131,7 +134,7 @@ const userSchema = new mongoose.Schema(
       ],
     },
 
-    // NEW: Course-specific bans
+    // course-specific bans
     bannedCourses: [
       {
         courseId: {
@@ -144,7 +147,7 @@ const userSchema = new mongoose.Schema(
         bannedBy: { type: mongoose.Schema.Types.ObjectId, ref: "Admin" },
         reason: String,
         permanent: { type: Boolean, default: true },
-        unbanAt: Date, // For temporary bans
+        unbanAt: Date, // for temporary bans
       },
     ],
     lastIp: {

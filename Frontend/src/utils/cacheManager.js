@@ -1,8 +1,11 @@
-// src/utils/cacheManager.js
 /**
- * Cache Manager for API responses and images
- * Uses IndexedDB for structured data caching
- * Implements 24-hour TTL and version-based invalidation
+ * keeps the cache manager utility focused and readable.
+ */
+// src/utils/cachemanager.js
+/**
+ * cache manager for api responses and images
+ * uses indexeddb for structured data caching
+ * implements 24-hour ttl and version-based invalidation
  */
 
 const DB_NAME = "AppCache";
@@ -22,7 +25,7 @@ class CacheManager {
   }
 
   /**
-   * Initialize IndexedDB
+   * initialize indexeddb
    */
   async initDB() {
     return new Promise((resolve, reject) => {
@@ -41,7 +44,7 @@ class CacheManager {
       request.onupgradeneeded = (event) => {
         const db = event.target.result;
 
-        // API Cache Store
+        // api cache store
         if (!db.objectStoreNames.contains(STORES.API_CACHE)) {
           const apiStore = db.createObjectStore(STORES.API_CACHE, {
             keyPath: "key",
@@ -50,7 +53,7 @@ class CacheManager {
           apiStore.createIndex("endpoint", "endpoint", { unique: false });
         }
 
-        // Image Cache Store
+        // image cache store
         if (!db.objectStoreNames.contains(STORES.IMAGE_CACHE)) {
           const imageStore = db.createObjectStore(STORES.IMAGE_CACHE, {
             keyPath: "url",
@@ -58,7 +61,7 @@ class CacheManager {
           imageStore.createIndex("timestamp", "timestamp", { unique: false });
         }
 
-        // Metadata Store (for versioning)
+        // metadata store (for versioning)
         if (!db.objectStoreNames.contains(STORES.METADATA)) {
           db.createObjectStore(STORES.METADATA, { keyPath: "key" });
         }
@@ -67,7 +70,7 @@ class CacheManager {
   }
 
   /**
-   * Generate cache key from endpoint and params
+   * generate cache key from endpoint and params
    */
   generateKey(endpoint, params = {}) {
     const sortedParams = Object.keys(params)
@@ -81,14 +84,14 @@ class CacheManager {
   }
 
   /**
-   * Check if cache entry is still valid
+   * check if cache entry is still valid
    */
   isValid(timestamp, maxAge = CACHE_DURATION) {
     return Date.now() - timestamp < maxAge;
   }
 
   /**
-   * Get cached API response
+   * get cached api response
    */
   async getAPI(endpoint, params = {}) {
     try {
@@ -109,12 +112,12 @@ class CacheManager {
           }
 
           if (!this.isValid(cached.timestamp)) {
-            this.deleteAPI(key); // Clean up expired entry
+            this.deleteAPI(key); // clean up expired entry
             resolve(null);
             return;
           }
 
-          //   console.log(`[Cache] Hit for ${endpoint} (age: ${Math.round((Date.now() - cached.timestamp) / 1000 / 60)}m)`);
+          //   console.log(`[cache] hit for ${endpoint} (age: ${math.round((date.now() - cached.timestamp) / 1000 / 60)}m)`);
           resolve(cached.data);
         };
 
@@ -130,7 +133,7 @@ class CacheManager {
   }
 
   /**
-   * Set cached API response
+   * set cached api response
    */
   async setAPI(endpoint, params = {}, data) {
     try {
@@ -155,7 +158,7 @@ class CacheManager {
         const request = store.put(cacheEntry);
 
         request.onsuccess = () => {
-          //   console.log(`[Cache] Stored ${endpoint}`);
+          //   console.log(`[cache] stored ${endpoint}`);
           resolve();
         };
 
@@ -170,7 +173,7 @@ class CacheManager {
   }
 
   /**
-   * Delete specific API cache entry
+   * delete specific api cache entry
    */
   async deleteAPI(key) {
     try {
@@ -184,7 +187,7 @@ class CacheManager {
   }
 
   /**
-   * Clear all API cache for an endpoint pattern
+   * clear all api cache for an endpoint pattern
    */
   async clearAPIByEndpoint(endpointPattern) {
     try {
@@ -204,7 +207,7 @@ class CacheManager {
           if (cursor) {
             if (cursor.value.endpoint.includes(endpointPattern)) {
               cursor.delete();
-              //   console.log(`[Cache] Cleared ${cursor.value.endpoint}`);
+              //   console.log(`[cache] cleared ${cursor.value.endpoint}`);
             }
             cursor.continue();
           } else {
@@ -220,7 +223,7 @@ class CacheManager {
   }
 
   /**
-   * Clear all expired cache entries
+   * clear all expired cache entries
    */
   async clearExpired() {
     try {
@@ -245,7 +248,7 @@ class CacheManager {
             cursor.continue();
           } else {
             if (cleared > 0) {
-              //   console.log(`[Cache] Cleared ${cleared} expired entries`);
+              //   console.log(`[cache] cleared ${cleared} expired entries`);
             }
             resolve(cleared);
           }
@@ -258,7 +261,7 @@ class CacheManager {
   }
 
   /**
-   * Clear all cache
+   * clear all cache
    */
   async clearAll() {
     try {
@@ -274,14 +277,14 @@ class CacheManager {
         transaction.objectStore(STORES.IMAGE_CACHE).clear(),
       ]);
 
-      //   console.log('[Cache] All cache cleared');
+      //   console.log('[cache] all cache cleared');
     } catch (error) {
       //   console.error(error);
     }
   }
 
   /**
-   * Get cache statistics
+   * get cache statistics
    */
   async getStats() {
     try {
@@ -320,20 +323,20 @@ class CacheManager {
   }
 
   /**
-   * Cache image by URL
+   * cache image by url
    */
   async cacheImage(url) {
     try {
       if (!url) return false;
 
-      // Check if already cached
+      // check if already cached
       const cached = await this.getImage(url);
       if (cached) {
-        // console.log('[Cache] Image already cached:', url);
+        // console.log('[cache] image already cached:', url);
         return true;
       }
 
-      // Fetch and cache the image
+      // fetch and cache the image
       const response = await fetch(url);
       if (!response.ok) {
         throw new Error(`Failed to fetch image: ${response.status}`);
@@ -342,7 +345,7 @@ class CacheManager {
       const blob = await response.blob();
 
       await this.setImage(url, blob);
-      // console.log('[Cache] Image cached:', url);
+      // console.log('[cache] image cached:', url);
       return true;
     } catch (error) {
       console.error("[Cache] Failed to cache image:", url, error);
@@ -351,7 +354,7 @@ class CacheManager {
   }
 
   /**
-   * Get cached image
+   * get cached image
    */
   async getImage(url) {
     try {
@@ -390,7 +393,7 @@ class CacheManager {
   }
 
   /**
-   * Set cached image
+   * set cached image
    */
   async setImage(url, blob) {
     try {
@@ -420,7 +423,7 @@ class CacheManager {
   }
 
   /**
-   * Delete specific image cache entry
+   * delete specific image cache entry
    */
   async deleteImage(url) {
     try {
@@ -437,7 +440,7 @@ class CacheManager {
   }
 
   /**
-   * Preload multiple images
+   * preload multiple images
    */
   async preloadImages(urls) {
     if (!Array.isArray(urls)) {
@@ -453,16 +456,16 @@ class CacheManager {
     const successful = results.filter(
       (r) => r.status === "fulfilled" && r.value
     ).length;
-    // console.log(`[Cache] Preloaded ${successful}/${validUrls.length} images`);
+    // console.log(`[cache] preloaded ${successful}/${validurls.length} images`);
 
     return successful;
   }
 }
 
-// Export singleton instance
+// export singleton instance
 export const cacheManager = new CacheManager();
 
-// Utility function to wrap API calls with caching
+// utility function to wrap api calls with caching
 export async function cachedAPICall(
   endpoint,
   params,
@@ -475,13 +478,13 @@ export async function cachedAPICall(
     skipCache = false,
   } = options;
 
-  // Skip cache if requested
+  // skip cache if requested
   if (skipCache) {
     const data = await fetchFunction();
     return data;
   }
 
-  // Check cache first
+  // check cache first
   if (!forceRefresh) {
     const cached = await cacheManager.getAPI(endpoint, params);
     if (cached) {
@@ -489,19 +492,19 @@ export async function cachedAPICall(
     }
   }
 
-  // Fetch fresh data
+  // fetch fresh data
   try {
     const data = await fetchFunction();
 
-    // Cache the result
+    // cache the result
     await cacheManager.setAPI(endpoint, params, data);
 
     return data;
   } catch (error) {
-    // If fetch fails, try to return stale cache as fallback
+    // if fetch fails, try to return stale cache as fallback
     const stale = await cacheManager.getAPI(endpoint, params);
     if (stale) {
-      //   console.log(`[Cache] Using stale cache for ${endpoint} due to fetch error`);
+      //   console.log(`[cache] using stale cache for ${endpoint} due to fetch error`);
       return stale;
     }
     throw error;

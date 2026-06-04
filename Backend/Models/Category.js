@@ -1,3 +1,6 @@
+/**
+ * keeps the category model focused and readable.
+ */
 import mongoose from "mongoose";
 
 const categorySchema = new mongoose.Schema(
@@ -25,7 +28,7 @@ const categorySchema = new mongoose.Schema(
   }
 );
 
-// Index for category lookup
-// categorySchema.index({ name: 1 });
+// index for category lookup
+// categoryschema.index({ name: 1 });
 
 export default mongoose.model("Category", categorySchema);

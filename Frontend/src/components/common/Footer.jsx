@@ -1,3 +1,6 @@
+/**
+ * keeps the footer component focused and readable.
+ */
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
@@ -23,7 +26,7 @@ const Footer = () => {
   const { contactInfo, contentSettings, loading } = useContent();
   const currentYear = new Date().getFullYear();
 
-  // Get dynamic data
+  // get dynamic data
   const siteName = contentSettings?.siteName || "Vidhgrow";
   const footerDescription =
     contactInfo?.footerDescription ||
@@ -37,7 +40,7 @@ const Footer = () => {
       ?.filter((link) => link.name && link.href)
       .sort((a, b) => a.order - b.order) || [];
 
-  // If no quick links from DB, use defaults
+  // if no quick links from db, use defaults
   const displayQuickLinks =
     quickLinks.length > 0
       ? quickLinks
@@ -47,13 +50,13 @@ const Footer = () => {
           { name: "Contact", href: "/contact" },
         ];
 
-  // Resources (static)
+  // resources (static)
   const resources = [
     { name: "Help Center", href: "/help" },
     { name: "FAQs", href: "/#faqs" },
   ];
 
-  // Social media icons mapping
+  // social media icons mapping
   const socialIcons = {
     instagram: Instagram,
     twitter: Twitter,
@@ -63,7 +66,7 @@ const Footer = () => {
     telegram: MessageSquare,
   };
 
-  // Animation variants
+  // animation variants
   const containerVariants = {
     hidden: { opacity: 0, y: 20 },
     visible: {
@@ -107,7 +110,7 @@ const Footer = () => {
       <motion.footer {...motionProps} className="border-t bg-background">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 lg:gap-8">
-            {/* Brand section */}
+            {/* brand section */}
             <motion.div
               {...itemMotionProps}
               className="col-span-1 sm:col-span-2 lg:col-span-1"
@@ -137,7 +140,7 @@ const Footer = () => {
                 {footerDescription}
               </p>
 
-              {/* Social media - Dynamic */}
+              {/* social media - dynamic */}
               {contactInfo?.socialMedia &&
                 Object.entries(contactInfo.socialMedia).some(
                   ([key, value]) => value
@@ -178,7 +181,7 @@ const Footer = () => {
                 )}
             </motion.div>
 
-            {/* Quick Links - Dynamic */}
+            {/* quick links - dynamic */}
             <motion.div {...itemMotionProps} className="col-span-1">
               <h3 className="text-sm font-semibold text-foreground mb-3">
                 Quick Links
@@ -197,7 +200,7 @@ const Footer = () => {
               </ul>
             </motion.div>
 
-            {/* Resources */}
+            {/* resources */}
             <motion.div {...itemMotionProps} className="col-span-1">
               <h3 className="text-sm font-semibold text-foreground mb-4">
                 Resources
@@ -216,7 +219,7 @@ const Footer = () => {
               </ul>
             </motion.div>
 
-            {/* Contact - Dynamic */}
+            {/* contact - dynamic */}
             <motion.div {...itemMotionProps} className="col-span-1">
               <h3 className="text-sm font-semibold text-foreground mb-4">
                 Contact Us
@@ -253,7 +256,7 @@ const Footer = () => {
               </div>
             </motion.div>
 
-            {/* Legal - Static */}
+            {/* legal - static */}
             <motion.div {...itemMotionProps} className="col-span-1">
               <h3 className="text-sm font-semibold text-foreground mb-4">
                 Legal
@@ -283,7 +286,7 @@ const Footer = () => {
 
         <Separator className="my-4 sm:my-6" />
 
-        {/* Bottom section - Dynamic copyright */}
+        {/* bottom section - dynamic copyright */}
         <motion.div {...itemMotionProps} className="flex justify-center mb-3">
           <p className="text-sm text-muted-foreground text-center">
             {copyrightText}

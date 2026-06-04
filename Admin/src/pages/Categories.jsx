@@ -1,3 +1,6 @@
+/**
+ * keeps the categories page focused and readable.
+ */
 import React, { useState } from "react";
 import { Plus, Edit2, Trash2, FolderOpen, Search } from "lucide-react";
 import { useAdmin } from "../contexts/AdminContext";
@@ -66,7 +69,7 @@ const Categories = () => {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
+      {/* header */}
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Categories</h1>
@@ -81,7 +84,7 @@ const Categories = () => {
         </button>
       </div>
 
-      {/* Search */}
+      {/* search */}
       <div className="bg-white rounded-lg shadow p-6">
         <div className="relative">
           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -97,7 +100,7 @@ const Categories = () => {
         </div>
       </div>
 
-      {/* Categories Grid */}
+      {/* categories grid */}
       <div className="bg-white rounded-lg shadow">
         {filteredCategories.length === 0 ? (
           <div className="p-6 text-center">
@@ -173,7 +176,7 @@ const Categories = () => {
           </div>
         )}
       </div>
-      {/* Delete Confirmation Modal */}
+      {/* delete confirmation modal */}
       {deleteConfirm && deleteConfirmCategory && (
         <div className="fixed inset-0 bg-opacity-30 flex items-center justify-center p-2 sm:p-4 z-50 bg-black/10 backdrop-blur-md border border-white/20 shadow-lg">
           <div className="bg-white rounded-xl p-6 w-full max-w-md">
@@ -213,7 +216,7 @@ const Categories = () => {
           </div>
         </div>
       )}
-      {/* Create/Edit Modal */}
+      {/* create/edit modal */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
           <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">

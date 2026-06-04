@@ -1,3 +1,6 @@
+/**
+ * keeps the test result component focused and readable.
+ */
 import React, { useEffect, useState, useCallback, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate, useParams } from "react-router-dom";
@@ -51,7 +54,7 @@ const TestResult = ({ isPaid }) => {
         await getTestResult(testId);
       }
 
-      // Just load course data (payment already verified at course access)
+      // just load course data (payment already verified at course access)
       if (testResult?.course?._id && !courseData) {
         try {
           const response = await apiMethods.courses.getById(
@@ -69,7 +72,7 @@ const TestResult = ({ isPaid }) => {
     loadTestData();
   }, [testId, testResult, loading, courseData]);
 
-  // Handle celebration animation completion
+  // handle celebration animation completion
   useEffect(() => {
     if (testResult) {
       const timer = setTimeout(() => {
@@ -91,7 +94,7 @@ const TestResult = ({ isPaid }) => {
     }
   }, [testResult?._id, testResult?.review]);
 
-  // Change from useCallback to useMemo since it returns computed data
+  // from usecallback to usememo since it returns computed data
   const getDifficultyResults = useMemo(() => {
     if (!testResult) return [];
 
@@ -102,7 +105,7 @@ const TestResult = ({ isPaid }) => {
       (difficultyResults && Array.isArray(difficultyResults));
 
     if (isMultiDifficulty && difficultyResults) {
-      // Group questions by difficulty efficiently
+      // group questions by difficulty efficiently
       const questionsByDifficulty =
         testResult.questions?.reduce((acc, q) => {
           const diff = q.difficulty;
@@ -113,7 +116,7 @@ const TestResult = ({ isPaid }) => {
           return acc;
         }, {}) || {};
 
-      // Map results with pre-grouped questions
+      // map results with pre-grouped questions
       return difficultyResults.map((result) => {
         const questionsForDiff = questionsByDifficulty[result.difficulty] || [];
         const correctCount = questionsForDiff.filter((q) => q.isCorrect).length;
@@ -130,7 +133,7 @@ const TestResult = ({ isPaid }) => {
       });
     }
 
-    // Single difficulty fallback
+    // single difficulty fallback
     return [
       {
         difficulty: Array.isArray(testResult.difficulty)
@@ -149,7 +152,7 @@ const TestResult = ({ isPaid }) => {
     ];
   }, [testResult]);
 
-  // Calculate performance metrics
+  // calculate performance metrics
   const getPerformanceMetrics = useCallback(() => {
     if (!testResult) return null;
 
@@ -163,7 +166,7 @@ const TestResult = ({ isPaid }) => {
     const accuracy = Math.round((correctAnswers / totalQuestions) * 100);
     const timePerQuestion = Math.round(timeTaken / totalQuestions);
 
-    // Performance rating based on score and time
+    // performance rating based on score and time
     let performanceRating = "Poor";
     let ratingColor = "red";
 
@@ -192,7 +195,7 @@ const TestResult = ({ isPaid }) => {
     };
   }, [testResult]);
 
-  // Handle share result
+  // handle share result
   const handleShare = useCallback(() => {
     if (!testResult) return;
 
@@ -210,8 +213,8 @@ const TestResult = ({ isPaid }) => {
   }, [testResult]);
 
   /**
-   * Handle PDF download using context method
-   * Downloads test result PDF with automatic token handling
+   * handle pdf download using context method
+   * downloads test result pdf with automatic token handling
    */
   const handleDownloadPDF = async () => {
     if (!testResult?._id) {
@@ -228,14 +231,14 @@ const TestResult = ({ isPaid }) => {
     setPdfError(null);
 
     try {
-      // Use context method for download
+      // use context method for download
       const result = await downloadTestPDF(testResult._id);
 
       if (!result.success) {
         throw new Error(result.error || "Failed to download PDF");
       }
 
-      // Create download link
+      // create download link
       const url = window.URL.createObjectURL(result.blob);
       const link = document.createElement("a");
       link.href = url;
@@ -260,7 +263,7 @@ const TestResult = ({ isPaid }) => {
     }
   };
 
-  // Handle save result
+  // handle save result
   const handleSaveResult = useCallback(() => {
     console.log("Save result functionality");
   }, []);
@@ -291,7 +294,7 @@ const TestResult = ({ isPaid }) => {
     }
   };
 
-  // Animation variants
+  // animation variants
   const containerVariants = {
     hidden: { opacity: 0 },
     visible: {
@@ -322,7 +325,7 @@ const TestResult = ({ isPaid }) => {
     },
   };
 
-  // Score color based on performance
+  // score color based on performance
   const getScoreColor = (score) => {
     if (score >= 90) return "text-green-500";
     if (score >= 80) return "text-blue-500";
@@ -331,7 +334,7 @@ const TestResult = ({ isPaid }) => {
     return "text-red-500";
   };
 
-  // Get difficulty color
+  // get difficulty color
   const getDifficultyColor = (difficulty) => {
     switch (difficulty?.toLowerCase()) {
       case "easy":
@@ -376,7 +379,7 @@ const TestResult = ({ isPaid }) => {
   const isMultiDifficulty = difficultyResults.length > 1;
   const courseTeacher = testResult.course?.teacher;
 
-  // Filter questions based on selected difficulty
+  // filter questions based on selected difficulty
   const getFilteredQuestions = () => {
     if (!showDetails) return [];
 
@@ -398,7 +401,7 @@ const TestResult = ({ isPaid }) => {
       animate="visible"
     >
       <div className="max-w-4xl mx-auto space-y-6">
-        {/* Celebration Header */}
+        {/* celebration header */}
         <motion.div variants={animations && !reducedMotion ? itemVariants : {}}>
           <Card
             className={`
@@ -410,7 +413,7 @@ const TestResult = ({ isPaid }) => {
             }
           `}
           >
-            {/* Background Pattern */}
+            {/* background pattern */}
             <div className="absolute inset-0 opacity-10">
               <div className="absolute inset-0 bg-gradient-to-br from-white to-transparent" />
             </div>
@@ -448,7 +451,7 @@ const TestResult = ({ isPaid }) => {
                 {testResult.courseTitle}
               </p>
 
-              {/* Score Display */}
+              {/* score display */}
               <div className="flex items-center justify-center space-x-6 mb-6">
                 <div className="text-center">
                   <div className="text-5xl font-bold mb-2">
@@ -484,7 +487,7 @@ const TestResult = ({ isPaid }) => {
           </Card>
         </motion.div>
 
-        {/* Key Metrics */}
+        {/* key metrics */}
         <motion.div
           variants={animations && !reducedMotion ? itemVariants : {}}
           className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"
@@ -521,7 +524,7 @@ const TestResult = ({ isPaid }) => {
           </Card>
         </motion.div>
 
-        {/* Performance Analysis */}
+        {/* performance analysis */}
         <motion.div variants={animations && !reducedMotion ? itemVariants : {}}>
           <Card className="p-6">
             <h3 className="text-lg font-semibold text-gray-900 dark:text-slate-100 mb-4">
@@ -529,7 +532,7 @@ const TestResult = ({ isPaid }) => {
             </h3>
 
             <div className="space-y-4">
-              {/* Overall Score Breakdown */}
+              {/* overall score breakdown */}
               <div>
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-sm font-medium text-gray-700 dark:text-slate-300">
@@ -554,7 +557,7 @@ const TestResult = ({ isPaid }) => {
                 </div>
               </div>
 
-              {/* Difficulty-wise Performance for Multi-difficulty Tests */}
+              {/* difficulty-wise performance for multi-difficulty tests */}
               {isMultiDifficulty && (
                 <div>
                   <h4 className="text-sm font-medium text-gray-700 dark:text-slate-300 mb-3">
@@ -602,7 +605,7 @@ const TestResult = ({ isPaid }) => {
               )}
             </div>
 
-            {/* Rank Change Indicator */}
+            {/* rank indicator */}
             {testResult.rankInfo && testResult.rankInfo.newRank && (
               <div className="text-center">
                 <div className="flex items-center justify-center mb-2">
@@ -633,7 +636,7 @@ const TestResult = ({ isPaid }) => {
           </Card>
         </motion.div>
 
-        {/* Detailed Results */}
+        {/* detailed results */}
         <motion.div variants={animations && !reducedMotion ? itemVariants : {}}>
           <Card className="p-6">
             <div className="flex items-center justify-between mb-4">
@@ -661,7 +664,7 @@ const TestResult = ({ isPaid }) => {
                   {(() => {
                     const filteredQuestions = getFilteredQuestions();
 
-                    // Ensure each question has difficulty field
+                    // ensure each question has difficulty field
                     const questionsWithDifficulty = filteredQuestions.map(
                       (q) => {
                         if (!q.difficulty && isMultiDifficulty) {
@@ -694,7 +697,7 @@ const TestResult = ({ isPaid }) => {
                       {}
                     );
 
-                    // Render collapsible difficulty sections
+                    // render collapsible difficulty sections
                     return Object.entries(groupedQuestions).map(
                       ([difficulty, questions]) => {
                         const diffResult = difficultyResults.find(
@@ -707,7 +710,7 @@ const TestResult = ({ isPaid }) => {
                             key={difficulty}
                             className="border border-gray-200 dark:border-slate-700 rounded-lg overflow-hidden"
                           >
-                            {/* Collapsible Header */}
+                            {/* collapsible header */}
                             <div
                               onClick={() =>
                                 setExpandedDifficulties((prev) => ({
@@ -722,16 +725,16 @@ const TestResult = ({ isPaid }) => {
                                   {difficulty}
                                 </h4>
 
-                                {/* Info Chips */}
+                                {/* info chips */}
                                 <div className="flex items-center space-x-2 flex-wrap gap-2">
-                                  {/* Correct answers chip */}
+                                  {/* correct answers chip */}
                                   <span className="inline-flex items-center px-2.5 py-1 rounded-full bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 text-xs font-medium">
                                     <CheckCircleIcon className="w-3.5 h-3.5 mr-1" />
                                     {diffResult?.correctAnswers}/
                                     {diffResult?.totalQuestions}
                                   </span>
 
-                                  {/* Time chip */}
+                                  {/* time chip */}
                                   <span className="inline-flex items-center px-2.5 py-1 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 text-xs font-medium">
                                     <ClockIcon className="w-3.5 h-3.5 mr-1" />
                                     {Math.floor(
@@ -740,7 +743,7 @@ const TestResult = ({ isPaid }) => {
                                     m {(diffResult?.timeTaken || 0) % 60}s
                                   </span>
 
-                                  {/* Score chip */}
+                                  {/* score chip */}
                                   <span
                                     className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${
                                       (diffResult?.percentage || 0) >= 70
@@ -753,7 +756,7 @@ const TestResult = ({ isPaid }) => {
                                 </div>
                               </div>
 
-                              {/* Expand/Collapse Icon */}
+                              {/* expand/collapse icon */}
                               <motion.div
                                 animate={{ rotate: isExpanded ? 180 : 0 }}
                                 transition={{ duration: 0.2 }}
@@ -774,7 +777,7 @@ const TestResult = ({ isPaid }) => {
                               </motion.div>
                             </div>
 
-                            {/* Expanded Content - Individual Questions */}
+                            {/* expanded content - individual questions */}
                             <AnimatePresence>
                               {isExpanded && (
                                 <motion.div
@@ -795,7 +798,7 @@ const TestResult = ({ isPaid }) => {
                                             <span className="font-semibold text-gray-900 dark:text-slate-100 text-sm">
                                               Q{qIndex + 1}
                                             </span>
-                                            {/* Show check/cross icon right next to Q number */}
+                                            {/* show check/cross icon right next to q number */}
                                             {question.isCorrect ? (
                                               <CheckCircleIcon className="w-5 h-5 text-green-500" />
                                             ) : (
@@ -803,13 +806,13 @@ const TestResult = ({ isPaid }) => {
                                             )}
                                           </div>
 
-                                          {/* Marks chip on the right */}
+                                          {/* marks chip on the right */}
                                           <span className="text-xs font-medium text-gray-600 dark:text-slate-400 px-2.5 py-1 rounded-full bg-gray-100 dark:bg-slate-800">
                                             {question.marksAwarded || 0} marks
                                           </span>
                                         </div>
 
-                                        {/* Only show full question if available */}
+                                        {/* only show full question if available */}
                                         {question.question?.question && (
                                           <p className="text-sm text-gray-700 dark:text-slate-300 mb-3">
                                             {question.question.question}
@@ -863,8 +866,8 @@ const TestResult = ({ isPaid }) => {
           </Card>
         </motion.div>
 
-        {/* Video Learning Section - Only for Paid Courses */}
-        {/* Video Learning Section - Only for Paid Courses */}
+        {/* video learning section - only for paid courses */}
+        {/* video learning section - only for paid courses */}
         {courseData?.isPaid && courseData?.videoContent?.type !== "none" && (
           <motion.div
             variants={animations && !reducedMotion ? itemVariants : {}}
@@ -905,7 +908,7 @@ const TestResult = ({ isPaid }) => {
                     exit={{ opacity: 0, height: 0 }}
                     transition={{ duration: 0.3 }}
                   >
-                    {/* Course-level videos */}
+                    {/* course-level videos */}
                     {courseData.videoContent.type === "course" &&
                       courseData.videoContent.courseVideo?.links?.length >
                         0 && (
@@ -927,7 +930,7 @@ const TestResult = ({ isPaid }) => {
                         </div>
                       )}
 
-                    {/* Difficulty-based videos */}
+                    {/* difficulty-based videos */}
                     {courseData.videoContent.type === "difficulty" && (
                       <div className="space-y-4">
                         <h4 className="font-medium text-gray-900 dark:text-slate-100 mb-3">
@@ -1122,12 +1125,12 @@ const TestResult = ({ isPaid }) => {
           </motion.div>
         )}
 
-        {/* Action Buttons */}
+        {/* action buttons */}
         <motion.div
           variants={animations && !reducedMotion ? itemVariants : {}}
           className="flex flex-wrap gap-4 justify-center"
         >
-          {/* PDF Download button - Only show if course has PDF export enabled */}
+          {/* pdf download button - only show if course has pdf export enabled */}
           {courseData?.hasPdfExport && (
             <Button
               variant="primary"
@@ -1140,7 +1143,7 @@ const TestResult = ({ isPaid }) => {
             </Button>
           )}
 
-          {/* Retake button only for FREE courses */}
+          {/* retake button only for free courses */}
           {!isPaid && (
             <Button
               variant="primary"
@@ -1182,7 +1185,7 @@ const TestResult = ({ isPaid }) => {
           </Button>
         </motion.div>
 
-        {/* PDF Download Error Alert */}
+        {/* pdf download error alert */}
         {pdfError && (
           <motion.div
             variants={animations && !reducedMotion ? itemVariants : {}}
@@ -1205,7 +1208,7 @@ const TestResult = ({ isPaid }) => {
           </motion.div>
         )}
 
-        {/* Achievement Badges */}
+        {/* achievement badges */}
         {testResult.achievements && testResult.achievements.length > 0 && (
           <motion.div
             variants={animations && !reducedMotion ? itemVariants : {}}
@@ -1236,7 +1239,7 @@ const TestResult = ({ isPaid }) => {
         )}
       </div>
 
-      {/* Enhanced Confetti Animation */}
+      {/* enhanced confetti animation */}
       <AnimatePresence>
         {metrics.isPassed && !celebrationComplete && (
           <motion.div

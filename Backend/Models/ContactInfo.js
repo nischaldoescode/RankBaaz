@@ -1,10 +1,13 @@
+/**
+ * keeps the contact info model focused and readable.
+ */
 import mongoose from "mongoose";
 import connection2 from "../Config/mongodb2.js";
 
 const contactInfoSchema = new mongoose.Schema(
   {
-    // Contact Details
-    // Contact Details
+    // contact details
+    // contact details
     email: {
       support: {
         type: String,
@@ -20,7 +23,7 @@ const contactInfoSchema = new mongoose.Schema(
       },
     },
 
-    // Social Media
+    // social media
     socialMedia: {
       instagram: {
         type: String,
@@ -48,7 +51,7 @@ const contactInfoSchema = new mongoose.Schema(
       },
     },
 
-    // Address
+    // ress
     address: {
       street: {
         type: String,
@@ -72,13 +75,13 @@ const contactInfoSchema = new mongoose.Schema(
       },
     },
 
-    // Business Hours
+    // business hours
     businessHours: {
       type: String,
       default: "Monday - Friday: 9AM - 6PM",
     },
 
-    // Quick Links
+    // quick links
     quickLinks: [
       {
         name: {
@@ -96,7 +99,7 @@ const contactInfoSchema = new mongoose.Schema(
       },
     ],
 
-    // Footer Text
+    // footer text
     copyrightText: {
       type: String,
       default: "© {year} Vidhgrow Pro. All rights reserved.",
@@ -121,7 +124,7 @@ const contactInfoSchema = new mongoose.Schema(
   }
 );
 
-// Ensure only one contact info document exists
+// ensure only one contact info document exists
 contactInfoSchema.statics.getContactInfo = async function () {
   let contactInfo = await this.findOne({ isActive: true });
   if (!contactInfo) {

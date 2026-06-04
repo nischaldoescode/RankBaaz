@@ -1,3 +1,6 @@
+/**
+ * keeps the stats cache middleware focused and readable.
+ */
 import redisClient, {
   isRedisConnectionError,
   summarizeRedisError,

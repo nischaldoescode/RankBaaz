@@ -1,3 +1,6 @@
+/**
+ * keeps the content context context focused and readable.
+ */
 import React, { createContext, useContext, useState } from "react";
 import axios from "axios";
 import { toast } from "react-toastify";
@@ -20,20 +23,20 @@ export const ContentProvider = ({ children }) => {
   const [contactInfo, setContactInfo] = useState(null);
   const [legalPages, setLegalPages] = useState({});
 
-  // Create axios instance with credentials and signing
+  // create axios instance with credentials and signing
   const api = axios.create({
     baseURL: import.meta.env.VITE_API_URL || "http://localhost:7000/api",
     withCredentials: true,
   });
 
-  // Add request interceptor to sign requests
+  // request interceptor to sign requests
   api.interceptors.request.use(
     (config) => {
       if (config._skipInterceptor) {
         return config;
       }
 
-      // Load secret if not in memory
+      // load secret if not in memory
       if (!adminRequestSigner.isSecretValid()) {
         adminRequestSigner.loadSigningSecret();
       }
@@ -52,17 +55,17 @@ export const ContentProvider = ({ children }) => {
     },
   );
 
-  // ADD THIS ENTIRE RESPONSE INTERCEPTOR
+  // this entire response interceptor
   /**
-   * Response interceptor - Handle signature errors
-   * Same as AuthContext but for ContentContext axios instance
+   * response interceptor - handle signature errors
+   * same as authcontext but for contentcontext axios instance
    */
   api.interceptors.response.use(
     (response) => response,
     async (error) => {
       const originalRequest = error.config;
 
-      // Signature error codes from backend
+      // signature error codes from backend
       const signatureErrorCodes = [
         "SIGNATURE_EXPIRED",
         "SIGNATURE_MISSING",
@@ -74,10 +77,10 @@ export const ContentProvider = ({ children }) => {
         error.response?.data?.code &&
         signatureErrorCodes.includes(error.response.data.code)
       ) {
-        // Prevent infinite retry loop
+        // prevent infinite retry loop
         if (originalRequest._signatureRetry) {
           console.error(
-            "[CONTENT_CONTEXT] Signature retry failed - clearing auth",
+            "Signature retry failed - clearing auth",
           );
           adminRequestSigner.clearSigningSecret();
           localStorage.removeItem("currentUser");
@@ -86,14 +89,14 @@ export const ContentProvider = ({ children }) => {
         }
 
         try {
-          console.log("[CONTENT_CONTEXT] Refreshing signing secret...");
+          console.log("Refreshing signing secret...");
 
           originalRequest._signatureRetry = true;
 
-          // Clear old secret
+          // clear old secret
           adminRequestSigner.clearSigningSecret();
 
-          // Fetch new secret
+          // fetch secret
           const apiBase = (
             import.meta.env.VITE_API_URL || "http://localhost:7000/api"
           ).replace(/\/$/, "");
@@ -114,16 +117,16 @@ export const ContentProvider = ({ children }) => {
           adminRequestSigner.setSigningSecret(signingSecret, expiresIn);
 
           console.log(
-            "[CONTENT_CONTEXT] Signing secret refreshed successfully",
+            "Signing secret refreshed successfully",
           );
 
-          // Keep _signatureRetry on the retried request so a permanent
+          // keep _signatureretry on the retried request so a permanent
           // mismatch fails once instead of starting a refresh loop.
           const signedRequest = adminRequestSigner.signRequest(originalRequest);
           return api(signedRequest);
         } catch (signatureError) {
           console.error(
-            "[CONTENT_CONTEXT] Signature refresh failed:",
+            "Signature refresh failed:",
             signatureError,
           );
           adminRequestSigner.clearSigningSecret();
@@ -137,7 +140,7 @@ export const ContentProvider = ({ children }) => {
         }
       }
 
-      // Handle 401 errors
+      // handle 401 errors
       if (error.response?.status === 401) {
         if (!originalRequest._retry) {
           originalRequest._retry = true;
@@ -151,7 +154,7 @@ export const ContentProvider = ({ children }) => {
               localStorage.removeItem("currentUser");
               adminRequestSigner.clearSigningSecret();
 
-              // setTimeout(() => {
+              // settimeout(() => {
               //   window.location.href = "/login";
               // }, 100);
             }
@@ -163,7 +166,7 @@ export const ContentProvider = ({ children }) => {
     },
   );
 
-  // Fetch Content Settings
+  // fetch content settings
   const fetchContentSettings = async () => {
     try {
       setLoading(true);
@@ -181,14 +184,14 @@ export const ContentProvider = ({ children }) => {
     }
   };
 
-  // Update Content Settings
+  // update content settings
   const updateContentSettings = async (data) => {
     try {
       setLoading(true);
       const formData = new FormData();
       Object.keys(data).forEach((key) => {
         if (key === "logo" || key === "favicon") {
-          // only append if it is an actual file — skip object/null values
+          // only append actual files.
           if (data[key] instanceof File) {
             formData.append(key, data[key]);
           }
@@ -218,7 +221,7 @@ export const ContentProvider = ({ children }) => {
     }
   };
 
-  // Fetch FAQs
+  // fetch faqs
   const fetchFAQs = async (filters = {}) => {
     try {
       setLoading(true);
@@ -238,7 +241,7 @@ export const ContentProvider = ({ children }) => {
     }
   };
 
-  // ADD THIS ENTIRE FUNCTION before the value object
+  // this entire function the value object
   const deleteLogo = async () => {
     try {
       setLoading(true);
@@ -257,7 +260,7 @@ export const ContentProvider = ({ children }) => {
       setLoading(false);
     }
   };
-  // Create FAQ
+  // create faq
   const createFAQ = async (faqData) => {
     try {
       setLoading(true);
@@ -277,7 +280,7 @@ export const ContentProvider = ({ children }) => {
     }
   };
 
-  // Update FAQ
+  // update faq
   const updateFAQ = async (id, faqData) => {
     try {
       setLoading(true);
@@ -297,7 +300,7 @@ export const ContentProvider = ({ children }) => {
     }
   };
 
-  // Delete FAQ
+  // delete faq
   const deleteFAQ = async (id) => {
     try {
       setLoading(true);
@@ -317,7 +320,7 @@ export const ContentProvider = ({ children }) => {
     }
   };
 
-  // AFTER deleteFAQ function, ADD:
+  // deletefaq function,
   const bulkUpdateFAQOrder = async (faqs) => {
     try {
       setLoading(true);
@@ -338,7 +341,7 @@ export const ContentProvider = ({ children }) => {
       setLoading(false);
     }
   };
-  // Fetch Contact Info
+  // fetch contact info
   const fetchContactInfo = async () => {
     try {
       setLoading(true);
@@ -357,7 +360,7 @@ export const ContentProvider = ({ children }) => {
     }
   };
 
-  // Update Contact Info
+  // update contact info
   const updateContactInfo = async (data) => {
     try {
       setLoading(true);
@@ -379,7 +382,7 @@ export const ContentProvider = ({ children }) => {
     }
   };
 
-  // Fetch Legal Pages
+  // fetch legal pages
   const fetchLegalPages = async () => {
     try {
       setLoading(true);
@@ -402,7 +405,7 @@ export const ContentProvider = ({ children }) => {
     }
   };
 
-  // ADDED: New function for bulk updating section order
+  // ed: function for bulk updating section order
   const bulkUpdateSectionOrder = async (type, sections) => {
     try {
       setLoading(true);
@@ -430,13 +433,13 @@ export const ContentProvider = ({ children }) => {
     try {
       setLoading(true);
 
-      // ADDED: Validate type
+      // ed: validate type
       if (!["privacy", "terms"].includes(type)) {
         toast.error("Invalid legal page type");
         return { success: false };
       }
 
-      // REMOVED: version from data
+      // version from data
       const { version, ...restData } = data;
 
       const response = await api.put(`/content/legal/${type}`, restData);
@@ -457,7 +460,7 @@ export const ContentProvider = ({ children }) => {
     }
   };
 
-  // Get legal template hints
+  // get legal template hints
   const getLegalTemplateHints = async (type) => {
     try {
       const response = await api.get(`/content/legal/${type}/hints`);
@@ -470,7 +473,7 @@ export const ContentProvider = ({ children }) => {
     }
   };
 
-  // Fetch preview data
+  // fetch preview data
   const fetchHomePreview = async () => {
     try {
       const response = await api.get("/content/preview/home");
@@ -512,7 +515,7 @@ export const ContentProvider = ({ children }) => {
       const response = await api.get(`/content/legal/${type}`);
       if (response.data.success) {
         const page = response.data.data.page;
-        // Ensure sections array exists
+        // ensure sections array exists
         if (!page.sections) {
           page.sections = [];
         }

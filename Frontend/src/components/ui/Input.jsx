@@ -1,3 +1,6 @@
+/**
+ * keeps the input component focused and readable.
+ */
 import * as React from "react"
 
 import { cn } from "@/lib/utils"

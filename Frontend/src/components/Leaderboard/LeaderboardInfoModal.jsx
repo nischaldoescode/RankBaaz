@@ -1,3 +1,6 @@
+/**
+ * keeps the leaderboard info modal component focused and readable.
+ */
 import Modal from "@/components/ui/Modal";
 
 export const LeaderboardInfoModal = ({ isOpen, onClose, infoData }) => {
@@ -6,7 +9,7 @@ export const LeaderboardInfoModal = ({ isOpen, onClose, infoData }) => {
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="How Points Work" size="md">
       <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-2">
-        {/* Base Points */}
+        {/* base points */}
         <div className="space-y-2">
           <h3 className="font-semibold text-sm">Base Points</h3>
           <div className="grid grid-cols-2 gap-2 text-xs">
@@ -21,7 +24,7 @@ export const LeaderboardInfoModal = ({ isOpen, onClose, infoData }) => {
           </div>
         </div>
 
-        {/* Difficulty Multipliers */}
+        {/* difficulty multipliers */}
         <div className="space-y-2">
           <h3 className="font-semibold text-sm">Difficulty</h3>
           <div className="grid grid-cols-3 gap-2 text-xs">
@@ -40,7 +43,7 @@ export const LeaderboardInfoModal = ({ isOpen, onClose, infoData }) => {
           </div>
         </div>
 
-        {/* Bonuses & Penalties */}
+        {/* bonuses & penalties */}
         <div className="space-y-2">
           <h3 className="font-semibold text-sm">Bonuses & Penalties</h3>
           <div className="space-y-1 text-xs">

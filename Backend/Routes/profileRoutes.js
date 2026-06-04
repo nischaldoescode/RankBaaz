@@ -1,3 +1,6 @@
+/**
+ * keeps the profile routes route focused and readable.
+ */
 import express from "express";
 import {
   getPublicProfile,
@@ -14,7 +17,7 @@ import {
 } from "../Middleware/requestSignature.js";
 const router = express.Router();
 
-// Public routes
+// public routes
 router.get("/:username", advancedCache({ ttl: 180 }), getPublicProfile);
 router.get(
   "/leaderboard/global",
@@ -23,7 +26,7 @@ router.get(
 );
 router.get("/search", advancedCache({ ttl: 120 }), searchUsernames);
 
-// Protected routes
+// protected routes
 router.get(
   "/settings",
   authMiddleware,

@@ -1,3 +1,6 @@
+/**
+ * keeps the card component focused and readable.
+ */
 import * as React from "react"
 
 import { cn } from "@/lib/utils"
@@ -10,7 +13,7 @@ function Card({
     <div
       data-slot="card"
       className={cn(
-        "bg-card text-card-foreground flex flex-col gap-4 rounded-xl border py-2 shadow-sm",
+        "vg-material-card text-card-foreground flex flex-col gap-4 py-2",
         className
       )}
       {...props} />

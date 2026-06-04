@@ -1,3 +1,6 @@
+/**
+ * keeps the violations page focused and readable.
+ */
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { toast } from "react-toastify";
@@ -211,7 +214,7 @@ const Violations = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-red-50 p-6">
-      {/* Header */}
+      {/* header */}
       <div className="mb-8">
         <div className="flex items-center gap-3 mb-2">
           <div className="p-3 bg-red-100 rounded-lg">
@@ -227,7 +230,7 @@ const Violations = () => {
           </div>
         </div>
       </div>
-      {/* Stats Cards */}
+      {/* stats cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
         {[
           {
@@ -277,7 +280,7 @@ const Violations = () => {
           </motion.div>
         ))}
       </div>{" "}
-      {/* Recent Violations Table */}
+      {/* recent violations table */}
       <div className="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
         <div className="p-6 border-b border-gray-200 bg-gradient-to-r from-red-50 to-orange-50">
           <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
@@ -354,9 +357,9 @@ const Violations = () => {
           </table>
         </div>
       </div>
-      {/* Blocked IPs Section */}
+      {/* blocked ips section */}
       <BlockedIpsList />
-      {/* User Details Modal */}
+      {/* user details modal */}
       {selectedUser && (
         <UserDetailsModal
           user={selectedUser}
@@ -369,7 +372,7 @@ const Violations = () => {
   );
 };
 
-// User Details Modal Component
+// user details modal component
 const UserDetailsModal = ({ user, onClose, onBan, onUnban }) => {
   const [userDetails, setUserDetails] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -397,7 +400,7 @@ const UserDetailsModal = ({ user, onClose, onBan, onUnban }) => {
         animate={{ opacity: 1, scale: 1 }}
         className="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto shadow-2xl"
       >
-        {/* Header */}
+        {/* header */}
         <div className="p-6 border-b border-gray-200 bg-gradient-to-r from-red-50 to-orange-50 flex items-center justify-between">
           <div>
             <h2 className="text-2xl font-bold text-gray-900">{user.name}</h2>
@@ -419,7 +422,7 @@ const UserDetailsModal = ({ user, onClose, onBan, onUnban }) => {
           </div>
         ) : (
           <div className="p-6 space-y-6">
-            {/* Violation Stats */}
+            {/* violation stats */}
             <div className="bg-red-50 border border-red-200 rounded-xl p-6">
               <h3 className="text-lg font-bold text-red-900 mb-4 flex items-center gap-2">
                 <FiAlertTriangle className="w-5 h-5" />
@@ -445,7 +448,7 @@ const UserDetailsModal = ({ user, onClose, onBan, onUnban }) => {
               </div>
             </div>
 
-            {/* Violation Details */}
+            {/* violation details */}
             {userDetails.user.devToolsViolations?.violationDetails?.length >
               0 && (
               <div>
@@ -480,7 +483,7 @@ const UserDetailsModal = ({ user, onClose, onBan, onUnban }) => {
               </div>
             )}
 
-            {/* Banned Courses */}
+            {/* banned courses */}
             {userDetails.user.bannedCourses?.length > 0 && (
               <div>
                 <h3 className="text-lg font-bold text-gray-900 mb-4">
@@ -515,7 +518,7 @@ const UserDetailsModal = ({ user, onClose, onBan, onUnban }) => {
               </div>
             )}
 
-            {/* Recent Test Activity */}
+            {/* recent test activity */}
             {userDetails.recentTests?.length > 0 && (
               <div>
                 <h3 className="text-lg font-bold text-gray-900 mb-4">

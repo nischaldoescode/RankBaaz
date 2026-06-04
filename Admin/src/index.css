@@ -1,3 +1,6 @@
+/**
+ * keeps the index stylesheet focused and readable.
+ */
 @import "tailwindcss";
 
 input[type=number] {
@@ -16,4 +19,271 @@ input[type=number]::-webkit-inner-spin-button {
 
 .Toastify__close-button--light:hover {
   color: #ffffff !important;
+}
+
+:root {
+  --admin-primary: #2563eb;
+  --admin-primary-rgb: 37, 99, 235;
+  --admin-ink: #0f172a;
+  --admin-muted: #64748b;
+  --admin-bg: #f8fbff;
+  --admin-surface: rgba(255, 255, 255, 0.90);
+  --admin-line: rgba(148, 163, 184, 0.30);
+  --admin-shadow: 0 1px 2px rgba(15, 23, 42, 0.08), 0 14px 40px rgba(37, 99, 235, 0.08);
+}
+
+body {
+  background:
+    linear-gradient(180deg, #f8fbff 0%, #ffffff 45%, #f8fafc 100%),
+    #f8fbff;
+  color: var(--admin-ink);
+  -webkit-font-smoothing: antialiased;
+}
+
+.admin-material-shell,
+.admin-app-frame,
+.admin-main-surface {
+  background:
+    linear-gradient(180deg, rgba(248, 251, 255, 0.96), rgba(255, 255, 255, 0.92)),
+    radial-gradient(circle at 8% 10%, rgba(var(--admin-primary-rgb), 0.08), transparent 34%) !important;
+}
+
+.admin-main-surface {
+  position: relative;
+}
+
+.admin-main-surface::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(90deg, rgba(37, 99, 235, 0.045) 1px, transparent 1px),
+    linear-gradient(180deg, rgba(37, 99, 235, 0.045) 1px, transparent 1px);
+  background-size: 42px 42px;
+  mask-image: linear-gradient(180deg, black, transparent 88%);
+}
+
+.admin-main-surface > div {
+  position: relative;
+  z-index: 1;
+}
+
+.admin-material-shell button,
+.admin-material-shell a[role="button"],
+.admin-material-shell input[type="button"],
+.admin-material-shell input[type="submit"] {
+  cursor: pointer;
+  border-radius: 999px !important;
+  transition: transform 0.16s ease, box-shadow 0.16s ease, background 0.16s ease, border-color 0.16s ease !important;
+}
+
+.admin-material-shell button:active,
+.admin-material-shell a[role="button"]:active {
+  transform: scale(0.985);
+}
+
+.admin-material-shell button:disabled,
+.admin-material-shell [aria-disabled="true"] {
+  cursor: not-allowed !important;
+  opacity: 0.48 !important;
+  transform: none !important;
+}
+
+.admin-material-shell input,
+.admin-material-shell textarea,
+.admin-material-shell select {
+  border-radius: 8px !important;
+  border-color: var(--admin-line) !important;
+}
+
+.admin-material-shell input:focus,
+.admin-material-shell textarea:focus,
+.admin-material-shell select:focus {
+  border-color: var(--admin-primary) !important;
+  box-shadow: 0 0 0 4px rgba(var(--admin-primary-rgb), 0.14) !important;
+  outline: none !important;
+}
+
+.admin-material-shell .bg-green-500,
+.admin-material-shell .bg-green-600,
+.admin-material-shell .bg-emerald-500,
+.admin-material-shell .bg-emerald-600,
+.admin-material-shell .bg-purple-500,
+.admin-material-shell .bg-purple-600,
+.admin-material-shell .bg-indigo-500,
+.admin-material-shell .bg-indigo-600,
+.admin-material-shell .bg-teal-500,
+.admin-material-shell .bg-teal-600,
+.admin-material-shell .bg-orange-500,
+.admin-material-shell .bg-orange-600,
+.admin-material-shell .bg-yellow-500,
+.admin-material-shell .bg-yellow-600,
+.admin-material-shell .from-green-500,
+.admin-material-shell .from-green-600,
+.admin-material-shell .from-purple-500,
+.admin-material-shell .from-purple-600,
+.admin-material-shell .from-indigo-500,
+.admin-material-shell .from-indigo-600,
+.admin-material-shell .from-teal-500,
+.admin-material-shell .from-teal-600,
+.admin-material-shell .from-orange-500,
+.admin-material-shell .from-orange-600,
+.admin-material-shell .from-yellow-500,
+.admin-material-shell .from-yellow-600,
+.admin-material-shell .to-green-600,
+.admin-material-shell .to-emerald-600,
+.admin-material-shell .to-purple-600,
+.admin-material-shell .to-indigo-600,
+.admin-material-shell .to-teal-600,
+.admin-material-shell .to-orange-600,
+.admin-material-shell .to-yellow-600 {
+  background: var(--admin-primary) !important;
+  --tw-gradient-from: var(--admin-primary) !important;
+  --tw-gradient-to: #1d4ed8 !important;
+  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to) !important;
+}
+
+.admin-material-shell .text-green-500,
+.admin-material-shell .text-green-600,
+.admin-material-shell .text-emerald-500,
+.admin-material-shell .text-emerald-600,
+.admin-material-shell .text-purple-500,
+.admin-material-shell .text-purple-600,
+.admin-material-shell .text-indigo-500,
+.admin-material-shell .text-indigo-600,
+.admin-material-shell .text-teal-500,
+.admin-material-shell .text-teal-600,
+.admin-material-shell .text-orange-500,
+.admin-material-shell .text-orange-600,
+.admin-material-shell .text-yellow-500,
+.admin-material-shell .text-yellow-600 {
+  color: var(--admin-primary) !important;
+}
+
+.admin-material-shell .border-green-200,
+.admin-material-shell .border-green-300,
+.admin-material-shell .border-green-500,
+.admin-material-shell .border-purple-200,
+.admin-material-shell .border-purple-300,
+.admin-material-shell .border-purple-500,
+.admin-material-shell .border-indigo-200,
+.admin-material-shell .border-indigo-300,
+.admin-material-shell .border-indigo-500,
+.admin-material-shell .border-teal-200,
+.admin-material-shell .border-teal-300,
+.admin-material-shell .border-teal-500,
+.admin-material-shell .border-orange-200,
+.admin-material-shell .border-orange-300,
+.admin-material-shell .border-orange-500,
+.admin-material-shell .border-yellow-200,
+.admin-material-shell .border-yellow-300,
+.admin-material-shell .border-yellow-500,
+.admin-material-shell .border-emerald-300,
+.admin-material-shell .border-emerald-500 {
+  border-color: rgba(var(--admin-primary-rgb), 0.26) !important;
+}
+
+.admin-material-shell .bg-white,
+.admin-material-shell .bg-white\/95,
+.admin-material-shell .bg-gray-50,
+.admin-material-shell .bg-gray-100 {
+  background-color: var(--admin-surface) !important;
+  backdrop-filter: blur(16px);
+}
+
+.admin-material-shell .bg-green-50,
+.admin-material-shell .bg-green-100,
+.admin-material-shell .bg-emerald-50,
+.admin-material-shell .bg-emerald-100,
+.admin-material-shell .bg-purple-50,
+.admin-material-shell .bg-purple-100,
+.admin-material-shell .bg-indigo-50,
+.admin-material-shell .bg-indigo-100,
+.admin-material-shell .bg-teal-50,
+.admin-material-shell .bg-teal-100,
+.admin-material-shell .bg-orange-50,
+.admin-material-shell .bg-orange-100,
+.admin-material-shell .bg-yellow-50,
+.admin-material-shell .bg-yellow-100 {
+  background-color: rgba(var(--admin-primary-rgb), 0.08) !important;
+}
+
+.admin-material-shell .text-green-700,
+.admin-material-shell .text-green-800,
+.admin-material-shell .text-green-900,
+.admin-material-shell .text-emerald-700,
+.admin-material-shell .text-emerald-800,
+.admin-material-shell .text-purple-700,
+.admin-material-shell .text-purple-800,
+.admin-material-shell .text-indigo-700,
+.admin-material-shell .text-indigo-800,
+.admin-material-shell .text-teal-700,
+.admin-material-shell .text-teal-800,
+.admin-material-shell .text-orange-700,
+.admin-material-shell .text-orange-800,
+.admin-material-shell .text-yellow-700,
+.admin-material-shell .text-yellow-800 {
+  color: #1d4ed8 !important;
+}
+
+.admin-material-shell .rounded-2xl,
+.admin-material-shell .rounded-3xl,
+.admin-material-shell .rounded-xl {
+  border-radius: 8px !important;
+}
+
+.admin-material-shell .shadow-2xl,
+.admin-material-shell .shadow-xl,
+.admin-material-shell .shadow-lg {
+  box-shadow: var(--admin-shadow) !important;
+}
+
+.admin-material-shell [class*="fixed"][class*="inset-0"] + div,
+.admin-material-shell [class*="modal"],
+.Toastify__toast {
+  border-radius: 8px !important;
+}
+
+.admin-auth-page {
+  position: relative;
+  overflow: hidden;
+  background:
+    linear-gradient(180deg, #f8fbff 0%, #ffffff 48%, #f8fafc 100%),
+    radial-gradient(circle at 12% 16%, rgba(var(--admin-primary-rgb), 0.10), transparent 36%) !important;
+}
+
+.admin-auth-page::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(90deg, rgba(37, 99, 235, 0.045) 1px, transparent 1px),
+    linear-gradient(180deg, rgba(37, 99, 235, 0.045) 1px, transparent 1px);
+  background-size: 42px 42px;
+  mask-image: linear-gradient(180deg, black, transparent 86%);
+}
+
+.admin-auth-page > div {
+  position: relative;
+  z-index: 1;
+}
+
+.admin-auth-page .bg-white,
+.admin-auth-page .rounded-2xl,
+.admin-auth-page .shadow-xl {
+  border-radius: 8px !important;
+  background: var(--admin-surface) !important;
+  border-color: var(--admin-line) !important;
+  box-shadow: var(--admin-shadow) !important;
+  backdrop-filter: blur(18px);
+}
+
+@media (max-width: 768px) {
+  .admin-main-surface {
+    padding-left: 14px !important;
+    padding-right: 14px !important;
+  }
 }

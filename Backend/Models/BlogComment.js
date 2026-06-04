@@ -1,3 +1,6 @@
+/**
+ * keeps the blog comment model focused and readable.
+ */
 import mongoose from "mongoose";
 
 const blogCommentSchema = new mongoose.Schema(

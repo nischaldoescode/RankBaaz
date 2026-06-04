@@ -1,3 +1,6 @@
+/**
+ * keeps the server module focused and readable.
+ */
 import express from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
@@ -13,7 +16,7 @@ import redisClient, {
 import fileUpload from "express-fileupload";
 import mongoose from "mongoose";
 import ioredisRatelimit from "ioredis-ratelimit";
-// Import routes
+// import routes
 import authRoutes from "./Routes/authRoutes.js";
 import courseRoutes from "./Routes/courseRoutes.js";
 import testRoutes from "./Routes/testRoutes.js";
@@ -36,16 +39,16 @@ import teacherRoutes from "./Routes/teacherRoutes.js";
 import khaltiRoutes from "./Routes/khaltiRoutes.js";
 import blogRoutes from "./Routes/blogRoutes.js";
 
-// Load environment variables
+// load environment variables
 dotenv.config();
 
-// Configure Cloudinary
+// configure cloudinary
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_NAME,
   api_key: process.env.CLOUDINARY_API_KEY,
   api_secret: process.env.CLOUDINARY_SECRET_KEY,
 });
-// Create Express app
+// create express app
 const app = express();
 const PORT = process.env.PORT || 5000;
 app.disable("x-powered-by");
@@ -55,20 +58,20 @@ app.set(
 );
 
 const mongoOptions = {
-  maxPoolSize: 100, // Increased for production
-  minPoolSize: 10, // Maintain minimum connections
-  serverSelectionTimeoutMS: 10000, // Increased timeout
-  socketTimeoutMS: 60000, // Increased socket timeout
-  connectTimeoutMS: 15000, // Add connection timeout
+  maxPoolSize: 100, // increased for production
+  minPoolSize: 10, // maintain minimum connections
+  serverSelectionTimeoutMS: 10000, // increased timeout
+  socketTimeoutMS: 60000, // increased socket timeout
+  connectTimeoutMS: 15000, // connection timeout
   bufferCommands: false,
   retryWrites: true,
   retryReads: true,
-  // Add these for better connection management
+  // these for better connection management
   maxIdleTimeMS: 60000,
-  compressors: ["zlib"], // Enable compression
+  compressors: ["zlib"], // enable compression
 };
 
-// we will await for the Data base connection
+// we will await for the data base connection
 await connectDB(mongoOptions);
 
 const store = new RedisStore({
@@ -86,7 +89,7 @@ try {
   process.exit(1);
 }
 
-// Create rate limiter functions using ioredis-ratelimit
+// create rate limiter functions using ioredis-ratelimit
 const createRateLimiter = (options) => {
   const limiter = ioredisRatelimit({
     client: redisClient,
@@ -122,26 +125,26 @@ const createRateLimiter = (options) => {
   };
 };
 
-// Helper to detect if request is from browser
+// helper to detect if request is from browser
 const isBrowserRequest = (req) => {
   const userAgent = req.get("User-Agent") || "";
-  // Check for common browser user agents
+  // check for common browser user agents
   return (
     /Mozilla|Chrome|Safari|Firefox|Edge|Opera/i.test(userAgent) &&
     !/bot|crawler|spider|scraper/i.test(userAgent)
   );
 };
 
-// Coupon limiter - MORE LENIENT FOR BROWSERS
+// coupon limiter - more lenient for browsers
 const couponLimiter = createRateLimiter({
   prefix: "coupon",
   windowMs: 15 * 60 * 1000,
-  max: 100, // Increased from 60
+  max: 100, // increased from 60
   message: {
     success: false,
     message: "Too many coupon requests, please try again later.",
   },
-  skip: (req) => isBrowserRequest(req), // Skip for browsers
+  skip: (req) => isBrowserRequest(req), // skip for browsers
 });
 
 const DEFAULT_ALLOWED_ORIGINS = [
@@ -164,7 +167,7 @@ const DEFAULT_ALLOWED_ORIGINS = [
   "https://www.teachers.vidhgrow.online",
   "https://blogs.vidhgrow.online",
   "https://www.blogs.vidhgrow.online",
-  
+
   "http://localhost:5174",
   "http://localhost:5176",
   "http://localhost:8080",
@@ -185,15 +188,15 @@ const allowedOrigins = [
 
 const corsOptions = {
   origin: function (origin, callback) {
-    // Handle requests without origin header (server-to-server, curl, etc.)
+    // handle requests without origin header (server-to-server, curl, etc.)
     if (!origin) {
       return callback(null, true);
     }
 
-    // Normalize origin
+    // normalize origin
     const normalizedOrigin = origin.replace(/\/$/, "");
 
-    // Check for exact match
+    // check for exact match
     const isAllowed = allowedOrigins.some(
       (allowed) => allowed.replace(/\/$/, "") === normalizedOrigin,
     );
@@ -202,7 +205,7 @@ const corsOptions = {
       return callback(null, true);
     }
 
-    // SECURITY: Check for origin mimicking
+    // security: check for origin mimicking
     try {
       const originHostname = new URL(normalizedOrigin).hostname;
       const isMimicking = allowedOrigins.some((allowed) => {
@@ -214,21 +217,21 @@ const corsOptions = {
       });
 
       if (isMimicking) {
-        console.warn(`[SECURITY] Detected origin mimicking attempt: ${origin}`);
+        console.warn(`Detected origin mimicking attempt: ${origin}`);
         return callback(new Error("Not allowed by CORS - Invalid origin"));
       }
     } catch (e) {
-      // Invalid URL format
+      // invalid url format
       return callback(new Error("Not allowed by CORS - Malformed origin"));
     }
 
-    // Log rejected origin for monitoring
-    console.warn(`[CORS] Rejected origin: ${origin}`);
+    // log rejected origin for monitoring
+    console.warn(`Rejected origin: ${origin}`);
     callback(new Error("Not allowed by CORS"));
   },
   credentials: true,
   methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
-  // CRITICAL FIX: Add signature headers to allowed headers
+  // signature headers to allowed headers
   allowedHeaders: [
     "Content-Type",
     "Authorization",
@@ -241,12 +244,12 @@ const corsOptions = {
     "Cookie",
   ],
   exposedHeaders: ["X-Total-Count", "Set-Cookie"],
-  maxAge: 86400, // Cache preflight for 24 hours
+  maxAge: 86400, // cache preflight for 24 hours
   preflightContinue: false,
   optionsSuccessStatus: 204,
 };
 
-// Middleware
+// middleware
 app.use(
   helmet({
     crossOriginEmbedderPolicy: false,
@@ -359,7 +362,7 @@ app.use(
 );
 
 if (process.env.NODE_ENV === "development") {
-  console.log("[SESSION_CONFIG] Initialized with:", {
+  console.log("Initialized with:", {
     secure: false,
     httpOnly: true,
     sameSite: "lax",
@@ -369,8 +372,8 @@ if (process.env.NODE_ENV === "development") {
 }
 
 /**
- * HELPER: Generate simple 403 HTML page
- * Returns minimal HTML to prevent information disclosure
+ * helper: generate simple 403 html page
+ * returns minimal html to prevent information disclosure
  */
 const getSimple403HTML = () => {
   return `
@@ -427,22 +430,22 @@ const getSimple403HTML = () => {
   `;
 };
 
-// check ip block before any route
+// check ip block any route
 
 app.use(checkIpBlock);
 
-// Apply bot protection globally (before routes)
+// apply bot protection globally (routes)
 app.use(botProtection);
 
 // console.log(
-//   " Bot protection and origin enforcement DISABLED for testing"
+//   " bot protection and origin enforcement disabled for testing"
 // );
 
 app.post("/api/security/verify-challenge", verifyChallenge);
 
 /**
- * Health check endpoint - No authentication required
- * Used by monitoring services and load balancers
+ * health check endpoint - no authentication required
+ * used by monitoring services and load balancers
  */
 app.get("/health", (req, res) => {
   res.status(200).json({
@@ -452,8 +455,8 @@ app.get("/health", (req, res) => {
 });
 
 /**
- * Sitemap endpoint - No authentication required
- * Used by search engines for SEO
+ * sitemap endpoint - no authentication required
+ * used by search engines for seo
  */
 app.get("/sitemap-profiles.xml", async (req, res) => {
   try {
@@ -510,18 +513,18 @@ app.get("/sitemap-profiles.xml", async (req, res) => {
   }
 });
 
-// Apply express-fileupload ONLY to routes that need it
+// apply express-fileupload only to routes that need it
 app.use((req, res, next) => {
-  // Skip express-fileupload for course routes (they use multer)
+  // skip express-fileupload for course routes (they use multer)
   if (req.path.startsWith("/api/courses")) {
     return next();
   }
 
-  // Apply express-fileupload to all other routes
+  // apply express-fileupload to all other routes
   fileUpload({
     useTempFiles: true,
     tempFileDir: "/tmp/",
-    // 10 MB file size limit
+    // 10 mb file size limit
     limits: { fileSize: 10 * 1024 * 1024 },
 
     abortOnLimit: true,
@@ -529,18 +532,18 @@ app.use((req, res, next) => {
   })(req, res, next);
 });
 /**
- * CORS preflight handler
+ * cors preflight handler
  */
 app.options("*", cors(corsOptions));
 
 /**
- * Mount API routes
+ * mount api routes
  *
- * CRITICAL: Routes are mounted BEFORE signature verification
- * This allows authentication middleware to set req.user/req.admin
- * before signature verification checks them
+ * routes are mounted signature verification
+ * this allows authentication middleware to set req.user/req.admin
+ * signature verification checks them
  *
- * @see Routes/ - Each route file has its own authentication middleware
+ * @see routes/ - each route file has its own authentication middleware
  */
 app.use("/api/auth", authRoutes);
 app.use("/api/security", securityRoutes);
@@ -557,7 +560,7 @@ app.use("/api/teachers", teacherRoutes);
 app.use("/api/payments/khalti", khaltiRoutes);
 app.use("/api/blogs", blogRoutes);
 /**
- * Root endpoint - Minimal response for security
+ * root endpoint - minimal response for security
  */
 app.get("/", (req, res) => {
   if (process.env.NODE_ENV === "production") {
@@ -583,7 +586,7 @@ app.get("/", (req, res) => {
   }
 });
 
-// 404 HANDLER
+// 404 handler
 app.use("*", (req, res) => {
   res.status(404).json({
     success: false,
@@ -599,14 +602,14 @@ app.use("*", (req, res) => {
 });
 
 /**
- * Public routes that bypass signature validation
+ * public routes that bypass signature validation
  *
- * Two categories:
- * 1. Unauthenticated public routes (login, register, etc.)
- * 2. Cookie-authenticated routes that don't need signatures
+ * two categories:
+ * 1. unauthenticated public routes (login, register, etc.)
+ * 2. cookie-authenticated routes that don't need signatures
  *    - /api/security/signing-secret (breaks chicken-and-egg problem)
  *
- * @constant {Array<string>} publicRoutes - Exact path matches
+ * @constant {array<string>} publicroutes - exact path matches
  */
 const publicRoutes = [
   "/health",
@@ -638,25 +641,25 @@ const publicRoutes = [
 
 
 /**
- * SECURITY LAYER 3: Request signature validation middleware
+ * security layer 3: request signature validation middleware
  *
- * Validates HMAC-SHA256 signatures for authenticated requests
- * Prevents Postman/Insomnia access even with valid cookies
+ * validates hmac-sha256 signatures for authenticated requests
+ * prevents postman/insomnia access even with valid cookies
  *
- * Exemptions:
- * - Public unauthenticated routes (login, register)
+ * exemptions:
+ * - public unauthenticated routes (login, register)
  * - /api/security/signing-secret (cookie-only auth, no signature needed)
  *
  * @middleware
  */
 app.use((req, res, next) => {
-  // EXEMPTION 1: Check if route is in public routes list
+  // exemption 1: check if route is in public routes list
   if (publicRoutes.includes(req.path)) {
     console.log("Bypassing signature check for public route:", req.path);
     return next();
   }
 
-  // EXEMPTION 2: OPTIONS preflight requests
+  // exemption 2: options preflight requests
   if (req.method === "OPTIONS") {
     return next();
   }
@@ -665,11 +668,11 @@ app.use((req, res, next) => {
   const timestamp = req.headers["x-request-timestamp"];
   const nonce = req.headers["x-request-nonce"];
 
-  // If signature headers are present, validate them
+  // if signature headers are present, validate them
   if (signature || timestamp || nonce) {
-    // All three must be present
+    // all three present
     if (!signature || !timestamp || !nonce) {
-      console.warn("[SIGNATURE] Incomplete signature headers:", {
+      console.warn("Incomplete signature headers:", {
         hasSignature: !!signature,
         hasTimestamp: !!timestamp,
         hasNonce: !!nonce,
@@ -683,7 +686,7 @@ app.use((req, res, next) => {
       });
     }
 
-    // Validate nonce format (must be exactly 32 hex characters)
+    // validate nonce format (exactly 32 hex characters)
     if (!/^[0-9a-f]{32}$/i.test(nonce)) {
       console.warn("Invalid nonce format:", {
         nonce: nonce.substring(0, 10) + "...",
@@ -701,7 +704,7 @@ app.use((req, res, next) => {
       return res.status(403).send(getSimple403HTML());
     }
 
-    // Validate timestamp format
+    // validate timestamp format
     const requestTime = parseInt(timestamp);
     if (isNaN(requestTime)) {
       console.warn("Invalid timestamp format:", {
@@ -712,7 +715,7 @@ app.use((req, res, next) => {
       return res.status(403).send(getSimple403HTML());
     }
 
-    // Check timestamp is within 5 minutes
+    // check timestamp is within 5 minutes
     const now = Date.now();
     const timeDiff = Math.abs(now - requestTime);
 
@@ -730,38 +733,38 @@ app.use((req, res, next) => {
 });
 
 /**
- * Signature validation middleware
+ * signature validation middleware
  *
- * SECURITY: Blocks ALL direct browser access to API endpoints
- * Only allows requests from our frontend applications with valid signatures
+ * security: blocks all direct browser access to api endpoints
+ * only allows requests from our frontend applications with valid signatures
  *
- * Exemptions (public routes):
- * - Health check
- * - Authentication endpoints
- * - Sitemap (for SEO)
+ * exemptions (public routes):
+ * - health check
+ * - authentication endpoints
+ * - sitemap (for seo)
  *
- * ALL other routes (including GET /api/courses/categories) require:
- * 1. Valid origin from allowed domains
- * 2. Request signature headers
+ * all other routes (including get /api/courses/categories) require:
+ * 1. valid origin from allowed domains
+ * 2. request signature headers
  *
- * This prevents:
- * - Typing backend URLs in browser address bar
- * - Postman/Insomnia access
+ * this prevents:
+ * - typing backend urls in browser ress bar
+ * - postman/insomnia access
  * - curl/wget access
- * - Chrome DevTools direct fetch
+ * - chrome devtools direct fetch
  */
 app.use((req, res, next) => {
-  // EXEMPTION 1: Public routes (no signature needed)
+  // exemption 1: public routes (no signature needed)
   if (publicRoutes.includes(req.path)) {
     return next();
   }
 
-  // EXEMPTION 2: OPTIONS preflight requests
+  // exemption 2: options preflight requests
   if (req.method === "OPTIONS") {
     return next();
   }
 
-  // EXEMPTION 3: Sitemap for SEO
+  // exemption 3: sitemap for seo
   if (req.path === "/sitemap-profiles.xml") {
     return next();
   }
@@ -784,23 +787,23 @@ app.use((req, res, next) => {
     "/api/blogs/sitemap.xml",
   ];
 
-  // Check if path is EXACTLY a public endpoint or a subpath of one
+  // check if path is exactly a public endpoint or a subpath of one
   const isPublicGet =
     req.method === "GET" &&
     (() => {
-      // Admin routes should NOT be treated as public
+      // admin routes should not be treated as public
       if (req.path.includes("/admin")) {
         return false;
       }
 
-      // Check if path matches public endpoints
+      // check if path matches public endpoints
       for (const endpoint of publicGetEndpoints) {
         if (req.path === endpoint || req.path.startsWith(endpoint + "/")) {
           return true;
         }
       }
 
-      // Special case: /api/courses (without /admin) is public
+      // special case: /api/courses (without /admin) is public
       if (req.path === "/api/courses" || req.path.startsWith("/api/courses?")) {
         return true;
       }
@@ -809,7 +812,7 @@ app.use((req, res, next) => {
     })();
 
   if (isPublicGet) {
-    // For public GETs, validate origin
+    // for public gets, validate origin
     const origin = req.get("Origin");
     const referer = req.get("Referer");
     const hasSignature = !!req.headers["x-request-signature"];
@@ -823,14 +826,14 @@ app.use((req, res, next) => {
       return res.status(403).send(getSimple403HTML());
     }
 
-    //Check for BOTH user auth cookie AND admin session cookie
+    //check for both user auth cookie and admin session cookie
     if (hasSignature) {
-      const hasUserAuthCookie = !!req.signedCookies.auth_session; // User JWT cookie
-      const hasAdminSession = !!req.session?.adminId || !!req.signedCookies.sid; // Admin session
+      const hasUserAuthCookie = !!req.signedCookies.auth_session; // user jwt cookie
+      const hasAdminSession = !!req.session?.adminId || !!req.signedCookies.sid; // admin session
 
-      // Allow if EITHER authenticated user OR admin
+      // allow if either authenticated user or admin
       if (hasUserAuthCookie || hasAdminSession) {
-        console.log("[SECURITY] Authenticated request to public endpoint:", {
+        console.log("Authenticated request to public endpoint:", {
           path: req.path,
           hasUserAuth: hasUserAuthCookie,
           hasAdminAuth: hasAdminSession,
@@ -838,8 +841,8 @@ app.use((req, res, next) => {
         return next();
       }
 
-      // If NO auth cookie AND NO session but HAS signature = suspicious (Postman)
-      console.warn("[SECURITY] Rejected public GET with signature (no auth):", {
+      // if no auth cookie and no session but has signature = suspicious (postman)
+      console.warn("Rejected public GET with signature (no auth):", {
         path: req.path,
         origin: origin || "none",
         ip: req.ip,
@@ -903,15 +906,15 @@ app.use((req, res, next) => {
     return next();
   }
 
-  // From this point, ALL routes require valid origin + signature
+  // from this point, all routes require valid origin + signature
 
   const origin = req.get("Origin");
   const referer = req.get("Referer");
   const hasSignature = !!req.headers["x-request-signature"];
 
-  // Block requests without valid origin (direct browser access, Postman, curl)const nonce = req.headers["x-request-nonce"];
+  // block direct api access without a trusted origin.
   if (!origin && !referer) {
-    console.warn("[SECURITY] Blocked direct access:", {
+    console.warn("Blocked direct access:", {
       path: req.path,
       method: req.method,
       ip: req.ip,
@@ -972,9 +975,9 @@ app.use((req, res, next) => {
     `);
   }
 
-  // Block requests from valid origin but missing signature
+  // block requests from valid origin but missing signature
   if (!hasSignature) {
-    console.warn("[SECURITY] Blocked request - Missing signature:", {
+    console.warn("Blocked request - Missing signature:", {
       path: req.path,
       method: req.method,
       origin: origin || "none",
@@ -988,23 +991,23 @@ app.use((req, res, next) => {
     });
   }
 
-  // Signature validation happens in auth middleware
+  // signature validation happens in auth middleware
   next();
 });
 
 /**
- * Express-level micro-caching
- * Caches responses in memory for ultra-fast repeated requests
- * Duration: 1 second (perfect for burst traffic)
+ * express-level micro-caching
+ * caches responses in memory for ultra-fast repeated requests
+ * duration: 1 second (perfect for burst traffic)
  */
 const microCache = {};
 const MICRO_CACHE_DURATION = 5000; // 1 second
 
 app.use((req, res, next) => {
-  // Only cache GET requests
+  // only cache get requests
   if (req.method !== "GET") return next();
 
-  // Skip for authenticated users (admin/user routes)
+  // skip for authenticated users (admin/user routes)
   if (req.path.includes("/admin") || req.user || req.admin) {
     return next();
   }
@@ -1016,7 +1019,7 @@ app.use((req, res, next) => {
     return res.send(cached.data);
   }
 
-  // Override res.send to cache response
+  // override res.send to cache response
   const originalSend = res.send.bind(res);
   res.send = (data) => {
     if (res.statusCode === 200) {
@@ -1025,7 +1028,7 @@ app.use((req, res, next) => {
         timestamp: Date.now(),
       };
 
-      // Auto-cleanup after expiration
+      // auto-cleanup expiration
       setTimeout(() => {
         delete microCache[key];
       }, MICRO_CACHE_DURATION);
@@ -1036,32 +1039,32 @@ app.use((req, res, next) => {
   next();
 });
 
-// From this point, ALL routes require valid origin + signature
+// from this point, all routes require valid origin + signature
 if (process.env.NODE_ENV === "development") {
   app.use((req, res, next) => {
-    console.log("[REQUEST_DEBUG] Method:", req.method);
-    console.log("[REQUEST_DEBUG] Path:", req.path);
+    console.log("Method:", req.method);
+    console.log("Path:", req.path);
     console.log(
-      "[REQUEST_DEBUG] Has auth cookie:",
+      "Has auth cookie:",
       !!req.signedCookies.auth_session,
     );
     console.log(
-      "[REQUEST_DEBUG] Has signature:",
+      "Has signature:",
       !!req.headers["x-request-signature"],
     );
-    console.log("[REQUEST_DEBUG] Origin:", req.get("Origin") || "none");
+    console.log("Origin:", req.get("Origin") || "none");
     console.log(
-      "[REQUEST_DEBUG] User-Agent:",
+      "User-Agent:",
       req.get("User-Agent")?.substring(0, 50) || "none",
     );
     next();
   });
 }
 
-// Error handling middleware
+// error handling middleware
 app.use((error, req, res, next) => {
   if (isRedisConnectionError(error)) {
-    console.warn("[REDIS] Request failed because Redis is unavailable:", {
+    console.warn("Request failed because Redis is unavailable:", {
       path: req.path,
       ...summarizeRedisError(error),
     });
@@ -1082,14 +1085,14 @@ app.use((error, req, res, next) => {
   const acceptsJson = req.get("Accept")?.includes("application/json");
   const isApiRoute = req.path.startsWith("/api/");
 
-  // CORS error - Enhanced security for production
+  // cors error - enhanced security for production
   if (error.message?.startsWith("Not allowed by CORS")) {
-    // Check if request has no origin/referer (suspicious)
+    // check if request has no origin/referer (suspicious)
     const hasNoOrigin = !req.get("Origin") && !req.get("Referer");
 
     if (acceptsJson || isApiRoute) {
-      // PRODUCTION: For requests with no origin, send simple HTML instead of JSON
-      // This prevents information disclosure about API structure
+      // production: for requests with no origin, send simple html instead of json
+      // this prevents information disclosure about api structure
       if (hasNoOrigin) {
         return res.status(403).send(`
         <!DOCTYPE html>
@@ -1155,7 +1158,7 @@ app.use((error, req, res, next) => {
         .send(corsErrorPage(req.get("Origin") || "Unknown"));
     }
   }
-  // Validation error
+  // validation error
   if (error.name === "ValidationError") {
     const errors = Object.values(error.errors).map((err) => ({
       field: err.path,
@@ -1168,7 +1171,7 @@ app.use((error, req, res, next) => {
     });
   }
 
-  // MongoDB duplicate key error
+  // mongodb duplicate key error
   if (error.code === 11000) {
     const field = Object.keys(error.keyValue)[0];
     return res.status(400).json({
@@ -1177,7 +1180,7 @@ app.use((error, req, res, next) => {
     });
   }
 
-  // JWT errors
+  // jwt errors
   if (error.name === "JsonWebTokenError") {
     return res.status(401).json({
       success: false,
@@ -1192,7 +1195,7 @@ app.use((error, req, res, next) => {
     });
   }
 
-  // MongoDB cast error
+  // mongodb cast error
   if (error.name === "CastError") {
     return res.status(400).json({
       success: false,
@@ -1200,13 +1203,13 @@ app.use((error, req, res, next) => {
     });
   }
 
-  // Default error
+  // default error
   const statusCode = error.statusCode || 500;
 
-  // CRITICAL FIX: Check if headers were already sent
+  // check if headers were already sent
   if (res.headersSent) {
     console.error(
-      "[ERROR] Headers already sent, cannot send error response:",
+      "Headers already sent, cannot send error response:",
       error,
     );
     return next(error);
@@ -1225,7 +1228,7 @@ const gracefulShutdown = (signal) => {
   server.close(async () => {
     console.log("HTTP server closed.");
 
-    // Close Redis connection
+    // close redis connection
     try {
       await redisClient.quit();
       console.log("Redis connection closed.");
@@ -1233,7 +1236,7 @@ const gracefulShutdown = (signal) => {
       console.error("Error closing Redis:", error);
     }
 
-    // Close MongoDB connections
+    // close mongodb connections
     try {
       await mongoose.connection.close();
       console.log("MongoDB connection closed.");
@@ -1241,7 +1244,7 @@ const gracefulShutdown = (signal) => {
       console.error("Error closing MongoDB:", error);
     }
 
-    // Close second database connection
+    // close second database connection
     try {
       await connection2.close();
       console.log("Content database connection closed.");
@@ -1252,7 +1255,7 @@ const gracefulShutdown = (signal) => {
     process.exit(0);
   });
 
-  // Force close after 30 seconds
+  // force close 30 seconds
   setTimeout(() => {
     console.error(
       "Could not close connections in time, forcefully shutting down",
@@ -1261,7 +1264,7 @@ const gracefulShutdown = (signal) => {
   }, 30000);
 };
 
-// Start server
+// start server
 const server = app.listen(PORT, async () => {
   console.log(`
         Server is running
@@ -1271,7 +1274,7 @@ const server = app.listen(PORT, async () => {
         Database: ${process.env.NODE_ENV === "production" ? "Production" : "Development"}
     `);
 
-  // Initialize leaderboards asynchronously (don't block startup)
+  // initialize leaderboards asynchronously (don't block startup)
   try {
     const { default: leaderboardService } = await import(
       "./services/leaderboardService.js"
@@ -1288,7 +1291,7 @@ const server = app.listen(PORT, async () => {
     console.error("Failed to start leaderboard initialization:", error);
   }
 });
-// Handle unhandled promise rejections
+// handle unhandled promise rejections
 process.on("unhandledRejection", (err) => {
   console.error("Unhandled Promise Rejection:", err);
   server.close(() => {
@@ -1296,13 +1299,13 @@ process.on("unhandledRejection", (err) => {
   });
 });
 
-// Handle uncaught exceptions
+// handle uncaught exceptions
 process.on("uncaughtException", (err) => {
   console.error("Uncaught Exception:", err);
   process.exit(1);
 });
 
-// Handle termination signals
+// handle termination signals
 process.on("SIGTERM", () => gracefulShutdown("SIGTERM"));
 process.on("SIGINT", () => gracefulShutdown("SIGINT"));
 export default app;

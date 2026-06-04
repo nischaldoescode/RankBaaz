@@ -1,3 +1,6 @@
+/**
+ * keeps the test resend utility focused and readable.
+ */
 // test-resend.js
 import { Resend } from "resend";
 import dotenv from "dotenv";
@@ -13,12 +16,12 @@ const sendTestEmail = async () => {
     const toEmail = "miraalsiro@gmail.com"; // <-- replace with your test email
 
     const result = await resend.emails.send({
-      from: "support@crazydukaan.store", // domain you verified in Resend
+      from: "support@crazydukaan.store", // domain you verified in resend
       to: toEmail,
       subject: "Resend Test Email from Crazy Dukaan",
       html: `
         <div style="font-family: Arial, sans-serif; padding: 20px;">
-          <h2 style="color: #4F46E5;">Test Email Successful 🎉</h2>
+          <h2 style="color: #4F46E5;">Test Email Successful </h2>
           <p>If you're seeing this, your Resend API setup is working correctly!</p>
           <p><b>From:</b> support@crazydukaan.store</p>
           <p><b>To:</b> ${toEmail}</p>

@@ -1,3 +1,6 @@
+/**
+ * keeps the about page focused and readable.
+ */
 import React, { useEffect } from "react";
 import { motion } from "framer-motion";
 import {
@@ -15,7 +18,7 @@ import { useContent } from "../context/ContentContext";
 import { Link } from "react-router-dom";
 import Loading from "../components/common/Loading";
 import { useSEO } from "../hooks/useSEO";
-// Icon mapping
+// icon mapping
 const iconMap = {
   Target,
   Heart,
@@ -59,13 +62,13 @@ const About = () => {
   if (loading || !contentSettings) {
     return <Loading variant="page" />;
   }
-  // Fallback values if content not loaded
+  // fallback values if content not loaded
   const values = contentSettings?.aboutValues || [];
   const features = contentSettings?.aboutFeatures || [];
   const stats = contentSettings?.aboutStats || [];
 
   return (
-    <div className="min-h-screen pt-20 pb-16">
+    <div className="vg-static-page min-h-screen pt-20 pb-16">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <motion.div
           initial={animations && !reducedMotion ? "hidden" : "visible"}
@@ -73,7 +76,7 @@ const About = () => {
           variants={containerVariants}
           className="space-y-16"
         >
-          {/* Hero Section */}
+          {/* hero section */}
           <motion.div variants={itemVariants} className="text-center">
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-foreground mb-6">
               About {contentSettings?.siteName || "Vidhgrow"}
@@ -84,7 +87,7 @@ const About = () => {
             </p>
           </motion.div>
 
-          {/* Stats Section */}
+          {/* stats section */}
           {stats.length > 0 && (
             <motion.div
               variants={itemVariants}
@@ -106,7 +109,7 @@ const About = () => {
             </motion.div>
           )}
 
-          {/* Values Section */}
+          {/* values section */}
           {values.length > 0 && (
             <motion.div variants={itemVariants} className="space-y-8">
               <div className="text-center">
@@ -145,7 +148,7 @@ const About = () => {
             </motion.div>
           )}
 
-          {/* Features Grid */}
+          {/* features grid */}
           {features.length > 0 && (
             <motion.div variants={itemVariants} className="space-y-8">
               <div className="text-center">
@@ -179,7 +182,7 @@ const About = () => {
             </motion.div>
           )}
 
-          {/* CTA Section */}
+          {/* cta section */}
           <motion.div
             variants={itemVariants}
             className="bg-gradient-to-br from-primary/10 to-purple-500/10 rounded-2xl p-8 md:p-12 text-center"

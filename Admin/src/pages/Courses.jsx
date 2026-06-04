@@ -1,3 +1,6 @@
+/**
+ * keeps the courses page focused and readable.
+ */
 import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { useAdmin } from "../contexts/AdminContext";
 import { useNavigate } from "react-router-dom";
@@ -34,7 +37,7 @@ import {
 
 import RichTextRenderer from "../components/plugins/RichTextRenderer";
 
-// Coupon Form Component with debounce
+// coupon form component with debounce
 const CouponForm = ({ courseId, onSuccess, onCancel }) => {
   const { createCoupon, fetchCourseCoupons } = useAdmin();
   const [formData, setFormData] = useState({
@@ -50,7 +53,7 @@ const CouponForm = ({ courseId, onSuccess, onCancel }) => {
 
   const discountOptions = [2, 5, 10, 15, 20];
 
-  // Load existing coupons for duplicate check
+  // load existing coupons for duplicate check
   useEffect(() => {
     const loadCoupons = async () => {
       const result = await fetchCourseCoupons(courseId);
@@ -61,7 +64,7 @@ const CouponForm = ({ courseId, onSuccess, onCancel }) => {
     loadCoupons();
   }, [courseId]);
 
-  // Debounced duplicate check
+  // debounced duplicate check
   const checkDuplicateCoupon = useCallback(
     (code) => {
       if (!code || code.length < 4) return;
@@ -168,7 +171,7 @@ const CouponForm = ({ courseId, onSuccess, onCancel }) => {
               .toUpperCase()
               .replace(/[^A-Z0-9]/g, "");
             setFormData({ ...formData, code: value });
-            debouncedDuplicateCheck(value); // ADD DEBOUNCED CHECK
+            debouncedDuplicateCheck(value); // debounced check
             if (errors.code) {
               setErrors({ ...errors, code: "" });
             }
@@ -179,7 +182,7 @@ const CouponForm = ({ courseId, onSuccess, onCancel }) => {
           placeholder="e.g., SAVE20"
           maxLength={20}
         />
-        {/* ADD CHECKING INDICATOR */}
+        {/* checking indicator */}
         {checkingDuplicate && (
           <p className="text-blue-500 text-xs mt-1 flex items-center">
             <Loader2 className="h-3 w-3 animate-spin mr-1" />
@@ -399,7 +402,7 @@ const CourseCoupons = ({ courseId }) => {
   );
 };
 
-// Video Player Modal Component
+// video player modal component
 const VideoPlayerModal = ({ video, onClose }) => {
   if (!video) return null;
 
@@ -443,7 +446,7 @@ const VideoPlayerModal = ({ video, onClose }) => {
   return (
     <div className="fixed inset-0 bg-white/10 backdrop-blur-md flex items-center justify-center p-2 sm:p-4 z-50">
       <div className="bg-white rounded-xl shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-hidden flex flex-col">
-        {/* Header */}
+        {/* header */}
         <div className="flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-200 bg-gray-50">
           <div className="truncate">
             <h3 className="text-base sm:text-lg font-semibold text-gray-900 truncate">
@@ -461,7 +464,7 @@ const VideoPlayerModal = ({ video, onClose }) => {
           </button>
         </div>
 
-        {/* Video Player */}
+        {/* video player */}
         <div className="relative bg-black flex-1 w-full">
           <div
             className="relative w-full h-0"
@@ -479,7 +482,7 @@ const VideoPlayerModal = ({ video, onClose }) => {
           </div>
         </div>
 
-        {/* Footer */}
+        {/* footer */}
         <div className="px-4 sm:px-6 py-3 sm:py-4 bg-gray-50 border-t border-gray-200">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
             <a
@@ -516,7 +519,7 @@ const VideoPlayerModal = ({ video, onClose }) => {
   );
 };
 
-// Generic Confirmation Modal
+// generic confirmation modal
 const ConfirmationModal = ({ modal, onClose }) => {
   if (!modal) return null;
 
@@ -600,7 +603,7 @@ const Courses = () => {
     togglePdfExport,
   } = useAdmin();
 
-  // State management
+  // state management
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("");
   const [selectedStatus, setSelectedStatus] = useState("");
@@ -669,7 +672,7 @@ const Courses = () => {
     initializeData();
   }, []);
 
-  // Handle URL parameters for editing/managing
+  // handle url parameters for editing/managing
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const editCourseId = urlParams.get("edit");
@@ -688,7 +691,7 @@ const Courses = () => {
         handleExpandCourse(manageCourseId);
       }
     }
-  }, [courses]); // Run when courses are loaded
+  }, [courses]); // run when courses are loaded
 
   const loadCourseCoupons = async (courseId) => {
     setLoadingCoupons((prev) => ({ ...prev, [courseId]: true }));
@@ -700,7 +703,7 @@ const Courses = () => {
   };
 
   useEffect(() => {
-    // Initialize courseQuestions for all courses when courses are loaded
+    // initialize coursequestions for all courses when courses are loaded
     if (courses.length > 0) {
       const initialQuestions = {};
       courses.forEach((course) => {
@@ -711,7 +714,7 @@ const Courses = () => {
       setCourseQuestions((prev) => ({ ...prev, ...initialQuestions }));
     }
   }, [courses]);
-  // Memoized filtered and sorted courses
+  // memoized filtered and sorted courses
   const filteredAndSortedCourses = useMemo(() => {
     let filtered = courses.filter((course) => {
       const matchesSearch =
@@ -722,7 +725,7 @@ const Courses = () => {
       const matchesCategory =
         !selectedCategory ||
         (() => {
-          // Handle populated category object
+          // handle populated category object
           if (
             course.category &&
             typeof course.category === "object" &&
@@ -730,11 +733,11 @@ const Courses = () => {
           ) {
             return course.category._id.toString() === selectedCategory;
           }
-          // Handle direct ObjectId reference
+          // handle direct objectid reference
           if (course.category && typeof course.category === "string") {
             return course.category === selectedCategory;
           }
-          // Handle categoryId field (if it exists)
+          // handle categoryid field (if it exists)
           if (course.categoryId) {
             return course.categoryId === selectedCategory;
           }
@@ -759,7 +762,7 @@ const Courses = () => {
       );
     });
 
-    // Sort courses
+    // sort courses
     switch (sortBy) {
       case "newest":
         filtered.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
@@ -793,13 +796,13 @@ const Courses = () => {
 
   useEffect(() => {
     if (expandedCourse) {
-      // Clean up selection states when switching courses
+      // clean up selection states when switching courses
       setSelectedQuestions({});
       setSelectAllStates({});
     }
   }, [expandedCourse]);
 
-  // Add this custom hook at the top of the Courses component
+  // this custom hook at the top of the courses component
   const useStatePreservation = () => {
     const preserveExpandedStates = useCallback(
       () => ({
@@ -835,7 +838,7 @@ const Courses = () => {
       url.searchParams.set("manage", courseId);
       window.history.pushState({}, "", url);
 
-      // Always fetch questions when expanding, but don't show loading if we have cached data
+      // always fetch questions when expanding, but don't show loading if we have cached data
       if (!courseQuestions[courseId]) {
         setQuestionsLoading((prev) => ({ ...prev, [courseId]: true }));
       }
@@ -873,7 +876,7 @@ const Courses = () => {
         newSelected = current.filter((id) => id !== questionId);
       }
 
-      // Update selectAllStates based on the new selection
+      // update selectallstates based on the selection
       setSelectAllStates((prevStates) => ({
         ...prevStates,
         [key]: newSelected.length === questions.length && questions.length > 0,
@@ -890,7 +893,7 @@ const Courses = () => {
       currentSelected.length === questions.length && questions.length > 0;
 
     if (!isCurrentlyAllSelected) {
-      // Select all questions
+      // select all questions
       setSelectedQuestions((prev) => ({
         ...prev,
         [key]: questions.map((q) => q._id),
@@ -900,7 +903,7 @@ const Courses = () => {
         [key]: true,
       }));
     } else {
-      // Deselect all questions
+      // deselect all questions
       setSelectedQuestions((prev) => ({
         ...prev,
         [key]: [],
@@ -921,7 +924,7 @@ const Courses = () => {
       return;
     }
 
-    // Show confirmation modal instead of window.confirm
+    // show confirmation modal instead of window.confirm
     setBulkDeleteConfirmation({
       courseId,
       difficulty,
@@ -939,7 +942,7 @@ const Courses = () => {
     const result = await bulkDeleteQuestions(courseId, questionsToDelete);
 
     if (result.success && result.successful > 0) {
-      // Update local state directly without server fetch
+      // update local state directly without server fetch
       const key = `${courseId}-${difficulty}`;
       const questionsToDelete = selectedQuestions[key] || [];
 
@@ -950,7 +953,7 @@ const Courses = () => {
         ),
       }));
 
-      // Clear selections
+      // clear selections
       setSelectedQuestions((prev) => ({ ...prev, [key]: [] }));
       setSelectAllStates((prev) => ({ ...prev, [key]: false }));
     }
@@ -1020,7 +1023,7 @@ const Courses = () => {
     };
   };
 
-  // Reset filters
+  // reset filters
   const resetFilters = () => {
     setSearchTerm("");
     setSelectedCategory("");
@@ -1030,8 +1033,8 @@ const Courses = () => {
   };
 
   /**
-   * Handle course edit - Initialize edit form with latest course data
-   * @param {Object} course - Course object to edit
+   * handle course edit - initialize edit form with latest course data
+   * @param {object} course - course object to edit
    */
   const handleEditCourse = (course) => {
     const latestCourse = courses.find((c) => c._id === course._id) || course;
@@ -1045,11 +1048,11 @@ const Courses = () => {
       category: latestCourse.category?._id || latestCourse.categoryId || null,
       isPaid: latestCourse.isPaid || false,
       price: latestCourse.price || 0,
-      hasPdfExport: latestCourse.hasPdfExport || false, // This will now have the correct value
+      hasPdfExport: latestCourse.hasPdfExport || false, // this will now have the correct value
     });
     setErrors({});
 
-    // Update URL without page reload
+    // update url without page reload
     const url = new URL(window.location);
     url.searchParams.set("edit", latestCourse._id);
     window.history.pushState({}, "", url);
@@ -1086,7 +1089,7 @@ const Courses = () => {
   const handleToggleCourseStatus = async (course) => {
     const result = await toggleCourseStatus(course._id);
     if (result.success) {
-      // Refresh courses list in background
+      // refresh courses list in background
       await fetchCourses();
     }
   };
@@ -1101,10 +1104,10 @@ const Courses = () => {
 
     setErrors({});
 
-    // Preserve expansion state
+    // preserve expansion state
     const currentExpandedCourse = expandedCourse;
 
-    console.log("[UPDATE] Sending data:", {
+    console.log("Sending data:", {
       courseId: editingCourse._id,
       hasPdfExport: editFormData.hasPdfExport,
       isPaid: editFormData.isPaid,
@@ -1114,24 +1117,24 @@ const Courses = () => {
     const result = await updateCourse(editingCourse._id, editFormData);
 
     if (result.success) {
-      console.log("[UPDATE] Received response:", {
+      console.log("Received response:", {
         hasPdfExport: result.updatedCourse?.hasPdfExport,
         isPaid: result.updatedCourse?.isPaid,
       });
 
-      // Close edit modal first
+      // close edit modal first
       setEditingCourse(null);
       setEditFormData({});
 
-      // Clear URL parameters
+      // clear url parameters
       const url = new URL(window.location);
       url.searchParams.delete("edit");
       window.history.pushState({}, "", url);
 
-      // Let fetchCourses handle the state update through AdminContext
+      // let fetchcourses handle the state update through admincontext
       await fetchCourses(false); // false = don't show loading spinner
 
-      // Restore expansion state
+      // restore expansion state
       if (currentExpandedCourse) {
         setExpandedCourse(currentExpandedCourse);
       }
@@ -1145,19 +1148,19 @@ const Courses = () => {
     setEditFormData({});
     setEditingQuestion(null);
     setQuestionFormData({});
-    // Clear URL parameters
+    // clear url parameters
     const url = new URL(window.location);
     url.searchParams.delete("edit");
     window.history.pushState({}, "", url);
   };
 
   /**
-   * Validate difficulty settings form
-   * @param {Object} formData - Difficulty settings data
-   * @param {number} courseMaxMarks - Course maximum marks
-   * @param {Array} allDifficulties - All course difficulties for total marks calculation
-   * @param {string} currentDifficulty - Current difficulty being edited
-   * @returns {Object} Validation errors object
+   * validate difficulty settings form
+   * @param {object} formdata - difficulty settings data
+   * @param {number} coursemaxmarks - course maximum marks
+   * @param {array} alldifficulties - all course difficulties for total marks calculation
+   * @param {string} currentdifficulty - current difficulty being edited
+   * @returns {object} validation errors object
    */
   const validateDifficultyForm = (
     formData,
@@ -1167,7 +1170,7 @@ const Courses = () => {
   ) => {
     const newErrors = {};
 
-    // Validate marksPerQuestion
+    // validate marksperquestion
     if (!formData.marksPerQuestion || formData.marksPerQuestion === "") {
       newErrors.marksPerQuestion = "Marks per question is required";
     } else if (parseInt(formData.marksPerQuestion) < 1) {
@@ -1176,21 +1179,21 @@ const Courses = () => {
       newErrors.marksPerQuestion = "Marks per question cannot exceed 100";
     }
 
-    // Validate maxQuestions
+    // validate maxquestions
     if (!formData.maxQuestions || formData.maxQuestions === "") {
       newErrors.maxQuestions = "Max questions is required";
     } else if (parseInt(formData.maxQuestions) < 1) {
       newErrors.maxQuestions = "Max questions must be at least 1";
     }
 
-    // Validate minTime
+    // validate mintime
     if (!formData.minTime || formData.minTime === "") {
       newErrors.minTime = "Min time is required";
     } else if (parseInt(formData.minTime) < 1) {
       newErrors.minTime = "Min time must be at least 1 second";
     }
 
-    // Validate maxTime
+    // validate maxtime
     if (!formData.maxTime || formData.maxTime === "") {
       newErrors.maxTime = "Max time is required";
     } else if (parseInt(formData.maxTime) < 1) {
@@ -1199,7 +1202,7 @@ const Courses = () => {
       newErrors.maxTime = "Max time must be greater than min time";
     }
 
-    // Validate total marks calculation
+    // validate total marks calculation
     if (
       Object.keys(newErrors).length === 0 &&
       courseMaxMarks &&
@@ -1209,12 +1212,12 @@ const Courses = () => {
 
       allDifficulties.forEach((diff) => {
         if (diff.name === currentDifficulty) {
-          // Use new values for current difficulty
+          // use values for current difficulty
           totalMarks +=
             parseInt(formData.marksPerQuestion) *
             parseInt(formData.maxQuestions);
         } else {
-          // Use existing values for other difficulties
+          // use existing values for other difficulties
           totalMarks += diff.marksPerQuestion * diff.maxQuestions;
         }
       });
@@ -1242,9 +1245,9 @@ const Courses = () => {
   };
 
   /**
-   * Open difficulty edit modal
-   * @param {Object} course - Course object
-   * @param {string} difficultyName - Difficulty name (Easy, Medium, Hard)
+   * open difficulty edit modal
+   * @param {object} course - course object
+   * @param {string} difficultyname - difficulty name (easy, medium, hard)
    */
   const handleEditDifficulty = (course, difficultyName) => {
     const difficulty = course.difficulties.find(
@@ -1275,9 +1278,9 @@ const Courses = () => {
   };
 
   /**
-   * Calculate course maximum marks from all difficulties
-   * @param {Object} course - Course object
-   * @returns {number} Total maximum marks
+   * calculate course maximum marks from all difficulties
+   * @param {object} course - course object
+   * @returns {number} total maximum marks
    */
   const calculateCourseMaxMarks = (course) => {
     if (!course.difficulties || course.difficulties.length === 0) return 0;
@@ -1288,9 +1291,9 @@ const Courses = () => {
   };
 
   /**
-   * Handle difficulty form field changes
-   * @param {string} field - Field name
-   * @param {string|number} value - Field value
+   * handle difficulty form field s
+   * @param {string} field - field name
+   * @param {string|number} value - field value
    */
   const handleDifficultyFieldChange = (field, value) => {
     setDifficultyFormData((prev) => ({
@@ -1298,7 +1301,7 @@ const Courses = () => {
       [field]: value,
     }));
 
-    // Clear error for this field when user starts typing
+    // clear error for this field when user starts typing
     if (difficultyErrors[field]) {
       setDifficultyErrors((prev) => {
         const newErrors = { ...prev };
@@ -1309,12 +1312,12 @@ const Courses = () => {
   };
 
   /**
-   * Save difficulty settings
+   * save difficulty settings
    */
   const handleSaveDifficulty = async () => {
     if (!editingDifficulty) return;
 
-    // Validate form
+    // validate form
     const validationErrors = validateDifficultyForm(
       difficultyFormData,
       editingDifficulty.courseMaxMarks,
@@ -1325,13 +1328,13 @@ const Courses = () => {
     if (Object.keys(validationErrors).length > 0) {
       setDifficultyErrors(validationErrors);
 
-      // Show first error as toast
+      // show first error as toast
       const firstError = Object.values(validationErrors)[0];
       toast.error(firstError);
       return;
     }
 
-    // Prepare update data
+    // prepare update data
     const updatedDifficulties = editingDifficulty.allDifficulties.map(
       (diff) => {
         if (diff.name === editingDifficulty.difficulty) {
@@ -1356,7 +1359,7 @@ const Courses = () => {
       difficulties: updatedDifficulties,
     };
 
-    // Call update API
+    // call update api
     const result = await updateCourse(editingDifficulty.courseId, updateData);
 
     if (result.success) {
@@ -1372,7 +1375,7 @@ const Courses = () => {
       });
       setDifficultyErrors({});
 
-      // Refresh courses
+      // refresh courses
       await fetchCourses();
     } else {
       toast.error(result.message || "Failed to update difficulty settings");
@@ -1380,7 +1383,7 @@ const Courses = () => {
   };
 
   /**
-   * Cancel difficulty editing
+   * cancel difficulty editing
    */
   const handleCancelDifficultyEdit = () => {
     setEditingDifficulty(null);
@@ -1395,7 +1398,7 @@ const Courses = () => {
 
   const handleConfirmDelete = async () => {
     if (deleteConfirmCourse) {
-      // Preserve expansion states before deletion
+      // preserve expansion states deletion
       const currentExpandedCourse = expandedCourse;
       const currentExpandedQuestions = { ...expandedQuestions };
 
@@ -1410,10 +1413,10 @@ const Courses = () => {
           return updated;
         });
 
-        // Refresh courses list
+        // refresh courses list
         await fetchCourses();
 
-        // Restore expansion states only if the deleted course wasn't the expanded one
+        // restore expansion states only if the deleted course wasn't the expanded one
         if (currentExpandedCourse !== deleteConfirmCourse._id) {
           setExpandedCourse(currentExpandedCourse);
           setExpandedQuestions(currentExpandedQuestions);
@@ -1422,13 +1425,13 @@ const Courses = () => {
       setDeleteConfirmCourse(null);
     }
   };
-  // Question editing handlers
+  // question editing handlers
   const handleEditQuestion = (question, courseId) => {
     setEditingQuestion({ ...question, courseId });
     setQuestionFormData({
       question: question.question || "",
       questionType: question.questionType || "single",
-      // Fix: Properly initialize based on question type
+      // properly initialize based on question type
       singleAnswer:
         question.questionType === "single" ? question.correctAnswer || "" : "",
       options:
@@ -1439,7 +1442,7 @@ const Courses = () => {
         question.questionType === "multiple" ? question.correctAnswer || 0 : 0,
       truefalseAnswer:
         question.questionType === "truefalse"
-          ? question.correctAnswer === 0 // 0 = True, 1 = False
+          ? question.correctAnswer === 0 // 0 = true, 1 = false
           : true,
       explanation: question.explanation || "",
       difficulty: question.difficulty || "Easy",
@@ -1460,7 +1463,7 @@ const Courses = () => {
     if (questionFormData.image && questionFormData.image.file) {
       updateData.image = questionFormData.image;
     }
-    // Set correctAnswer based on question type (not answer field)
+    // set correctanswer based on question type (not answer field)
     switch (questionFormData.questionType) {
       case "single":
         updateData.correctAnswer = questionFormData.singleAnswer;
@@ -1486,7 +1489,7 @@ const Courses = () => {
       if (result.success) {
         setEditingQuestion(null);
         setQuestionFormData({});
-        // Only update question data, preserve course expansion
+        // only update question data, preserve course expansion
         const questionsData = await fetchQuestions(editingQuestion.courseId);
         setCourseQuestions((prev) => ({
           ...prev,
@@ -1507,13 +1510,13 @@ const Courses = () => {
     const result = await deleteQuestion(courseId, questionId);
 
     if (result.success) {
-      // Only update local state - no refetch needed
+      // only update local state - no refetch needed
       setCourseQuestions((prev) => ({
         ...prev,
         [courseId]: (prev[courseId] || []).filter((q) => q._id !== questionId),
       }));
 
-      // Clear selections if question was selected
+      // clear selections if question was selected
       const allKeys = Object.keys(selectedQuestions);
       const updatedSelections = { ...selectedQuestions };
       allKeys.forEach((key) => {
@@ -1531,13 +1534,13 @@ const Courses = () => {
     const course = courses.find((c) => c._id === courseId);
 
     if (!difficulty) {
-      // If no difficulty specified, show difficulty selection
+      // if no difficulty specified, show difficulty selection
       const availableDifficulties = course?.difficulties || [];
       if (availableDifficulties.length === 1) {
-        // If only one difficulty, auto-select it
+        // if only one difficulty, auto-select it
         difficulty = availableDifficulties[0].name;
       } else {
-        // Show difficulty selection modal or dropdown
+        // show difficulty selection modal or dropdown
         setShowDifficultySelection({ courseId, availableDifficulties });
         return;
       }
@@ -1570,7 +1573,7 @@ const Courses = () => {
   const handleCreateQuestion = async () => {
     if (!addingQuestion) return;
 
-    // Validate question text (minlength: 10, maxlength: 1000)
+    // validate question text (minlength: 10, maxlength: 1000)
     if (!newQuestionData.question.trim()) {
       toast.error("Question text is required");
       return;
@@ -1584,7 +1587,7 @@ const Courses = () => {
       return;
     }
 
-    // Validate explanation (required: true, minlength: 10)
+    // validate explanation (required: true, minlength: 10)
     if (!newQuestionData.explanation.trim()) {
       toast.error("Explanation is required");
       return;
@@ -1594,7 +1597,7 @@ const Courses = () => {
       return;
     }
 
-    // Prepare question data based on type
+    // prepare question data based on type
     let answer = "";
     switch (newQuestionData.questionType) {
       case "single":
@@ -1602,7 +1605,7 @@ const Courses = () => {
           toast.error("Answer is required");
           return;
         }
-        // Validate answer length (minlength: 1, maxlength: 2500)
+        // validate answer length (minlength: 1, maxlength: 2500)
         if (newQuestionData.singleAnswer.trim().length > 2500) {
           toast.error("Answer cannot exceed 2500 characters");
           return;
@@ -1614,7 +1617,7 @@ const Courses = () => {
           toast.error("All options must be filled");
           return;
         }
-        // Validate selected answer length
+        // validate selected answer length
         const selectedAnswer =
           newQuestionData.options[newQuestionData.correctAnswer];
         if (selectedAnswer.length > 2500) {
@@ -1631,7 +1634,7 @@ const Courses = () => {
     const questionPayload = {
       course: addingQuestion.courseId,
       question: newQuestionData.question,
-      correctAnswer: answer, // Use correctAnswer instead of answer
+      correctAnswer: answer, // use correctanswer instead of answer
       explanation: newQuestionData.explanation,
       difficulty: addingQuestion.difficulty,
       marksPerQuestion: addingQuestion.marksPerQuestion,
@@ -1640,7 +1643,7 @@ const Courses = () => {
     if (newQuestionData.image && newQuestionData.image.file) {
       questionPayload.image = newQuestionData.image;
     }
-    // Add question type specific fields
+    // question type specific fields
     if (newQuestionData.questionType === "multiple") {
       questionPayload.options = newQuestionData.options;
       questionPayload.numberOfOptions = newQuestionData.options.length;
@@ -1672,7 +1675,7 @@ const Courses = () => {
     }
   };
 
-  // Handler to open video edit modal
+  // handler to open video edit modal
   const handleEditVideoContent = (course) => {
     setEditingVideoContent({
       courseId: course._id,
@@ -1680,7 +1683,7 @@ const Courses = () => {
       course: course,
     });
 
-    // Initialize form data with existing video content
+    // initialize form data with existing video content
     if (course.videoContent && course.videoContent.type !== "none") {
       setVideoEditFormData({
         type: course.videoContent.type,
@@ -1690,7 +1693,7 @@ const Courses = () => {
         difficultyVideos: course.videoContent.difficultyVideos || [],
       });
     } else {
-      // Initialize empty structure
+      // initialize empty structure
       const emptyDiffVideos =
         course.difficulties?.map((diff) => ({
           difficulty: diff.name,
@@ -1705,18 +1708,18 @@ const Courses = () => {
     }
   };
 
-  // Handler to save video content changes
+  // handler to save video content s
   const handleUpdateVideoContent = async () => {
     if (!editingVideoContent) return;
 
     try {
-      // Prepare update data
+      // prepare update data
       const updateData = {
         videoType: videoEditFormData.type,
       };
 
       if (videoEditFormData.type === "course") {
-        // Filter out empty links
+        // filter out empty links
         const validLinks = videoEditFormData.courseVideo.links.filter(
           (link) => link.url && link.url.trim(),
         );
@@ -1735,7 +1738,7 @@ const Courses = () => {
       } else if (videoEditFormData.type === "difficulty") {
         const diffVideosData = {};
 
-        // Process each difficulty
+        // process each difficulty
         for (const diffVideo of videoEditFormData.difficultyVideos) {
           const validLinks = diffVideo.links.filter(
             (link) => link.url && link.url.trim(),
@@ -1762,7 +1765,7 @@ const Courses = () => {
         updateData.videoType = "remove";
       }
 
-      // Call update API
+      // call update api
       const result = await updateCourse(
         editingVideoContent.courseId,
         updateData,
@@ -1777,7 +1780,7 @@ const Courses = () => {
           difficultyVideos: [],
         });
 
-        // Refresh courses
+        // refresh courses
         await fetchCourses();
       }
     } catch (error) {
@@ -1786,7 +1789,7 @@ const Courses = () => {
     }
   };
 
-  // Handler to remove all video content
+  // handler to remove all video content
   const handleRemoveAllVideos = async (courseId) => {
     try {
       const result = await updateCourse(courseId, {
@@ -1803,7 +1806,7 @@ const Courses = () => {
     }
   };
 
-  // Helper function to detect video platform
+  // helper function to detect video platform
   const detectPlatform = (url) => {
     if (!url) return "Unknown";
 
@@ -1836,13 +1839,13 @@ const Courses = () => {
   const handleImageUpload = (e, type) => {
     const file = e.target.files[0];
     if (file) {
-      // Add file size validation (e.g., 5MB limit)
+      // file size validation (e.g., 5mb limit)
       if (file.size > 5 * 1024 * 1024) {
         toast.error("Image size must be less than 5MB");
         return;
       }
 
-      // Add file type validation
+      // file type validation
       if (!file.type.startsWith("image/")) {
         toast.error("Please select a valid image file");
         return;
@@ -1865,7 +1868,7 @@ const Courses = () => {
     }
   };
 
-  // Add this new function for removing images
+  // this function for removing images
   const handleRemoveImage = (type) => {
     if (type === "edit") {
       setQuestionFormData({ ...questionFormData, image: null });
@@ -1879,7 +1882,7 @@ const Courses = () => {
 
   return (
     <div className="space-y-4 sm:space-y-6 p-3 sm:p-6 bg-gray-50 min-h-screen">
-      {/* Header */}
+      {/* header */}
       <div className="bg-white rounded-xl shadow-lg p-4 sm:p-6 border border-gray-100">
         <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4 sm:gap-6">
           <div className="flex items-center space-x-4">
@@ -1942,7 +1945,7 @@ const Courses = () => {
 
                 await fetchCourses();
 
-                // Restore all preserved states
+                // restore all preserved states
                 setExpandedCourse(preserveState.expandedCourse);
                 setExpandedQuestions(preserveState.expandedQuestions);
                 setSelectedQuestions(preserveState.selectedQuestions);
@@ -1967,11 +1970,11 @@ const Courses = () => {
           </div>
         </div>
 
-        {/* Filters Panel */}
+        {/* filters panel */}
         {(showFilters || hasActiveFilters) && (
           <div className="mt-6 pt-6 border-t border-gray-200 space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3 sm:gap-4">
-              {/* Search */}
+              {/* search */}
               <div className="sm:col-span-2 lg:col-span-2">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Search Courses
@@ -1988,7 +1991,7 @@ const Courses = () => {
                 </div>
               </div>
 
-              {/* Category Filter */}
+              {/* category filter */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Category
@@ -2007,7 +2010,7 @@ const Courses = () => {
                 </select>
               </div>
 
-              {/* Status Filter */}
+              {/* status filter */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Status
@@ -2023,7 +2026,7 @@ const Courses = () => {
                 </select>
               </div>
 
-              {/* Sort */}
+              {/* sort */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Sort By
@@ -2061,7 +2064,7 @@ const Courses = () => {
         )}
       </div>
 
-      {/* Courses List */}
+      {/* courses list */}
       <div className="bg-white rounded-xl shadow-lg overflow-hidden border border-gray-100">
         <div className="px-6 py-4 border-b border-gray-200 bg-gray-50">
           <div className="flex items-center justify-between">
@@ -2159,9 +2162,9 @@ const Courses = () => {
                   key={course._id}
                   className="p-4 sm:p-6 hover:bg-gray-50 transition-colors duration-150"
                 >
-                  {/* Course Header */}
+                  {/* course header */}
                   <div className="flex flex-col sm:flex-row items-start space-y-4 sm:space-y-0 sm:space-x-4">
-                    {/* Course Image */}
+                    {/* course image */}
                     <div className="flex-shrink-0">
                       {course.image ? (
                         <img
@@ -2181,7 +2184,7 @@ const Courses = () => {
                       )}
                     </div>
 
-                    {/* Course Details */}
+                    {/* course details */}
                     <div className="flex-1 min-w-0">
                       <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between">
                         <div className="flex-1 lg:pr-4">
@@ -2204,7 +2207,7 @@ const Courses = () => {
                             </p>
                           )}
 
-                          {/* Course Metadata */}
+                          {/* course metadata */}
                           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4 text-sm">
                             <div className="flex items-center space-x-2 text-gray-500">
                               <Calendar className="h-4 w-4 text-blue-500" />
@@ -2264,7 +2267,7 @@ const Courses = () => {
                           </div>
                         </div>
 
-                        {/* Action Buttons */}
+                        {/* action buttons */}
                         <div className="flex flex-row items-start justify-start lg:justify-end gap-1 sm:gap-2 mt-4 lg:mt-0 lg:ml-2 w-full lg:w-auto lg:flex-shrink-0">
                           <button
                             onClick={() => handleExpandCourse(course._id)}
@@ -2315,10 +2318,10 @@ const Courses = () => {
                     </div>
                   </div>
 
-                  {/* Expanded Course Details - KEEP THIS ONE */}
+                  {/* expanded course details - keep this one */}
                   {isExpanded && (
                     <div className="mt-8 pt-8 border-t border-gray-200 space-y-8 animate-in slide-in-from-top-4 duration-300">
-                      {/* Course Configuration - KEEP AND MODIFY */}
+                      {/* course configuration - keep and modify */}
                       {course.difficulties &&
                         course.difficulties.length > 0 && (
                           <div>
@@ -2332,7 +2335,7 @@ const Courses = () => {
                                   key={level.name}
                                   className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl p-4 sm:p-6 border border-gray-200 hover:shadow-md transition-all duration-200 relative group"
                                 >
-                                  {/* ADD EDIT BUTTON */}
+                                  {/* edit button */}
                                   <button
                                     onClick={() =>
                                       handleEditDifficulty(course, level.name)
@@ -2343,7 +2346,7 @@ const Courses = () => {
                                     <Edit2 className="h-4 w-4" />
                                   </button>
 
-                                  {/* Rest of the card content remains same */}
+                                  {/* rest of the card content remains same */}
                                   <div className="flex items-center justify-between mb-4">
                                     <span
                                       className={`px-3 py-1 text-sm font-semibold rounded-full ${getDifficultyColor(
@@ -2421,7 +2424,7 @@ const Courses = () => {
                             </div>
                           </div>
                         )}
-                      {/* Test Results / PDF Download Section */}
+                      {/* test results / pdf download section */}
                       <div className="mt-8 pt-8 border-t border-gray-200">
                         <div className="flex items-center justify-between mb-4">
                           <h4 className="text-lg font-semibold text-gray-900 flex items-center space-x-2">
@@ -2441,7 +2444,7 @@ const Courses = () => {
                             <span>Course Data Export</span>
                           </h4>
 
-                          {/* Toggle PDF Export Button */}
+                          {/* toggle pdf export button */}
                           <button
                             onClick={() => togglePdfExport(course._id)}
                             className={`inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium transition-all cursor-pointer ${
@@ -2486,7 +2489,7 @@ const Courses = () => {
                           </button>
                         </div>
 
-                        {/* Conditional Content */}
+                        {/* conditional content */}
                         {course.hasPdfExport ? (
                           <div className="bg-gray-50 rounded-lg p-4">
                             <p className="text-sm text-gray-600 mb-4">
@@ -2495,7 +2498,7 @@ const Courses = () => {
                               Users can also download their test results.
                             </p>
 
-                            {/* Admin Download Button */}
+                            {/* admin download button */}
                             <div className="flex items-center space-x-4">
                               <button
                                 onClick={() => downloadCoursePDF(course._id)}
@@ -2550,7 +2553,7 @@ const Courses = () => {
                         )}
                       </div>
 
-                      {/* Questions Section */}
+                      {/* questions section */}
                       <div>
                         <div className="flex items-center justify-between mb-6">
                           <h4 className="text-lg font-semibold text-gray-900 flex items-center space-x-2">
@@ -2610,7 +2613,7 @@ const Courses = () => {
                                             </button>
                                           )}
 
-                                          {/* Bulk selection controls */}
+                                          {/* bulk selection controls */}
                                           {questions.length > 0 && (
                                             <>
                                               <button
@@ -3210,7 +3213,7 @@ const Courses = () => {
                                         {link.url && (
                                           <div className="flex items-center justify-between">
                                             <span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-green-100 text-green-800">
-                                              ✓ {detectPlatform(link.url)}
+                                              platform: {detectPlatform(link.url)}
                                             </span>
 
                                             <a
@@ -3379,7 +3382,7 @@ const Courses = () => {
                                               {link.url && (
                                                 <div className="flex items-center justify-between">
                                                   <span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-green-100 text-green-800">
-                                                    ✓ {detectPlatform(link.url)}
+                                                    platform: {detectPlatform(link.url)}
                                                   </span>
 
                                                   <a
@@ -3928,7 +3931,7 @@ const Courses = () => {
                           : "border-gray-200 hover:border-blue-300"
                       }`}
                     >
-                      ✅ True
+                      True
                     </button>
                     <button
                       onClick={() =>
@@ -3943,7 +3946,7 @@ const Courses = () => {
                           : "border-gray-200 hover:border-blue-300"
                       }`}
                     >
-                      ❌ False
+                      no False
                     </button>
                   </div>
                 )}
@@ -4366,7 +4369,6 @@ const Courses = () => {
                       }`}
                     >
                       <div className="flex items-center justify-center space-x-2">
-                        <span className="text-lg">✅</span>
                         <span>True</span>
                       </div>
                     </button>
@@ -4384,7 +4386,7 @@ const Courses = () => {
                       }`}
                     >
                       <div className="flex items-center justify-center space-x-2">
-                        <span className="text-lg">❌</span>
+                        <span className="text-lg">no</span>
                         <span>False</span>
                       </div>
                     </button>

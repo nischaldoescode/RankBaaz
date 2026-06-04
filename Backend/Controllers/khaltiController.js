@@ -1,3 +1,6 @@
+/**
+ * keeps the khalti controller controller focused and readable.
+ */
 import axios from "axios";
 import Course from "../Models/Course.js";
 import Payment from "../Models/Payment.js";
@@ -11,7 +14,7 @@ const KHALTI_BASE = process.env.NODE_ENV === "production"
 const KHALTI_SECRET = process.env.KHALTI_SECRET_KEY;
 
 /**
- * initiate khalti payment — nepal only
+ * starts a khalti payment for nepal.
  */
 export const initiateKhaltiPayment = async (req, res) => {
   try {
@@ -48,7 +51,7 @@ export const initiateKhaltiPayment = async (req, res) => {
     }
 
     const purchaseOrderId = `VG-${courseId.toString().slice(-8)}-${Date.now()}`;
-    const amountPaisa = Math.round(course.price * 100); // NPR to paisa
+    const amountPaisa = Math.round(course.price * 100); // npr to paisa
 
     const payload = {
       return_url: `${process.env.FRONTEND_URL}/payment/khalti/callback`,
@@ -59,7 +62,7 @@ export const initiateKhaltiPayment = async (req, res) => {
       customer_info: {
         name: req.user.name || "Student",
         email: req.user.email || "",
-        phone: "9800000001", // placeholder — can collect from user
+        phone: "9800000001", // placeholder until phone is collected
       },
       merchant_extra: JSON.stringify({
         courseId: courseId.toString(),
@@ -96,7 +99,7 @@ export const initiateKhaltiPayment = async (req, res) => {
 };
 
 /**
- * verify khalti payment after callback
+ * verify khalti payment callback
  */
 export const verifyKhaltiPayment = async (req, res) => {
   try {
@@ -167,7 +170,7 @@ export const verifyKhaltiPayment = async (req, res) => {
       course: courseId,
       orderId: pidx,
       paymentId: transaction_id,
-      amount: total_amount / 100, // paisa to NPR
+      amount: total_amount / 100, // paisa to npr
       originalAmount: course.price,
       currency: "NPR",
       status: "success",
@@ -208,7 +211,7 @@ export const verifyKhaltiPayment = async (req, res) => {
 };
 
 /**
- * khalti callback handler (GET — after user returns from payment portal)
+ * handles the user returning from khalti.
  * frontend handles the redirect; this is for backend confirmation only
  */
 export const khaltiCallback = async (req, res) => {

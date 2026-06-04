@@ -1,3 +1,6 @@
+/**
+ * keeps the test page focused and readable.
+ */
 import React, { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
@@ -50,8 +53,8 @@ const Test = () => {
     submitAnswer,
     nextQuestion,
     submitTest,
-    // pauseTest,
-    // resumeTest,
+    // pausetest,
+    // resumetest,
     resetTest,
     isLastQuestion,
     answeredQuestions,
@@ -71,17 +74,17 @@ const Test = () => {
   const [showReloadWarning, setShowReloadWarning] = useState(false);
   const [answers, setAnswers] = useState({});
   const [allDifficultyResults, setAllDifficultyResults] = useState([]);
-  const [courseLoading, setCourseLoading] = useState(true); // ADD THIS LINE
+  const [courseLoading, setCourseLoading] = useState(true); // this line
 
   const primaryColors = getPrimaryColorClasses();
 
   useEffect(() => {
-    // Only run in production
+    // only run in production
     if (import.meta.env.MODE !== "production") {
       return;
     }
 
-    // Skip if not in active test
+    // skip if not in active test
     if (!testState.isActive || testPhase !== "active") {
       return;
     }
@@ -89,28 +92,28 @@ const Test = () => {
     let detectionInterval;
     let performanceCheck;
 
-    // Method 1: Console detection
+    // method 1: console detection
     const consoleCheck = () => {
       const startTime = performance.now();
-      debugger; // Will pause if DevTools open
+      debugger; // will pause if devtools open
       const endTime = performance.now();
 
-      // If execution takes >100ms, DevTools likely open
+      // if execution takes >100ms, devtools likely open
       return endTime - startTime > 100;
     };
 
-    // Method 2: Window size detection
+    // method 2: window size detection
     const sizeCheck = () => {
       const widthThreshold = window.outerWidth - window.innerWidth > 160;
       const heightThreshold = window.outerHeight - window.innerHeight > 160;
       return widthThreshold || heightThreshold;
     };
 
-    // Method 3: Performance timing check
+    // method 3: performance timing check
     performanceCheck = () => {
       const start = performance.now();
 
-      // Trigger potential DevTools detection
+      // trigger potential devtools detection
       const devtools = /./;
       devtools.toString = function () {
         return true;
@@ -122,7 +125,7 @@ const Test = () => {
       return end - start > 100;
     };
 
-    // Combined detection
+    // combined detection
     const detectDevTools = () => {
       const detected = consoleCheck() || sizeCheck() || performanceCheck();
 
@@ -134,13 +137,13 @@ const Test = () => {
       }
     };
 
-    // Run detection every 1 second
+    // run detection every 1 second
     detectionInterval = setInterval(detectDevTools, 1000);
 
-    // Also detect on window resize
+    // also detect on window resize
     window.addEventListener("resize", detectDevTools);
 
-    // Prevent right-click context menu
+    // prevent right-click context menu
     const preventContextMenu = (e) => {
       if (testState.isActive && testPhase === "active") {
         e.preventDefault();
@@ -150,7 +153,7 @@ const Test = () => {
 
     document.addEventListener("contextmenu", preventContextMenu);
 
-    // Prevent F12 and Ctrl+Shift+I
+    // prevent f12 and ctrl+shift+i
     const preventDevToolsShortcuts = (e) => {
       if (testState.isActive && testPhase === "active") {
         if (
@@ -168,7 +171,7 @@ const Test = () => {
     };
 
     document.addEventListener("keydown", preventDevToolsShortcuts);
-    // NEW: Tab change / window inactive detection
+    // tab / window inactive detection
     const handleVisibilityChange = () => {
       if (document.hidden && testState.isActive && testPhase === "active") {
         toast.error(
@@ -190,7 +193,7 @@ const Test = () => {
     };
   }, [testState.isActive, testPhase, devToolsOpen, violationRecorded]);
 
-  // NEW: Handle DevTools detection (INSTANT BAN)
+  // handle devtools detection (instant ban)
   const handleDevToolsDetected = async () => {
     if (violationRecorded) return;
 
@@ -203,13 +206,13 @@ const Test = () => {
         detectionMethod: "multiple",
       });
 
-      // CHANGED: Instant ban message (no warnings)
+      // d: instant ban message (no warnings)
       if (response.data.banned || response.data.success === false) {
         const pointsDeducted = response.data.pointsDeducted || 10;
 
-        // Show severe warning toast
+        // show severe warning toast
         toast.error(
-          `🚫 SECURITY VIOLATION DETECTED!\n\n` +
+          ` SECURITY VIOLATION DETECTED!\n\n` +
             `DevTools/Inspector usage is strictly prohibited.\n` +
             `-${pointsDeducted} points deducted.\n\n` +
             `You have been permanently banned from "${courseData?.name}".`,
@@ -224,19 +227,19 @@ const Test = () => {
           }
         );
 
-        // CHANGED: Immediate redirect (reduced delay to 3 seconds)
+        // d: immediate redirect (reduced delay to 3 seconds)
         setTimeout(() => {
           resetTest();
           navigate("/courses");
         }, 3000);
       } else {
-        // This branch should never execute with instant ban
+        // this branch should never execute with instant ban
         toast.error("Violation recorded", { duration: 5000 });
       }
     } catch (error) {
       console.error("Failed to record violation:", error);
 
-      // Still redirect on error to prevent cheating
+      // still redirect on error to prevent cheating
       toast.error("Security violation detected. Exiting test.", {
         duration: 5000,
       });
@@ -247,56 +250,56 @@ const Test = () => {
     }
   };
 
-  // Initialize test phase based on current state
+  // initialize test phase based on current state
   useEffect(() => {
     if (testResult) {
-      // console.log("Setting phase to result");
+      // console.log("setting phase to result");
       setTestPhase("result");
     } else if (currentTest && testState.isActive) {
       if (testState.isPaused) {
-        // console.log("Setting phase to paused");
+        // console.log("setting phase to paused");
         setTestPhase("paused");
       } else {
-        // console.log("Setting phase to active");
+        // console.log("setting phase to active");
         setTestPhase("active");
       }
     } else if (currentTest) {
-      // console.log("Setting phase to start");
+      // console.log("setting phase to start");
       setTestPhase("start");
     } else {
-      // console.log("No valid state, keeping current phase:", testPhase);
+      // console.log("no valid state, keeping current phase:", testphase);
     }
   }, [currentTest, testResult, testState, currentQuestion]);
 
-  // Reset test state when course changes
+  // reset test state when course s
   useEffect(() => {
-    resetTest(); // Clear old test data
+    resetTest(); // clear old test data
     setSelectedDifficulty(null);
     setTestPhase("start");
     setCourseData(null);
   }, [courseId]);
 
   useEffect(() => {
-    // Skip if course data hasn't loaded yet
+    // skip if course data hasn't loaded yet
     if (!courseData) {
       return;
     }
 
-    // Check if user came directly to test URL
+    // check if user came directly to test url
     const cameFromCourses =
       document.referrer.includes("/courses") ||
       sessionStorage.getItem(`test_access_${courseId}`) === "granted";
 
-    // Only enforce checks if NOT from courses page
+    // only enforce checks if not from courses page
     if (!cameFromCourses && !currentTest && !testResult) {
-      // Authentication check
+      // authentication check
       if (!isAuthenticated) {
         toast.error("Please login to access tests");
         navigate("/login", { state: { from: location } });
         return;
       }
 
-      // Paid course check
+      // paid course check
       if (courseData.isPaid) {
         const checkPurchase = async () => {
           try {
@@ -310,7 +313,7 @@ const Test = () => {
               return;
             }
 
-            // Access granted
+            // access granted
             sessionStorage.setItem(`test_access_${courseId}`, "granted");
           } catch (error) {
             console.error("Purchase error", error);
@@ -321,7 +324,7 @@ const Test = () => {
 
         checkPurchase();
       } else {
-        // Free course - grant access immediately
+        // free course - grant access immediately
         sessionStorage.setItem(`test_access_${courseId}`, "granted");
       }
     }
@@ -335,14 +338,14 @@ const Test = () => {
     testResult,
   ]);
 
-  // Clear session flag when component unmounts
+  // clear session flag when component unmounts
   useEffect(() => {
     return () => {
       sessionStorage.removeItem(`test_access_${courseId}`);
     };
   }, [courseId]);
 
-  // Handle browser navigation with custom modal
+  // handle browser navigation with custom modal
   useEffect(() => {
     const handleBeforeUnload = (e) => {
       if (testState.isActive && !testState.isPaused && testPhase !== "result") {
@@ -384,19 +387,19 @@ const Test = () => {
       }
     };
 
-    // Always add listeners (but they only act when test is active)
+    // always listeners (but they only act when test is active)
     window.addEventListener("beforeunload", handleBeforeUnload);
     window.addEventListener("popstate", handlePopState);
     window.addEventListener("visibilitychange", handleVisibilityChange);
     document.addEventListener("keydown", handleKeyDown, { capture: true });
 
-    // Push history state only when test becomes active
+    // push history state only when test becomes active
     if (testState.isActive) {
       window.history.pushState(null, "", window.location.pathname);
     }
 
     return () => {
-      // Always clean up all listeners
+      // always clean up all listeners
       window.removeEventListener("beforeunload", handleBeforeUnload);
       window.removeEventListener("popstate", handlePopState);
       window.removeEventListener("visibilitychange", handleVisibilityChange);
@@ -409,20 +412,20 @@ const Test = () => {
   };
 
   const handleTimeExpiredSubmit = useCallback(() => {
-    // console.log("Time expired - resetting test");
+    // console.log("time expired - resetting test");
 
-    // Close any open modals
+    // close any open modals
     setShowExitModal(false);
     setShowSubmitModal(false);
     setShowReloadWarning(false);
 
-    // Show toast notification
+    // show toast notification
     toast.error("Time expired! Test ended.", {
       duration: 3000,
       icon: "⏰",
     });
 
-    // Small delay for animation, then reset and navigate
+    // small delay for animation, then reset and navigate
     setTimeout(() => {
       resetTest();
       setAnswers({});
@@ -449,10 +452,10 @@ const Test = () => {
     timeRemaining: timeRemainingFormatted,
   });
 
-  // use effect to Auto-submit when time runs out
+  // use effect to auto-submit when time runs out
   useEffect(() => {
     if (testState.isActive && testState.timeRemaining === 0 && !testResult) {
-      // console.log("Time expired - resetting test");
+      // console.log("time expired - resetting test");
       handleTimeExpiredSubmit();
     }
   }, [
@@ -499,9 +502,9 @@ const Test = () => {
       setSelectedDifficulty(difficulty);
       setCourseData(course);
 
-      // Store the progression order starting from selected difficulty
+      // store the progression order starting from selected difficulty
       setAllDifficulties(remainingDifficulties);
-      setCurrentDifficultyIndex(0); // Start from index 0 of remaining difficulties
+      setCurrentDifficultyIndex(0); // start from index 0 of remaining difficulties
 
       setShowTerms(true);
     },
@@ -509,33 +512,33 @@ const Test = () => {
   );
 
   const handleStartTest = useCallback(async () => {
-    // CHANGE: Add auth verification BEFORE API call
+    // auth verification api call
     if (!isAuthenticated) {
-      // console.error("Authentication required");
+      // console.error("authentication required");
       toast.error("Please log in to start the test");
       navigate("/login", { state: { from: location } });
       return { success: false, error: "Not authenticated" };
     }
 
-    // CHANGE: Verify localStorage user exists
+    // verify localstorage user exists
     const storedUser = localStorage.getItem("user");
     if (!storedUser) {
-      // console.error("[START_TEST] No user in localStorage");
+      // console.error("no user in localstorage");
       toast.error("Session expired. Please login again.");
       navigate("/login", { state: { from: location } });
       return { success: false, error: "No session" };
     }
 
-    // console.log("[START_TEST] Auth check passed, proceeding with test start");
+    // console.log("auth check passed, proceeding with test start");
 
     if (!selectedDifficulty) {
-      // console.error("No difficulty selected");
+      // console.error("no difficulty selected");
       return { success: false, error: "No difficulty selected" };
     }
 
-    // Verify courseData is loaded
+    // verify coursedata is loaded
     if (!courseData) {
-      // console.error("Course data not loaded");
+      // console.error("course data not loaded");
       toast.error("Course information not loaded. Please try again.");
       return { success: false, error: "Course data missing" };
     }
@@ -543,22 +546,22 @@ const Test = () => {
     try {
       clearError();
 
-      // REMOVED: dispatch({ type: TEST_ACTIONS.SET_LOADING, payload: true });
-      // The loading state is already managed by the startTest function in TestContext
+      // dispatch({ type: test_actions.set_loading, payload: true });
+      // the loading state is already managed by the starttest function in testcontext
 
       // console.log(
-      //   `[START_TEST] Starting test for course: ${courseId}, difficulty: ${selectedDifficulty.name}`
+      //   `starting test for course: ${courseid}, difficulty: ${selecteddifficulty.name}`
       // );
 
       const result = await startTest(courseId, selectedDifficulty.name);
 
-      // Better error handling
+      // better error handling
       if (!result) {
         throw new Error("No response from start test");
       }
 
       if (result.success) {
-        // console.log("[START_TEST] Test started successfully");
+        // console.log("test started successfully");
         setTestPhase("active");
         setSelectedAnswer(null);
         setAnswers({});
@@ -566,13 +569,13 @@ const Test = () => {
       }
 
       if (result.isNoQuestionsError) {
-        // Auto-skip to next difficulty if no questions
+        // auto-skip to next difficulty if no questions
         const allDiffOrder = ["Easy", "Medium", "Hard"];
         const currentIndex = allDiffOrder.indexOf(selectedDifficulty.name);
         const nextDifficultyName = allDiffOrder[currentIndex + 1];
 
         if (nextDifficultyName) {
-          // Try next difficulty
+          // try next difficulty
           const nextDiff = courseData?.difficulties?.find(
             (d) => d.name === nextDifficultyName
           );
@@ -583,11 +586,11 @@ const Test = () => {
             );
             setSelectedDifficulty(nextDiff);
 
-            // Recursively try next difficulty
+            // recursively try next difficulty
             return handleStartTest();
           }
         } else {
-          // No more difficulties available
+          // no more difficulties available
           toast.error(
             "No difficulties with questions available for this course"
           );
@@ -596,24 +599,24 @@ const Test = () => {
         return result;
       }
 
-      // Handle authentication errors specifically
+      // handle authentication errors specifically
       if (
         result.error?.includes("Credentials") ||
         result.error?.includes("authentication")
       ) {
-        // console.error("[START_TEST] Authentication error");
+        // console.error("authentication error");
         toast.error("Session expired. Please login again.");
         navigate("/login", { state: { from: location } });
         return result;
       }
 
-      // console.error("[START_TEST] Test start failed:", result.error);
+      // console.error("test start failed:", result.error);
       toast.error(result.error || "Failed to start test");
       return result;
     } catch (error) {
-      // console.error("[START_TEST] Exception:", error);
+      // console.error("exception:", error);
 
-      // Handle network/auth errors
+      // handle network/auth errors
       if (error.response?.status === 401) {
         toast.error("Session expired. Please login again.");
         navigate("/login", { state: { from: location } });
@@ -623,7 +626,7 @@ const Test = () => {
 
       return { success: false, error: error.message };
     }
-    // REMOVED: finally block with dispatch
+    // finally block with dispatch
   }, [
     courseId,
     selectedDifficulty,
@@ -638,14 +641,14 @@ const Test = () => {
     setTermsAccepted(true);
     setShowTerms(false);
 
-    // Add loading state and proper error handling
+    // loading state and proper error handling
     try {
       const result = await handleStartTest();
       if (result && result.success) {
-        // console.log("Test started successfully after terms acceptance");
+        // console.log("test started successfully terms acceptance");
       }
     } catch (error) {
-      // console.error("Failed to start test after terms acceptance:", error);
+      // console.error("failed to start test terms acceptance:", error);
     }
   }, [handleStartTest]);
 
@@ -653,7 +656,7 @@ const Test = () => {
     setShowTerms(false);
     setSelectedDifficulty(null);
   }, []);
-  // Handle answer selection
+  // handle answer selection
   const handleAnswerSelect = useCallback(
     async (answer) => {
       if (!currentQuestion) return;
@@ -669,7 +672,7 @@ const Test = () => {
             [currentQuestion._id]: answer,
           }));
 
-          // Pass feedback to TestQuestion component
+          // pass feedback to testquestion component
           return { feedback: result.feedback };
         }
       } catch (error) {
@@ -680,7 +683,7 @@ const Test = () => {
   );
 
   const handleNextQuestion = useCallback(() => {
-    // CHANGE: Only allow navigation if answer was validated
+    // only allow navigation if answer was validated
     if (!currentQuestion || selectedAnswer === null) {
       toast.error("Please answer the current question first");
       return;
@@ -689,15 +692,15 @@ const Test = () => {
     const result = nextQuestion();
     setSelectedAnswer(null);
 
-    // NEW: Reset validation lock for next question
+    // reset validation lock for next question
     if (result.hasNext) {
-      // Question navigation successful
+      // question navigation successful
     } else {
-      // No more questions - prepare for difficulty completion
+      // no more questions - prepare for difficulty completion
     }
   }, [nextQuestion, currentQuestion, selectedAnswer]);
 
-  // Handle test submission
+  // handle test submission
   const handleSubmitTest = useCallback(async () => {
     try {
       const result = await submitTest();
@@ -707,7 +710,7 @@ const Test = () => {
         setShowSubmitModal(false);
       }
     } catch (error) {
-      // console.error("Failed to submit test:", error);
+      // console.error("failed to submit test:", error);
     }
   }, [submitTest]);
 
@@ -757,14 +760,14 @@ const Test = () => {
         const startResult = await startTest(courseId, nextDifficultyName);
 
         if (startResult.success) {
-          // Successfully started next difficulty
+          // successfully started next difficulty
           setSelectedDifficulty(nextDiff);
           setTestPhase("active");
           setAnswers({});
           setSelectedAnswer(null);
           toast.success(`Starting ${nextDifficultyName} difficulty`);
         } else if (startResult.isNoQuestionsError) {
-          // Next difficulty has no questions - try to find the next one
+          // next difficulty has no questions - try to find the next one
           toast(
             `No questions in ${nextDifficultyName}. Checking for more difficulties...`
           );
@@ -777,11 +780,11 @@ const Test = () => {
             subsequentDiff &&
             courseData.difficulties.find((d) => d.name === subsequentDiff)
           ) {
-            // Try the difficulty after the one with no questions
+            // try the difficulty the one with no questions
             const secondNextResult = await startTest(courseId, subsequentDiff);
 
             if (secondNextResult.success) {
-              // Successfully started the subsequent difficulty
+              // successfully started the subsequent difficulty
               const secondNextDiffObj = courseData.difficulties.find(
                 (d) => d.name === subsequentDiff
               );
@@ -791,14 +794,14 @@ const Test = () => {
               setSelectedAnswer(null);
               toast.success(`Starting ${subsequentDiff} difficulty`);
             } else if (secondNextResult.isNoQuestionsError) {
-              // Subsequent difficulty also has no questions - submit test
+              // subsequent difficulty also has no questions - submit test
               toast("No more difficulties available. Completing test...");
               const result = await submitTest(true, updatedResults);
 
               if (result.success) {
                 const { pointsEarned, rankInfo } = result.data || {};
 
-                // Show points and rank change
+                // show points and rank
                 if (pointsEarned && rankInfo) {
                   const { previousRank, newRank, rankChange } = rankInfo;
 
@@ -824,7 +827,7 @@ const Test = () => {
                   );
                 }
 
-                // Show new badges if any
+                // show badges if any
                 if (
                   result.data?.newBadges &&
                   result.data.newBadges.length > 0
@@ -832,7 +835,7 @@ const Test = () => {
                   setTimeout(() => {
                     toast.success(`New badge unlocked!`, {
                       duration: 5000,
-                      icon: "🏆",
+                      icon: "",
                     });
                   }, 1000);
                 }
@@ -840,19 +843,19 @@ const Test = () => {
                 setTestPhase("result");
               }
             } else {
-              // Error starting subsequent difficulty
+              // error starting subsequent difficulty
               console.error(secondNextResult);
               toast.error("Failed to start next difficulty");
             }
           } else {
-            // No subsequent difficulty exists - submit test with current results
+            // no subsequent difficulty exists - submit test with current results
             toast("No more difficulties available. Completing test...");
             const result = await submitTest(true, updatedResults);
 
             if (result.success) {
               const { pointsEarned, rankInfo } = result.data || {};
 
-              // Show points and rank change
+              // show points and rank
               if (pointsEarned && rankInfo) {
                 const { previousRank, newRank, rankChange } = rankInfo;
 
@@ -878,12 +881,12 @@ const Test = () => {
                 );
               }
 
-              // Show new badges if any
+              // show badges if any
               if (result.data?.newBadges && result.data.newBadges.length > 0) {
                 setTimeout(() => {
                   toast.success(`New badge unlocked!`, {
                     duration: 5000,
-                    icon: "🏆",
+                    icon: "",
                   });
                 }, 1000);
               }
@@ -892,18 +895,18 @@ const Test = () => {
             }
           }
         } else {
-          // Other error starting next difficulty
+          // other error starting next difficulty
           console.error(startResult);
           toast.error("Failed to start next difficulty");
         }
       } else {
-        // No more difficulties configured - submit test
+        // no more difficulties configured - submit test
         const result = await submitTest(true, updatedResults);
 
         if (result.success) {
           const { pointsEarned, rankInfo } = result.data || {};
 
-          // Show points and rank change
+          // show points and rank
           if (pointsEarned && rankInfo) {
             const { previousRank, newRank, rankChange } = rankInfo;
 
@@ -929,12 +932,12 @@ const Test = () => {
             );
           }
 
-          // Show new badges if any
+          // show badges if any
           if (result.data?.newBadges && result.data.newBadges.length > 0) {
             setTimeout(() => {
               toast.success(`New badge unlocked!`, {
                 duration: 5000,
-                icon: "🏆",
+                icon: "",
               });
             }, 1000);
           }
@@ -943,7 +946,7 @@ const Test = () => {
         }
       }
     } catch (error) {
-      // console.error("Auto-transition failed:", error);
+      // console.error("auto-transition failed:", error);
       toast.error("Failed to proceed");
     }
   }, [
@@ -960,7 +963,7 @@ const Test = () => {
   useEffect(() => {
     const loadCourseInfo = async () => {
       if (!courseId) {
-        // console.error("[COURSE_LOAD] No courseId provided");
+        // console.error("no courseid provided");
         navigate("/courses");
         return;
       }
@@ -968,11 +971,11 @@ const Test = () => {
       setCourseLoading(true);
 
       try {
-        // console.log(`[COURSE_LOAD] Loading course data for: ${courseId}`);
+        // console.log(`loading course data for: ${courseid}`);
         const response = await apiMethods.courses.getById(courseId);
 
         if (!response?.data?.data?.course) {
-          // console.error("[COURSE_LOAD] Invalid response structure:", response);
+          // console.error("invalid response structure:", response);
           toast.error("Failed to load course information");
           navigate("/courses");
           return;
@@ -980,17 +983,17 @@ const Test = () => {
 
         const course = response.data.data.course;
 
-        // console.log(`[COURSE_LOAD] Course loaded:`, {
+        // console.log(`course loaded:`, {
         //   name: course.name,
-        //   isPaid: course.isPaid,
+        //   ispaid: course.ispaid,
         //   difficulties: course.difficulties?.length,
         // });
 
         setCourseData(course);
       } catch (error) {
-        // console.error("[COURSE_LOAD] Error loading course:", error);
+        // console.error("error loading course:", error);
 
-        // Better error handling
+        // better error handling
         if (error.response?.status === 404) {
           toast.error("Course not found");
         } else if (error.response?.status === 401) {
@@ -1003,7 +1006,7 @@ const Test = () => {
           toast.error("Failed to load course. Please try again.");
         }
 
-        // Redirect after showing error
+        // redirect showing error
         setTimeout(() => navigate("/courses"), 2000);
       } finally {
         setCourseLoading(false);
@@ -1013,23 +1016,23 @@ const Test = () => {
     loadCourseInfo();
   }, [courseId, navigate, location]);
 
-  // In Test.jsx - Fixed version with proper error handling
+  // in test.jsx - ed version with proper error handling
   useEffect(() => {
     const checkAndLoadExistingTest = async () => {
-      // CHANGE: Check authentication first before checking isPaid
+      // check authentication first checking ispaid
       if (!isAuthenticated) {
-        // console.log("User not authenticated, redirecting to login");
+        // console.log("user not authenticated, redirecting to login");
         navigate("/login", { state: { from: location } });
         return;
       }
 
-      // CHANGE: Wait for courseData to be loaded before checking
+      // wait for coursedata to be loaded checking
       if (!courseData) {
-        // console.log("Course data still loading...");
+        // console.log("course data still loading...");
         return;
       }
 
-      // CHANGE: Only check for existing tests if course is paid
+      // only check for existing tests if course is paid
       if (courseData.isPaid) {
         try {
           const response = await apiMethods.tests.getHistory();
@@ -1045,8 +1048,8 @@ const Test = () => {
             return;
           }
         } catch (error) {
-          // console.error("Failed to check test history:", error);
-          // CHANGE: Don't block if history check fails
+          // console.error("failed to check test history:", error);
+          // don't block if history check fails
           if (error.response?.status === 401) {
             navigate("/login", { state: { from: location } });
             return;
@@ -1054,7 +1057,7 @@ const Test = () => {
         }
       }
 
-      // CHANGE: Only proceed if we have both auth and courseData
+      // only proceed if we have both auth and coursedata
       if (isAuthenticated && courseData) {
         setTestPhase("start");
       }
@@ -1063,7 +1066,7 @@ const Test = () => {
     checkAndLoadExistingTest();
   }, [courseData, courseId, isAuthenticated, navigate, location]);
 
-  // Handle test exit
+  // handle test exit
   const handleExitTest = useCallback(() => {
     if (testState.isActive) {
       setShowExitModal(true);
@@ -1087,7 +1090,7 @@ const Test = () => {
       resetTest();
       navigate("/courses");
     } catch (error) {
-      // console.error("Failed to record abandonment:", error);
+      // console.error("failed to record abandonment:", error);
     }
   }, [
     courseId,
@@ -1097,9 +1100,9 @@ const Test = () => {
     navigate,
   ]);
 
-  // Handle forced exit
+  // handle forced exit
   const handleForceExit = useCallback(() => {
-    // Clear all local storage and context data
+    // clear all local storage and context data
     resetTest();
     setAnswers({});
     setSelectedAnswer(null);
@@ -1109,12 +1112,12 @@ const Test = () => {
     toast("Test progress discarded");
   }, [resetTest, navigate]);
 
-  // Navigation handlers
+  // navigation handlers
   const handleReturnToCourses = () => navigate("/courses");
 
   const handleViewResults = () => navigate("/profile");
   const handleRetakeTest = () => {
-    // Only allow retake for FREE courses
+    // only allow retake for free courses
     if (courseData?.isPaid) {
       toast.error("Paid courses can only be taken once");
       navigate("/courses");
@@ -1123,17 +1126,17 @@ const Test = () => {
 
     resetTest();
     setTestPhase("start");
-    setSelectedDifficulty(null); // Reset to difficulty selection
+    setSelectedDifficulty(null); // reset to difficulty selection
   };
 
-  // Loading state
+  // loading state
   if (loading && !currentTest) {
     return <Loading message="Loading test..." />;
   }
 
   if (error && !currentTest) {
-    // Log error details for monitoring
-    console.error("[TEST_ERROR]", {
+    // log error details for monitoring
+    console.error("", {
       error,
       courseId,
       timestamp: new Date().toISOString(),
@@ -1141,12 +1144,12 @@ const Test = () => {
       testState,
     });
 
-    // Throw error to be caught by ErrorBoundary
+    // throw error to be caught by errorboundary
     throw new Error(`Test Error: ${error}`);
   }
 
   const renderTestPhase = () => {
-    // Step 0: If paid course and still loading test result
+    // step 0: if paid course and still loading test result
     if (courseData?.isPaid && loading && !testResult && !currentTest) {
       return (
         <div className="max-w-2xl mx-auto text-center">
@@ -1167,7 +1170,7 @@ const Test = () => {
       );
     }
 
-    // Step 1: If paid course and test result loaded, show it immediately
+    // step 1: if paid course and test result loaded, show it immediately
     if (courseData?.isPaid && testResult && testPhase === "result") {
       return (
         <TestResult
@@ -1181,7 +1184,7 @@ const Test = () => {
       );
     }
 
-    // Step 2: Show difficulty selection if no difficulty selected (free course or first attempt)
+    // step 2: show difficulty selection if no difficulty selected (free course or first attempt)
     if (!selectedDifficulty) {
       return (
         <DifficultySelection
@@ -1192,7 +1195,7 @@ const Test = () => {
       );
     }
 
-    // Step 3: Show terms if difficulty selected but not accepted
+    // step 3: show terms if difficulty selected but not accepted
     if (showTerms && !termsAccepted) {
       return (
         <TermsOfService
@@ -1204,7 +1207,7 @@ const Test = () => {
       );
     }
 
-    // Step 3: Show loading while starting test
+    // step 3: show loading while starting test
     if (termsAccepted && !currentTest && loading) {
       return (
         <div className="max-w-2xl mx-auto text-center">
@@ -1215,10 +1218,10 @@ const Test = () => {
       );
     }
 
-    // Remove the "start" case entirely since DifficultySelection handles everything
+    // remove the "start" case entirely since difficultyselection handles everything
 
     switch (testPhase) {
-      // Remove case "start" completely
+      // remove case "start" completely
 
       case "active":
         return (
@@ -1230,10 +1233,10 @@ const Test = () => {
             transition={{ duration: 0.5, ease: "easeInOut" }}
             className="min-h-screen flex flex-col"
           >
-            {/* Fixed Header */}
+            {/* ed header */}
             <div className="sticky top-16 z-50 bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm border-b shadow-sm">
               <div className="max-w-6xl mx-auto px-4 py-3">
-                {/* Course name and controls */}
+                {/* course name and controls */}
                 <div className="flex justify-between items-center mb-3">
                   <div>
                     <h1 className="text-lg font-semibold text-gray-900 dark:text-white truncate">
@@ -1249,7 +1252,7 @@ const Test = () => {
                   </div>
 
                   <div className="flex items-center space-x-3">
-                    {/* Timer */}
+                    {/* timer */}
                     <div className="flex items-center space-x-2 px-3 py-1.5 rounded-lg border bg-gray-50 dark:bg-gray-800">
                       <ClockIcon className="w-4 h-4 text-gray-600 dark:text-gray-400" />
                       <span
@@ -1285,7 +1288,7 @@ const Test = () => {
                   </div>
                 </div>
 
-                {/* Question counter */}
+                {/* question counter */}
                 <div className="text-sm text-gray-600 dark:text-gray-400">
                   Question {testState.currentQuestionIndex + 1} of{" "}
                   {testState.totalQuestions}
@@ -1293,7 +1296,7 @@ const Test = () => {
               </div>
             </div>
 
-            {/* Scrollable Content Area */}
+            {/* scrollable content area */}
             <div className="flex-1 overflow-auto">
               <div className="max-w-4xl mx-auto py-6">
                 <TestQuestion
@@ -1308,10 +1311,10 @@ const Test = () => {
               </div>
             </div>
 
-            {/* Fixed Bottom Progress Bar */}
+            {/* ed bottom progress bar */}
             <div className="sticky bottom-0 z-50 bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm border-t shadow-lg">
               <div className="max-w-6xl mx-auto px-4 py-4">
-                {/* Progress Bar */}
+                {/* progress bar */}
                 <div className="mb-4">
                   <div className="flex justify-between text-sm text-gray-600 dark:text-gray-400 mb-2">
                     <span>Progress</span>
@@ -1327,7 +1330,7 @@ const Test = () => {
                   </div>
                 </div>
 
-                {/* Navigation Controls */}
+                {/* navigation controls */}
                 <div className="flex items-center justify-between">
                   <div className="text-sm text-gray-600 dark:text-gray-400">
                     Answered: {answeredQuestions}/{testState.totalQuestions}
@@ -1335,7 +1338,7 @@ const Test = () => {
 
                   <div className="flex items-center space-x-3">
                     {isLastQuestion ? (
-                      // Check if there are more difficulties to complete
+                      // check if there are more difficulties to complete
                       hasNextDifficulty() ? (
                         <Button
                           onClick={handleAutoSubmit}
@@ -1343,7 +1346,7 @@ const Test = () => {
                           className={`px-6 py-2 cursor-pointer transition-all duration-200 ${
                             !canCompleteDifficulty()
                               ? "opacity-50 cursor-not-allowed bg-gray-400 text-gray-700"
-                              : "bg-green-600 hover:bg-green-700 text-white"
+                              : "bg-blue-600 hover:bg-blue-700 text-white"
                           }`}
                         >
                           {canCompleteDifficulty()
@@ -1399,7 +1402,7 @@ const Test = () => {
                 animate={{ scale: 1, opacity: 1 }}
                 transition={{ duration: 0.5 }}
               >
-                <div className="text-green-500 text-6xl mb-4">🎉</div>
+                <CheckCircleIcon className="mx-auto mb-4 h-14 w-14 text-blue-600" />
                 <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">
                   Test Completed!
                 </h2>
@@ -1439,7 +1442,7 @@ const Test = () => {
   };
 
   return (
-    <div className="min-h-screen bg-transparent py-4 lg:py-8">
+    <div className="vg-test-shell min-h-screen bg-transparent py-4 lg:py-8">
       {/* Temporary test button - remove in production
       <Button
         variant="outline"
@@ -1498,7 +1501,7 @@ const Test = () => {
         </div>
       </Modal>
 
-      {/* Submit Confirmation Modal */}
+      {/* submit confirmation modal */}
       <Modal
         isOpen={showSubmitModal}
         onClose={() => setShowSubmitModal(false)}
@@ -1537,7 +1540,7 @@ const Test = () => {
         </div>
       </Modal>
 
-      {/* Custom Reload Warning Modal */}
+      {/* custom reload warning modal */}
       <ReloadWarningModal
         isOpen={showReloadWarning}
         onStay={handleStayInTest}

@@ -1,3 +1,6 @@
+/**
+ * keeps the blog post model focused and readable.
+ */
 import mongoose from "mongoose";
 
 const encryptedPayloadSchema = new mongoose.Schema(

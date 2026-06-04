@@ -1,3 +1,6 @@
+/**
+ * keeps the confirm modal utility focused and readable.
+ */
 import React from "react";
 import { X, AlertTriangle } from "lucide-react";
 
@@ -20,15 +23,15 @@ const ConfirmModal = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      {/* Backdrop with blur */}
+      {/* backdrop with blur */}
       <div
         className="absolute inset-0 bg-black/40 backdrop-blur-sm cursor-pointer"
         onClick={onClose}
       ></div>
 
-      {/* Modal */}
+      {/* modal */}
       <div className="relative bg-white rounded-xl shadow-2xl max-w-md w-full p-6 transform transition-all">
-        {/* Close button */}
+        {/* close button */}
         <button
           onClick={onClose}
           className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors cursor-pointer"
@@ -36,7 +39,7 @@ const ConfirmModal = ({
           <X className="w-5 h-5" />
         </button>
 
-        {/* Icon */}
+        {/* icon */}
         <div
           className={`w-12 h-12 rounded-full flex items-center justify-center mb-4 ${
             type === "danger"
@@ -47,13 +50,13 @@ const ConfirmModal = ({
           <AlertTriangle className="w-6 h-6" />
         </div>
 
-        {/* Title */}
+        {/* title */}
         <h3 className="text-xl font-bold text-gray-900 mb-2">{title}</h3>
 
-        {/* Message */}
+        {/* message */}
         <p className="text-gray-600 mb-6">{message}</p>
 
-        {/* Actions */}
+        {/* actions */}
         <div className="flex gap-3 justify-end">
           <button
             onClick={onClose}

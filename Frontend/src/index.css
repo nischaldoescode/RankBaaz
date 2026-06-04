@@ -1,15 +1,18 @@
+/**
+ * keeps the index stylesheet focused and readable.
+ */
 @import "tailwindcss";
 
 .scrollbar-hide {
-  -ms-overflow-style: none;  /* IE and Edge */
-  scrollbar-width: none;  /* Firefox */
+  -ms-overflow-style: none;  /* ie and edge */
+  scrollbar-width: none;  /* firefox */
 }
 
 .scrollbar-hide::-webkit-scrollbar {
-  display: none;  /* Chrome, Safari, Opera */
+  display: none;  /* chrome, safari, opera */
 }
 
-/* Ensure proper text wrapping in all contexts */
+/* ensure proper text wrapping in all contexts */
 .overflow-wrap-anywhere {
   overflow-wrap: anywhere;
   word-break: break-word;

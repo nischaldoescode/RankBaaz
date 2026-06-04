@@ -1,23 +1,16 @@
-import React, { useState, useEffect } from "react";
+/**
+ * keeps the home page focused and readable.
+ */
+import React, { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
-import { motion } from "framer-motion";
+import { motion, useScroll, useTransform } from "framer-motion";
 import {
-  Brain,
   BookOpen,
   Award,
-  Users,
-  TrendingUp,
   ArrowRight,
-  Target,
-  Trophy,
-  Rocket,
-  Zap,
-  Shield,
-  Lightbulb,
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
-import { Card, CardContent } from "@/components/ui/Card";
 import {
   Accordion,
   AccordionContent,
@@ -46,23 +39,8 @@ import { useTheme } from "../context/ThemeContext";
 import { useContent } from "../context/ContentContext";
 import Loading from "../components/common/Loading";
 
-const iconMap = {
-  Brain,
-  BookOpen,
-  Award,
-  Users,
-  TrendingUp,
-  Target,
-  Trophy,
-  Rocket,
-  Zap,
-  Shield,
-  Lightbulb,
-};
-
 import TeacherCTASection from "../components/Teachers/TeacherCTA";
 
-// thin animated divider
 const Divider = () => (
   <div className="flex items-center justify-center py-2">
     <motion.div
@@ -75,7 +53,6 @@ const Divider = () => (
   </div>
 );
 
-// section label pill
 const SectionLabel = ({ children }) => (
   <motion.p
     initial={{ opacity: 0, y: 8 }}
@@ -88,16 +65,16 @@ const SectionLabel = ({ children }) => (
 );
 
 const humanDefaultCopy = {
-  heroTitle: "Practice smarter with",
-  heroHighlight: "courses, tests, and clear feedback",
+  heroTitle: "Learn the next thing clearly",
+  heroHighlight: "then practice until it stays",
   heroDescription:
-    "Vidhgrow brings course learning, timed practice tests, score reports, and leaderboards into one simple place, so students can see what to study next.",
-  featuresTitle: "Built for focused practice",
+    "Vidhgrow keeps courses, tests, teacher notes, and progress reports in one calm workspace, so every attempt tells you what to revise next.",
+  featuresTitle: "A quieter way to keep moving",
   featuresDescription:
-    "Choose a course, attempt a test, review your result, and keep improving with progress that is easy to understand.",
-  ctaTitle: "Start with a course, then test yourself",
+    "Study material, test attempts, and progress signals sit close together without turning the page into noise.",
+  ctaTitle: "Start small. Keep the work visible.",
   ctaDescription:
-    "Create your free account and keep your practice history, results, badges, and course progress together.",
+    "Create your free account and keep course progress, attempts, score reports, and next steps in one place.",
 };
 
 const oldDefaultCopy = {
@@ -118,21 +95,251 @@ const copyOrHumanDefault = (value, oldDefault, fallback) =>
 
 const platformHighlights = [
   {
-    icon: BookOpen,
-    title: "Learn from courses",
-    description: "Organized lessons and teacher-created material.",
+    title: "Course notes that stay usable",
+    description: "Lessons, files, and teacher context kept close to the work.",
   },
   {
-    icon: Target,
-    title: "Practice with tests",
-    description: "Timed attempts with question-level feedback.",
+    title: "Tests with real feedback",
+    description: "Timed attempts, answer checks, and review points after each run.",
   },
   {
-    icon: Trophy,
-    title: "Track your rank",
-    description: "Progress, badges, and leaderboard movement.",
+    title: "Progress you can read",
+    description: "Scores, rank movement, and attempts shown without extra decoration.",
   },
 ];
+
+const LearningFlowIllustration = ({ animations, reducedMotion }) => (
+  <svg
+    className="vg-learning-illustration"
+    viewBox="0 0 680 520"
+    role="img"
+    aria-label="Learning path from course notes to practice test and progress review"
+  >
+    <defs>
+      <linearGradient id="storyBlue" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0%" stopColor="#2563eb" stopOpacity="0.92" />
+        <stop offset="100%" stopColor="#38bdf8" stopOpacity="0.72" />
+      </linearGradient>
+      <linearGradient id="storySoft" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0%" stopColor="#eff6ff" />
+        <stop offset="100%" stopColor="#ffffff" />
+      </linearGradient>
+      <filter id="storyShadow" x="-20%" y="-20%" width="140%" height="140%">
+        <feDropShadow
+          dx="0"
+          dy="18"
+          stdDeviation="18"
+          floodColor="#1e3a8a"
+          floodOpacity="0.13"
+        />
+      </filter>
+    </defs>
+
+    <motion.g
+      className="vg-illustration-grid"
+      animate={
+        animations && !reducedMotion
+          ? { x: [0, 12, 0], y: [0, -8, 0] }
+          : {}
+      }
+      transition={{ duration: 9, repeat: Infinity, ease: "easeInOut" }}
+    >
+      <path d="M64 116h540M64 196h540M64 276h540M64 356h540" />
+      <path d="M138 70v360M258 70v360M378 70v360M498 70v360" />
+    </motion.g>
+
+    <motion.g
+      filter="url(#storyShadow)"
+      animate={
+        animations && !reducedMotion
+          ? { y: [0, -10, 0], rotate: [0, -1.2, 0] }
+          : {}
+      }
+      transition={{ duration: 7, repeat: Infinity, ease: "easeInOut" }}
+    >
+      <rect x="90" y="116" width="214" height="156" rx="18" fill="url(#storySoft)" />
+      <path d="M124 154h92M124 184h148M124 214h118" className="vg-svg-line" />
+      <path
+        d="M256 138c18 18 18 50 0 68-18-18-18-50 0-68Z"
+        fill="#dbeafe"
+      />
+      <path
+        d="M255 154v42M240 174h30"
+        stroke="#2563eb"
+        strokeWidth="6"
+        strokeLinecap="round"
+      />
+    </motion.g>
+
+    <motion.g
+      filter="url(#storyShadow)"
+      animate={
+        animations && !reducedMotion
+          ? { y: [0, 12, 0], rotate: [0, 1.4, 0] }
+          : {}
+      }
+      transition={{ duration: 8, repeat: Infinity, ease: "easeInOut", delay: 0.5 }}
+    >
+      <rect x="382" y="170" width="214" height="160" rx="18" fill="#ffffff" />
+      <rect x="414" y="206" width="150" height="18" rx="9" fill="#dbeafe" />
+      <rect x="414" y="244" width="108" height="14" rx="7" fill="#bfdbfe" />
+      <rect x="414" y="276" width="132" height="14" rx="7" fill="#e0f2fe" />
+      <circle cx="556" cy="278" r="24" fill="url(#storyBlue)" />
+      <path
+        d="M546 278l8 8 18-22"
+        stroke="#ffffff"
+        strokeWidth="6"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </motion.g>
+
+    <motion.g
+      animate={
+        animations && !reducedMotion
+          ? { pathLength: [0.25, 1, 0.25] }
+          : {}
+      }
+      transition={{ duration: 5.5, repeat: Infinity, ease: "easeInOut" }}
+    >
+      <path
+        d="M296 218C350 186 380 198 414 226"
+        fill="none"
+        stroke="url(#storyBlue)"
+        strokeWidth="8"
+        strokeLinecap="round"
+        strokeDasharray="12 16"
+      />
+    </motion.g>
+
+    <motion.g
+      filter="url(#storyShadow)"
+      animate={
+        animations && !reducedMotion
+          ? { y: [0, -16, 0], x: [0, 8, 0] }
+          : {}
+      }
+      transition={{ duration: 6.6, repeat: Infinity, ease: "easeInOut", delay: 0.2 }}
+    >
+      <rect x="206" y="332" width="260" height="88" rx="18" fill="#ffffff" />
+      <path d="M242 382h210" stroke="#dbeafe" strokeWidth="12" strokeLinecap="round" />
+      <path d="M242 382h132" stroke="url(#storyBlue)" strokeWidth="12" strokeLinecap="round" />
+      <circle cx="242" cy="382" r="18" fill="#2563eb" />
+      <circle cx="374" cy="382" r="18" fill="#38bdf8" />
+      <circle cx="452" cy="382" r="18" fill="#dbeafe" />
+    </motion.g>
+
+    <motion.g
+      className="vg-illustration-orbits"
+      animate={
+        animations && !reducedMotion
+          ? { rotate: [0, 4, -4, 0] }
+          : {}
+      }
+      transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }}
+    >
+      <circle cx="120" cy="360" r="28" />
+      <circle cx="568" cy="122" r="36" />
+      <path d="M544 122h72M568 86v72" />
+    </motion.g>
+  </svg>
+);
+
+const LearningStorySection = ({ animations, reducedMotion, isAuthenticated }) => {
+  const sectionRef = useRef(null);
+  const { scrollYProgress } = useScroll({
+    target: sectionRef,
+    offset: ["start end", "end start"],
+  });
+  const textX = useTransform(scrollYProgress, [0, 0.5, 1], [-38, 0, 28]);
+  const artX = useTransform(scrollYProgress, [0, 0.5, 1], [56, 0, -42]);
+  const artY = useTransform(scrollYProgress, [0, 0.5, 1], [26, -12, -42]);
+  const fade = useTransform(scrollYProgress, [0, 0.18, 0.78, 1], [0.4, 1, 1, 0.24]);
+
+  const motionStyle = reducedMotion ? undefined : { x: textX, opacity: fade };
+  const artStyle = reducedMotion ? undefined : { x: artX, y: artY, opacity: fade };
+
+  return (
+    <section
+      ref={sectionRef}
+      className="vg-story-horizontal relative px-4 py-16 sm:px-6 lg:px-8"
+    >
+      <div className="mx-auto grid max-w-6xl items-center gap-10 lg:grid-cols-[0.92fr_1.08fr]">
+        <motion.div
+          style={motionStyle}
+          initial={animations && !reducedMotion ? { opacity: 0, y: 24 } : {}}
+          whileInView={animations && !reducedMotion ? { opacity: 1, y: 0 } : {}}
+          viewport={{ once: true, margin: "-80px" }}
+          className="space-y-6"
+        >
+          <SectionLabel>How the work moves</SectionLabel>
+          <h2 className="max-w-xl text-3xl font-bold leading-tight text-foreground sm:text-4xl">
+            Read the lesson, try the test, keep the next step visible.
+          </h2>
+          <p className="max-w-xl text-base leading-8 text-muted-foreground sm:text-lg">
+            Vidhgrow is built around the actual study loop: course material,
+            timed attempts, feedback, and a cleaner view of what changed after
+            every round.
+          </p>
+
+          <div className="vg-story-rail" aria-label="Vidhgrow learning flow">
+            {platformHighlights.map((item, index) => (
+              <div className="vg-story-point" key={item.title}>
+                <span>{String(index + 1).padStart(2, "0")}</span>
+                <strong>{item.title}</strong>
+                <p>{item.description}</p>
+              </div>
+            ))}
+          </div>
+
+          <Button asChild size="lg" className="gap-2 px-6">
+            <Link to={isAuthenticated ? "/courses" : "/register"}>
+              {isAuthenticated ? "Open courses" : "Start the loop"}
+              <ArrowRight className="h-4 w-4" />
+            </Link>
+          </Button>
+        </motion.div>
+
+        <motion.div
+          style={artStyle}
+          initial={animations && !reducedMotion ? { opacity: 0, scale: 0.96 } : {}}
+          whileInView={animations && !reducedMotion ? { opacity: 1, scale: 1 } : {}}
+          viewport={{ once: true, margin: "-80px" }}
+          transition={{ duration: 0.7, ease: "easeOut" }}
+          className="vg-story-illustration-card"
+        >
+          <LearningFlowIllustration
+            animations={animations}
+            reducedMotion={reducedMotion}
+          />
+        </motion.div>
+      </div>
+    </section>
+  );
+};
+
+const refinedFeatureCopy = {
+  "Smart Learning": {
+    title: "Guided study paths",
+    description:
+      "Move through courses and practice sets in an order that makes sense for your current level.",
+  },
+  "Precision Testing": {
+    title: "Exam-style practice",
+    description:
+      "Use focused assessments to see what is strong, what needs work, and what to revise next.",
+  },
+  "Achievement System": {
+    title: "Visible progress",
+    description:
+      "Track scores, attempts, and course movement with clear feedback and less clutter.",
+  },
+};
+
+const refineFeature = (feature) => ({
+  ...feature,
+  ...(refinedFeatureCopy[feature.title] || {}),
+});
 
 const Home = () => {
   const [email, setEmail] = useState("");
@@ -308,7 +515,6 @@ const Home = () => {
 
   return (
     <div className="overflow-x-hidden">
-      {/* ── Hero ── */}
       <section className="relative flex min-h-[calc(100vh-4rem)] items-center px-4 pb-16 pt-24 sm:px-6 sm:pb-20 lg:px-8">
         <div
           className="absolute inset-0 pointer-events-none"
@@ -316,9 +522,9 @@ const Home = () => {
             backgroundImage: `
       linear-gradient(hsl(var(--foreground)/0.04) 1px, transparent 1px),
       linear-gradient(90deg, hsl(var(--foreground)/0.04) 1px, transparent 1px)
-    `,
+            `,
             backgroundSize: "40px 40px",
-            backgroundPosition: "0 0" /* anchored to top-left — no gap */,
+            backgroundPosition: "0 0",
           }}
         />
 
@@ -329,17 +535,11 @@ const Home = () => {
             transition={animations && !reducedMotion ? { duration: 0.7 } : {}}
             className="mx-auto max-w-4xl space-y-7 text-center"
           >
-            <h1 className="text-4xl sm:text-5xl lg:text-[3.75rem] font-bold tracking-tight leading-tight">
+            <h1 className="text-4xl sm:text-5xl lg:text-[3.25rem] font-bold tracking-tight leading-tight">
               {heroTitle}
               <br />
-              <span className="relative inline-block text-primary">
+              <span className="vg-raw-highlight">
                 {heroHighlight}
-                <motion.span
-                  className="absolute -bottom-1 left-0 h-[3px] rounded-full bg-primary/30"
-                  initial={{ width: 0 }}
-                  animate={{ width: "100%" }}
-                  transition={{ delay: 0.6, duration: 0.7, ease: "easeOut" }}
-                />
               </span>
             </h1>
 
@@ -390,7 +590,7 @@ const Home = () => {
                 <Button asChild size="lg" className="gap-2 px-6">
                   <Link to="/register">
                     Get Started Free
-                    <Rocket className="w-4 h-4" />
+                    <ArrowRight className="w-4 h-4" />
                   </Link>
                 </Button>
                 <Button asChild variant="outline" size="lg" className="px-6">
@@ -399,7 +599,6 @@ const Home = () => {
               </motion.div>
             )}
 
-            {/* minimal trust line */}
             {contentSettings?.stats && contentSettings.stats.length > 0 && (
               <motion.p
                 initial={animations && !reducedMotion ? { opacity: 0 } : {}}
@@ -416,38 +615,17 @@ const Home = () => {
             )}
           </motion.div>
 
-          <motion.div
-            initial={animations && !reducedMotion ? { opacity: 0, y: 18 } : {}}
-            animate={animations && !reducedMotion ? { opacity: 1, y: 0 } : {}}
-            transition={animations && !reducedMotion ? { delay: 0.7 } : {}}
-            className="mt-12 grid gap-3 sm:grid-cols-3"
-          >
-            {platformHighlights.map((item) => {
-              const Icon = item.icon;
-              return (
-                <div
-                  key={item.title}
-                  className="rounded-lg border border-border/70 bg-background/75 p-4 shadow-sm backdrop-blur-sm"
-                >
-                  <div className="mb-3 flex h-9 w-9 items-center justify-center rounded-md bg-primary/10 text-primary">
-                    <Icon className="h-4 w-4" />
-                  </div>
-                  <h3 className="text-sm font-semibold text-foreground">
-                    {item.title}
-                  </h3>
-                  <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
-                    {item.description}
-                  </p>
-                </div>
-              );
-            })}
-          </motion.div>
         </div>
       </section>
 
+      <LearningStorySection
+        animations={animations}
+        reducedMotion={reducedMotion}
+        isAuthenticated={isAuthenticated}
+      />
+
       <Divider />
 
-      {/* ── Stats ── */}
       {contentSettings?.stats && contentSettings.stats.length > 0 && (
         <section className="relative py-20 px-4 sm:px-6 lg:px-8 bg-muted/20">
           <div className="max-w-6xl mx-auto">
@@ -462,7 +640,6 @@ const Home = () => {
                   : "grid-cols-1"
               }`}
             >
-              {/* chart left */}
               {contentSettings?.chartConfig?.enabled &&
                 contentSettings?.chartConfig?.position === "left" && (
                   <motion.div
@@ -484,7 +661,6 @@ const Home = () => {
                   </motion.div>
                 )}
 
-              {/* stats grid */}
               <div
                 className={`grid grid-cols-2 gap-5 ${
                   contentSettings?.chartConfig?.enabled &&
@@ -493,50 +669,45 @@ const Home = () => {
                     : "order-1 lg:max-w-xl mx-auto w-full"
                 }`}
               >
-                {contentSettings.stats.map((stat, index) => {
-                  const IconComponent = iconMap[stat.icon] || Users;
-                  return (
-                    <motion.div
-                      key={index}
-                      initial={
-                        animations && !reducedMotion
-                          ? { opacity: 0, y: 20 }
-                          : {}
-                      }
-                      whileInView={
-                        animations && !reducedMotion ? { opacity: 1, y: 0 } : {}
-                      }
-                      viewport={{ once: true }}
-                      transition={{ delay: index * 0.1 }}
-                      onHoverStart={() => setActiveStatIndex(index)}
-                      onHoverEnd={() => setActiveStatIndex(null)}
-                      className="group relative cursor-default rounded-lg border border-border/50 bg-background/70 p-5 backdrop-blur-sm transition-all duration-300 hover:border-primary/30 hover:bg-primary/5"
-                    >
-                      <div className="flex flex-col items-center text-center gap-2">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-md bg-primary/10 transition-colors duration-300 group-hover:bg-primary/20">
-                          <IconComponent className="w-5 h-5 text-primary" />
-                        </div>
-                        <div className="text-2xl sm:text-3xl font-bold text-foreground">
-                          {stat.value}
-                        </div>
-                        <div className="text-xs text-muted-foreground leading-tight">
-                          {stat.label}
-                        </div>
+                {contentSettings.stats.map((stat, index) => (
+                  <motion.div
+                    key={index}
+                    initial={
+                      animations && !reducedMotion
+                        ? { opacity: 0, y: 20 }
+                        : {}
+                    }
+                    whileInView={
+                      animations && !reducedMotion ? { opacity: 1, y: 0 } : {}
+                    }
+                    viewport={{ once: true }}
+                    transition={{ delay: index * 0.1 }}
+                    onHoverStart={() => setActiveStatIndex(index)}
+                    onHoverEnd={() => setActiveStatIndex(null)}
+                    className="group relative cursor-default rounded-lg border border-border/50 bg-background/70 p-5 backdrop-blur-sm transition-all duration-300 hover:border-primary/30 hover:bg-primary/5"
+                  >
+                    <div className="flex flex-col items-center text-center gap-2">
+                      <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-primary/70">
+                        {String(index + 1).padStart(2, "0")}
+                      </span>
+                      <div className="text-2xl sm:text-3xl font-bold text-foreground">
+                        {stat.value}
                       </div>
-                      {/* hover glow */}
-                      {activeStatIndex === index && (
-                        <motion.div
-                          layoutId="stat-glow"
-                          className="absolute inset-0 -z-10 rounded-lg bg-primary/5"
-                          transition={{ type: "spring", bounce: 0.2 }}
-                        />
-                      )}
-                    </motion.div>
-                  );
-                })}
+                      <div className="text-xs text-muted-foreground leading-tight">
+                        {stat.label}
+                      </div>
+                    </div>
+                    {activeStatIndex === index && (
+                      <motion.div
+                        layoutId="stat-glow"
+                        className="absolute inset-0 -z-10 rounded-lg bg-primary/5"
+                        transition={{ type: "spring", bounce: 0.2 }}
+                      />
+                    )}
+                  </motion.div>
+                ))}
               </div>
 
-              {/* chart right */}
               {contentSettings?.chartConfig?.enabled &&
                 contentSettings?.chartConfig?.position === "right" && (
                   <motion.div
@@ -564,7 +735,6 @@ const Home = () => {
 
       <Divider />
 
-      {/* ── Features ── */}
       {contentSettings?.features && contentSettings.features.length > 0 && (
         <section className="relative py-20 px-4 sm:px-6 lg:px-8">
           <div className="max-w-6xl mx-auto">
@@ -587,9 +757,9 @@ const Home = () => {
               </p>
             </motion.div>
 
-            <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-6">
-              {contentSettings.features.map((feature, index) => {
-                const IconComponent = iconMap[feature.icon] || Brain;
+            <div className="vg-feature-river">
+              {contentSettings.features.map((rawFeature, index) => {
+                const feature = refineFeature(rawFeature);
                 return (
                   <motion.div
                     key={index}
@@ -601,21 +771,14 @@ const Home = () => {
                     }
                     viewport={{ once: true }}
                     transition={{ delay: index * 0.12 }}
-                    whileHover={animations && !reducedMotion ? { y: -4 } : {}}
+                    whileHover={animations && !reducedMotion ? { x: 6 } : {}}
+                    className="vg-feature-river-item"
                   >
-                    <Card className="h-full rounded-lg border-border/50 bg-background/70 backdrop-blur-sm transition-all duration-300 hover:border-primary/25 hover:shadow-md">
-                      <CardContent className="p-6">
-                        <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-md bg-primary/10">
-                          <IconComponent className="w-6 h-6 text-primary" />
-                        </div>
-                        <h3 className="text-base font-semibold mb-2 text-foreground">
-                          {feature.title}
-                        </h3>
-                        <p className="text-sm text-muted-foreground leading-relaxed">
-                          {feature.description}
-                        </p>
-                      </CardContent>
-                    </Card>
+                    <span>{String(index + 1).padStart(2, "0")}</span>
+                    <div>
+                      <h3>{feature.title}</h3>
+                      <p>{feature.description}</p>
+                    </div>
                   </motion.div>
                 );
               })}
@@ -626,7 +789,7 @@ const Home = () => {
 
       <Divider />
 
-      {/* ── CTA ── */}
+      {/* call to action */}
       <section className="relative py-24 px-4 sm:px-6 lg:px-8 overflow-hidden">
         <div className="absolute inset-0 pointer-events-none">
           <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/20 to-transparent" />
@@ -682,7 +845,7 @@ const Home = () => {
 
       <TeacherCTASection />
 
-      {/* ── FAQ ── */}
+      {/* faq */}
       {faqs && faqs.length > 0 && (
         <section
           id="faqs"

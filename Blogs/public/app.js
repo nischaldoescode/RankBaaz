@@ -1,3 +1,6 @@
+/**
+ * keeps the app module focused and readable.
+ */
 const hexToBytes = (hex) => {
   const bytes = new Uint8Array(hex.length / 2);
   for (let i = 0; i < bytes.length; i += 1) {

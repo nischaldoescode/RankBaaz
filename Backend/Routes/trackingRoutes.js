@@ -1,3 +1,6 @@
+/**
+ * keeps the tracking routes route focused and readable.
+ */
 import express from "express";
 import redisClient from "../Config/redis.js";
 
@@ -6,14 +9,14 @@ const router = express.Router();
 /**
  * tracking link endpoint
  * logs visit data and redirects to home
- * 
+ *
  * stores in redis with 1 hour expiry
  * captures ip, user agent, timestamp
  */
 router.get("/:trackingId", async (req, res) => {
   try {
     const { trackingId } = req.params;
-    
+
     // validate tracking id format (4 alphanumeric characters)
     if (!/^[a-z0-9]{4}$/i.test(trackingId)) {
       return res.redirect(process.env.FRONTEND_URL || "https://vidhgrow.online");
@@ -30,24 +33,24 @@ router.get("/:trackingId", async (req, res) => {
 
     // store in redis with 1 hour expiry
     const redisKey = `track:${trackingId}`;
-    
-    // get existing visits or create new array
+
+    // get existing visits or create array
     const existing = await redisClient.get(redisKey);
     const visits = existing ? JSON.parse(existing) : [];
-    
-    // add new visit
+
+    // visit
     visits.push(visitData);
-    
+
     // save with 1 hour ttl (3600 seconds)
     await redisClient.setex(redisKey, 3600, JSON.stringify(visits));
 
-    console.log(`[TRACKING] Visit logged for ${trackingId}:`, visitData.ip);
+    console.log(`Visit logged for ${trackingId}:`, visitData.ip);
 
     // redirect to frontend
     return res.redirect(process.env.FRONTEND_URL || "https://vidhgrow.online");
-    
+
   } catch (error) {
-    console.error("[TRACKING] Error logging visit:", error);
+    console.error("Error logging visit:", error);
     return res.redirect(process.env.FRONTEND_URL || "https://vidhgrow.online");
   }
 });
@@ -67,7 +70,7 @@ router.get("/admin/view/:trackingId", async (req, res) => {
     }
 
     const { trackingId } = req.params;
-    
+
     // validate format
     if (!/^[a-z0-9]{4}$/i.test(trackingId)) {
       return res.status(400).json({
@@ -103,7 +106,7 @@ router.get("/admin/view/:trackingId", async (req, res) => {
     });
 
   } catch (error) {
-    console.error("[TRACKING] Error fetching data:", error);
+    console.error("Error fetching data:", error);
     return res.status(500).json({
       success: false,
       message: "failed to fetch tracking data",
@@ -126,7 +129,7 @@ router.get("/admin/list/all", async (req, res) => {
 
     // find all tracking keys in redis
     const keys = await redisClient.keys("track:*");
-    
+
     const trackingIds = keys.map(key => key.replace("track:", ""));
 
     return res.json({
@@ -136,7 +139,7 @@ router.get("/admin/list/all", async (req, res) => {
     });
 
   } catch (error) {
-    console.error("[TRACKING] Error listing tracking ids:", error);
+    console.error("Error listing tracking ids:", error);
     return res.status(500).json({
       success: false,
       message: "failed to list tracking ids",

@@ -1,3 +1,6 @@
+/**
+ * keeps the not found page focused and readable.
+ */
 import React, { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
@@ -20,7 +23,7 @@ const NotFound = () => {
   const [countdown, setCountdown] = useState(10);
   const [autoRedirect, setAutoRedirect] = useState(true);
   const { contentSettings } = useContent();
-  
+
   const primaryColors = getPrimaryColorClasses();
   const isDark = theme === "dark";
 
@@ -44,7 +47,7 @@ const NotFound = () => {
     }
   });
 
-  // Auto redirect countdown
+  // auto redirect countdown
   useEffect(() => {
     if (!autoRedirect) return;
 
@@ -61,12 +64,12 @@ const NotFound = () => {
     return () => clearInterval(timer);
   }, [navigate, isAuthenticated, autoRedirect]);
 
-  // Cancel auto redirect
+  // cancel auto redirect
   const handleCancelRedirect = () => {
     setAutoRedirect(false);
   };
 
-  // Animation variants
+  // animation variants
   const containerVariants = {
     initial: { opacity: 0, y: 50 },
     animate: {
@@ -102,9 +105,9 @@ const NotFound = () => {
 
   return (
     <div className="min-h-screen flex items-center justify-center px-3 sm:px-5 lg:px-7 py-11 sm:py-15 lg:py-19 relative overflow-hidden">
-      {/* Background Elements */}
+      {/* background elements */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        {/* Animated background shapes */}
+        {/* animated background shapes */}
         {animations && !reducedMotion && (
           <>
             <motion.div
@@ -137,7 +140,7 @@ const NotFound = () => {
         initial="initial"
         animate="animate"
       >
-        {/* 404 Number */}
+        {/* 404 number */}
         <motion.div
           className="relative mb-8"
           variants={animations && !reducedMotion ? bounceVariants : {}}
@@ -155,7 +158,7 @@ const NotFound = () => {
             404
           </h1>
 
-          {/* Warning Icon */}
+          {/* warning icon */}
           <motion.div
             className="absolute -top-8 -right-8 sm:-top-12 sm:-right-12"
             animate={
@@ -176,7 +179,7 @@ const NotFound = () => {
           </motion.div>
         </motion.div>
 
-        {/* Error Message */}
+        {/* error message */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -324,7 +327,7 @@ const NotFound = () => {
           </div>
         </motion.div>
 
-        {/* Fun Facts */}
+        {/* fun facts */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -337,7 +340,7 @@ const NotFound = () => {
             ${isDark ? "text-slate-200" : "text-gray-800"}
           `}
           >
-            💡 Did you know?
+             Did you know?
           </h3>
           <p
             className={`

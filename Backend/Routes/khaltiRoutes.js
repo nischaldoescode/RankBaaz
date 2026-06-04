@@ -1,3 +1,6 @@
+/**
+ * keeps the khalti routes route focused and readable.
+ */
 import express from "express";
 import {
   initiateKhaltiPayment,

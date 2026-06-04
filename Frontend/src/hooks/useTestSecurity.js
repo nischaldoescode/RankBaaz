@@ -1,3 +1,6 @@
+/**
+ * keeps the use test security module focused and readable.
+ */
 import { useEffect, useCallback, useRef } from 'react';
 import { useAuth } from './useAuth';
 
@@ -25,7 +28,7 @@ export const useTestSecurity = (isTestActive, onViolation) => {
   useEffect(() => {
     if (isTestActive) {
       document.addEventListener('visibilitychange', handleVisibilityChange);
-      
+
       return () => {
         document.removeEventListener('visibilitychange', handleVisibilityChange);
       };

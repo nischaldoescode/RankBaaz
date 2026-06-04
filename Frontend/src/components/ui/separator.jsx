@@ -1,3 +1,6 @@
+/**
+ * keeps the separator component focused and readable.
+ */
 "use client"
 
 import * as React from "react"

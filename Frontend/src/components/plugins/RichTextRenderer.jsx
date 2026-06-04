@@ -1,10 +1,13 @@
+/**
+ * keeps the rich text renderer component focused and readable.
+ */
 import React from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
-import 'katex/dist/katex.min.css'; // Import KaTeX CSS
+import 'katex/dist/katex.min.css'; // import katex css
 
 const RichTextRenderer = ({ content, className = "" }) => {
   return (
@@ -13,11 +16,11 @@ const RichTextRenderer = ({ content, className = "" }) => {
       remarkPlugins={[remarkMath]}
       rehypePlugins={[rehypeKatex]}
       components={{
-        // Code block renderer
+        // code block renderer
         code({ node, inline, className, children, ...props }) {
           const match = /language-(\w+)/.exec(className || '');
           const language = match ? match[1] : '';
-          
+
           if (!inline && match) {
             return (
               <div className="my-4 rounded-lg overflow-hidden">
@@ -40,8 +43,8 @@ const RichTextRenderer = ({ content, className = "" }) => {
               </div>
             );
           }
-          
-          // Inline code
+
+          // inline code
           return (
             <code
               className="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-800 rounded text-sm font-mono text-red-600 dark:text-red-400"
@@ -51,13 +54,13 @@ const RichTextRenderer = ({ content, className = "" }) => {
             </code>
           );
         },
-        
-        // Style paragraphs
+
+        // style paragraphs
         p({ children }) {
           return <p className="my-2 leading-relaxed">{children}</p>;
         },
-        
-        // Style lists
+
+        // style lists
         ul({ children }) {
           return <ul className="list-disc list-inside my-2 space-y-1">{children}</ul>;
         },

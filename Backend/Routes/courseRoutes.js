@@ -1,3 +1,6 @@
+/**
+ * keeps the course routes route focused and readable.
+ */
 import express from "express";
 import {
   createCourse,
@@ -39,39 +42,39 @@ import {
 const router = express.Router();
 
 /**
- * Public course routes
+ * public course routes
  */
 
 /**
- * GET / - List all courses
- * Auth: None required
- * Cache: 150 seconds
+ * get / - list all courses
+ * auth: none required
+ * cache: 150 seconds
  */
 router.get("/", cacheStats("all-courses", 150), getAllCourses);
 
 /**
- * GET /categories - List all categories
- * Auth: None required
- * Cache: 500 seconds
+ * get /categories - list all categories
+ * auth: none required
+ * cache: 500 seconds
  */
 router.get("/categories", cacheStats("all-categories", 500), getAllCategories);
 
 /**
- * GET /categories/:categoryId - Get category details
- * Auth: None required
+ * get /categories/:categoryid - get category details
+ * auth: none required
  */
 router.get("/categories/:categoryId", getCategoryById);
 
 /**
- * GET /:courseId - Get course details
- * Auth: None required
+ * get /:courseid - get course details
+ * auth: none required
  */
 router.get("/:courseId", getCourseById);
 
 /**
- * GET /:courseId/questions - Get course questions
- * Auth: None required
- * Cache: 300 seconds
+ * get /:courseid/questions - get course questions
+ * auth: none required
+ * cache: 300 seconds
  */
 router.get(
   "/:courseId/questions",
@@ -102,9 +105,9 @@ router.get(
   getDifficultyBreakdown
 );
 /**
- * GET /:courseId/download-pdf - Download course data as PDF
- * Auth: Admin only
- * Access: Private
+ * get /:courseid/download-pdf - download course data as pdf
+ * auth: admin only
+ * access: private
  */
 router.get("/:courseId/download-pdf", authenticateAdmin, downloadCoursePDF);
 

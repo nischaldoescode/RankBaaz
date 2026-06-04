@@ -1,3 +1,6 @@
+/**
+ * keeps the course review model focused and readable.
+ */
 import mongoose from "mongoose";
 
 const courseReviewSchema = new mongoose.Schema(

@@ -1,3 +1,6 @@
+/**
+ * keeps the auth context context focused and readable.
+ */
 import React, { createContext, useContext, useState, useEffect } from "react";
 import axios from "axios";
 import { toast, ToastContainer } from "react-toastify";
@@ -14,7 +17,7 @@ export const useAuth = () => {
   return context;
 };
 
-// Configure axios defaults
+// configure axios defaults
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:7000";
 axios.defaults.baseURL = API_URL;
 axios.defaults.withCredentials = true;
@@ -37,8 +40,8 @@ const refreshAdminSigningSecret = async () => {
 };
 
 /**
- * Request interceptor - Add signatures to admin requests
- * Runs before every axios request
+ * request interceptor - signatures to admin requests
+ * runs every axios request
  */
 axios.interceptors.request.use(
   async (config) => {
@@ -46,7 +49,7 @@ axios.interceptors.request.use(
       return config;
     }
 
-    // Public endpoints that don't need signatures
+    // public endpoints that don't need signatures
     const publicEndpoints = [
       "/admin/login",
       "/admin/check-exists",
@@ -61,12 +64,12 @@ axios.interceptors.request.use(
       return config;
     }
 
-    // Load secret if not in memory
+    // load secret if not in memory
     if (!adminRequestSigner.isSecretValid()) {
       adminRequestSigner.loadSigningSecret();
     }
 
-    // Sign request if authenticated
+    // sign request if authenticated
     const isAuthenticated = !!localStorage.getItem("currentUser");
 
     if (isAuthenticated && adminRequestSigner.isSecretValid()) {
@@ -81,7 +84,7 @@ axios.interceptors.request.use(
 );
 
 /**
- * Response interceptor - Handle signature errors and auth errors
+ * response interceptor - handle signature errors and auth errors
  */
 axios.interceptors.response.use(
   (response) => response,
@@ -100,9 +103,9 @@ axios.interceptors.response.use(
       error.response?.data?.code &&
       signatureErrorCodes.includes(error.response.data.code)
     ) {
-      // Try to block the inifite refreshing loop
+      // try to block the inifite refreshing loop
       if (originalRequest._signatureRetry) {
-        console.error("[ADMIN_AUTH] Signature retry failed - clearing auth");
+        console.error("Signature retry failed - clearing auth");
         adminRequestSigner.clearSigningSecret();
         localStorage.removeItem("currentUser");
         window.location.href = "/login";
@@ -110,14 +113,14 @@ axios.interceptors.response.use(
       }
 
       try {
-        console.log("[ADMIN_AUTH] Refreshing signing secret...");
+        console.log("Refreshing signing secret...");
 
         originalRequest._signatureRetry = true;
 
-        // Clear old secret
+        // clear old secret
         adminRequestSigner.clearSigningSecret();
 
-        // Fetch new secret without cache/ETag reuse.
+        // fetch secret without cache/etag reuse.
         const secretResponse = await refreshAdminSigningSecret();
 
         if (!secretResponse.data.success) {
@@ -127,14 +130,14 @@ axios.interceptors.response.use(
         const { signingSecret, expiresIn } = secretResponse.data.data;
         adminRequestSigner.setSigningSecret(signingSecret, expiresIn);
 
-        console.log("[ADMIN_AUTH] Signing secret refreshed successfully");
+        console.log("Signing secret refreshed successfully");
 
-        // Keep _signatureRetry on the retried request. If this still fails,
+        // keep _signatureretry on the retried request. if this still fails,
         // the next response stops instead of refreshing forever.
         const signedRequest = adminRequestSigner.signRequest(originalRequest);
         return axios(signedRequest);
       } catch (signatureError) {
-        console.error("[ADMIN_AUTH] Signature refresh failed:", signatureError);
+        console.error("Signature refresh failed:", signatureError);
         adminRequestSigner.clearSigningSecret();
 
         if (signatureError.response?.status === 401) {
@@ -146,30 +149,30 @@ axios.interceptors.response.use(
       }
     }
 
-    // Handle 401 Unauthorized errors (existing auth error handling)
+    // handle 401 unauthorized errors (existing auth error handling)
     if (error.response?.status === 401) {
       const originalRequest = error.config;
 
-      // Prevent infinite loops
+      // prevent infinite loops
       if (originalRequest._retry) {
         return Promise.reject(error);
       }
 
-      // Only redirect on 401 if not already on login page
+      // only redirect on 401 if not already on login page
       if (
         !window.location.pathname.includes("/login") &&
         !originalRequest.url.includes("/admin/profile")
       ) {
         originalRequest._retry = true;
 
-        // For admin, clear state and redirect
+        // for admin, clear state and redirect
         if (localStorage.getItem("currentUser")) {
           const userData = JSON.parse(localStorage.getItem("currentUser"));
           if (userData.role === "admin") {
             localStorage.removeItem("currentUser");
-            adminRequestSigner.clearSigningSecret(); // Also clear signing secret
+            adminRequestSigner.clearSigningSecret(); // also clear signing secret
 
-            // Delay redirect to allow current request to complete
+            // delay redirect to allow current request to complete
             setTimeout(() => {
               window.location.href = "/login";
             }, 100);
@@ -188,7 +191,7 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
-  // Check authentication status on mount
+  // check authentication status on mount
   useEffect(() => {
     checkAuthStatus();
   }, []);
@@ -197,12 +200,12 @@ export const AuthProvider = ({ children }) => {
     try {
       setLoading(true);
 
-      // Check localStorage first
+      // check localstorage first
       const savedUser = localStorage.getItem("currentUser");
       if (savedUser) {
         const userData = JSON.parse(savedUser);
 
-        // Verify with backend that session is still valid (only for admin)
+        // verify with backend that session is still valid (only for admin)
         if (userData.role === "admin") {
           try {
             const response = await axios.get("/admin/profile");
@@ -213,7 +216,7 @@ export const AuthProvider = ({ children }) => {
               throw new Error("Invalid session");
             }
           } catch (error) {
-            // Session invalid, clear everything
+            // session invalid, clear everything
             console.error("Session validation failed:", error);
             localStorage.removeItem("currentUser");
             setUser(null);
@@ -238,7 +241,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   /**
-   * SHA-256 solver for admin captcha (same as user-facing)
+   * sha-256 solver for admin captcha (same as user-facing)
    */
   const solveAdminCaptcha = async (seed, difficulty) => {
     let nonce = 0;
@@ -259,7 +262,7 @@ export const AuthProvider = ({ children }) => {
 
       nonce++;
 
-      // Yield every 1000 attempts
+      // yield every 1000 attempts
       if (nonce % 1000 === 0) {
         await new Promise((resolve) => setTimeout(resolve, 0));
       }
@@ -278,7 +281,7 @@ export const AuthProvider = ({ children }) => {
       try {
         response = await axios.post("/admin/login", credentials);
       } catch (error) {
-        // captcha handling (same as before)...
+        // captcha handling (same as )...
         if (error.response?.data?.code === "CAPTCHA_REQUIRED") {
           const captchaData = error.response.data.data;
           const solvingToast = toast.loading("Solving security challenge...");
@@ -309,17 +312,17 @@ export const AuthProvider = ({ children }) => {
       if (response.data.success) {
         const userData = response.data.data.admin;
 
-        // Store user data first
+        // store user data first
         setUser(userData);
         setIsAuthenticated(true);
         localStorage.setItem("currentUser", JSON.stringify(userData));
 
-        // Wait for next tick to ensure cookie is set
+        // wait for next tick to ensure cookie is set
         await new Promise((resolve) => setTimeout(resolve, 100));
 
-        // CRITICAL: Fetch admin signing secret AFTER cookie is set
+        // fetch admin signing secret cookie is set
         try {
-          console.log("[ADMIN_AUTH] Fetching signing secret...");
+          console.log("Fetching signing secret...");
 
           const secretResponse = await axios.get(
             "/security/signing-secret",
@@ -333,17 +336,17 @@ export const AuthProvider = ({ children }) => {
             const { signingSecret, expiresIn } = secretResponse.data.data;
             adminRequestSigner.setSigningSecret(signingSecret, expiresIn);
 
-            console.log("[ADMIN_AUTH] Signing secret acquired successfully");
+            console.log("Signing secret acquired successfully");
           } else {
             throw new Error("Failed to get signing secret");
           }
         } catch (secretError) {
           console.error(
-            "[ADMIN_AUTH] Failed to get signing secret:",
+            "Failed to get signing secret:",
             secretError
           );
 
-          // If we can't get signing secret, clear everything and don't proceed
+          // if we can't get signing secret, clear everything and don't proceed
           setUser(null);
           setIsAuthenticated(false);
           localStorage.removeItem("currentUser");
@@ -378,7 +381,7 @@ export const AuthProvider = ({ children }) => {
     } catch (error) {
       console.error("Logout error:", error);
     } finally {
-      // Clear admin signing secret
+      // clear admin signing secret
       adminRequestSigner.clearSigningSecret();
 
       setUser(null);
@@ -389,7 +392,7 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // Add this BEFORE the existing value object
+  // this the existing value object
   const updateProfile = async (profileData) => {
     try {
       setLoading(true);
@@ -397,7 +400,7 @@ export const AuthProvider = ({ children }) => {
 
       if (response.data.success) {
         const updatedUser = response.data.data.admin;
-        // Preserve the original timestamps and ID
+        // preserve the original timestamps and id
         const userWithTimestamps = {
           ...updatedUser,
           _id: updatedUser._id || updatedUser.id,

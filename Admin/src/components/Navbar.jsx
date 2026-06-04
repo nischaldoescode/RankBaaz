@@ -1,3 +1,6 @@
+/**
+ * keeps the navbar component focused and readable.
+ */
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import {
@@ -22,7 +25,7 @@ const Navbar = ({ onToggleSidebar, sidebarOpen }) => {
   const dropdownRef = useRef(null);
   const notificationRef = useRef(null);
 
-  // API call tracking for notifications
+  // api call tracking for notifications
   const addNotification = (type, title, message) => {
     const notification = {
       id: Date.now() + Math.random(),
@@ -33,12 +36,12 @@ const Navbar = ({ onToggleSidebar, sidebarOpen }) => {
       type,
     };
 
-    setNotifications((prev) => [notification, ...prev.slice(0, 19)]); // Keep max 20
+    setNotifications((prev) => [notification, ...prev.slice(0, 19)]); // keep max 20
     setUnreadCount((prev) => prev + 1);
   };
 
   useEffect(() => {
-    // Create a custom event listener for admin operations
+    // create a custom event listener for admin operations
     const handleAdminOperation = (event) => {
       const { type, operation, success, data } = event.detail;
 
@@ -137,7 +140,7 @@ const Navbar = ({ onToggleSidebar, sidebarOpen }) => {
       }
     };
 
-    // Add event listener
+    // event listener
     window.addEventListener("adminOperation", handleAdminOperation);
 
     return () => {
@@ -145,7 +148,7 @@ const Navbar = ({ onToggleSidebar, sidebarOpen }) => {
     };
   }, []);
 
-  // Mark notification as read
+  // mark notification as read
   const markAsRead = (notificationId) => {
     setNotifications((prev) =>
       prev.map((notif) =>
@@ -155,7 +158,7 @@ const Navbar = ({ onToggleSidebar, sidebarOpen }) => {
     setUnreadCount((prev) => Math.max(0, prev - 1));
   };
 
-  // Delete notification
+  // delete notification
   const deleteNotification = (notificationId) => {
     const deletedNotif = notifications.find((n) => n.id === notificationId);
     setNotifications((prev) =>
@@ -166,13 +169,13 @@ const Navbar = ({ onToggleSidebar, sidebarOpen }) => {
     }
   };
 
-  // Mark all as read
+  // mark all as read
   const markAllAsRead = () => {
     setNotifications((prev) => prev.map((notif) => ({ ...notif, read: true })));
     setUnreadCount(0);
   };
 
-  // Close dropdowns when clicking outside
+  // close dropdowns when clicking outside
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
@@ -196,19 +199,19 @@ const Navbar = ({ onToggleSidebar, sidebarOpen }) => {
   };
 
   const getNotificationIcon = (type) => {
-    switch (type) {
-      case "success":
-        return "🟢";
-      case "error":
-        return "🔴";
-      case "info":
-        return "🔵";
-      default:
-        return "🔵";
-    }
+    const color =
+      type === "error" ? "#dc2626" : type === "success" ? "#2563eb" : "#0ea5e9";
+
+    return (
+      <span
+        aria-hidden="true"
+        className="mt-1 block h-2.5 w-2.5 rounded-full"
+        style={{ backgroundColor: color }}
+      />
+    );
   };
 
-  // Close all dropdowns
+  // close all dropdowns
   const closeAllDropdowns = () => {
     setDropdownOpen(false);
     setNotificationOpen(false);
@@ -216,7 +219,7 @@ const Navbar = ({ onToggleSidebar, sidebarOpen }) => {
 
   return (
     <>
-      {/* Mobile backdrop - Only show when dropdowns are open on mobile */}
+      {/* mobile backdrop - only show when dropdowns are open on mobile */}
       {(dropdownOpen || notificationOpen) && (
         <div
           className="fixed inset-0 bg-black/10 backdrop-blur-md border border-white/20 shadow-lg md:hidden"
@@ -230,7 +233,7 @@ const Navbar = ({ onToggleSidebar, sidebarOpen }) => {
         style={{ zIndex: 50 }}
       >
         <div className="flex h-12 sm:h-14 md:h-16 items-center w-full">
-          {/* Mobile menu button */}
+          {/* mobile menu button */}
           <button
             type="button"
             className="flex items-center justify-center w-12 sm:w-14 h-full border-r border-gray-200/60 text-gray-600 hover:text-gray-900 hover:bg-gray-50/80 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-500 md:hidden transition-all duration-200 active:scale-95"
@@ -245,16 +248,16 @@ const Navbar = ({ onToggleSidebar, sidebarOpen }) => {
           </button>
 
           <div className="flex-1 flex justify-between items-center px-2 sm:px-4 lg:px-6 w-full">
-            {/* Left side - Title */}
+            {/* left side - title */}
             <div className="flex-1 min-w-0">
               <h1 className="text-xs sm:text-sm md:text-lg lg:text-xl font-semibold text-gray-900 truncate">
                 Admin Dashboard
               </h1>
             </div>
 
-            {/* Right side - Actions */}
+            {/* right side - actions */}
             <div className="flex items-center space-x-1 sm:space-x-2">
-              {/* Notifications */}
+              {/* notifications */}
               <div className="relative" ref={notificationRef}>
                 <button
                   type="button"
@@ -274,14 +277,14 @@ const Navbar = ({ onToggleSidebar, sidebarOpen }) => {
                   )}
                 </button>
 
-                {/* Notifications dropdown */}
+                {/* notifications dropdown */}
                 {notificationOpen && (
                   <div
                     className="absolute right-0 mt-2 w-80 sm:w-96 lg:w-[420px] bg-white rounded-xl shadow-2xl border border-gray-200/60 py-2 transform transition-all duration-200 ease-out max-h-[80vh] flex flex-col"
                     style={{ zIndex: 60 }}
                     onClick={(e) => e.stopPropagation()}
                   >
-                    {/* Header */}
+                    {/* header */}
                     <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between flex-shrink-0">
                       <h3 className="text-sm font-semibold text-gray-900">
                         Notifications
@@ -296,7 +299,7 @@ const Navbar = ({ onToggleSidebar, sidebarOpen }) => {
                       )}
                     </div>
 
-                    {/* Notifications list with custom scrollbar */}
+                    {/* notifications list with custom scrollbar */}
                     <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100 hover:scrollbar-thumb-gray-400">
                       {notifications.length === 0 ? (
                         <div className="px-4 py-8 text-center text-gray-500">
@@ -348,7 +351,7 @@ const Navbar = ({ onToggleSidebar, sidebarOpen }) => {
                                     className="p-1 text-gray-400 hover:text-blue-600 transition-colors cursor-pointer"
                                     title="Mark as read"
                                   >
-                                    <Check className="w-4.8 h-4.8" />
+                                    <Check className="w-4 h-4" />
                                   </button>
                                 )}
                                 <button
@@ -359,7 +362,7 @@ const Navbar = ({ onToggleSidebar, sidebarOpen }) => {
                                   className="p-1 text-gray-400 hover:text-red-600 transition-colors cursor-pointer"
                                   title="Delete"
                                 >
-                                  <Trash2 className="w-4.6 h-4.6" />
+                                  <Trash2 className="w-4 h-4" />
                                 </button>
                               </div>
                             </div>
@@ -368,7 +371,7 @@ const Navbar = ({ onToggleSidebar, sidebarOpen }) => {
                       )}
                     </div>
 
-                    {/* Footer */}
+                    {/* footer */}
                     {notifications.length > 0 && (
                       <div className="px-4 py-2 border-t border-gray-100 flex-shrink-0">
                         <button
@@ -387,7 +390,7 @@ const Navbar = ({ onToggleSidebar, sidebarOpen }) => {
                 )}
               </div>
 
-              {/* Profile dropdown */}
+              {/* profile dropdown */}
               <div className="relative" ref={dropdownRef}>
                 <button
                   type="button"
@@ -428,7 +431,7 @@ const Navbar = ({ onToggleSidebar, sidebarOpen }) => {
                     style={{ zIndex: 60 }}
                     onClick={(e) => e.stopPropagation()}
                   >
-                    {/* User info section */}
+                    {/* user info section */}
                     <div className="px-4 py-3 border-b border-gray-100 cursor-pointer">
                       <div className="flex items-center">
                         <div className="h-10 w-10 rounded-full bg-gradient-to-r from-blue-600 to-blue-700 flex items-center justify-center shadow-sm">
@@ -445,13 +448,13 @@ const Navbar = ({ onToggleSidebar, sidebarOpen }) => {
                       </div>
                     </div>
 
-                    {/* Menu items */}
+                    {/* menu items */}
                     <div className="py-1">
                       <button
                         className="flex items-center w-full px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 hover:text-gray-900 transition-colors duration-150 cursor-pointer"
                         onClick={() => {
                           navigate("/setting");
-                          setDropdownOpen(false); // Close the dropdown after navigation
+                          setDropdownOpen(false); // close the dropdown navigation
                         }}
                       >
                         <Settings className="mr-3 h-4 w-4 text-gray-400" />
@@ -473,7 +476,7 @@ const Navbar = ({ onToggleSidebar, sidebarOpen }) => {
         </div>
       </header>
 
-      {/* Custom scrollbar styles */}
+      {/* custom scrollbar styles */}
       <style
         dangerouslySetInnerHTML={{
           __html: `

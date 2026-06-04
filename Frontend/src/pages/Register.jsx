@@ -1,3 +1,6 @@
+/**
+ * keeps the register page focused and readable.
+ */
 import React, { useState, useEffect, useCallback, useMemo, memo } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
@@ -106,7 +109,7 @@ const Register = () => {
   });
 
   const [username, setUsername] = useState("");
-  const [registerStep, setRegisterStep] = useState(1); // 1: form, 2: OTP, 3: username
+  const [registerStep, setRegisterStep] = useState(1); // 1: form, 2: otp, 3: username
   const [otpTimer, setOtpTimer] = useState(0);
   const [canResendOtp, setCanResendOtp] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -172,7 +175,7 @@ const Register = () => {
     }
   }, [isAuthenticated, authLoading, navigate]);
 
-  // Auto-focus first OTP input when OTP step loads
+  // auto-focus first otp input when otp step loads
   useEffect(() => {
     if (registerStep === 2) {
       setTimeout(() => {
@@ -206,7 +209,7 @@ const Register = () => {
       [name]: inputValue,
     }));
 
-    // Clear error using functional update - no dependency needed
+    // clear error using functional update - no dependency needed
     setErrors((prev) => {
       if (prev[name]) {
         const newErrors = { ...prev };
@@ -215,7 +218,7 @@ const Register = () => {
       }
       return prev;
     });
-  }, []); // Empty dependency array - function never recreates
+  }, []); // empty dependency array - function never recreates
 
   const checkUsernameAvailability = useCallback(
     debounce(async (username, nameForUsername) => {
@@ -237,7 +240,7 @@ const Register = () => {
         return;
       }
 
-      // ── check reserved usernames client-side first ──
+      // check reserved usernames on the client first
       const reservedCheck = checkReservedUsername(username);
       if (reservedCheck.reserved) {
         setUsernameAvailable(false);
@@ -292,7 +295,7 @@ const Register = () => {
   );
 
   const handleDateChange = useCallback((e) => {
-    let value = e.target.value.replace(/\D/g, ""); // Remove non-digits
+    let value = e.target.value.replace(/\D/g, ""); // remove non-digits
 
     if (value.length >= 2) {
       value = value.slice(0, 2) + "/" + value.slice(2);
@@ -306,7 +309,7 @@ const Register = () => {
       dateOfBirth: value,
     }));
 
-    // Use functional update - no dependency needed
+    // use functional update - no dependency needed
     setErrors((prev) => {
       if (prev.dateOfBirth) {
         const newErrors = { ...prev };
@@ -315,20 +318,20 @@ const Register = () => {
       }
       return prev;
     });
-  }, []); // Empty dependency array
+  }, []); // empty dependency array
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
     if (isLoading) return;
 
-    // Check terms agreement locally
+    // check terms agreement locally
     if (!formData.agreeToTerms) {
       setErrors({ agreeToTerms: "You must agree to the terms and conditions" });
       return;
     }
 
-    // Check password match locally
+    // check password match locally
     if (formData.password !== formData.confirmPassword) {
       setErrors({ confirmPassword: "Passwords do not match" });
       return;
@@ -379,7 +382,7 @@ const Register = () => {
     setErrors({});
 
     try {
-      // Call a new API endpoint to verify OTP without username
+      // call a api endpoint to verify otp without username
       const response = await apiMethods.auth.verifyRegistrationOtp(
         formData.email,
         otpValue,
@@ -399,7 +402,7 @@ const Register = () => {
         error.response?.data?.message ||
         "Failed to verify OTP. Please try again.";
 
-      // Check if session expired - send user back to step 1
+      // check if session expired - send user back to step 1
       if (
         errorMessage === "Registration session expired. Please register again."
       ) {
@@ -407,19 +410,19 @@ const Register = () => {
           duration: 5000,
         });
 
-        // Reset to initial state
+        // reset to initial state
         setRegisterStep(1);
         setOtpValue("");
         setUsername("");
         setUsernameAvailable(null);
         setErrors({});
 
-        // Optionally we will keep their email so they don't have to retype everything
-        // formData.email is preserved, but user will need to re-enter other details
+        // optionally we will keep their email so they don't have to retype everything
+        // formdata.email is preserved, but user will need to re-enter other details
       } else {
-        // Normal OTP error
+        // normal otp error
         setErrors({ otp: errorMessage });
-        // toast.error(errorMessage);
+        // toast.error(errormessage);
       }
     } finally {
       setIsLoading(false);
@@ -468,7 +471,7 @@ const Register = () => {
       const errorMessage =
         error.response?.data?.message || "Registration failed";
 
-      // Check if session expired
+      // check if session expired
       if (
         errorMessage ===
           "Registration session expired. Please register again." ||
@@ -1135,7 +1138,7 @@ const Register = () => {
                       </div>
                     </form>
                   ) : registerStep === 2 ? (
-                    // Registration Step 2: OTP Verification
+                    // registration otp verification
                     <form
                       className="space-y-6 mt-[-60px]"
                       onSubmit={handleOtpVerification}

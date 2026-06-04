@@ -1,3 +1,6 @@
+/**
+ * keeps the login page focused and readable.
+ */
 import React, { useState, useEffect } from "react";
 import {
   Eye,
@@ -10,12 +13,14 @@ import {
   AlertCircle,
 } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
+import { useContent } from "../contexts/ContentContext";
 import AdminRegister from "../pages/AdminRegister";
 
 const Login = () => {
   const [showRegister, setShowRegister] = useState(false);
   const [checkingAdmin, setCheckingAdmin] = useState(true);
   const { login, loading, isAuthenticated, checkAdminExists } = useAuth();
+  const { contentSettings, fetchContentSettings } = useContent();
 
   const [formData, setFormData] = useState({
     email: "",
@@ -24,11 +29,16 @@ const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState({});
   const [toast, setToast] = useState({ show: false, message: "", type: "" });
+  const [logoBroken, setLogoBroken] = useState(false);
+  const siteName = contentSettings?.siteName || "Vidhgrow";
+  const logoUrl = contentSettings?.logo?.url;
 
-  // Redirect if already authenticated
+  // redirect if already authenticated
 
-  // Check if admin exists on component mount
+  // check if admin exists on component mount
   useEffect(() => {
+    fetchContentSettings();
+
     const checkAdmin = async () => {
       try {
         const response = await checkAdminExists();
@@ -43,11 +53,15 @@ const Login = () => {
     };
 
     checkAdmin();
-  }, [checkAdminExists]);
+  }, []);
+
+  useEffect(() => {
+    setLogoBroken(false);
+  }, [logoUrl]);
 
   const showToast = (message, type) => {
     setToast({ show: true, message, type });
-    // Auto-hide after 4 seconds
+    // auto-hide 4 seconds
     setTimeout(() => setToast({ show: false, message: "", type: "" }), 4000);
   };
 
@@ -58,7 +72,7 @@ const Login = () => {
       [name]: value,
     }));
 
-    // Clear errors when user starts typing
+    // clear errors when user starts typing
     if (errors[name]) {
       setErrors((prev) => ({
         ...prev,
@@ -67,7 +81,7 @@ const Login = () => {
     }
   };
 
-  // Handle copy/paste restrictions for password when visible
+  // handle copy/paste restrictions for password when visible
   const handlePasswordKeyDown = (e) => {
     if (showPassword && (e.ctrlKey || e.metaKey)) {
       if (e.key === "c" || e.key === "v" || e.key === "x") {
@@ -93,8 +107,8 @@ const Login = () => {
 
       if (result.success) {
         showToast("Welcome back! Login successful", "success");
-        // The login function now handles the redirect with proper timing
-        // Don't add any redirect here to avoid race conditions
+        // the login function now handles the redirect with proper timing
+        // avoid adding another redirect here because login already handles it
       } else {
         setErrors({ submit: result.message });
         showToast(result.message || "Login failed. Please try again.", "error");
@@ -108,7 +122,7 @@ const Login = () => {
 
   if (checkingAdmin) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-blue-100 flex items-center justify-center">
+      <div className="admin-auth-page min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
       </div>
     );
@@ -116,7 +130,7 @@ const Login = () => {
 
   if (showRegister) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-blue-100 flex items-center justify-center py-8 px-4">
+      <div className="admin-auth-page min-h-screen flex items-center justify-center py-8 px-4">
         <div className="max-w-md w-full">
           <AdminRegister onSwitchToLogin={() => setShowRegister(false)} />
         </div>
@@ -125,21 +139,24 @@ const Login = () => {
   }
   return (
     <>
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-blue-100 flex items-center justify-center py-8 px-4 sm:px-6 lg:px-8">
+      <div className="admin-auth-page min-h-screen flex items-center justify-center py-8 px-4 sm:px-6 lg:px-8">
         <div className="max-w-md w-full space-y-8">
-          {/* Header */}
+          {/* header */}
           <div className="text-center">
-            {/* Logo Container */}
-            <img
-              src="/logo.png"
-              alt="Vidhgrow Logo"
-              className="w-full h-full object-contain p-4 sm:p-3 rounded-2xl"
-              onError={(e) => {
-                // Fallback to icon if image fails to load
-                e.target.style.display = "none";
-                e.target.nextElementSibling.style.display = "flex";
-              }}
-            />
+            <div className="mx-auto mb-5 flex min-h-14 max-w-[220px] items-center justify-center">
+              {logoUrl && !logoBroken ? (
+                <img
+                  src={logoUrl}
+                  alt={siteName}
+                  className="max-h-14 max-w-full object-contain"
+                  onError={() => setLogoBroken(true)}
+                />
+              ) : (
+                <div className="rounded-lg bg-blue-50 px-4 py-2 text-sm font-bold tracking-wide text-blue-700">
+                  {siteName}
+                </div>
+              )}
+            </div>
             <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-2">
               Welcome Back
             </h2>
@@ -148,7 +165,7 @@ const Login = () => {
             </p>
           </div>
 
-          {/* Form Container */}
+          {/* form container */}
           <div className="bg-white rounded-2xl shadow-xl p-8 border border-gray-100">
             <form onSubmit={handleSubmit} className="space-y-6">
               {errors.submit && (
@@ -158,7 +175,7 @@ const Login = () => {
                 </div>
               )}
 
-              {/* Email Field */}
+              {/* email field */}
               <div className="space-y-2">
                 <label
                   htmlFor="email"
@@ -194,7 +211,7 @@ const Login = () => {
                 )}
               </div>
 
-              {/* Password Field */}
+              {/* password field */}
               <div className="space-y-2">
                 <label
                   htmlFor="password"
@@ -243,7 +260,7 @@ const Login = () => {
                 )}
               </div>
 
-              {/* Submit Button */}
+              {/* submit button */}
               <button
                 type="submit"
                 disabled={loading}
@@ -259,7 +276,7 @@ const Login = () => {
                 )}
               </button>
 
-              {/* Admin Notice */}
+              {/* admin notice */}
               <div className="text-center pt-4">
                 <p className="text-sm text-gray-500 bg-gray-50 rounded-lg py-3 px-4">
                   Admin access only.
@@ -268,7 +285,7 @@ const Login = () => {
             </form>
           </div>
 
-          {/* Footer */}
+          {/* footer */}
           <div className="text-center">
             <p className="text-sm text-gray-500">
               © 2025 Vidhgrow Admin Panel. All rights reserved.
@@ -277,7 +294,7 @@ const Login = () => {
         </div>
       </div>
 
-      {/* Custom Styles */}
+      {/* custom styles */}
       <style>
         {`
           @keyframes slide-up {
@@ -290,7 +307,7 @@ const Login = () => {
               transform: translateY(0);
             }
           }
-          
+
           @media (min-width: 640px) {
             @keyframes slide-up {
               from {
@@ -303,7 +320,7 @@ const Login = () => {
               }
             }
           }
-          
+
           .animate-slide-up {
             animation: slide-up 0.3s ease-out;
           }

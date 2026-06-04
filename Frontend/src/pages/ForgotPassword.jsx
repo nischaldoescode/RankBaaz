@@ -1,3 +1,6 @@
+/**
+ * keeps the forgot password page focused and readable.
+ */
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
@@ -19,7 +22,7 @@ import { apiMethods, handleApiError } from "../services/api";
 import { useTheme } from "../context/ThemeContext";
 
 const ForgotPassword = ({ onBackToLogin }) => {
-  const [step, setStep] = useState(1); // 1: identifier, 2: OTP, 3: new password
+  const [step, setStep] = useState(1); // 1: identifier, 2: otp, 3: password
   const [formData, setFormData] = useState({
     identifier: "",
     otp: "",
@@ -38,7 +41,7 @@ const ForgotPassword = ({ onBackToLogin }) => {
   const { animations = true, reducedMotion = false } = useTheme() || {};
   const navigate = useNavigate();
 
-  // OTP Timer Effect
+  // otp timer effect
   useEffect(() => {
     let interval;
     if (otpTimer > 0) {
@@ -62,7 +65,7 @@ const ForgotPassword = ({ onBackToLogin }) => {
       [name]: value,
     }));
 
-    // Clear error for this field
+    // clear error for this field
     if (errors[name]) {
       setErrors((prev) => ({
         ...prev,
@@ -143,7 +146,7 @@ const ForgotPassword = ({ onBackToLogin }) => {
         setFormData((prev) => ({
           ...prev,
           resetToken: response.data.data.resetToken,
-          otp: "", // Clear OTP
+          otp: "", // clear otp
         }));
         setStep(3);
         toast.success("OTP verified");
@@ -156,7 +159,7 @@ const ForgotPassword = ({ onBackToLogin }) => {
   };
 
   const handlePasswordReset = async () => {
-    // Validation
+    // validation
     if (!formData.newPassword) {
       setErrors({ newPassword: "New password is required" });
       return;
@@ -190,7 +193,7 @@ const ForgotPassword = ({ onBackToLogin }) => {
 
       if (response.data.success) {
         toast.success("Password reset successfully! You can now login.");
-        // Reset state and go back to login
+        // reset state and go back to login
         handleReset();
         if (onBackToLogin) {
           onBackToLogin();
@@ -259,7 +262,7 @@ const ForgotPassword = ({ onBackToLogin }) => {
       transition={{ type: "spring", damping: 25, stiffness: 200 }}
       className="w-full max-w-md space-y-3 sm:space-y-5"
     >
-      {/* Back Button */}
+      {/* back button */}
       <motion.div
         initial={animations && !reducedMotion ? { opacity: 0, y: -10 } : {}}
         animate={animations && !reducedMotion ? { opacity: 1, y: 0 } : {}}
@@ -277,7 +280,7 @@ const ForgotPassword = ({ onBackToLogin }) => {
         </button>
       </motion.div>
 
-      {/* Header */}
+      {/* header */}
       <motion.div
         initial={animations && !reducedMotion ? { opacity: 0, y: -10 } : {}}
         animate={animations && !reducedMotion ? { opacity: 1, y: 0 } : {}}
@@ -294,7 +297,7 @@ const ForgotPassword = ({ onBackToLogin }) => {
         </p>
       </motion.div>
 
-      {/* Form Card */}
+      {/* form card */}
       <motion.div
         initial={animations && !reducedMotion ? { opacity: 0, y: 10 } : {}}
         animate={animations && !reducedMotion ? { opacity: 1, y: 0 } : {}}
@@ -306,7 +309,7 @@ const ForgotPassword = ({ onBackToLogin }) => {
               onSubmit={handleSubmit}
               className="space-y-5 sm:space-y-6 w-full"
             >
-              {/* Submit Error */}
+              {/* submit error */}
               {errors.submit && (
                 <motion.div
                   initial={{ opacity: 0, y: -10 }}
@@ -320,7 +323,7 @@ const ForgotPassword = ({ onBackToLogin }) => {
                 </motion.div>
               )}
 
-              {/* Step 1: Identifier (Email or Username) */}
+              {/* step 1: identifier (email or username) */}
               {step === 1 && (
                 <motion.div
                   initial={{ opacity: 0, x: -20 }}
@@ -365,7 +368,7 @@ const ForgotPassword = ({ onBackToLogin }) => {
                 </motion.div>
               )}
 
-              {/* Step 2: OTP Verification */}
+              {/* step 2: otp verification */}
               {step === 2 && (
                 <motion.div
                   initial={{ opacity: 0, x: -20 }}
@@ -401,7 +404,7 @@ const ForgotPassword = ({ onBackToLogin }) => {
                                 otp: newOtp.join(""),
                               });
 
-                              // Auto-focus next input
+                              // auto-focus next input
                               if (index < 5) {
                                 document
                                   .getElementById(`forgot-otp-${index + 1}`)
@@ -488,7 +491,7 @@ const ForgotPassword = ({ onBackToLogin }) => {
                 </motion.div>
               )}
 
-              {/* Step 3: New Password */}
+              {/* step 3: password */}
               {step === 3 && (
                 <motion.div
                   initial={{ opacity: 0, x: -20 }}
@@ -496,7 +499,7 @@ const ForgotPassword = ({ onBackToLogin }) => {
                   exit={{ opacity: 0, x: 20 }}
                   className="space-y-4 w-full"
                 >
-                  {/* New Password Field */}
+                  {/* password field */}
                   <div className="space-y-2 w-full">
                     <label
                       htmlFor="newPassword"
@@ -550,7 +553,7 @@ const ForgotPassword = ({ onBackToLogin }) => {
                     </p>
                   </div>
 
-                  {/* Confirm Password Field */}
+                  {/* confirm password field */}
                   <div className="space-y-2 w-full">
                     <label
                       htmlFor="confirmPassword"
@@ -604,7 +607,7 @@ const ForgotPassword = ({ onBackToLogin }) => {
                 </motion.div>
               )}
 
-              {/* Submit Button */}
+              {/* submit button */}
               <Button
                 type="submit"
                 disabled={isLoading}

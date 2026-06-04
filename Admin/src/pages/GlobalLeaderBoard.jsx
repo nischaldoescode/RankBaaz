@@ -1,3 +1,6 @@
+/**
+ * keeps the global leader board page focused and readable.
+ */
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { toast } from "react-toastify";
@@ -17,7 +20,7 @@ const GlobalLeaderboard = () => {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState({
     limit: 100,
-    sortBy: "points", // points, testsCompleted, averagePercentile
+    sortBy: "points", // points, testscompleted, averagepercentile
   });
   const [refreshing, setRefreshing] = useState(false);
 
@@ -81,10 +84,10 @@ const GlobalLeaderboard = () => {
   };
 
   const getRankIcon = (rank) => {
-    if (rank <= 3) return "🏆";
-    if (rank <= 10) return "🥇";
-    if (rank <= 50) return "🥈";
-    return "🥉";
+    if (rank <= 3) return "";
+    if (rank <= 10) return "";
+    if (rank <= 50) return "";
+    return "";
   };
 
   if (loading) {
@@ -97,7 +100,7 @@ const GlobalLeaderboard = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 p-6">
-      {/* Header */}
+      {/* header */}
       <div className="mb-8">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -137,7 +140,7 @@ const GlobalLeaderboard = () => {
         </div>
       </div>
 
-      {/* Filters */}
+      {/* filters */}
       <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-6 mb-8">
         <div className="flex items-center gap-3 mb-4">
           <FiFilter className="w-5 h-5 text-gray-600" />
@@ -165,7 +168,7 @@ const GlobalLeaderboard = () => {
         </div>
       </div>
 
-      {/* Top 3 Podium */}
+      {/* top 3 podium */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
         {leaderboard.slice(0, 3).map((user, idx) => (
           <motion.div
@@ -205,7 +208,7 @@ const GlobalLeaderboard = () => {
         ))}
       </div>
 
-      {/* Full Leaderboard Table */}
+      {/* full leaderboard table */}
       <div className="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
         <div className="p-6 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50">
           <h2 className="text-xl font-bold text-gray-900">Complete Rankings</h2>
@@ -280,7 +283,7 @@ const GlobalLeaderboard = () => {
                           className="px-2 py-1 bg-purple-100 text-purple-700 rounded text-xs"
                           title={badge.type}
                         >
-                          🏆
+
                         </span>
                       ))}
                       {user.badges?.length > 3 && (

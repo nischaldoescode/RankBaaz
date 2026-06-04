@@ -1,3 +1,6 @@
+/**
+ * keeps the blog management page focused and readable.
+ */
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import axios from "axios";
 import { toast } from "react-toastify";
@@ -877,7 +880,7 @@ const BlogManagement = () => {
         try {
           if (range.intersectsNode(block)) blocks.add(block);
         } catch {
-          // Ignore detached nodes while the editor is changing.
+          // ignore detached nodes while the editor is changing.
         }
       });
 

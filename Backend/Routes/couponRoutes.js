@@ -1,3 +1,6 @@
+/**
+ * keeps the coupon routes route focused and readable.
+ */
 import express from "express";
 import {
   createCoupon,
@@ -24,7 +27,7 @@ import { verifyRequestSignature } from "../Middleware/requestSignature.js";
 
 const router = express.Router();
 
-// ── admin routes ──
+// admin routes
 router.post(
   "/",
   authenticateAdmin,
@@ -60,7 +63,7 @@ router.post(
   adminSetTeacherCouponAccess,
 );
 
-// ── teacher routes ──
+// teacher routes
 router.post(
   "/teacher",
   authenticateTeacher,
@@ -86,7 +89,7 @@ router.patch(
   teacherToggleCouponStatus,
 );
 
-// ── user routes ──
+// user routes
 router.post("/verify", authenticateUser, verifyRequestSignature, verifyCoupon);
 
 export default router;

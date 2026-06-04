@@ -1,3 +1,6 @@
+/**
+ * keeps the payment modal component focused and readable.
+ */
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -18,13 +21,15 @@ import { Input } from "@/components/ui/Input";
 import { apiMethods } from "@/services/api";
 import toast from "react-hot-toast";
 import { useAuth } from "@/context/AuthContext";
+import { useContent } from "@/context/ContentContext";
 
 /**
- * payment modal — supports razorpay (india) and khalti (nepal)
+ * handles razorpay and khalti checkout flows.
  * geo restriction determines which payment gateway is shown
  */
 const PaymentModal = ({ isOpen, onClose, course, onSuccess }) => {
   const { user } = useAuth();
+  const { contentSettings } = useContent();
   const [loading, setLoading] = useState(false);
   const [orderData, setOrderData] = useState(null);
   const [phoneNumber, setPhoneNumber] = useState("");
@@ -60,7 +65,7 @@ const PaymentModal = ({ isOpen, onClose, course, onSuccess }) => {
     }
   }, [isOpen]);
 
-  // ── razorpay order ──
+  // razorpay order
 
   const createRazorpayOrder = async (appliedCouponId = null) => {
     try {
@@ -79,7 +84,7 @@ const PaymentModal = ({ isOpen, onClose, course, onSuccess }) => {
     }
   };
 
-  // ── coupon ──
+  // coupon
 
   const handleVerifyCoupon = async () => {
     if (!couponCode.trim()) {
@@ -118,12 +123,12 @@ const PaymentModal = ({ isOpen, onClose, course, onSuccess }) => {
     if (isIndiaCourse) await createRazorpayOrder();
   };
 
-  // ── phone validation ──
+  // phone validation
 
   const validateIndiaPhone = (p) => /^[6-9]\d{9}$/.test(p);
   const validateNepalPhone = (p) => /^9[6-8]\d{8}$/.test(p);
 
-  // ── razorpay payment ──
+  // razorpay payment
 
   const handleRazorpayPayment = async () => {
     if (!phoneNumber.trim()) {
@@ -147,7 +152,7 @@ const PaymentModal = ({ isOpen, onClose, course, onSuccess }) => {
       order_id: orderData.orderId,
       name: "Vidhgrow",
       description: `Purchase ${orderData.courseName}`,
-      image: orderData.courseImage || "/logo.png",
+      image: orderData.courseImage || contentSettings?.logo?.url || undefined,
       prefill: {
         name: orderData.userName || user?.name,
         email: orderData.userEmail || user?.email,
@@ -158,7 +163,7 @@ const PaymentModal = ({ isOpen, onClose, course, onSuccess }) => {
       modal: {
         ondismiss: () => {
           setLoading(false);
-          toast("Payment cancelled", { icon: "ℹ️", duration: 3000 });
+          toast("Payment cancelled", { icon: "ℹ", duration: 3000 });
         },
         escape: true,
         backdropclose: false,
@@ -180,7 +185,7 @@ const PaymentModal = ({ isOpen, onClose, course, onSuccess }) => {
           const verifyRes = await apiMethods.payments.verifyPayment(payload);
           toast.dismiss(processingToast);
           if (verifyRes.data.success) {
-            toast.success("Payment successful! 🎉 Course unlocked.", {
+            toast.success("Payment successful!  Course unlocked.", {
               duration: 5000,
             });
             setTimeout(() => {
@@ -220,7 +225,7 @@ const PaymentModal = ({ isOpen, onClose, course, onSuccess }) => {
     }
   };
 
-  // ── khalti payment (nepal) ──
+  // khalti payment for nepal
 
   const handleKhaltiPayment = async () => {
     if (!phoneNumber.trim()) {
@@ -246,10 +251,10 @@ const PaymentModal = ({ isOpen, onClose, course, onSuccess }) => {
       }
 
       toast("Redirecting to Khalti payment portal...", {
-        icon: "🔗",
+        icon: "",
         duration: 3000,
       });
-      // redirect to Khalti — they handle the payment flow
+      // khalti handles the hosted payment flow.
       setTimeout(() => {
         window.location.href = payment_url;
       }, 500);
@@ -262,7 +267,7 @@ const PaymentModal = ({ isOpen, onClose, course, onSuccess }) => {
     }
   };
 
-  // ── display values ──
+  // display values
 
   const displayPrice =
     couponApplied && couponData ? couponData.finalPrice : course?.price;
@@ -413,7 +418,7 @@ const PaymentModal = ({ isOpen, onClose, course, onSuccess }) => {
                       <CheckCircle className="w-5 h-5 text-green-600" />
                       <div>
                         <p className="text-sm font-medium text-green-900 dark:text-green-100">
-                          Coupon applied — {discount}% off
+                          Coupon applied: {discount}% off
                         </p>
                         <p className="text-xs text-green-700 dark:text-green-300">
                           Save {currencySymbol}
@@ -491,7 +496,7 @@ const PaymentModal = ({ isOpen, onClose, course, onSuccess }) => {
                 ))}
               </div>
 
-              {/* CTA button */}
+              {/* cta button */}
               {isIndiaCourse ? (
                 <Button
                   onClick={handleRazorpayPayment}

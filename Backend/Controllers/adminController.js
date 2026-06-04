@@ -1,3 +1,6 @@
+/**
+ * keeps the admin controller controller focused and readable.
+ */
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { body, validationResult } from "express-validator";
@@ -47,7 +50,7 @@ const getIpInfo = async (ip) => {
   }
 };
 
-// Validation rules (same as before)
+// validation rules (same as )
 
 export const registerValidation = [
   body("name")
@@ -107,7 +110,7 @@ export const changePasswordValidation = [
     .withMessage("New password must be at least 6 characters"),
 ];
 
-// Simple admin token generation (no IP/User-Agent)
+// simple admin token generation (no ip/user-agent)
 const generateAdminToken = (userId) => {
   return jwt.sign({ userId, isAdmin: true }, process.env.JWT_SECRET, {
     expiresIn: "7d",
@@ -131,7 +134,7 @@ export const adminRegister = async (req, res) => {
       });
     }
 
-    // 🔐 Block registration if any admin already exists
+    //  block registration if any admin already exists
     const adminExists = await Admin.exists({});
     if (adminExists) {
       return res.status(403).json({
@@ -142,7 +145,7 @@ export const adminRegister = async (req, res) => {
 
     const { name, email, password, age, gender } = req.body;
 
-    // Email duplication check
+    // email duplication check
     const existingAdmin = await Admin.findOne({ email });
 
     if (existingAdmin) {
@@ -152,10 +155,10 @@ export const adminRegister = async (req, res) => {
       });
     }
 
-    // Hash password
+    // hash password
     const hashedPassword = await bcrypt.hash(password, 12);
 
-    // Create admin
+    // create admin
     const admin = new Admin({
       name,
       email,
@@ -192,16 +195,16 @@ export const adminRegister = async (req, res) => {
   }
 };
 
-// Admin Login
+// admin login
 export const adminLogin = async (req, res) => {
   try {
     const { email, password, captchaSeed, captchaNonce } = req.body;
 
-    // Check if captcha is required
+    // check if captcha is required
     const captchaRequired = await isCaptchaRequired(email);
 
     if (captchaRequired) {
-      // Verify captcha was provided
+      // verify captcha was provided
       if (!captchaSeed || !captchaNonce) {
         const captcha = await generateAdminCaptcha(email);
 
@@ -217,14 +220,14 @@ export const adminLogin = async (req, res) => {
         });
       }
 
-      // Captcha verification happens in middleware, so if we're here it's valid
+      // captcha verification happens in middleware, so if we're here it's valid
     }
 
-    // Find admin
+    // find admin
     const admin = await Admin.findOne({ email }).select("+password");
 
     if (!admin) {
-      // Track failed attempt
+      // track failed attempt
       const attemptInfo = await trackAdminLoginAttempt(email, false);
 
       return res.status(401).json({
@@ -240,11 +243,11 @@ export const adminLogin = async (req, res) => {
       });
     }
 
-    // Verify password
+    // verify password
     const isPasswordValid = await bcrypt.compare(password, admin.password);
 
     if (!isPasswordValid) {
-      // Track failed attempt
+      // track failed attempt
       const attemptInfo = await trackAdminLoginAttempt(email, false);
 
       return res.status(401).json({
@@ -260,10 +263,10 @@ export const adminLogin = async (req, res) => {
       });
     }
 
-    // SUCCESS - Clear failed attempts
+    // success - clear failed attempts
     await trackAdminLoginAttempt(email, true);
 
-    // Generate tokens
+    // generate tokens
     const accessToken = jwt.sign(
       { adminId: admin._id, role: "admin" },
       process.env.ADMIN_JWT_SECRET,
@@ -276,12 +279,12 @@ export const adminLogin = async (req, res) => {
       { expiresIn: "30d" },
     );
 
-    // Save refresh token
+    // save refresh token
     admin.refreshToken = refreshToken;
     admin.lastLogin = new Date();
     await admin.save();
 
-    // Set HTTP-only cookies with correct names
+    // set http-only cookies with correct names
     res.cookie("adminToken", accessToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
@@ -298,7 +301,7 @@ export const adminLogin = async (req, res) => {
       path: "/",
     });
 
-    // Return admin data
+    // return admin data
     const adminData = {
       id: admin._id,
       name: admin.name,
@@ -320,7 +323,7 @@ export const adminLogin = async (req, res) => {
   }
 };
 
-// Admin Get Profile
+// admin get profile
 export const adminGetProfile = async (req, res) => {
   try {
     const admin = await Admin.findById(req.admin.userId).select("-password");
@@ -339,7 +342,7 @@ export const adminGetProfile = async (req, res) => {
   }
 };
 
-// Admin Update Profile
+// admin update profile
 export const adminUpdateProfile = async (req, res) => {
   try {
     const errors = validationResult(req);
@@ -353,7 +356,7 @@ export const adminUpdateProfile = async (req, res) => {
 
     const userId = req.admin.userId;
     const currentAdmin = await Admin.findById(userId).select("email");
-    // Check email uniqueness
+    // check email uniqueness
     if (req.body.email && req.body.email !== currentAdmin.email) {
       const existingAdmin = await Admin.findOne({
         email: req.body.email,
@@ -406,7 +409,7 @@ export const adminUpdateProfile = async (req, res) => {
   }
 };
 
-// Admin Change Password
+// admin password
 export const adminChangePassword = async (req, res) => {
   try {
     const errors = validationResult(req);
@@ -457,7 +460,7 @@ export const adminChangePassword = async (req, res) => {
   }
 };
 
-// Admin Logout
+// admin logout
 export const adminLogout = async (req, res) => {
   try {
     res.clearCookie("adminToken");
@@ -485,13 +488,13 @@ export const admincheckExists = async (req, res) => {
   }
 };
 
-// Get all registered users with pagination
+// get all registered users with pagination
 export const getAllUsers = async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 20;
     const skip = (page - 1) * limit;
-    const sortBy = req.query.sortBy || "createdAt"; // createdAt, name, email
+    const sortBy = req.query.sortBy || "createdAt"; // createdat, name, email
     const sortOrder = req.query.sortOrder === "asc" ? 1 : -1;
 
     const [users, totalUsers] = await Promise.all([
@@ -509,7 +512,7 @@ export const getAllUsers = async (req, res) => {
 
     const totalPages = Math.ceil(totalUsers / limit);
 
-    // Calculate age from dateOfBirth
+    // calculate age from dateofbirth
     const usersWithAge = users.map((user) => ({
       ...user,
       age: user.dateOfBirth ? calculateAge(user.dateOfBirth) : null,
@@ -537,7 +540,7 @@ export const getAllUsers = async (req, res) => {
   }
 };
 
-// Search users by name, email, or username
+// search users by name, email, or username
 export const searchUsers = async (req, res) => {
   try {
     const { query } = req.query;
@@ -652,7 +655,7 @@ export const getUserDetails = async (req, res) => {
   }
 };
 
-// Helper function to calculate age
+// helper function to calculate age
 function calculateAge(birthDate) {
   const today = new Date();
   const birth = new Date(birthDate);
@@ -666,7 +669,7 @@ function calculateAge(birthDate) {
   return age;
 }
 
-// Export user statistics to CSV
+// export user statistics to csv
 export const exportUsersToCSV = async (req, res) => {
   try {
     const users = await User.find({})
@@ -675,7 +678,7 @@ export const exportUsersToCSV = async (req, res) => {
       )
       .lean();
 
-    // CSV Headers
+    // csv headers
     const headers = [
       "Name",
       "Email",
@@ -689,7 +692,7 @@ export const exportUsersToCSV = async (req, res) => {
       "Badges Earned",
     ];
 
-    // CSV Rows
+    // csv rows
     const rows = users.map((user) => {
       const age = user.dateOfBirth ? calculateAge(user.dateOfBirth) : "N/A";
       const regDate = new Date(user.createdAt).toLocaleDateString("en-US");
@@ -708,13 +711,13 @@ export const exportUsersToCSV = async (req, res) => {
       ];
     });
 
-    // Build CSV content
+    // build csv content
     const csvContent = [
       headers.join(","),
       ...rows.map((row) => row.map((cell) => `"${cell}"`).join(",")),
     ].join("\n");
 
-    // Set headers for file download
+    // set headers for file download
     res.setHeader("Content-Type", "text/csv; charset=utf-8");
     res.setHeader(
       "Content-Disposition",
@@ -723,8 +726,8 @@ export const exportUsersToCSV = async (req, res) => {
     res.setHeader("Cache-Control", "no-cache");
     res.setHeader("Pragma", "no-cache");
 
-    // Send CSV
-    res.status(200).send("\uFEFF" + csvContent); // Add BOM for Excel compatibility
+    // send csv
+    res.status(200).send("\uFEFF" + csvContent); // bom for excel compatibility
   } catch (error) {
     console.error("Export users to CSV error:", error);
     res.status(500).json({

@@ -1,3 +1,6 @@
+/**
+ * keeps the content management page focused and readable.
+ */
 import React, { useState, useEffect, useCallback } from "react";
 import { useContent } from "../contexts/ContentContext";
 import {
@@ -77,7 +80,7 @@ const iconMap = {
   Heart,
 };
 
-// Sortable Legal Section Component
+// sortable legal section component
 const SortableLegalSection = ({
   section,
   sectionIndex,
@@ -203,7 +206,7 @@ const SortableLegalSection = ({
       }`}
     >
       <div className="flex items-start gap-4">
-        {/* Drag Handle */}
+        {/* drag handle */}
         <div
           {...attributes}
           {...listeners}
@@ -213,7 +216,7 @@ const SortableLegalSection = ({
         </div>
 
         <div className="flex-1 space-y-4">
-          {/* Section Header */}
+          {/* section header */}
           <div className="flex items-center justify-between">
             <input
               type="text"
@@ -242,7 +245,7 @@ const SortableLegalSection = ({
             </div>
           </div>
 
-          {/* ← ADD THIS ENTIRE BLOCK: Section Content (paragraph text) */}
+          {/* ← this entire block: section content (paragraph text) */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Section Content (optional paragraph text)
@@ -260,7 +263,7 @@ const SortableLegalSection = ({
             </p>
           </div>
 
-          {/* Subheaders */}
+          {/* subheaders */}
           {section.subheaders && section.subheaders.length > 0 && (
             <div className="ml-8 space-y-4">
               {section.subheaders.map((subheader, subIndex) => (
@@ -268,7 +271,7 @@ const SortableLegalSection = ({
                   key={subheader.id}
                   className="bg-gray-50 p-4 rounded-lg border border-gray-200"
                 >
-                  {/* ← MODIFY THIS: Make title optional */}
+                  {/* ← modify this: make title optional */}
                   <div className="flex items-center justify-between mb-3">
                     <input
                       type="text"
@@ -299,7 +302,7 @@ const SortableLegalSection = ({
                     </div>
                   </div>
 
-                  {/* Points remain the same */}
+                  {/* points remain the same */}
                   {subheader.points && subheader.points.length > 0 && (
                     <div className="ml-4 space-y-2">
                       {subheader.points.map((point, pointIndex) => (
@@ -339,7 +342,7 @@ const SortableLegalSection = ({
   );
 };
 
-// ADD: FAQs Live Preview Component
+// faqs live preview component
 const FAQsPreview = ({ data }) => {
   if (!data || data.length === 0) return null;
 
@@ -379,7 +382,7 @@ const FAQsPreview = ({ data }) => {
   );
 };
 
-// ADD: About Stats Live Preview Component
+// about stats live preview component
 const AboutStatsPreview = ({ data }) => {
   if (!data || data.length === 0) return null;
 
@@ -411,7 +414,7 @@ const AboutStatsPreview = ({ data }) => {
   );
 };
 
-// ADD: About Features Live Preview Component
+// about features live preview component
 const AboutFeaturesPreview = ({ data }) => {
   if (!data || data.length === 0) return null;
 
@@ -449,7 +452,7 @@ const AboutFeaturesPreview = ({ data }) => {
   );
 };
 
-// NEW Sortable FAQ Item Component
+// sortable faq item component
 const SortableFAQItem = ({ faq, index, handleEditFAQ, handleDeleteFAQ }) => {
   const {
     attributes,
@@ -475,7 +478,7 @@ const SortableFAQItem = ({ faq, index, handleEditFAQ, handleDeleteFAQ }) => {
       }`}
     >
       <div className="flex items-start gap-4">
-        {/* Drag Handle */}
+        {/* drag handle */}
         <div
           {...attributes}
           {...listeners}
@@ -516,7 +519,7 @@ const SortableFAQItem = ({ faq, index, handleEditFAQ, handleDeleteFAQ }) => {
   );
 };
 
-// ============ MAIN COMPONENT ============
+// main component
 
 const ContentManagement = () => {
   const {
@@ -635,7 +638,7 @@ const ContentManagement = () => {
     }
   }, [contactInfo]);
 
-  // Load template hints when legal page type changes
+  // load template hints when legal page type s
   useEffect(() => {
     const loadHints = async () => {
       const result = await getLegalTemplateHints(legalForm.type);
@@ -680,13 +683,13 @@ const ContentManagement = () => {
   const handleLegalSubmit = async (e) => {
     e.preventDefault();
 
-    // Validation: Must have title
+    // validation: have title
     if (!legalForm.title || legalForm.title.trim() === "") {
       toast.error("Please enter a page title");
       return;
     }
 
-    // Validation: Must have at least one section OR have old content
+    // validation: have at least one section or have old content
     if (
       (!legalForm.sections || legalForm.sections.length === 0) &&
       !legalForm.content
@@ -695,7 +698,7 @@ const ContentManagement = () => {
       return;
     }
 
-    // Warning if trying to save with old content
+    // warning if trying to save with old content
     if (
       legalForm.content &&
       (!legalForm.sections || legalForm.sections.length === 0)
@@ -730,7 +733,7 @@ const ContentManagement = () => {
     );
   };
 
-  // handleFAQDragEnd function
+  // handlefaqdragend function
   const handleFAQDragEnd = async (event) => {
     const { active, over } = event;
 
@@ -743,17 +746,17 @@ const ContentManagement = () => {
 
     const newFaqs = arrayMove(faqs, oldIndex, newIndex);
 
-    // Prepare data for backend
+    // prepare data for backend
     const updatedFAQs = newFaqs.map((faq, index) => ({
       id: faq._id,
       order: index,
     }));
 
-    // Save to backend - this will refetch automatically
+    // save to backend - this will refetch automatically
     await bulkUpdateFAQOrder(updatedFAQs);
   };
 
-  // Handle Legal Section Drag End
+  // handle legal section drag end
   const handleSectionDragEnd = async (event) => {
     const { active, over } = event;
 
@@ -766,23 +769,23 @@ const ContentManagement = () => {
 
     const newSections = arrayMove(legalForm.sections, oldIndex, newIndex);
 
-    // Update order values
+    // update order values
     const updatedSections = newSections.map((section, index) => ({
       ...section,
       order: index,
     }));
 
-    // Update local state immediately
+    // update local state immediately
     setLegalForm((prev) => ({
       ...prev,
       sections: updatedSections,
     }));
 
-    // Save to backend
+    // save to backend
     await bulkUpdateSectionOrder(legalForm.type, updatedSections);
   };
 
-  // ADD this sensors configuration right after handleSectionDragEnd:
+  // this sensors configuration right handlesectiondragend:
   const sensors = useSensors(
     useSensor(PointerSensor),
     useSensor(KeyboardSensor, {
@@ -799,11 +802,11 @@ const ContentManagement = () => {
     }
   };
 
-  // Preview handlers
+  // preview handlers
   const handleLoadPreview = async (type) => {
     setPreviewType(type);
     setShowPreview(true);
-    setPreviewData(null); // Reset preview data
+    setPreviewData(null); // reset preview data
 
     let result;
     if (type === "home") {
@@ -813,7 +816,7 @@ const ContentManagement = () => {
     } else if (type === "footer") {
       result = await fetchFooterPreview();
     } else if (type === "contact") {
-      // Use contactInfo directly
+      // use contactinfo directly
       setPreviewData(contactInfo);
       return;
     } else if (type === "privacy") {
@@ -825,12 +828,12 @@ const ContentManagement = () => {
     if (result?.success) {
       setPreviewData(result.data);
     } else if (result) {
-      // For legal pages, result is the data directly
+      // for legal pages, result is the data directly
       setPreviewData(result);
     }
   };
 
-  // Dynamic array management helpers
+  // dynamic array management helpers
   const addToArray = (field, defaultItem) => {
     updateSettingsForm((prev) => ({
       ...prev,
@@ -854,7 +857,7 @@ const ContentManagement = () => {
     }));
   };
 
-  // Social Media Management
+  // social media management
   const addSocialMedia = (platform) => {
     setContactForm((prev) => ({
       ...prev,
@@ -897,7 +900,7 @@ const ContentManagement = () => {
           </p>
         </div>
 
-        {/* Tabs */}
+        {/* tabs */}
         <div className="bg-white rounded-lg shadow-sm mb-6">
           <div className="border-b border-gray-200">
             <nav
@@ -928,10 +931,10 @@ const ContentManagement = () => {
           </div>
 
           <div className="p-6">
-            {/* Site Settings Tab */}
+            {/* site settings tab */}
             {activeTab === "settings" && (
               <form onSubmit={handleSettingsSubmit} className="space-y-8">
-                {/* Basic Site Info */}
+                {/* basic site info */}
                 <div className="space-y-6">
                   <h3 className="text-lg font-semibold text-gray-900 border-b pb-2">
                     Basic Site Information
@@ -994,7 +997,7 @@ const ContentManagement = () => {
                         Logo
                       </label>
 
-                      {/* Show current logo with delete option */}
+                      {/* show current logo with delete option */}
                       {settingsForm.logo?.url && (
                         <div className="mb-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
                           <div className="flex items-center justify-between mb-2">
@@ -1033,7 +1036,7 @@ const ContentManagement = () => {
                         </div>
                       )}
 
-                      {/* Upload new logo */}
+                      {/* upload logo */}
                       <div className="space-y-2">
                         <input
                           type="file"
@@ -1048,7 +1051,7 @@ const ContentManagement = () => {
                         </p>
                       </div>
 
-                      {/* Preview newly selected file (before saving) */}
+                      {/* preview ly selected file (saving) */}
                       {settingsForm.logo instanceof File && (
                         <div className="mt-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
                           <p className="text-xs font-medium text-blue-900 mb-2">
@@ -1063,7 +1066,7 @@ const ContentManagement = () => {
                   </div>
                 </div>
 
-                {/* Hero Section */}
+                {/* hero section */}
                 <div className="space-y-6">
                   <h3 className="text-lg font-semibold text-gray-900 border-b pb-2">
                     Home Page - Hero Section
@@ -1123,7 +1126,7 @@ const ContentManagement = () => {
                   </div>
                 </div>
 
-                {/* Home Page Stats */}
+                {/* home page stats */}
                 <div className="space-y-6">
                   <div className="flex items-center justify-between">
                     <h3 className="text-lg font-semibold text-gray-900">
@@ -1248,7 +1251,7 @@ const ContentManagement = () => {
                   </div>
                 )}
 
-                {/* Chart Type Visual Guide */}
+                {/* chart type visual guide */}
                 <div className="md:col-span-3 bg-blue-50 dark:bg-blue-950 rounded-lg p-4 border border-blue-200 dark:border-blue-800">
                   <h4 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-3 flex items-center gap-2">
                     <Info className="w-4 h-4" />
@@ -1324,14 +1327,14 @@ const ContentManagement = () => {
                   </div>
                 </div>
 
-                {/* Chart Configuration */}
+                {/* chart configuration */}
                 <div className="space-y-6">
                   <h3 className="text-lg font-semibold text-gray-900 border-b pb-2">
                     Home Page - Chart Configuration
                   </h3>
 
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    {/* Chart Type Selector */}
+                    {/* chart type selector */}
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
                         Chart Type
@@ -1356,7 +1359,7 @@ const ContentManagement = () => {
                       </select>
                     </div>
 
-                    {/* Chart Position Selector */}
+                    {/* chart position selector */}
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
                         Chart Position
@@ -1379,7 +1382,7 @@ const ContentManagement = () => {
                       </select>
                     </div>
 
-                    {/* Chart Enable/Disable Toggle */}
+                    {/* chart enable/disable toggle */}
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
                         Show Chart
@@ -1414,7 +1417,7 @@ const ContentManagement = () => {
                   </div>
                 </div>
 
-                {/* Chart Position Visual Guide */}
+                {/* chart position visual guide */}
                 <div className="md:col-span-3 bg-purple-50 dark:bg-purple-950 rounded-lg p-4 border border-purple-200 dark:border-purple-800">
                   <h4 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-3 flex items-center gap-2">
                     <BarChart2 className="w-4 h-4" />
@@ -1463,7 +1466,7 @@ const ContentManagement = () => {
                   </div>
                 </div>
 
-                {/* Home Page Features */}
+                {/* home page features */}
                 <div className="space-y-6">
                   <div className="flex items-center justify-between">
                     <h3 className="text-lg font-semibold text-gray-900">
@@ -1601,7 +1604,7 @@ const ContentManagement = () => {
                   </div>
                 </div>
 
-                {/* Live Preview - Features */}
+                {/* live preview - features */}
                 {settingsForm.features && settingsForm.features.length > 0 && (
                   <div className="bg-gradient-to-br from-green-50 to-teal-50 dark:from-green-950 dark:to-teal-950 rounded-xl p-6 border border-green-200 dark:border-green-800">
                     <h4 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-4 uppercase flex items-center gap-2">
@@ -1646,7 +1649,7 @@ const ContentManagement = () => {
                   </div>
                 )}
 
-                {/* CTA Section */}
+                {/* cta section */}
                 <div className="space-y-6">
                   <h3 className="text-lg font-semibold text-gray-900 border-b pb-2">
                     Home Page - CTA Section
@@ -1689,7 +1692,7 @@ const ContentManagement = () => {
                   </div>
                 </div>
 
-                {/* About Page Values */}
+                {/* about page values */}
                 <div className="space-y-6">
                   <div className="flex items-center justify-between">
                     <h3 className="text-lg font-semibold text-gray-900">
@@ -1781,7 +1784,7 @@ const ContentManagement = () => {
                                   </option>
                                   <option value="text-pink-500">Pink</option>
                                 </select>
-                                {/* Color Preview Dot */}
+                                {/* color preview dot */}
                                 <div className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none">
                                   <div
                                     className={`w-6 h-6 rounded-full ${value.color.replace(
@@ -1817,7 +1820,7 @@ const ContentManagement = () => {
                                   </option>
                                   <option value="bg-pink-500/10">Pink</option>
                                 </select>
-                                {/* Background Preview Box */}
+                                {/* background preview box */}
                                 <div className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none">
                                   <div
                                     className={`w-6 h-6 rounded border border-gray-300 ${value.bgColor}`}
@@ -1862,7 +1865,7 @@ const ContentManagement = () => {
                   </div>
                 </div>
 
-                {/* Live Preview for About Values */}
+                {/* live preview for about values */}
                 {settingsForm.aboutValues &&
                   settingsForm.aboutValues.length > 0 && (
                     <div className="bg-gradient-to-br from-blue-50 to-purple-50 dark:from-blue-950 dark:to-purple-950 rounded-xl p-6 border border-blue-200 dark:border-blue-800">
@@ -1899,7 +1902,7 @@ const ContentManagement = () => {
                     </div>
                   )}
 
-                {/* About Page Features */}
+                {/* about page features */}
                 <div className="space-y-6">
                   <div className="flex items-center justify-between">
                     <h3 className="text-lg font-semibold text-gray-900">
@@ -2004,7 +2007,7 @@ const ContentManagement = () => {
                     <AboutFeaturesPreview data={settingsForm.aboutFeatures} />
                   )}
 
-                {/* About Page Stats */}
+                {/* about page stats */}
                 <div className="space-y-6">
                   <div className="flex items-center justify-between">
                     <h3 className="text-lg font-semibold text-gray-900">
@@ -2101,7 +2104,7 @@ const ContentManagement = () => {
               </form>
             )}
 
-            {/* FAQs Tab */}
+            {/* faqs tab */}
             {activeTab === "faqs" && (
               <div className="space-y-6">
                 <form
@@ -2148,7 +2151,7 @@ const ContentManagement = () => {
                     />
                   </div>
 
-                  {/* ← ADD THIS ENTIRE SECTION */}
+                  {/* ← this entire section */}
                   <div className="flex justify-end gap-3 pt-4">
                     {editingFAQ && (
                       <button
@@ -2189,7 +2192,7 @@ const ContentManagement = () => {
                     </p>
                   </div>
 
-                  {/* REPLACE the entire DragDropContext section with this: */}
+                  {/* replace the entire dragdropcontext section with this: */}
                   <DndContext
                     sensors={sensors}
                     collisionDetection={closestCenter}
@@ -2222,10 +2225,10 @@ const ContentManagement = () => {
               </div>
             )}
 
-            {/* Contact Info Tab */}
+            {/* contact info tab */}
             {activeTab === "contact" && (
               <form onSubmit={handleContactSubmit} className="space-y-8">
-                {/* Email Section - Simplified */}
+                {/* email section - */}
                 <div className="bg-gray-50 p-6 rounded-lg">
                   <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
                     <Mail className="w-5 h-5" />
@@ -2251,7 +2254,7 @@ const ContentManagement = () => {
                     placeholder="support@example.com"
                   />
                 </div>
-                {/* Telegram Section - Simplified */}
+                {/* telegram section - */}
                 <div className="bg-gray-50 p-6 rounded-lg">
                   <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
                     <MessageSquare className="w-5 h-5" />
@@ -2282,7 +2285,7 @@ const ContentManagement = () => {
                   </p>
                 </div>
 
-                {/* Social Media Section */}
+                {/* social media section */}
                 <div className="bg-gray-50 p-6 rounded-lg">
                   <div className="flex items-center justify-between mb-4">
                     <h3 className="text-lg font-semibold text-gray-900">
@@ -2372,7 +2375,7 @@ const ContentManagement = () => {
                   </div>
                 </div>
 
-                {/* Address Section */}
+                {/* ress section */}
                 <div className="bg-gray-50 p-6 rounded-lg">
                   <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
                     <MapPin className="w-5 h-5" />
@@ -2490,7 +2493,7 @@ const ContentManagement = () => {
                   </div>
                 </div>
 
-                {/* Business Hours */}
+                {/* business hours */}
                 <div className="bg-gray-50 p-6 rounded-lg">
                   <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
                     <Clock className="w-5 h-5" />
@@ -2510,7 +2513,7 @@ const ContentManagement = () => {
                   />
                 </div>
 
-                {/* Footer Content */}
+                {/* footer content */}
                 <div className="bg-gray-50 p-6 rounded-lg">
                   <h3 className="text-lg font-semibold text-gray-900 mb-4">
                     Footer Content
@@ -2556,7 +2559,7 @@ const ContentManagement = () => {
                     </div>
                   </div>
 
-                  {/* Quick Links Section  */}
+                  {/* quick links section  */}
                   <div className="bg-gray-50 p-6 rounded-lg">
                     <div className="flex items-center justify-between mb-4">
                       <h3 className="text-lg font-semibold text-gray-900">
@@ -2641,7 +2644,7 @@ const ContentManagement = () => {
                                 </div>
                               </div>
                               <div className="flex gap-2 mt-8">
-                                {/* Move Up */}
+                                {/* move up */}
                                 <button
                                   type="button"
                                   onClick={() => {
@@ -2656,7 +2659,7 @@ const ContentManagement = () => {
                                       newQuickLinks[index],
                                       newQuickLinks[index - 1],
                                     ];
-                                    // Update order values
+                                    // update order values
                                     newQuickLinks.forEach((link, i) => {
                                       link.order = i;
                                     });
@@ -2671,7 +2674,7 @@ const ContentManagement = () => {
                                 >
                                   <ChevronUp className="w-5 h-5" />
                                 </button>
-                                {/* Move Down */}
+                                {/* move down */}
                                 <button
                                   type="button"
                                   onClick={() => {
@@ -2690,7 +2693,7 @@ const ContentManagement = () => {
                                       newQuickLinks[index + 1],
                                       newQuickLinks[index],
                                     ];
-                                    // Update order values
+                                    // update order values
                                     newQuickLinks.forEach((link, i) => {
                                       link.order = i;
                                     });
@@ -2707,7 +2710,7 @@ const ContentManagement = () => {
                                 >
                                   <ChevronDown className="w-5 h-5" />
                                 </button>
-                                {/* Delete */}
+                                {/* delete */}
                                 <button
                                   type="button"
                                   onClick={() => {
@@ -2715,7 +2718,7 @@ const ContentManagement = () => {
                                       contactForm.quickLinks.filter(
                                         (_, i) => i !== index,
                                       );
-                                    // Update order values
+                                    // update order values
                                     newQuickLinks.forEach((link, i) => {
                                       link.order = i;
                                     });
@@ -2755,10 +2758,10 @@ const ContentManagement = () => {
               </form>
             )}
 
-            {/* Legal Pages Tab */}
+            {/* legal pages tab */}
             {activeTab === "legal" && (
               <div className="space-y-6">
-                {/* Page Type Selector */}
+                {/* page type selector */}
                 <div className="bg-gray-50 p-6 rounded-lg">
                   <h3 className="text-lg font-semibold text-gray-900 mb-4">
                     Select Legal Page to Edit
@@ -2785,7 +2788,7 @@ const ContentManagement = () => {
                   </select>
                 </div>
 
-                {/* Old Content Warning */}
+                {/* old content warning */}
                 {legalForm.content &&
                   (!legalForm.sections || legalForm.sections.length === 0) && (
                     <div className="bg-yellow-50 border-2 border-yellow-400 rounded-lg p-6">
@@ -2803,7 +2806,7 @@ const ContentManagement = () => {
                             organization.
                           </p>
 
-                          {/* Show Old Content */}
+                          {/* show old content */}
                           <div className="bg-white rounded-lg p-4 mb-4 border border-yellow-300 max-h-64 overflow-y-auto">
                             <p className="text-xs font-semibold text-gray-700 mb-2">
                               Current Content:
@@ -2813,7 +2816,7 @@ const ContentManagement = () => {
                             </pre>
                           </div>
 
-                          {/* Migration Options */}
+                          {/* migration options */}
                           <div className="flex gap-3">
                             <button
                               type="button"
@@ -2846,7 +2849,7 @@ const ContentManagement = () => {
                             <button
                               type="button"
                               onClick={() => {
-                                // Just clear old content, keep empty sections
+                                // just clear old content, keep empty sections
                                 setLegalForm((prev) => ({
                                   ...prev,
                                   content: "",
@@ -2862,7 +2865,7 @@ const ContentManagement = () => {
                     </div>
                   )}
 
-                {/* Template Hints */}
+                {/* template hints */}
                 {templateHints && (
                   <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
                     <h4 className="text-sm font-semibold text-blue-900 mb-3 flex items-center gap-2">
@@ -2875,7 +2878,7 @@ const ContentManagement = () => {
                   </div>
                 )}
 
-                {/* Page Title */}
+                {/* page title */}
                 <div className="bg-gray-50 p-6 rounded-lg">
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Page Title
@@ -2895,7 +2898,7 @@ const ContentManagement = () => {
                   />
                 </div>
 
-                {/* Metadata Section */}
+                {/* metadata section */}
                 <div className="bg-gray-50 p-6 rounded-lg border border-gray-200">
                   <h4 className="text-lg font-semibold text-gray-900 mb-4">
                     Policy Metadata
@@ -2965,7 +2968,7 @@ const ContentManagement = () => {
                   </div>
                 </div>
 
-                {/* Sections Management */}
+                {/* sections management */}
                 <div className="space-y-6">
                   <div className="flex items-center justify-between">
                     <h3 className="text-lg font-semibold text-gray-900">
@@ -2992,7 +2995,7 @@ const ContentManagement = () => {
                     </button>
                   </div>
 
-                  {/* Drag and Drop Sections */}
+                  {/* drag and drop sections */}
                   <DndContext
                     sensors={sensors}
                     collisionDetection={closestCenter}
@@ -3019,9 +3022,9 @@ const ContentManagement = () => {
                   </DndContext>
                 </div>
 
-                {/* Save and Delete Buttons */}
+                {/* save and delete buttons */}
                 <div className="flex justify-between items-center pt-6 border-t">
-                  {/* Delete Old Content Button (only show if old content exists) */}
+                  {/* delete old content button (only show if old content exists) */}
                   {legalForm.content && (
                     <button
                       type="button"
@@ -3074,7 +3077,7 @@ const ContentManagement = () => {
                     </button>
                   )}
 
-                  {/* Save Button */}
+                  {/* save button */}
                   <button
                     onClick={handleLegalSubmit}
                     disabled={loading}
@@ -3085,7 +3088,7 @@ const ContentManagement = () => {
                   </button>
                 </div>
 
-                {/* Live Preview */}
+                {/* live preview */}
                 {legalForm.sections && legalForm.sections.length > 0 && (
                   <LegalPagePreview
                     title={legalForm.title}
@@ -3096,8 +3099,8 @@ const ContentManagement = () => {
               </div>
             )}
 
-            {/* Preview Tab */}
-            {/* Preview Tab */}
+            {/* preview tab */}
+            {/* preview tab */}
             {activeTab === "preview" && (
               <div className="space-y-6">
                 <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl p-6 border border-blue-200">

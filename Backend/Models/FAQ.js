@@ -1,3 +1,6 @@
+/**
+ * keeps the faq model focused and readable.
+ */
 import mongoose from 'mongoose';
 import connection2 from '../Config/mongodb2.js';
 
@@ -12,7 +15,7 @@ const faqSchema = new mongoose.Schema({
     required: [true, 'Answer is required'],
     trim: true,
   },
-  // REMOVED category field completely
+  // category field completely
   order: {
     type: Number,
     default: 0,
@@ -33,7 +36,7 @@ const faqSchema = new mongoose.Schema({
   timestamps: true,
 });
 
-// CHANGED INDEX - removed category
+// d index - category
 faqSchema.index({ order: 1, isActive: 1 });
 
 const FAQ = connection2.model('FAQ', faqSchema);

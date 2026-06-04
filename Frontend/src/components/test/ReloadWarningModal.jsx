@@ -1,3 +1,6 @@
+/**
+ * keeps the reload warning modal component focused and readable.
+ */
 import React from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ExclamationTriangleIcon, XMarkIcon } from "@heroicons/react/24/outline";
@@ -10,7 +13,7 @@ const ReloadWarningModal = ({ isOpen, onStay, onLeave, testProgress }) => {
   return (
     <AnimatePresence>
       <div className="fixed inset-0 z-[99999] flex items-center justify-center" style={{ zIndex: 99999 }}>
-        {/* Backdrop */}
+        {/* backdrop */}
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -19,7 +22,7 @@ const ReloadWarningModal = ({ isOpen, onStay, onLeave, testProgress }) => {
           onClick={onStay}
         />
 
-        {/* Modal */}
+        {/* modal */}
         <motion.div
           initial={{ opacity: 0, scale: 0.95, y: 20 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -28,7 +31,7 @@ const ReloadWarningModal = ({ isOpen, onStay, onLeave, testProgress }) => {
           className="relative z-10 w-full max-w-md mx-4"
         >
           <Card className="p-6 shadow-2xl border-2 border-yellow-200 dark:border-yellow-800">
-            {/* Close button */}
+            {/* close button */}
             <button
               onClick={onStay}
               className="absolute top-4 right-4 p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
@@ -36,7 +39,7 @@ const ReloadWarningModal = ({ isOpen, onStay, onLeave, testProgress }) => {
               <XMarkIcon className="w-5 h-5 text-gray-500" />
             </button>
 
-            {/* Warning icon */}
+            {/* warning icon */}
             <div className="flex justify-center mb-4">
               <motion.div
                 initial={{ scale: 0 }}
@@ -48,12 +51,12 @@ const ReloadWarningModal = ({ isOpen, onStay, onLeave, testProgress }) => {
               </motion.div>
             </div>
 
-            {/* Content */}
+            {/* content */}
             <div className="text-center">
               <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
                 Leave Test?
               </h2>
-              
+
               <p className="text-gray-600 dark:text-gray-400 mb-4">
                 You have an active test in progress. If you leave now, all your progress will be lost and you'll need to start over.
               </p>

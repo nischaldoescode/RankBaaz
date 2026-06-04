@@ -1,4 +1,7 @@
-import React, { useEffect } from "react";
+/**
+ * keeps the sidebar component focused and readable.
+ */
+import React, { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import {
   LayoutDashboard,
@@ -15,9 +18,14 @@ import {
   GraduationCap,
   Newspaper
 } from "lucide-react";
+import { useContent } from "../contexts/ContentContext";
 
 const Sidebar = ({ isOpen, onClose }) => {
   const location = useLocation();
+  const { contentSettings, fetchContentSettings } = useContent();
+  const [logoBroken, setLogoBroken] = useState(false);
+  const siteName = contentSettings?.siteName || "Vidhgrow";
+  const logoUrl = contentSettings?.logo?.url;
 
   const navigation = [
     {
@@ -30,25 +38,25 @@ const Sidebar = ({ isOpen, onClose }) => {
       name: "Categories",
       href: "/categories",
       icon: FolderOpen,
-      color: "from-purple-500 to-purple-600",
+      color: "from-blue-500 to-blue-600",
     },
     {
       name: "Courses",
       href: "/courses",
       icon: BookOpen,
-      color: "from-green-500 to-green-600",
+      color: "from-blue-500 to-blue-600",
     },
     {
       name: "Create Course",
       href: "/courses/create",
       icon: Plus,
-      color: "from-orange-500 to-orange-600",
+      color: "from-blue-500 to-blue-600",
     },
     {
       name: "User Stats",
       href: "/user-stats",
       icon: BarChart3,
-      color: "from-red-500 to-red-600",
+      color: "from-blue-500 to-blue-600",
     },
 
     {
@@ -67,7 +75,7 @@ const Sidebar = ({ isOpen, onClose }) => {
       name: "Blogs",
       href: "/blogs",
       icon: Newspaper,
-      color: "from-teal-500 to-teal-600",
+      color: "from-blue-500 to-blue-600",
     },
     {
       name: "Coupons",
@@ -79,30 +87,40 @@ const Sidebar = ({ isOpen, onClose }) => {
       href: "/violations",
       name: "Security Violations",
       icon: ShieldAlert,
-      color: "from-red-500 to-red-600",
+      color: "from-blue-500 to-blue-600",
     },
     {
       href: "/leaderboard",
       name: "Global Leaderboard",
       icon: Medal,
-      color: "from-yellow-500 to-yellow-600",
+      color: "from-blue-500 to-blue-600",
     },
     {
       href: "/admin/teachers",
       name: "Teachers",
       icon: GraduationCap,
-      color: "from-green-500 to-green-600",
+      color: "from-blue-500 to-blue-600",
     }
   ];
 
-  // Close sidebar when route changes on mobile
+  useEffect(() => {
+    if (!contentSettings) {
+      fetchContentSettings();
+    }
+  }, []);
+
+  useEffect(() => {
+    setLogoBroken(false);
+  }, [logoUrl]);
+
+  // close sidebar when route s on mobile
   useEffect(() => {
     if (isOpen) {
       onClose();
     }
   }, [location.pathname]);
 
-  // Prevent body scroll when sidebar is open on mobile
+  // prevent body scroll when sidebar is open on mobile
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = "hidden";
@@ -117,7 +135,7 @@ const Sidebar = ({ isOpen, onClose }) => {
 
   return (
     <>
-      {/* Mobile backdrop with blur effect */}
+      {/* mobile backdrop with blur effect */}
       {isOpen && (
         <div
           className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[60] md:hidden transition-all duration-300"
@@ -125,7 +143,7 @@ const Sidebar = ({ isOpen, onClose }) => {
         />
       )}
 
-      {/* Sidebar */}
+      {/* sidebar */}
       <div
         className={`
         fixed md:static inset-y-0 left-0 z-[70] md:z-auto
@@ -138,23 +156,26 @@ const Sidebar = ({ isOpen, onClose }) => {
       >
         <div className="flex flex-col w-64 sm:w-72 lg:w-80">
           <div className="flex flex-col flex-grow h-screen pt-4 sm:pt-5 pb-4 bg-white/95 backdrop-blur-md border-r border-gray-200/80 shadow-2xl md:shadow-lg">
-            {/* Header with enhanced styling */}
+            {/* header with enhanced styling */}
             <div className="flex items-center justify-between flex-shrink-0 px-4 sm:px-6 mb-2">
-              <div className="flex flex-wrap items-center min-w-0 flex-1 text-center">
-                {/* Logo Image */}
-                <img
-                  src="/logo.png"
-                  alt="Vidhgrow Logo"
-                  className="w-full h-full object-contain p-3 rounded-3xl"
-                  onError={(e) => {
-                    // Fallback to icon if image fails to load
-                    e.target.style.display = "none";
-                    e.target.nextElementSibling.style.display = "flex";
-                  }}
-                />
-                <div className="ml-3 min-w-0 flex-1 break-words">
+              <div className="flex min-w-0 flex-1 items-center gap-3">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-blue-50">
+                  {logoUrl && !logoBroken ? (
+                    <img
+                      src={logoUrl}
+                      alt={siteName}
+                      className="max-h-9 max-w-9 object-contain"
+                      onError={() => setLogoBroken(true)}
+                    />
+                  ) : (
+                    <span className="text-sm font-bold text-blue-700">
+                      {siteName.charAt(0).toUpperCase()}
+                    </span>
+                  )}
+                </div>
+                <div className="min-w-0 flex-1 break-words">
                   <h2 className="text-lg sm:text-xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">
-                    Vidhgrow
+                    {siteName}
                   </h2>
                   <p className="text-xs text-gray-500 font-medium truncate">
                     Admin Panel
@@ -162,7 +183,7 @@ const Sidebar = ({ isOpen, onClose }) => {
                 </div>
               </div>
 
-              {/* Enhanced mobile close button */}
+              {/* enhanced mobile close button */}
               <button
                 onClick={onClose}
                 className="md:hidden p-2 rounded-xl text-gray-400 hover:text-gray-600 hover:bg-gray-100/80 transition-all duration-200 active:scale-95 flex-shrink-0"
@@ -171,7 +192,7 @@ const Sidebar = ({ isOpen, onClose }) => {
               </button>
             </div>
 
-            {/* Navigation with enhanced styling and proper scrolling */}
+            {/* navigation with enhanced styling and proper scrolling */}
             <div className="mt-6 flex-grow flex flex-col min-h-0">
               <nav className="flex-1 px-3 sm:px-4 space-y-2 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100 hover:scrollbar-thumb-gray-400">
                 {navigation.map((item, index) => {
@@ -197,12 +218,12 @@ const Sidebar = ({ isOpen, onClose }) => {
                         animationDelay: `${index * 50}ms`,
                       }}
                     >
-                      {/* Background gradient for active state */}
+                      {/* background gradient for active state */}
                       {isActive && (
                         <div className="absolute inset-0 bg-gradient-to-r from-blue-600/5 to-blue-700/5 rounded-2xl" />
                       )}
 
-                      {/* Icon with enhanced styling */}
+                      {/* icon with enhanced styling */}
                       <div
                         className={`
                         relative mr-3 flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center
@@ -224,7 +245,7 @@ const Sidebar = ({ isOpen, onClose }) => {
                         {item.name}
                       </span>
 
-                      {/* Active indicator with pulse effect */}
+                      {/* active indicator with pulse effect */}
                       {isActive && (
                         <>
                           <div className="ml-auto w-2 h-2 bg-blue-600 rounded-full animate-pulse" />
@@ -236,12 +257,12 @@ const Sidebar = ({ isOpen, onClose }) => {
                 })}
               </nav>
 
-              {/* Enhanced bottom section */}
+              {/* enhanced bottom section */}
               <div className="flex-shrink-0 border-t border-gray-200/80 p-4 sm:p-6 mt-6">
                 <div className="relative overflow-hidden group">
                   <div className="absolute inset-0 bg-gradient-to-r from-blue-50 to-purple-50 rounded-2xl opacity-50 group-hover:opacity-100 transition-opacity duration-300" />
                   <div className="relative flex items-center p-4 rounded-2xl bg-gradient-to-r from-gray-50/80 to-gray-100/80 border border-gray-200/60 hover:shadow-lg transition-all duration-300 hover:scale-[1.02]">
-                    <div className="w-12 h-12 bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 rounded-2xl flex items-center justify-center shadow-lg">
+                    <div className="w-12 h-12 bg-gradient-to-br from-blue-500 via-blue-600 to-blue-700 rounded-2xl flex items-center justify-center shadow-lg">
                       <Users className="w-6 h-6 text-white" />
                     </div>
                     <div className="ml-4 min-w-0 flex-1">
@@ -250,7 +271,7 @@ const Sidebar = ({ isOpen, onClose }) => {
                       </p>
                       <p className="text-xs text-gray-500">Control Panel</p>
                     </div>
-                    <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
+                    <div className="w-2 h-2 bg-blue-500 rounded-full" />
                   </div>
                 </div>
               </div>
@@ -259,7 +280,7 @@ const Sidebar = ({ isOpen, onClose }) => {
         </div>
       </div>
 
-      {/* Custom scrollbar styles using a style tag */}
+      {/* custom scrollbar styles using a style tag */}
       <style
         dangerouslySetInnerHTML={{
           __html: `

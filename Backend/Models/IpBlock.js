@@ -1,7 +1,10 @@
+/**
+ * keeps the ip block model focused and readable.
+ */
 import mongoose from "mongoose";
 
 /**
- * stores blocked ip addresses with optional expiry
+ * stores blocked ip resses with optional expiry
  */
 const ipBlockSchema = new mongoose.Schema(
   {
@@ -24,7 +27,7 @@ const ipBlockSchema = new mongoose.Schema(
       type: Date,
       default: null,
     },
-    // soft reference — user may be deleted
+    // user may be deleted while the block remains.
     userId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
@@ -35,7 +38,7 @@ const ipBlockSchema = new mongoose.Schema(
 );
 
 // auto-expire documents using mongodb ttl index
-// documents with null expiresAt are NOT expired (ttl only fires when field exists)
+// documents with null expiresat are not expired (ttl only fires when field exists)
 ipBlockSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0, sparse: true });
 
 const IpBlock = mongoose.model("IpBlock", ipBlockSchema);

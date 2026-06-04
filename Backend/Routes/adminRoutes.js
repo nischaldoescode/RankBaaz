@@ -1,3 +1,6 @@
+/**
+ * keeps the admin routes route focused and readable.
+ */
 import express from "express";
 import {
   adminLogin,
@@ -26,14 +29,14 @@ import { requireAdminCaptcha } from "../Middleware/adminCaptcha.js";
 
 const router = express.Router();
 
-// ADD THIS ROUTE AT THE TOP
+// this route at the top
 router.get("/check-exists", admincheckExists);
 
-// Admin public routes
+// admin public routes
 router.post("/register", registerValidation, adminRegister);
 router.post("/login", loginValidation, requireAdminCaptcha, adminLogin);
 
-// Admin protected routes
+// admin protected routes
 router.get("/profile", authenticateAdmin, adminGetProfile);
 router.put(
   "/profile",

@@ -1,8 +1,11 @@
+/**
+ * keeps the content settings model focused and readable.
+ */
 import mongoose from 'mongoose';
 import connection2 from '../Config/mongodb2.js';
 
 const contentSettingsSchema = new mongoose.Schema({
-  // Site Identity
+  // site identity
   siteName: {
     type: String,
     default: 'Vidhgrow',
@@ -16,8 +19,8 @@ const contentSettingsSchema = new mongoose.Schema({
     type: String,
     default: 'Learn from courses, attempt timed tests, review your score reports, and see what to study next.',
   },
-  
-  // Logo & Branding
+
+  // logo & branding
   logo: {
     url: {
       type: String,
@@ -28,9 +31,9 @@ const contentSettingsSchema = new mongoose.Schema({
       default: null,
     },
   },
-  
-  
-  // Hero Section
+
+
+  // hero section
   heroTitle: {
     type: String,
     default: 'Practice smarter with',
@@ -43,8 +46,8 @@ const contentSettingsSchema = new mongoose.Schema({
     type: String,
     default: 'Vidhgrow brings course learning, timed practice tests, score reports, and leaderboards into one simple place, so students can see what to study next.',
   },
-  
-  // Stats Section for Home Page
+
+  // stats section for home page
   stats: [{
     icon: {
       type: String,
@@ -60,8 +63,8 @@ const contentSettingsSchema = new mongoose.Schema({
       required: true,
     },
   }],
-  
-  // Chart Configuration for Home Page
+
+  // chart configuration for home page
   chartConfig: {
     type: {
       type: String,
@@ -78,8 +81,8 @@ const contentSettingsSchema = new mongoose.Schema({
       default: true,
     },
   },
-  
-  // Features Section for Home Page
+
+  // features section for home page
   featuresTitle: {
     type: String,
     default: 'Built for focused practice',
@@ -103,8 +106,8 @@ const contentSettingsSchema = new mongoose.Schema({
       required: true,
     },
   }],
-  
-  // About Page Values Section
+
+  // about page values section
   aboutValues: [{
     icon: {
       type: String,
@@ -128,8 +131,8 @@ const contentSettingsSchema = new mongoose.Schema({
       default: 'bg-blue-500/10',
     },
   }],
-  
-  // About Page Features Section
+
+  // about page features section
   aboutFeatures: [{
     icon: {
       type: String,
@@ -145,8 +148,8 @@ const contentSettingsSchema = new mongoose.Schema({
       required: true,
     },
   }],
-  
-  // About Page Stats
+
+  // about page stats
   aboutStats: [{
     value: {
       type: String,
@@ -157,8 +160,8 @@ const contentSettingsSchema = new mongoose.Schema({
       required: true,
     },
   }],
-  
-  // CTA Section
+
+  // cta section
   ctaTitle: {
     type: String,
     default: 'Start with a course, then test yourself',
@@ -167,8 +170,8 @@ const contentSettingsSchema = new mongoose.Schema({
     type: String,
     default: 'Create your free account and keep your practice history, results, badges, and course progress together.',
   },
-  
-  // Colors & Theme
+
+  // colors & theme
   primaryColor: {
     type: String,
     default: '#3b82f6',
@@ -181,8 +184,8 @@ const contentSettingsSchema = new mongoose.Schema({
     type: String,
     default: '#f59e0b',
   },
-  
-  // Background Elements
+
+  // background elements
   backgroundElements: {
     enabled: {
       type: Boolean,
@@ -194,8 +197,8 @@ const contentSettingsSchema = new mongoose.Schema({
       default: 'medium',
     },
   },
-  
-  // Metadata
+
+  // metadata
   isActive: {
     type: Boolean,
     default: true,
@@ -208,7 +211,7 @@ const contentSettingsSchema = new mongoose.Schema({
   timestamps: true,
 });
 
-// Ensure only one settings document exists
+// ensure only one settings document exists
 contentSettingsSchema.statics.getSettings = async function() {
   let settings = await this.findOne({ isActive: true });
   if (!settings) {

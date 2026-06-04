@@ -1,3 +1,6 @@
+/**
+ * keeps the contact page focused and readable.
+ */
 import React, { useEffect } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
@@ -45,7 +48,7 @@ const Contact = () => {
   }
 
   return (
-    <div className="min-h-screen pt-20 pb-16">
+    <div className="vg-static-page min-h-screen pt-20 pb-16">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <motion.div
           initial={animations && !reducedMotion ? "hidden" : "visible"}
@@ -53,7 +56,7 @@ const Contact = () => {
           variants={containerVariants}
           className="space-y-12"
         >
-          {/* Header */}
+          {/* header */}
           <motion.div variants={itemVariants} className="text-center">
             <h1 className="text-4xl sm:text-5xl font-bold text-foreground mb-4">
               Get in Touch
@@ -64,12 +67,12 @@ const Contact = () => {
             </p>
           </motion.div>
 
-          {/* Contact Cards */}
+          {/* contact cards */}
           <motion.div
             variants={itemVariants}
             className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6"
           >
-            {/* Email Card - Only Support */}
+            {/* email card - only support */}
             {contactInfo?.email?.support && (
               <div className="bg-card border border-border rounded-xl p-6 hover:shadow-lg transition-shadow">
                 <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mb-4">
@@ -88,7 +91,7 @@ const Contact = () => {
               </div>
             )}
 
-            {/* Telegram Card - NEW */}
+            {/* telegram card - */}
             {contactInfo?.telegram?.support && (
               <div className="bg-card border border-border rounded-xl p-6 hover:shadow-lg transition-shadow">
                 <div className="w-12 h-12 bg-blue-500/10 rounded-lg flex items-center justify-center mb-4">
@@ -112,7 +115,7 @@ const Contact = () => {
               </div>
             )}
 
-            {/* Address Card - Conditional (only if city exists) */}
+            {/* ress card - conditional (only if city exists) */}
             {contactInfo?.address?.city && (
               <div className="bg-card border border-border rounded-xl p-6 hover:shadow-lg transition-shadow">
                 <div className="w-12 h-12 bg-orange-500/10 rounded-lg flex items-center justify-center mb-4">
@@ -143,7 +146,7 @@ const Contact = () => {
               </div>
             )}
 
-            {/* Business Hours Card */}
+            {/* business hours card */}
             {contactInfo?.businessHours && (
               <div className="bg-card border border-border rounded-xl p-6 hover:shadow-lg transition-shadow">
                 <div className="w-12 h-12 bg-purple-500/10 rounded-lg flex items-center justify-center mb-4">
@@ -159,7 +162,7 @@ const Contact = () => {
             )}
           </motion.div>
 
-          {/* Contact Form Section */}
+          {/* contact form section */}
           <motion.div
             variants={itemVariants}
             className="bg-card border border-border rounded-2xl p-8 md:p-12 max-w-3xl mx-auto"
@@ -251,7 +254,7 @@ const Contact = () => {
             <Link
               to="/#faqs"
               onClick={() => {
-                // Scroll to FAQs after navigation
+                // scroll to faqs after navigation.
                 setTimeout(() => {
                   const faqSection = document.getElementById("faqs");
                   if (faqSection) {

@@ -1,8 +1,11 @@
+/**
+ * keeps the api service focused and readable.
+ */
 import axios from "axios";
 import toast from "react-hot-toast";
 import crypto from "crypto-js";
 import { requestSigner } from "../utils/requestSigning.js";
-// Create axios instance with default config
+// create axios instance with default config
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL || "http://localhost:7000",
   timeout: 60000,
@@ -13,7 +16,7 @@ const api = axios.create({
 });
 
 /**
- * SHA-256 Challenge Solver (Browser-compatible)
+ * sha-256 challenge solver (browser-compatible)
  */
 const solveChallenge = async (seed, difficulty) => {
   let nonce = 0;
@@ -47,7 +50,7 @@ const solveChallenge = async (seed, difficulty) => {
 const logApiError = (error, context) => {
   if (import.meta.env.VITE_VITE_ENV !== "development") return;
 
-  console.group(`[API_ERROR] ${context}`);
+  console.group(`${context}`);
   console.error("Full error object:", error);
 
   if (error.response) {
@@ -73,10 +76,10 @@ const logApiError = (error, context) => {
 };
 
 /**
- * Request interceptor
- * - Adds request signatures to authenticated endpoints
- * - Skips signature for public endpoints
- * - Loads signing secret from localStorage if available
+ * request interceptor
+ * signs authenticated requests when a valid secret exists
+ * - skips signature for public endpoints
+ * - loads signing secret from localstorage if available
  */
 api.interceptors.request.use(
   async (config) => {
@@ -99,7 +102,7 @@ api.interceptors.request.use(
       config.url?.includes(endpoint),
     );
 
-    // Public GET endpoints (no auth required)
+    // public get endpoints (no auth required)
     const publicGetEndpoints = [
       "/api/content/settings",
       "/api/content/contact",
@@ -135,44 +138,13 @@ api.interceptors.request.use(
   },
 );
 
-// Helper function to add signature to request
-function addSignatureToRequest(config, secret) {
-  const timestamp = Date.now().toString();
-  const nonce = crypto.lib.WordArray.random(16).toString();
-
-  const method = config.method.toUpperCase();
-  const path =
-    new URL(config.url, config.baseURL || window.location.origin).pathname +
-    (new URL(config.url, config.baseURL || window.location.origin).search ||
-      "");
-  const body = config.data ? JSON.stringify(config.data) : "";
-
-  const payload = `${timestamp}:${nonce}:${method}:${path}:${body}`;
-
-  const signature = crypto.HmacSHA256(payload, secret).toString();
-
-  config.headers["x-request-signature"] = signature;
-  config.headers["x-request-timestamp"] = timestamp;
-  config.headers["x-request-nonce"] = nonce;
-
-  if (import.meta.env.VITE_ENV === "development") {
-    console.log("[API_REQUEST] Request signed:", {
-      method,
-      path,
-      signature: signature.substring(0, 16) + "...",
-    });
-  }
-
-  return config;
-}
-
-// CRITICAL: Signature error handler - Must be AFTER auth refresh interceptor
+// signature error handler - auth refresh interceptor
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
 
-    // Handle signature-related errors
+    // handle signature-related errors
     const signatureErrorCodes = [
       "SIGNATURE_EXPIRED",
       "SIGNATURE_MISSING",
@@ -184,12 +156,12 @@ api.interceptors.response.use(
       error.response?.data?.code &&
       signatureErrorCodes.includes(error.response.data.code)
     ) {
-      // Prevent infinite retry loops
+      // prevent infinite retry loops
       if (originalRequest._signatureRetry) {
-        // console.error("[SIGNATURE] Retry failed - clearing auth");
+        // console.error("retry failed - clearing auth");
         requestSigner.clearSigningSecret();
 
-        // If signature keeps failing, might be auth issue
+        // if signature keeps failing, might be auth issue
         if (error.response.status === 401 || error.response.status === 403) {
           localStorage.removeItem("user");
           window.location.href = "/login";
@@ -201,18 +173,18 @@ api.interceptors.response.use(
       try {
         if (import.meta.env.VITE_ENV === "development") {
           console.log(
-            `[SIGNATURE] Handling ${error.response.data.code}, fetching new secret...`,
+            `Handling ${error.response.data.code}, fetching new secret...`,
           );
         }
 
-        // Mark this request as a retry
+        // mark this request as a retry
         originalRequest._signatureRetry = true;
 
-        // Clear old secret
+        // clear old secret
         requestSigner.clearSigningSecret();
 
-        // CRITICAL FIX: Use base axios instance to avoid interceptor recursion
-        // Create a new axios instance specifically for fetching signing secret
+        // use base axios instance to avoid interceptor recursion
+        // create a axios instance specifically for fetching signing secret
         const baseURL = import.meta.env.VITE_API_URL || "http://localhost:7000";
         const secretResponse = await axios
           .create({
@@ -229,30 +201,30 @@ api.interceptors.response.use(
         const newSecret = secretResponse.data.data.signingSecret;
         const expiresIn = secretResponse.data.data.expiresIn;
 
-        // Store new secret
+        // store secret
         requestSigner.setSigningSecret(newSecret, expiresIn);
 
         if (import.meta.env.VITE_ENV === "development") {
-          console.log("[SIGNATURE] Secret refreshed successfully");
+          console.log("Secret refreshed successfully");
         }
 
-        // CRITICAL: Remove the retry flag before re-signing
+        // remove the retry flag re-signing
         delete originalRequest._signatureRetry;
 
-        // Re-sign the original request with new secret
+        // re-sign the original request with secret
         const signedRequest = requestSigner.signRequest(originalRequest);
 
         if (import.meta.env.VITE_ENV === "development") {
-          console.log("[SIGNATURE] Retrying original request");
+          console.log("Retrying original request");
         }
 
-        // Retry the original request
+        // retry the original request
         return api(signedRequest);
       } catch (signatureError) {
-        // console.error("[SIGNATURE] Refresh failed:", signatureError);
+        // console.error("refresh failed:", signatureerror);
         requestSigner.clearSigningSecret();
 
-        // If we can't get signing secret, auth is likely broken
+        // if we can't get signing secret, auth is likely broken
         if (signatureError.response?.status === 401) {
           localStorage.removeItem("user");
           window.location.href = "/login";
@@ -266,7 +238,7 @@ api.interceptors.response.use(
   },
 );
 
-// Response Interceptor - Handle Auth & Errors
+// response interceptor - handle auth & errors
 let isRefreshing = false;
 let failedQueue = [];
 
@@ -288,7 +260,7 @@ api.interceptors.response.use(
 
     logApiError(error, originalRequest?.url || "Unknown URL");
 
-    // Handle network errors
+    // handle network errors
     if (!error.response) {
       const detailedMessage =
         import.meta.env.VITE_ENV === "development"
@@ -300,7 +272,7 @@ api.interceptors.response.use(
             }`
           : "Network error. Please check your connection.";
 
-      console.error("[API] Network error details:", {
+      console.error("Network error details:", {
         url: originalRequest?.url,
         method: originalRequest?.method,
         baseURL: import.meta.env.VITE_API_URL,
@@ -322,7 +294,7 @@ api.interceptors.response.use(
     const { status, data } = error.response;
 
     if (import.meta.env.VITE_ENV === "development") {
-      console.warn(`[API] ${status} Error:`, {
+      console.warn(`${status} Error:`, {
         url: originalRequest?.url,
         method: originalRequest?.method,
         status,
@@ -330,15 +302,15 @@ api.interceptors.response.use(
       });
     }
     if (status === 401) {
-      // ENHANCED: Check for specific error codes
+      // enhanced: check for specific error codes
       const errorCode = data?.code;
 
-      // If CSRF token error, try to refresh CSRF token first
+      // if csrf token error, try to refresh csrf token first
       if (errorCode && errorCode.includes("CSRF")) {
         console.log(
-          "[API] CSRF error detected, token will be refreshed automatically",
+          "CSRF error detected, token will be refreshed automatically",
         );
-        // The interceptor at the top will handle fetching new CSRF token
+        // the interceptor at the top will handle fetching csrf token
         return Promise.reject(error);
       }
 
@@ -356,7 +328,7 @@ api.interceptors.response.use(
           !window.location.pathname.includes("/login") &&
           !window.location.pathname.includes("/register")
         ) {
-          console.log("[API] Redirecting to login due to auth failure");
+          console.log("Redirecting to login due to auth failure");
           window.location.href = "/login";
         }
 
@@ -406,7 +378,7 @@ api.interceptors.response.use(
       }
     }
 
-    // Log other errors
+    // log other errors
     switch (status) {
       case 400:
         console.error("Bad request:", data?.message);
@@ -434,7 +406,7 @@ api.interceptors.response.use(
   },
 );
 
-// API methods
+// api methods
 export const apiMethods = {
   get: (url, config = {}) => api.get(url, config),
   post: (url, data = {}, config = {}) => api.post(url, data, config),

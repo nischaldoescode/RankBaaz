@@ -1,3 +1,6 @@
+/**
+ * keeps the invite expired page focused and readable.
+ */
 import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { useSearchParams } from "react-router-dom";

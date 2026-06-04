@@ -1,3 +1,6 @@
+/**
+ * keeps the content routes route focused and readable.
+ */
 import express from "express";
 import {
   getContentSettings,
@@ -27,29 +30,29 @@ import {
 
 const router = express.Router();
 
-// ============ PUBLIC ROUTES ============
-// Content Settings (Public Read)
+// public routes
+// content settings (public read)
 router.get(
   "/settings",
   advancedCache({ ttl: 600, key: "content:settings" }),
   getContentSettings
 );
 
-// FAQs (Public Read)
+// faqs (public read)
 router.get(
   "/faqs",
   advancedCache({ ttl: 600, key: "content:faqs" }),
   getAllFAQs
 );
 
-// Contact Info (Public Read)
+// contact info (public read)
 router.get(
   "/contact",
   advancedCache({ ttl: 600, key: "content:contact" }),
   getContactInfo
 );
 
-// Legal Pages (Public Read)
+// legal pages (public read)
 router.get("/legal/:type", advancedCache({ ttl: 3600 }), getLegalPage);
 router.get(
   "/legal",
@@ -57,7 +60,7 @@ router.get(
   getAllLegalPages
 );
 
-// Preview endpoints (Public - can be accessed without auth for testing)
+// preview endpoints (public - can be accessed without auth for testing)
 router.get(
   "/preview/home",
   advancedCache({ ttl: 300, key: "preview:home" }),
@@ -73,21 +76,21 @@ router.get(
   advancedCache({ ttl: 300, key: "preview:footer" }),
   getFooterPreview
 );
-// ============ ADMIN ROUTES ============
+// admin routes
 /**
- * CRITICAL: Use adminOnly middleware ALONE for admin-only routes
+ * use adminonly middleware alone for admin-only routes
  *
- * Why:
- * - protect = authenticateUser (looks for auth_session cookie)
- * - adminOnly = authenticateAdmin (looks for adminToken cookie)
+ * why:
+ * - protect = authenticateuser (looks for auth_session cookie)
+ * - adminonly = authenticateadmin (looks for admintoken cookie)
  *
- * Using both causes protect to fail for admin requests
- * Admin routes should ONLY use adminOnly middleware
+ * using both causes protect to fail for admin requests
+ * admin routes should only use adminonly middleware
  *
- * @see authMiddleware.js - authenticateUser and authenticateAdmin
+ * @see authmiddleware.js - authenticateuser and authenticateadmin
  */
 
-// Content Settings (Admin Only)
+// content settings (admin only)
 router.put(
   "/settings",
   adminOnly,
@@ -96,7 +99,7 @@ router.put(
 );
 router.delete("/settings/logo", adminOnly, deleteLogo);
 
-// FAQs (Admin Only)
+// faqs (admin only)
 router.post("/faqs", adminOnly, invalidateOnMutation(["content"]), createFAQ);
 router.put(
   "/faqs/:id",
@@ -117,7 +120,7 @@ router.post(
   bulkUpdateFAQOrder
 );
 
-// Contact Info (Admin Only)
+// contact info (admin only)
 router.put(
   "/contact",
   adminOnly,
@@ -125,7 +128,7 @@ router.put(
   updateContactInfo
 );
 
-// Legal Pages (Admin Only)
+// legal pages (admin only)
 router.put(
   "/legal/:type",
   adminOnly,

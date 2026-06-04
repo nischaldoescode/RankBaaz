@@ -1,3 +1,6 @@
+/**
+ * keeps the user manage ment page focused and readable.
+ */
 import React, { useState, useEffect } from "react";
 import { useAdmin } from "../contexts/AdminContext";
 import {
@@ -204,7 +207,7 @@ const UserManagement = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
       <div className="p-4 sm:p-6 lg:p-8">
-        {/* Header */}
+        {/* header */}
         <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-8 gap-6">
           <div className="space-y-2">
             <h1 className="text-3xl lg:text-4xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">
@@ -235,7 +238,7 @@ const UserManagement = () => {
           </button>
         </div>
 
-        {/* Search and Filters */}
+        {/* search and filters */}
         <div className="bg-white/70 backdrop-blur-sm rounded-2xl shadow-lg border border-white/50 p-6 mb-8">
           <form
             onSubmit={handleSearch}
@@ -292,7 +295,7 @@ const UserManagement = () => {
           </div>
         </div>
 
-        {/* Stats */}
+        {/* stats */}
         <div className="bg-white/70 backdrop-blur-sm rounded-2xl shadow-lg border border-white/50 p-6 mb-8">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="flex items-center gap-4">
@@ -331,7 +334,7 @@ const UserManagement = () => {
           </div>
         </div>
 
-        {/* Users Table */}
+        {/* users table */}
         <div className="bg-white/70 backdrop-blur-sm rounded-2xl shadow-lg border border-white/50 overflow-hidden">
           <div className="p-6 border-b border-gray-200">
             <h2 className="text-xl font-bold text-gray-900">
@@ -352,7 +355,7 @@ const UserManagement = () => {
             </div>
           ) : (
             <>
-              {/* Desktop Table */}
+              {/* desktop table */}
               <div className="hidden md:block overflow-x-auto">
                 <table className="w-full">
                   <thead className="bg-gray-50 border-b border-gray-200">
@@ -429,7 +432,7 @@ const UserManagement = () => {
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <span className="font-mono text-xs text-gray-500">
-                            {user.lastIp || "—"}
+                            {user.lastIp || "not available"}
                           </span>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-right">
@@ -471,7 +474,7 @@ const UserManagement = () => {
                 </table>
               </div>
 
-              {/* Mobile Cards */}
+              {/* mobile cards */}
               <div className="md:hidden space-y-4 p-4">
                 {users.map((user) => (
                   <div
@@ -549,7 +552,7 @@ const UserManagement = () => {
                 ))}
               </div>
 
-              {/* Pagination */}
+              {/* pagination */}
               {pagination.totalPages > 1 && (
                 <div className="px-6 py-4 border-t border-gray-200 flex items-center justify-between">
                   <div className="text-sm text-gray-700">
@@ -585,7 +588,7 @@ const UserManagement = () => {
         </div>
       </div>
 
-      {/* User Details Modal */}
+      {/* user details modal */}
       {showUserModal && selectedUser && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl">
@@ -635,13 +638,13 @@ const UserManagement = () => {
                 ))}
               </div>
 
-              {/* IP information panel */}
+              {/* ip information panel */}
               <div className="mt-4 p-4 rounded-xl border border-gray-200 bg-gray-50 space-y-3">
                 <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
                   Network Info
                 </p>
 
-                {/* ip address row */}
+                {/* ip ress row */}
                 <div className="flex items-center justify-between flex-wrap gap-2">
                   <div>
                     <p className="text-xs text-gray-500">Last Known IP</p>
@@ -781,7 +784,7 @@ const UserManagement = () => {
         </div>
       )}
 
-      {/* Block IP Dialog */}
+      {/* block ip dialog */}
       {blockDialog.open && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[60] p-4">
           <div className="bg-white rounded-2xl max-w-md w-full shadow-2xl p-6">
@@ -836,7 +839,7 @@ const UserManagement = () => {
         </div>
       )}
 
-      {/* Delete Confirm Dialog */}
+      {/* delete confirm dialog */}
       <ConfirmDialog
         isOpen={deleteDialog.open}
         title="Delete User"

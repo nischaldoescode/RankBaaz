@@ -1,89 +1,89 @@
 /**
- * PM2 Ecosystem Configuration
- * Production-grade process management with clustering
- * 
- * Features:
- * - Multi-core CPU utilization via clustering
- * - Automatic process restart on failure
- * - Memory limit protection
- * - Log rotation for disk space management
- * - Zero-downtime reload
- * - Environment-specific configurations
+ * pm2 ecosystem configuration
+ * production-grade process management with clustering
+ *
+ * features:
+ * - multi-core cpu utilization via clustering
+ * - automatic process restart on failure
+ * - memory limit protection
+ * - log rotation for disk space management
+ * - zero-downtime reload
+ * - environment-specific configurations
  */
 
 module.exports = {
   apps: [{
-    // Application name
+    // application name
     name: "rankbaaz-api",
-    
-    // Entry point
+
+    // entry point
     script: "./src/server.js",
-    
-    // Interpreter (use node for ES modules)
+
+    // interpreter (use node for es modules)
     interpreter: "node",
-    
-    // Interpreter arguments (enable ES modules)
+
+    // interpreter arguments (enable es modules)
     interpreter_args: "",
-    
-    // Execution mode: cluster for multi-core, fork for single process
+
+    // execution mode: cluster for multi-core, fork for single process
     exec_mode: "cluster",
-    
-    // Number of instances
-    // "max" = use all CPU cores
-    // Or specify a number: 2, 4, etc.
+
+    // number of instances
+    // "max" = use all cpu cores
+    // or specify a number: 2, 4, etc.
     instances: "max",
-    
-    // Auto restart configuration
+
+    // auto restart configuration
     autorestart: true,
-    watch: false, // Disable in production (use CI/CD instead)
-    max_memory_restart: "1G", // Restart if memory exceeds 1GB
-    
-    // Environment variables for production
+    watch: false, // disable in production (use ci/cd instead)
+    max_memory_restart: "1G", // restart if memory exceeds 1gb
+
+    // environment variables for production
     env_production: {
       NODE_ENV: "production",
       PORT: 5000,
     },
-    
-    // Environment variables for development
+
+    // environment variables for development
     env_development: {
       NODE_ENV: "development",
       PORT: 5000,
     },
-    
-    // Error handling
-    min_uptime: "10s", // Consider app unstable if crashes within 10s
-    max_restarts: 10, // Max restart attempts before giving up
-    restart_delay: 4000, // Wait 4s before restart
-    
-    // Logging configuration
+
+    // error handling
+    min_uptime: "10s", // consider app unstable if crashes within 10s
+    max_restarts: 10, // max restart attempts giving up
+    restart_delay: 4000, // wait 4s restart
+
+    // logging configuration
     error_file: "./logs/pm2-error.log",
     out_file: "./logs/pm2-out.log",
     log_file: "./logs/pm2-combined.log",
-    time: true, // Prefix logs with timestamp
+    time: true, // prefix logs with timestamp
     log_date_format: "YYYY-MM-DD HH:mm:ss Z",
-    
-    // Log rotation to prevent disk overflow
+
+    // log rotation to prevent disk overflow
     merge_logs: true,
     max_log_size: "10M",
-    
-    // Process management
-    kill_timeout: 5000, // Wait 5s for graceful shutdown before force kill
-    listen_timeout: 3000, // Wait 3s for app to bind to port
+
+    // process management
+    kill_timeout: 5000, // wait 5s for graceful shutdown force kill
+    listen_timeout: 3000, // wait 3s for app to bind to port
     shutdown_with_message: true,
-    
-    // Advanced features
-    instance_var: "INSTANCE_ID", // Expose instance ID as env variable
-    
-    // Graceful reload (zero-downtime deployment)
-    wait_ready: true, // Wait for process.send('ready') before considering app started
-    
-    // Cron restart (optional: restart at specific times)
-    // cron_restart: "0 3 * * *", // Restart daily at 3 AM
+
+    // advanced features
+    instance_var: "INSTANCE_ID", // expose instance id as env variable
+
+    // graceful reload (zero-downtime deployment)
+    wait_ready: true, // wait for process.send('ready') considering app started
+
+    // cron restart (optional: restart at specific times)
+    // cron_restart: "0 3 * * *", // restart daily at 3 am
   }],
-  
+
   /**
-   * Deployment configuration (optional)
-   * Automate deployment to production/staging servers
+   * deployment configuration (optional)
+   * automate deployment to production/staging servers
    */
   deploy: {
     production: {

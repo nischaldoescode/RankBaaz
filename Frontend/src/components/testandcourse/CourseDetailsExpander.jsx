@@ -1,3 +1,6 @@
+/**
+ * keeps the course details expander component focused and readable.
+ */
 import React, { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import { ChevronDown, Play, Eye } from "lucide-react";
@@ -32,7 +35,7 @@ const CourseDetailsExpander = ({
   const navigate = useNavigate();
   const { calculateEstimatedTime } = useCourses();
 
-  // Use parent's expanded state directly
+  // use parent's expanded state directly
   const actuallyExpanded = parentIsExpanded || false;
 
   const toggleExpanded = () => {
@@ -45,7 +48,7 @@ const CourseDetailsExpander = ({
 
   useEffect(() => {}, [course._id, parentIsExpanded, actuallyExpanded]);
 
-  // Check purchase status when component mounts
+  // check purchase status when component mounts
   useEffect(() => {
     const checkPurchaseStatus = async () => {
       if (!isAuthenticated || !course.isPaid) {
@@ -66,7 +69,7 @@ const CourseDetailsExpander = ({
     checkPurchaseStatus();
   }, [course._id, isAuthenticated, course.isPaid]);
 
-  // Check if paid course test already taken
+  // check if paid course test already taken
   useEffect(() => {
     const checkIfTestTaken = async () => {
       if (!isAuthenticated || !course.isPaid || !hasPurchased) {
@@ -98,7 +101,7 @@ const CourseDetailsExpander = ({
   }, [hasPurchased, course._id, isAuthenticated, course.isPaid]);
 
   const handleStartTest = () => {
-    // NEW: Grant session access
+    // grant session access
     sessionStorage.setItem(`test_access_${course._id}`, "granted");
 
     if (!isAuthenticated) {
@@ -149,7 +152,7 @@ const CourseDetailsExpander = ({
                 viewMode === "grid" ? "p-6" : "p-4"
               } mt-3 bg-gray-50 rounded-lg border border-gray-200 space-y-4`}
             >
-              {/* Stats Row */}
+              {/* stats row */}
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <span className="text-gray-600 text-sm">Estimated Time:</span>
@@ -190,7 +193,7 @@ const CourseDetailsExpander = ({
                 </div>
               </div>
 
-              {/* Description */}
+              {/* description */}
               <div>
                 <span className="text-gray-600 text-sm">Overview:</span>
                 <p
@@ -252,7 +255,7 @@ const CourseDetailsExpander = ({
         </AccordionItem>
       </Accordion>
 
-      {/* Payment Modal */}
+      {/* payment modal */}
       <PaymentModal
         isOpen={showPaymentModal}
         onClose={() => setShowPaymentModal(false)}

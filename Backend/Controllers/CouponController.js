@@ -1,3 +1,6 @@
+/**
+ * keeps the coupon controller controller focused and readable.
+ */
 import Coupon from "../Models/Coupon.js";
 import Course from "../Models/Course.js";
 import crypto from "crypto";
@@ -5,7 +8,7 @@ import { body, validationResult } from "express-validator";
 import DOMPurify from "isomorphic-dompurify";
 import redisClient from "../Config/redis.js";
 
-// Validation rules for coupon creation
+// validation rules for coupon creation
 export const couponValidation = [
   body("code")
     .trim()
@@ -43,7 +46,7 @@ export const couponValidation = [
     .withMessage("Valid until must be a valid date"),
 ];
 
-// Validation rules for coupon update
+// validation rules for coupon update
 export const couponUpdateValidation = [
   body("code")
     .optional()
@@ -64,7 +67,7 @@ export const couponUpdateValidation = [
   body("maxUsage")
     .optional()
     .custom((value) => {
-      // Allow null, empty string, or valid positive integer
+      // allow null, empty string, or valid positive integer
       if (value === null || value === "" || value === undefined) {
         return true;
       }
@@ -80,7 +83,7 @@ export const couponUpdateValidation = [
   body("validUntil")
     .optional()
     .custom((value) => {
-      // Allow null, empty string, or valid future date
+      // allow null, empty string, or valid future date
       if (value === null || value === "" || value === undefined) {
         return true;
       }
@@ -95,7 +98,7 @@ export const couponUpdateValidation = [
     }),
 ];
 
-// Helper function to clear multiple coupon caches
+// helper function to clear multiple coupon caches
 const clearCouponCache = async (couponCodes) => {
   if (!Array.isArray(couponCodes) || couponCodes.length === 0) {
     return;
@@ -104,13 +107,13 @@ const clearCouponCache = async (couponCodes) => {
   try {
     const cacheKeys = couponCodes.map((code) => `coupon:${code.toUpperCase()}`);
     await redisClient.del(...cacheKeys);
-    console.log(`[CACHE] Cleared cache for ${cacheKeys.length} coupons`);
+    console.log(`Cleared cache for ${cacheKeys.length} coupons`);
   } catch (error) {
-    console.error("[CACHE] Bulk cache clear failed:", error);
+    console.error("Bulk cache clear failed:", error);
   }
 };
 
-// Create coupon
+// create coupon
 export const createCoupon = async (req, res) => {
   try {
     const errors = validationResult(req);
@@ -125,15 +128,15 @@ export const createCoupon = async (req, res) => {
     const { code, type, course, discount, maxUsage, validUntil } = req.body;
 
     const sanitizedCode = DOMPurify.sanitize(code.trim().toUpperCase());
-    // Check if coupon code already exists
+    // check if coupon code already exists
     const hashedCode = crypto
       .createHash("sha256")
       .update(sanitizedCode)
       .digest("hex");
 
-    // Check if coupon code already exists (using hashed code)
+    // check if coupon code already exists (using hashed code)
     const existingCoupon = await Coupon.findOne({
-      hashedCode: hashedCode, // Use hashed code for lookup
+      hashedCode: hashedCode, // use hashed code for lookup
     });
 
     if (existingCoupon) {
@@ -143,7 +146,7 @@ export const createCoupon = async (req, res) => {
       });
     }
 
-    // If course-level coupon, verify course exists and is paid
+    // if course-level coupon, verify course exists and is paid
     if (type === "course") {
       const courseDoc = await Course.findById(course);
       if (!courseDoc) {
@@ -160,7 +163,7 @@ export const createCoupon = async (req, res) => {
       }
     }
 
-    // Create coupon
+    // create coupon
     const coupon = new Coupon({
       code: sanitizedCode,
       hashedCode: hashedCode,
@@ -174,7 +177,7 @@ export const createCoupon = async (req, res) => {
 
     await coupon.save();
 
-    // Populate course details if course-level coupon
+    // populate course details if course-level coupon
     await coupon.populate("course", "name isPaid price");
 
     res.status(201).json({
@@ -205,7 +208,7 @@ export const createCoupon = async (req, res) => {
   }
 };
 
-// Get all coupons (for admin)
+// get all coupons (for admin)
 export const getAllCoupons = async (req, res) => {
   try {
     const { type, isActive, courseId } = req.query;
@@ -247,13 +250,13 @@ export const getAllCoupons = async (req, res) => {
   }
 };
 
-// Update coupon details
+// update coupon details
 export const updateCoupon = async (req, res) => {
   try {
     const { couponId } = req.params;
     const { code, discount, maxUsage, validUntil } = req.body;
 
-    // Find existing coupon
+    // find existing coupon
     const coupon = await Coupon.findById(couponId);
     if (!coupon) {
       return res.status(404).json({
@@ -265,26 +268,26 @@ export const updateCoupon = async (req, res) => {
     const cacheKey = `coupon:${coupon.code.toUpperCase()}`;
     try {
       await redisClient.del(cacheKey);
-      console.log(`[CACHE] Cleared cache for coupon: ${coupon.code}`);
+      console.log(`Cleared cache for coupon: ${coupon.code}`);
     } catch (cacheError) {
-      console.error("[CACHE] Failed to clear coupon cache:", cacheError);
-      // Don't fail the request if cache clear fails
+      console.error("Failed to clear coupon cache:", cacheError);
+      // don't fail the request if cache clear fails
     }
 
-    // If code is being changed, check for duplicates
+    // if code is being d, check for duplicates
     if (code && code.toUpperCase() !== coupon.code) {
       const sanitizedCode = DOMPurify.sanitize(code.trim().toUpperCase());
 
-      // Generate new hashed code
+      // generate hashed code
       const newHashedCode = crypto
         .createHash("sha256")
         .update(sanitizedCode)
         .digest("hex");
 
-      // Check if new code already exists
+      // check if code already exists
       const existingCoupon = await Coupon.findOne({
         hashedCode: newHashedCode,
-        _id: { $ne: couponId }, // Exclude current coupon
+        _id: { $ne: couponId }, // exclude current coupon
       });
 
       if (existingCoupon) {
@@ -294,14 +297,14 @@ export const updateCoupon = async (req, res) => {
         });
       }
 
-      // Update code and hashedCode
+      // update code and hashedcode
       coupon.code = sanitizedCode;
       coupon.hashedCode = newHashedCode;
     }
 
-    // Update other fields if provided
+    // update other fields if provided
     if (discount !== undefined) {
-      // Validate discount is in allowed values
+      // validate discount is in allowed values
       if (![2, 5, 10, 15, 20].includes(parseInt(discount))) {
         return res.status(400).json({
           success: false,
@@ -312,7 +315,7 @@ export const updateCoupon = async (req, res) => {
     }
 
     if (maxUsage !== undefined) {
-      // If maxUsage is empty string or null, set to null (unlimited)
+      // if maxusage is empty string or null, set to null (unlimited)
       if (maxUsage === "" || maxUsage === null) {
         coupon.maxUsage = null;
       } else {
@@ -324,7 +327,7 @@ export const updateCoupon = async (req, res) => {
               "Max usage must be at least 1 or leave empty for unlimited",
           });
         }
-        // Check if new maxUsage is less than current usage
+        // check if maxusage is less than current usage
         if (parsedMaxUsage < coupon.usageCount) {
           return res.status(400).json({
             success: false,
@@ -336,7 +339,7 @@ export const updateCoupon = async (req, res) => {
     }
 
     if (validUntil !== undefined) {
-      // If validUntil is empty string or null, set to null (no expiry)
+      // if validuntil is empty string or null, set to null (no expiry)
       if (validUntil === "" || validUntil === null) {
         coupon.validUntil = null;
       } else {
@@ -353,7 +356,7 @@ export const updateCoupon = async (req, res) => {
 
     await coupon.save();
 
-    // Populate course details if course-level coupon
+    // populate course details if course-level coupon
     await coupon.populate("course", "name isPaid price");
 
     res.status(200).json({
@@ -385,7 +388,7 @@ export const updateCoupon = async (req, res) => {
   }
 };
 
-// Get coupons for a specific course (for admin)
+// get coupons for a specific course (for admin)
 export const getCourseCoupons = async (req, res) => {
   try {
     const { courseId } = req.params;
@@ -420,19 +423,19 @@ export const getCourseCoupons = async (req, res) => {
   }
 };
 
-// Verify coupon (for users during checkout)
+// verify coupon (for users during checkout)
 export const verifyCoupon = async (req, res) => {
   try {
     const { code, courseId } = req.body;
     const userId = req.user?.userId;
 
-    // ADD CACHE CHECK
+    // cache check
     const cacheKey = `coupon:${code}:${courseId}`;
     const cached = await redisClient.get(cacheKey);
 
     if (cached) {
       const cachedData = JSON.parse(cached);
-      // Still need to check user-specific validations
+      // still need to check user-specific validations
       const coupon = await Coupon.findById(cachedData.couponId);
       if (coupon) {
         const validationResult = coupon.isValid(userId);
@@ -446,13 +449,13 @@ export const verifyCoupon = async (req, res) => {
       }
     }
 
-    // Hash the input code to search
+    // hash the input code to search
     const hashedCode = crypto
       .createHash("sha256")
       .update(code.toUpperCase())
       .digest("hex");
 
-    // Find coupon by hashed code
+    // find coupon by hashed code
     const coupon = await Coupon.findOne({ hashedCode });
 
     if (!coupon) {
@@ -462,7 +465,7 @@ export const verifyCoupon = async (req, res) => {
       });
     }
 
-    // Check if coupon is valid
+    // check if coupon is valid
     const validationResult = coupon.isValid(userId);
     if (!validationResult.valid) {
       return res.status(400).json({
@@ -471,7 +474,7 @@ export const verifyCoupon = async (req, res) => {
       });
     }
 
-    // Check if coupon applies to this course
+    // check if coupon applies to this course
     if (coupon.type === "course") {
       if (coupon.course.toString() !== courseId) {
         return res.status(400).json({
@@ -481,7 +484,7 @@ export const verifyCoupon = async (req, res) => {
       }
     }
 
-    // Get course details
+    // get course details
     const course = await Course.findById(courseId);
     if (!course || !course.isPaid) {
       return res.status(400).json({
@@ -490,12 +493,12 @@ export const verifyCoupon = async (req, res) => {
       });
     }
 
-    // Calculate discount
+    // calculate discount
     const originalPrice = course.price;
     const discountAmount = Math.round((originalPrice * coupon.discount) / 100);
     const finalPrice = originalPrice - discountAmount;
 
-    // ADD TO CACHE (5 minutes)
+    // to cache (5 minutes)
     await redisClient.setex(
       cacheKey,
       300,
@@ -508,7 +511,7 @@ export const verifyCoupon = async (req, res) => {
       })
     );
 
-    // Return discount info (WITHOUT revealing the actual coupon code or hash)
+    // return discount info (without revealing the actual coupon code or hash)
     res.status(200).json({
       success: true,
       message: "Coupon applied successfully",
@@ -529,7 +532,7 @@ export const verifyCoupon = async (req, res) => {
   }
 };
 
-// Update coupon status
+// update coupon status
 export const updateCouponStatus = async (req, res) => {
   try {
     const { couponId } = req.params;
@@ -568,7 +571,7 @@ export const updateCouponStatus = async (req, res) => {
   }
 };
 
-// Delete coupon
+// delete coupon
 export const deleteCoupon = async (req, res) => {
   try {
     const { couponId } = req.params;
@@ -585,10 +588,10 @@ export const deleteCoupon = async (req, res) => {
     const cacheKey = `coupon:${coupon.code.toUpperCase()}`;
     try {
       await redisClient.del(cacheKey);
-      console.log(`[CACHE] Cleared cache for deleted coupon: ${coupon.code}`);
+      console.log(`Cleared cache for deleted coupon: ${coupon.code}`);
     } catch (cacheError) {
-      console.error("[CACHE] Failed to clear coupon cache:", cacheError);
-      // Don't fail the request if cache clear fails
+      console.error("Failed to clear coupon cache:", cacheError);
+      // don't fail the request if cache clear fails
     }
 
     res.status(200).json({
@@ -605,10 +608,10 @@ export const deleteCoupon = async (req, res) => {
 };
 
 
-// ── Teacher coupon management ──
+// teacher coupon management
 
 /**
- * teacher creates a coupon — only allowed if admin granted access
+ * lets a teacher create a coupon when admin has granted access.
  * and teacher owns the course
  */
 export const teacherCreateCoupon = async (req, res) => {

@@ -1,3 +1,6 @@
+/**
+ * keeps the blog crypto utility focused and readable.
+ */
 import crypto from "crypto";
 
 const ALGORITHM = "aes-256-gcm";

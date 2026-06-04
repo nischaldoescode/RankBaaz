@@ -1,3 +1,6 @@
+/**
+ * keeps the header component focused and readable.
+ */
 import React, { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
@@ -6,7 +9,6 @@ import {
   LogOut,
   Settings,
   ChevronDown,
-  GraduationCap,
   Home,
   BookOpen,
   FileText,
@@ -70,6 +72,8 @@ const Header = () => {
   const { contentSettings } = useContent();
   const location = useLocation();
   const navigate = useNavigate();
+  const siteName = contentSettings?.siteName || "Vidhgrow";
+  const logoUrl = contentSettings?.logo?.url;
 
   const initial = user?.username?.charAt(0).toUpperCase() || "U";
   const avatarColor = avatarColors[initial] || avatarColors.A;
@@ -92,30 +96,30 @@ const Header = () => {
 
   const filteredLinks = navLinks.filter((l) => !l.protected || isAuthenticated);
 
-  // ── Desktop NavLink ──
+  // desktop nav link
   const DesktopNavLink = ({ link }) => (
     <Link
       to={link.path}
-      className={`relative flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 ${
+      className={`relative flex items-center gap-1.5 px-3.5 py-2 rounded-full text-sm font-semibold transition-all duration-200 ${
         isActive(link.path)
           ? "text-primary"
-          : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+          : "text-muted-foreground hover:text-foreground hover:bg-blue-50"
       }`}
     >
-      {link.label}
       {isActive(link.path) && (
         <motion.span
-          layoutId="desktop-indicator"
-          className="absolute -bottom-[1px] left-2 right-2 h-[2px] bg-primary rounded-full"
-          transition={{ type: "spring", stiffness: 400, damping: 30 }}
+          layoutId="desktop-nav-fill"
+          className="absolute inset-0 rounded-full bg-primary/10"
+          transition={{ type: "spring", stiffness: 420, damping: 34 }}
         />
       )}
+      <span className="relative z-10">{link.label}</span>
     </Link>
   );
 
   return (
     <>
-      {/* ─────────────────── Desktop / Tablet header (top) ─────────────────── */}
+      {/* desktop and tablet header */}
       <motion.header
         className={`sticky top-0 z-50 w-full transition-all duration-300 border-b ${
           scrolled
@@ -128,40 +132,40 @@ const Header = () => {
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
-            {/* Logo */}
+            {/* logo */}
             <Link
               to="/"
-              className="flex items-center gap-2.5 hover:opacity-80 transition-opacity"
+              className="flex min-w-0 items-center gap-2.5 hover:opacity-80 transition-opacity"
             >
-              {contentSettings?.logo?.url ? (
+              {logoUrl ? (
                 <CachedImage
-                  src={contentSettings.logo.url}
-                  alt={contentSettings.siteName || "Logo"}
-                  className="h-10 w-auto object-contain rounded-lg"
+                  src={logoUrl}
+                  alt={siteName}
+                  className="h-8 max-w-[112px] rounded-lg object-contain sm:h-10 sm:max-w-[156px]"
                   fallback={
-                    <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-                      <GraduationCap className="w-5 h-5 text-primary-foreground" />
-                    </div>
+                    <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-sm font-bold text-primary sm:h-10 sm:w-10">
+                      {siteName.charAt(0).toUpperCase()}
+                    </span>
                   }
                 />
               ) : (
-                <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-                  <GraduationCap className="w-5 h-5 text-primary-foreground" />
-                </div>
+                <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-sm font-bold text-primary sm:h-10 sm:w-10">
+                  {siteName.charAt(0).toUpperCase()}
+                </span>
               )}
-              <span className="hidden sm:block text-base font-bold text-foreground">
-                {contentSettings?.siteName || "Vidhgrow"}
+              <span className="hidden max-w-[118px] truncate text-base font-bold text-foreground sm:block md:max-w-[180px]">
+                {siteName}
               </span>
             </Link>
 
-            {/* Desktop nav links */}
+            {/* desktop nav links */}
             <nav className="hidden lg:flex items-center gap-1">
               {filteredLinks.map((link) => (
                 <DesktopNavLink key={link.path} link={link} />
               ))}
             </nav>
 
-            {/* Right side */}
+            {/* right side */}
             <div className="flex items-center gap-2">
               {isAuthenticated ? (
                 <DropdownMenu>
@@ -244,9 +248,9 @@ const Header = () => {
 
       <>
 
-        <div className="lg:hidden fixed bottom-4 left-4 right-4 z-50 flex justify-center pointer-events-none">
+        <div className="vg-bottom-nav lg:hidden fixed bottom-2 left-3 right-3 z-50 flex justify-center pointer-events-none">
           <motion.nav
-            className="pointer-events-auto flex items-center gap-0.5 bg-background/95 backdrop-blur-xl border border-border rounded-2xl shadow-xl px-1.5 py-1.5"
+            className="pointer-events-auto grid w-full max-w-[430px] grid-cols-5 items-center gap-1 rounded-[28px] border border-blue-100/80 bg-white/88 px-2 py-2 shadow-[0_10px_35px_rgba(15,23,42,0.14)] backdrop-blur-2xl"
             initial={animations && !reducedMotion ? { y: 80, opacity: 0 } : {}}
             animate={animations && !reducedMotion ? { y: 0, opacity: 1 } : {}}
             transition={{
@@ -267,12 +271,12 @@ const Header = () => {
                 <Link
                   key={link.path}
                   to={link.path}
-                  className="relative flex flex-col items-center justify-center px-3.5 py-2 rounded-xl transition-all min-w-[52px]"
+                  className="relative flex min-w-0 flex-col items-center justify-center rounded-2xl px-2.5 py-2 transition-all"
                 >
                   {active && (
                     <motion.div
                       layoutId="bottomNavActive"
-                      className="absolute inset-0 bg-primary/10 rounded-xl"
+                      className="absolute inset-x-1 top-1 h-8 rounded-full bg-primary/10"
                       transition={{
                         type: "spring",
                         stiffness: 380,
@@ -287,7 +291,7 @@ const Header = () => {
                       }`}
                     />
                     <span
-                      className={`text-[9px] font-bold uppercase tracking-tight leading-none transition-colors duration-200 ${
+                      className={`max-w-full truncate text-[10px] font-semibold leading-none transition-colors duration-200 ${
                         active ? "text-primary" : "text-muted-foreground"
                       }`}
                     >
@@ -301,12 +305,12 @@ const Header = () => {
             {isAuthenticated ? (
               <Link
                 to="/profile"
-                className="relative flex flex-col items-center justify-center px-3.5 py-2 rounded-xl transition-all min-w-[52px]"
+                className="relative flex min-w-0 flex-col items-center justify-center rounded-2xl px-2.5 py-2 transition-all"
               >
                 {isActive("/profile") && (
                   <motion.div
                     layoutId="bottomNavActive"
-                    className="absolute inset-0 bg-primary/10 rounded-xl"
+                    className="absolute inset-x-1 top-1 h-8 rounded-full bg-primary/10"
                     transition={{ type: "spring", stiffness: 380, damping: 30 }}
                   />
                 )}
@@ -319,7 +323,7 @@ const Header = () => {
                     {initial}
                   </motion.div>
                   <span
-                    className={`text-[9px] font-bold uppercase tracking-tight leading-none transition-colors duration-200 ${
+                    className={`max-w-full truncate text-[10px] font-semibold leading-none transition-colors duration-200 ${
                       isActive("/profile")
                         ? "text-primary"
                         : "text-muted-foreground"
@@ -332,12 +336,12 @@ const Header = () => {
             ) : (
               <Link
                 to="/login"
-                className="relative flex flex-col items-center justify-center px-3.5 py-2 rounded-xl transition-all min-w-[52px]"
+                className="relative flex min-w-0 flex-col items-center justify-center rounded-2xl px-2.5 py-2 transition-all"
               >
                 {isActive("/login") && (
                   <motion.div
                     layoutId="bottomNavActive"
-                    className="absolute inset-0 bg-primary/10 rounded-xl"
+                    className="absolute inset-x-1 top-1 h-8 rounded-full bg-primary/10"
                     transition={{ type: "spring", stiffness: 380, damping: 30 }}
                   />
                 )}
@@ -350,7 +354,7 @@ const Header = () => {
                     }`}
                   />
                   <span
-                    className={`text-[9px] font-bold uppercase tracking-tight leading-none transition-colors duration-200 ${
+                    className={`max-w-full truncate text-[10px] font-semibold leading-none transition-colors duration-200 ${
                       isActive("/login")
                         ? "text-primary"
                         : "text-muted-foreground"

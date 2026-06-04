@@ -1,4 +1,7 @@
-// rateLimiters.js
+/**
+ * keeps the pdf ratelimiter utility focused and readable.
+ */
+// ratelimiters.js
 import ioredisRatelimit from "ioredis-ratelimit";
 import redisClient, {
   isRedisConnectionError,
@@ -33,7 +36,7 @@ const createRateLimiter = (options) => {
   };
 };
 
-// PDF download limiter
+// pdf download limiter
 export const pdfDownloadLimiter = createRateLimiter({
   prefix: "pdf-download",
   windowMs: 60 * 60 * 1000, // 1 hour

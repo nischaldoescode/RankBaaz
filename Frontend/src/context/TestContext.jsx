@@ -1,3 +1,6 @@
+/**
+ * keeps the test context context focused and readable.
+ */
 import React, {
   createContext,
   useContext,
@@ -8,7 +11,7 @@ import React, {
 import { apiMethods, handleApiError } from "../services/api";
 import toast from "react-hot-toast";
 
-// Initial state
+// initial state
 const initialState = {
   currentTest: null,
   currentQuestion: null,
@@ -35,7 +38,7 @@ const initialState = {
   },
 };
 
-// Action types
+// action types
 const TEST_ACTIONS = {
   UPDATE_QUESTION_TIMER: "UPDATE_QUESTION_TIMER",
   RESET_QUESTION_TIMER: "RESET_QUESTION_TIMER",
@@ -60,29 +63,29 @@ const TEST_ACTIONS = {
   SET_VALIDATING: "SET_VALIDATING",
 };
 
-// Reducer
+// reducer
 const testReducer = (state, action) => {
   switch (action.type) {
     case TEST_ACTIONS.SET_LOADING:
       return { ...state, loading: action.payload };
 
     case TEST_ACTIONS.START_TEST:
-      // Get the test data from API response
+      // get the test data from api response
       const testData = action.payload.test;
-      // console.log("Test data structure:", testData);
+      // console.log("test data structure:", testdata);
 
-      // Extract difficulty settings from courseInfo
+      // extract difficulty settings from courseinfo
       const difficultySettings = testData.courseInfo?.difficulty;
       const timeLimit =
         difficultySettings?.timerSettings?.maxTime ||
         testData.courseInfo?.maxTime ||
         60;
 
-      // Questions are directly in testData.questions
+      // questions are directly in testdata.questions
       const questions = testData.questions || [];
       const firstQuestion = questions.length > 0 ? questions[0] : null;
 
-      // console.log("First question:", firstQuestion);
+      // console.log("first question:", firstquestion);
 
       return {
         ...state,
@@ -95,7 +98,7 @@ const testReducer = (state, action) => {
           },
         },
         selectedCourseId: action.payload.courseId,
-        allDifficulties: action.payload.allDifficulties, // Add this
+        allDifficulties: action.payload.allDifficulties, // this
         completedDifficulties: action.payload.completedDifficulties || [],
         allTestResults: state.allTestResults || [],
         currentQuestion: firstQuestion,
@@ -148,7 +151,7 @@ const testReducer = (state, action) => {
           ...(state.allTestResults || []),
           action.payload.result,
         ],
-        answers: {}, // Reset answers for next difficulty
+        answers: {}, // reset answers for next difficulty
         currentQuestion: null,
       };
 
@@ -309,16 +312,16 @@ export const TestProvider = ({ children }) => {
     state.testState.timeRemaining,
   ]);
 
-  // Modified effect for difficulty transition
+  // modified effect for difficulty transition
   useEffect(() => {
     if (
       state.testState.isActive &&
       state.testState.timeRemaining === 0 &&
       !state.testResult
     ) {
-      // console.log("Difficulty time expired, checking for next difficulty");
-      // Handle difficulty transition instead of auto-submit
-      // This should be handled in Test.jsx component
+      // console.log("difficulty time expired, checking for next difficulty");
+      // handle difficulty transition instead of auto-submit
+      // this should be handled in test.jsx component
     }
   }, [
     state.testState.timeRemaining,
@@ -331,30 +334,30 @@ export const TestProvider = ({ children }) => {
       dispatch({ type: TEST_ACTIONS.SET_LOADING, payload: true });
 
       // console.log(
-      //   `[TEST_CONTEXT] Starting test - Course: ${courseId}, Difficulty: ${difficulty}`
+      //   `starting test - course: ${courseid}, difficulty: ${difficulty}`
       // );
 
-      // CHANGE: Remove caching for now to ensure fresh data
-      // The cache was causing stale authentication issues
+      // remove caching for now to ensure fresh data
+      // the cache was causing stale authentication issues
 
       let test;
       try {
         const response = await apiMethods.tests.startTest(courseId, difficulty);
 
-        // CHANGE: Validate response structure
+        // validate response structure
         if (!response || !response.data || !response.data.data) {
           throw new Error("Invalid response structure from API");
         }
 
         test = response.data.data;
-        // console.log(`[TEST_CONTEXT] Test data received:`, {
-        //   questionCount: test.questions?.length,
-        //   courseName: test.courseInfo?.name,
-        //   difficulty: test.courseInfo?.difficulty?.name,
+        // console.log(`test data received:`, {
+        //   questioncount: test.questions?.length,
+        //   coursename: test.courseinfo?.name,
+        //   difficulty: test.courseinfo?.difficulty?.name,
         // });
       } catch (apiError) {
-        // CHANGE: Better error categorization
-        // console.error("[TEST_CONTEXT] API Error:", apiError);
+        // better error categorization
+        // console.error("api error:", apierror);
 
         if (apiError.response?.status === 401) {
           const msg = "Session expired. Please login again.";
@@ -362,7 +365,7 @@ export const TestProvider = ({ children }) => {
           return {
             success: false,
             error: msg,
-            requiresAuth: true, // CHANGE: New flag
+            requiresAuth: true, // flag
           };
         }
 
@@ -376,10 +379,10 @@ export const TestProvider = ({ children }) => {
           };
         }
 
-        throw apiError; // Re-throw for outer catch
+        throw apiError; // re-throw for outer catch
       }
 
-      // CHANGE: Validate test data before dispatching
+      // validate test data dispatching
       if (!test.questions || test.questions.length === 0) {
         const msg = "No questions available for this difficulty";
         dispatch({ type: TEST_ACTIONS.SET_ERROR, payload: msg });
@@ -407,9 +410,9 @@ export const TestProvider = ({ children }) => {
 
       return { success: true, test, difficulty: difficulty };
     } catch (err) {
-      // console.error("[TEST_CONTEXT] Start test error:", err);
+      // console.error("start test error:", err);
 
-      // CHANGE: Extract backend error message properly
+      // extract backend error message properly
       const backendMessage = err.response?.data?.message || "";
       const msg = handleApiError(err, "Failed to start test");
 
@@ -427,7 +430,7 @@ export const TestProvider = ({ children }) => {
   };
 
   const submitAnswer = async (questionId, answer) => {
-    dispatch({ type: TEST_ACTIONS.SET_VALIDATING, payload: true }); // NEW: Lock
+    dispatch({ type: TEST_ACTIONS.SET_VALIDATING, payload: true }); // lock
 
     try {
       const actualCourseId =
@@ -445,7 +448,7 @@ export const TestProvider = ({ children }) => {
         payload: { questionId, answer },
       });
 
-      // NEW: Unlock after brief delay
+      // unlock brief delay
       setTimeout(
         () => {
           dispatch({ type: TEST_ACTIONS.SET_VALIDATING, payload: false });
@@ -504,21 +507,21 @@ export const TestProvider = ({ children }) => {
       dispatch({ type: TEST_ACTIONS.SUBMIT_TEST });
 
       if (!isFinalSubmission) {
-        // Not a final submission - just return success for local storage
+        // not a final submission - just return success for local storage
         return { success: true, storedLocally: true };
       }
 
-      // Final submission only - use accumulated results from component
+      // final submission only - use accumulated results from component
       // console.log(
-      //   "Final submission with accumulated results:",
-      //   accumulatedResults
+      //   "final submission with accumulated results:",
+      //   accumulatedresults
       // );
 
       if (!accumulatedResults || accumulatedResults.length === 0) {
         throw new Error("No accumulated results provided for final submission");
       }
 
-      // Collect all answers from all difficulties
+      // collect all answers from all difficulties
       const allAnswers = [];
       accumulatedResults.forEach((diffResult) => {
         if (diffResult.answerMapping) {
@@ -577,7 +580,7 @@ export const TestProvider = ({ children }) => {
   const canCompleteDifficulty = useCallback(() => {
     if (!state.currentTest || !state.testState.isActive) return false;
 
-    // Check if all questions are answered or time is up
+    // check if all questions are answered or time is up
     const allQuestionsAnswered =
       Object.keys(state.answers).length === state.testState.totalQuestions;
     const timeIsUp = state.testState.timeRemaining === 0;
@@ -650,13 +653,13 @@ export const TestProvider = ({ children }) => {
   };
 
   /**
-   * Download test result PDF with one-time token
-   * @param {string} testId - Test result ID
-   * @returns {Promise<{success: boolean, error?: string, blob?: Blob, filename?: string}>}
+   * download test result pdf with one-time token
+   * @param {string} testid - test result id
+   * @returns {promise<{success: boolean, error?: string, blob?: blob, filename?: string}>}
    */
   const downloadTestPDF = async (testId) => {
     try {
-      // Step 1: Generate one-time token
+      // step 1: generate one-time token
       const tokenResponse = await apiMethods.tests.generatePDFToken(testId);
 
       if (!tokenResponse.data.success || !tokenResponse.data.data.token) {
@@ -665,10 +668,10 @@ export const TestProvider = ({ children }) => {
 
       const token = tokenResponse.data.data.token;
 
-      // Step 2: Download PDF with token
+      // step 2: download pdf with token
       const pdfResponse = await apiMethods.tests.downloadPDF(testId, token);
 
-      // Extract filename from Content-Disposition header
+      // extract filename from content-disposition header
       const contentDisposition = pdfResponse.headers["content-disposition"];
       let filename = `Vidhgrow_Test_${
         new Date().toISOString().split("T")[0]
@@ -717,7 +720,7 @@ export const TestProvider = ({ children }) => {
   const resumeTest = () => {
     if (state.testState.isActive && state.testState.isPaused) {
       dispatch({ type: TEST_ACTIONS.RESUME_TEST });
-      toast("ℹ️ Test resumed");
+      toast("ℹ Test resumed");
     }
   };
 

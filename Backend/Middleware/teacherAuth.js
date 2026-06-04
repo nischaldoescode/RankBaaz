@@ -1,3 +1,6 @@
+/**
+ * keeps the teacher auth middleware focused and readable.
+ */
 import jwt from "jsonwebtoken";
 import Teacher from "../Models/Teacher.js";
 import redisClient from "../Config/redis.js";
@@ -5,7 +8,7 @@ import { verifyRequestSignature } from "./requestSignature.js";
 
 /**
  * authenticate teacher via jwt cookie
- * also checks accessBlocked status from cache or db
+ * also checks accessblocked status from cache or db
  */
 export const authenticateTeacher = async (req, res, next) => {
   try {
@@ -91,8 +94,8 @@ export const authenticateTeacher = async (req, res, next) => {
 };
 
 /**
- * Block teacher-only features until documents are verified.
- * Profile + document upload routes stay open so the teacher can fix verification.
+ * block teacher-only features until documents are verified.
+ * profile + document upload routes stay open so the teacher can verification.
  */
 export const requireDocumentVerification = (req, res, next) => {
   const teacher = req.teacher;

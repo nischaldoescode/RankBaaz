@@ -1,21 +1,24 @@
+/**
+ * keeps the otp utils utility focused and readable.
+ */
 import { Resend } from "resend";
 import dotenv from "dotenv";
 
 dotenv.config();
 
 /**
- * Generates a 6-digit OTP code
- * @returns {string} The generated OTP code
+ * generates a 6-digit otp code
+ * @returns {string} the generated otp code
  */
 export const generateOtp = () => {
   return Math.floor(100000 + Math.random() * 900000).toString();
 };
 
 /**
- * Sends an OTP email to the specified email address
- * @param {string} email - Recipient's email address
- * @param {string} otp - OTP code to send
- * @returns {Promise<boolean>}
+ * sends an otp email to the specified email ress
+ * @param {string} email - recipient's email ress
+ * @param {string} otp - otp code to send
+ * @returns {promise<boolean>}
  */
 export const sendOtpEmail = async (
   email,
@@ -26,13 +29,13 @@ export const sendOtpEmail = async (
   const startTime = Date.now();
 
   try {
-    // Check which email service to use
+    // check which email service to use
     const emailService = process.env.EMAIL_SERVICE || "resend";
 
-    // console.log(`[EMAIL] Using service: ${emailService}`);
-    // console.log(`[EMAIL] Sending to: ${email}`);
+    // console.log(`using service: ${emailservice}`);
+    // console.log(`sending to: ${email}`);
 
-    // Logo section
+    // logo section
     const logoSection = logoUrl
       ? `<img src="${logoUrl}" alt="${siteName} Logo" style="max-width: 150px; height: auto;" />`
       : `<h1 style="margin: 0; color: #1a1a1a; font-size: 28px; font-weight: 600; letter-spacing: -0.5px;">${siteName}</h1>`;
@@ -63,7 +66,7 @@ export const sendOtpEmail = async (
                 padding: 15px !important;
             }
         }
-        
+
         @keyframes fadeInUp {
             from {
                 opacity: 0;
@@ -74,7 +77,7 @@ export const sendOtpEmail = async (
                 transform: translateY(0);
             }
         }
-        
+
         @keyframes pulse {
             0%, 100% {
                 transform: scale(1);
@@ -83,11 +86,11 @@ export const sendOtpEmail = async (
                 transform: scale(1.05);
             }
         }
-        
+
         .animate-fade-in {
             animation: fadeInUp 0.6s ease-out;
         }
-        
+
         .animate-pulse {
             animation: pulse 2s ease-in-out infinite;
         }
@@ -145,10 +148,10 @@ export const sendOtpEmail = async (
     let messageId;
 
     if (emailService === "resend") {
-      // RESEND API - FAST AND RELIABLE
+      // resend api - fast and reliable
       const resend = new Resend(process.env.RESEND_API_KEY);
 
-      // console.log(`[EMAIL] Resend - From: ${process.env.EMAIL_USER}`);
+      // console.log(`resend - from: ${process.env.email_user}`);
 
       const data = await resend.emails.send({
         from: `${siteName} <${process.env.EMAIL_USER}>`,
@@ -158,29 +161,29 @@ export const sendOtpEmail = async (
       });
 
       messageId = data.id;
-      // console.log(`[EMAIL] Resend success - ID: ${messageId}`);
+      // console.log(`resend success - id: ${messageid}`);
     }
 
     const duration = Date.now() - startTime;
-    // console.log(`[EMAIL] Total time: ${duration}ms`);
+    // console.log(`total time: ${duration}ms`);
 
     return true;
   } catch (error) {
     const duration = Date.now() - startTime;
 
-    console.error("[EMAIL] Send failed");
-    console.error("[EMAIL] Error type:", error.name);
-    console.error("[EMAIL] Error message:", error.message);
-    console.error("[EMAIL] Time elapsed:", duration + "ms");
+    console.error("Send failed");
+    console.error("Error type:", error.name);
+    console.error("Error message:", error.message);
+    console.error("Time elapsed:", duration + "ms");
 
     if (error.code) {
-      console.error("[EMAIL] Error code:", error.code);
+      console.error("Error code:", error.code);
     }
     if (error.statusCode) {
-      console.error("[EMAIL] Status code:", error.statusCode);
+      console.error("Status code:", error.statusCode);
     }
 
-    // Specific error messages
+    // specific error messages
     if (error.message?.includes("Invalid API key")) {
       throw new Error("Email service not configured - Invalid API key");
     } else if (error.message?.includes("timeout")) {
@@ -196,8 +199,8 @@ export const sendOtpEmail = async (
 };
 
 /**
- * Validates OTP format
- * @param {string} otp - OTP to validate
+ * validates otp format
+ * @param {string} otp - otp to validate
  * @returns {boolean}
  */
 export const validateOtpFormat = (otp) => {
@@ -205,8 +208,8 @@ export const validateOtpFormat = (otp) => {
 };
 
 /**
- * Checks if OTP has expired
- * @param {Date} expiresAt - OTP expiration date
+ * checks if otp has expired
+ * @param {date} expiresat - otp expiration date
  * @returns {boolean}
  */
 export const isOtpExpired = (expiresAt) => {

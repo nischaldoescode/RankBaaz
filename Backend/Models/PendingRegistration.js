@@ -1,3 +1,6 @@
+/**
+ * keeps the pending registration model focused and readable.
+ */
 import mongoose from "mongoose";
 
 const pendingRegistrationSchema = new mongoose.Schema({
@@ -24,7 +27,7 @@ const pendingRegistrationSchema = new mongoose.Schema({
   createdAt: {
     type: Date,
     default: Date.now,
-    expires: 900, // we will performmm autoo-deletion after 15 minutes using TTL index
+    expires: 900, // we will performmm autoo-deletion 15 minutes using ttl index
   },
 });
 

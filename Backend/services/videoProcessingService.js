@@ -1,3 +1,6 @@
+/**
+ * keeps the video processing service service focused and readable.
+ */
 class VideoProcessingService {
   constructor() {
     this.allowedDomains = [
@@ -9,7 +12,7 @@ class VideoProcessingService {
     ];
   }
 
-  // Validate video URL
+  // validate video url
   validateVideoUrl(url) {
     try {
       const urlObj = new URL(url);
@@ -20,7 +23,7 @@ class VideoProcessingService {
     }
   }
 
-  // Extract platform from URL
+  // extract platform from url
   extractPlatform(url) {
     try {
       const urlObj = new URL(url);

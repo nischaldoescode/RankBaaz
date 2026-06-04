@@ -1,9 +1,12 @@
+/**
+ * keeps the teacher profile page focused and readable.
+ */
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import axios from "axios";
 import Loading from "../components/common/Loading";
-import NotFound from "./NotFound"; // your existing 404 page
+import NotFound from "./NotFound";
 
 const API = import.meta.env.VITE_API_URL || "http://localhost:7000/api";
 const DICEBEAR = (seed) =>
@@ -11,7 +14,7 @@ const DICEBEAR = (seed) =>
 
 const TeacherProfile = () => {
   const { username: rawUsername } = useParams();
-  // strip @ if present — handles both /@username and /teacher/@username
+  // accept both /@username and /teacher/@username.
   const username = rawUsername?.startsWith("@")
     ? rawUsername.slice(1)
     : rawUsername;
@@ -34,7 +37,7 @@ const TeacherProfile = () => {
       .get(`${API}/teachers/public/${username}`)
       .then((r) => setData(r.data.data))
       .catch((err) => {
-        // 404 means not found OR blocked — show 404 page
+        // not found and blocked teachers share the same public 404.
         setNotFound(true);
       })
       .finally(() => setLoading(false));
@@ -49,7 +52,7 @@ const TeacherProfile = () => {
   }
 
   if (notFound || !data) {
-    // render the actual 404 component — same as App.jsx 404 route
+    // use the shared 404 page.
     return <NotFound />;
   }
 

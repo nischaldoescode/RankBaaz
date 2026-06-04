@@ -1,7 +1,10 @@
+/**
+ * keeps the request signing utility focused and readable.
+ */
 import crypto from "crypto-js";
 
 /**
- * teacher panel request signer — mirrors admin panel signing logic
+ * signs teacher panel requests using the same hmac flow as admin.
  */
 class TeacherRequestSigner {
   constructor() {
@@ -53,7 +56,7 @@ class TeacherRequestSigner {
 
   signRequest(config) {
     if (!this.isSecretValid()) {
-      console.warn("[TEACHER_SIGNER] Secret expired or missing");
+      console.warn("Secret expired or missing");
       return config;
     }
 
@@ -68,7 +71,7 @@ class TeacherRequestSigner {
         const urlObj = new URL(path);
         path = urlObj.pathname + urlObj.search;
       } catch (e) {
-        console.error("[TEACHER_SIGNER] Failed to parse URL:", e);
+        console.error("Failed to parse URL:", e);
       }
     } else if (!path.startsWith("/api")) {
       try {
@@ -79,7 +82,7 @@ class TeacherRequestSigner {
           path = basePath + cleanPath;
         }
       } catch (e) {
-        console.error("[TEACHER_SIGNER] Failed to build path:", e);
+        console.error("Failed to build path:", e);
       }
     }
 
@@ -95,7 +98,7 @@ class TeacherRequestSigner {
       config.headers["X-Request-Timestamp"] = timestamp;
       config.headers["X-Request-Nonce"] = nonce;
     } catch (err) {
-      console.error("[TEACHER_SIGNER] Signing failed:", err);
+      console.error("Signing failed:", err);
       throw err;
     }
 

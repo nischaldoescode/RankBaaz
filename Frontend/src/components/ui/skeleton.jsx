@@ -1,3 +1,6 @@
+/**
+ * keeps the skeleton component focused and readable.
+ */
 import { cn } from "@/lib/utils"
 
 function Skeleton({

@@ -1,3 +1,6 @@
+/**
+ * keeps the upload middleware focused and readable.
+ */
 import multer from "multer";
 import { v2 as cloudinary } from "cloudinary";
 import { createRequire } from "module";
@@ -6,7 +9,7 @@ const require = createRequire(import.meta.url);
 const CloudinaryStorage = require("multer-storage-cloudinary");
 
 
-// Create dynamic storage engine
+// create dynamic storage engine
 const dynamicStorage = new CloudinaryStorage({
   cloudinary: cloudinary,
   params: (req, file) => {
@@ -38,7 +41,7 @@ const dynamicStorage = new CloudinaryStorage({
   },
 });
 
-// File filters
+// file filters
 const imageFileFilter = (req, file, cb) => {
   const allowedTypes = [
     "image/jpeg",

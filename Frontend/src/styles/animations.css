@@ -1,4 +1,7 @@
-/* Custom Keyframe Animations */
+/**
+ * keeps the animations stylesheet focused and readable.
+ */
+/* custom keyframe animations */
 @keyframes fadeInUp {
   from {
     opacity: 0;
@@ -233,7 +236,7 @@
   }
 }
 
-/* Animation Utility Classes */
+/* animation utility classes */
 .animate-fade-in-up {
   animation: fadeInUp 0.6s ease-out forwards;
 }
@@ -315,7 +318,7 @@
   animation: card-flip 0.8s ease-in-out forwards;
 }
 
-/* Stagger Animations */
+/* stagger animations */
 .stagger-children > * {
   opacity: 0;
   transform: translateY(20px);
@@ -329,7 +332,7 @@
 .stagger-children > *:nth-child(5) { animation-delay: 0.5s; }
 .stagger-children > *:nth-child(6) { animation-delay: 0.6s; }
 
-/* Hover Animations */
+/* hover animations */
 .hover-lift {
   transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
@@ -383,7 +386,7 @@
   left: 100%;
 }
 
-/* Loading Animations */
+/* loading animations */
 .spinner-ring {
   display: inline-block;
   position: relative;
@@ -452,7 +455,7 @@
   }
 }
 
-/* Entrance Animations with Delays */
+/* entrance animations with delays */
 .animate-entrance-1 {
   animation: fadeInUp 0.6s ease-out 0.1s both;
 }
@@ -473,7 +476,7 @@
   animation: fadeInUp 0.6s ease-out 0.5s both;
 }
 
-/* Page Transition Animations */
+/* page transition animations */
 .page-enter {
   opacity: 0;
   transform: translateX(-20px);
@@ -496,7 +499,7 @@
   transition: opacity 0.4s ease, transform 0.4s ease;
 }
 
-/* Modal Animations */
+/* modal animations */
 .modal-enter {
   opacity: 0;
   transform: scale(0.9);
@@ -519,7 +522,7 @@
   transition: opacity 0.3s ease, transform 0.3s ease;
 }
 
-/* Toast Animations */
+/* toast animations */
 .toast-enter {
   opacity: 0;
   transform: translateY(100px);
@@ -542,7 +545,7 @@
   transition: opacity 0.3s ease, transform 0.3s ease;
 }
 
-/* Progress Circle Animation */
+/* progress circle animation */
 .progress-circle {
   transform: rotate(-90deg);
   transform-origin: 50% 50%;
@@ -563,7 +566,7 @@
   transition: stroke-dasharray 0.6s ease;
 }
 
-/* Scroll Reveal Animations */
+/* scroll reveal animations */
 .scroll-reveal {
   opacity: 0;
   transform: translateY(50px);
@@ -575,7 +578,7 @@
   transform: translateY(0);
 }
 
-/* Performance Optimizations */
+/* performance optimizations */
 .will-change-transform {
   will-change: transform;
 }
@@ -590,7 +593,7 @@
   perspective: 1000;
 }
 
-/* Reduced Motion Preferences */
+/* reduced motion preferences */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -600,7 +603,7 @@
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }
-  
+
   .animate-float,
   .animate-pulse-glow,
   .animate-shimmer,
@@ -609,7 +612,7 @@
   }
 }
 
-/* Dark Theme Animation Adjustments */
+/* dark theme animation adjustments */
 @media (prefers-color-scheme: dark) {
   .animate-shimmer {
     background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.05), transparent);

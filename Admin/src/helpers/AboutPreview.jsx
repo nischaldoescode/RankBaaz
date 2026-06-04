@@ -1,3 +1,6 @@
+/**
+ * keeps the about preview utility focused and readable.
+ */
 import {
   Brain,
   Target,
@@ -42,7 +45,7 @@ export const AboutPreview = ({ data }) => {
         </p>
       </div>
 
-      {/* Header Preview */}
+      {/* header preview */}
       <div className="bg-card rounded-xl p-8 border border-border text-center">
         <h4 className="text-sm font-semibold text-muted-foreground mb-6 uppercase">
           Page Header
@@ -62,7 +65,7 @@ export const AboutPreview = ({ data }) => {
         </p>
       </div>
 
-      {/* Stats Preview */}
+      {/* stats preview */}
       {data.stats && data.stats.length > 0 && (
         <div className="bg-card rounded-xl p-6 border border-border">
           <h4 className="text-sm font-semibold text-muted-foreground mb-6 uppercase text-center">
@@ -84,7 +87,7 @@ export const AboutPreview = ({ data }) => {
         </div>
       )}
 
-      {/* Values Preview */}
+      {/* values preview */}
       {data.values && data.values.length > 0 && (
         <div className="bg-card rounded-xl p-6 border border-border">
           <h4 className="text-sm font-semibold text-muted-foreground mb-6 uppercase text-center">
@@ -116,7 +119,7 @@ export const AboutPreview = ({ data }) => {
         </div>
       )}
 
-      {/* Features Preview */}
+      {/* features preview */}
       {data.features && data.features.length > 0 && (
         <div className="bg-card rounded-xl p-6 border border-border">
           <h4 className="text-sm font-semibold text-muted-foreground mb-6 uppercase text-center">

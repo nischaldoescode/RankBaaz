@@ -1,3 +1,6 @@
+/**
+ * keeps the teacher join page focused and readable.
+ */
 import React, { useState, useEffect, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
@@ -5,7 +8,7 @@ import axios from "axios";
 
 const API = import.meta.env.VITE_API_URL || "http://localhost:7000/api";
 
-// localStorage key
+// localstorage key
 const LS_KEY = "vg_teacher_application";
 
 const getStored = () => {
@@ -23,7 +26,7 @@ const setStored = (data) => {
   } catch {}
 };
 
-// ── UI primitives ──
+// ui primitives
 
 const inputCls =
   "w-full h-12 px-4 border-2 border-border rounded-xl text-sm bg-background text-foreground outline-none focus:border-primary transition-colors placeholder:text-muted-foreground";
@@ -35,7 +38,7 @@ const CountryFlag = ({ country }) =>
     <span className="text-lg">🇳🇵</span>
   );
 
-// ── waitlist count hook ──
+// waitlist count hook
 
 const useWaitlistCount = () => {
   const [count, setCount] = useState(null);
@@ -95,7 +98,7 @@ const AnimatedNumber = ({ value }) => {
   return <span>{displayed}</span>;
 };
 
-// ── status banners ──
+// status banners
 
 const ReviewInProgress = ({ email }) => (
   <motion.div
@@ -128,9 +131,9 @@ const ReviewInProgress = ({ email }) => (
         reviewing it and will send an invite link to your email once approved.
       </p>
       <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-xs text-amber-800 text-left space-y-1">
-        <p>✉️ Check your inbox (including spam folder)</p>
+        <p> Check your inbox (including spam folder)</p>
         <p>⏱ Reviews typically take 24–48 hours</p>
-        <p>🔗 Invite links expire in 4 minutes — register promptly</p>
+        <p> Invite links expire in 4 minutes. Register promptly.</p>
       </div>
     </div>
   </motion.div>
@@ -194,7 +197,7 @@ const AlreadyRegistered = () => {
   );
 };
 
-// ── application form ──
+// application form
 
 const ApplicationForm = ({ onApplied }) => {
   const [form, setForm] = useState({
@@ -231,7 +234,7 @@ const ApplicationForm = ({ onApplied }) => {
     setLoading(true);
     try {
       await axios.post(`${API}/api/teachers/apply`, form);
-      // store in localStorage so user sees status on revisit
+      // store in localstorage so user sees status on revisit
       setStored({
         email: form.email,
         status: "pending",
@@ -241,7 +244,7 @@ const ApplicationForm = ({ onApplied }) => {
     } catch (err) {
       const msg = err.response?.data?.message || "Failed to submit";
       if (msg.toLowerCase().includes("already")) {
-        // already applied — reflect it
+        // keep the existing application state visible.
         setStored({
           email: form.email,
           status: "pending",
@@ -415,7 +418,7 @@ const ApplicationForm = ({ onApplied }) => {
   );
 };
 
-// ── perks grid ──
+// perks grid
 
 const PERKS = [
   {
@@ -436,7 +439,7 @@ const PERKS = [
   },
 ];
 
-// ── main component ──
+// main component
 
 const TeacherJoin = () => {
   const [waitlistCount, setWaitlistCount] = useState(null);
@@ -445,12 +448,12 @@ const TeacherJoin = () => {
   const PORTAL_URL =
     import.meta.env.VITE_TEACHER_PORTAL_URL || "http://localhost:5175";
 
-  // ── scroll to top on mount ──
+  // scroll to top on mount
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "smooth" });
   }, []);
 
-  // ── waitlist count ──
+  // waitlist count
   useEffect(() => {
     axios
       .get(`${API}/api/teachers/waitlist-count`)
@@ -458,7 +461,7 @@ const TeacherJoin = () => {
       .catch(() => {});
   }, []);
 
-  // ── check application status from localStorage + backend ──
+  // check application status from storage and backend
   useEffect(() => {
     const stored = getStored();
 
@@ -476,12 +479,12 @@ const TeacherJoin = () => {
         const { status } = r.data.data;
         setAppStatus(status);
         if (status === "registered") {
-          // update localStorage
+          // update localstorage
           setStored({ ...stored, status: "registered" });
         }
       })
       .catch(() => {
-        // if backend fails, use localStorage status
+        // if backend fails, use localstorage status
         setAppStatus(stored.status || "pending");
       });
   }, []);
@@ -500,9 +503,9 @@ const TeacherJoin = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* ── hero ── */}
+      {/* hero */}
       <section className="relative overflow-hidden">
-        {/* full-bleed background — no gap on mobile */}
+        {/* full-bleed background */}
         <div
           className="absolute inset-0"
           style={{
@@ -512,7 +515,7 @@ const TeacherJoin = () => {
           }}
         />
 
-        {/* grid / net pattern — full width, no gap */}
+        {/* full-width grid pattern */}
         <div
           className="absolute inset-0 pointer-events-none"
           style={{
@@ -599,7 +602,7 @@ const TeacherJoin = () => {
         </div>
       </section>
 
-      {/* ── apply section ── */}
+      {/* apply section */}
       <section
         id="apply"
         className="py-16 px-4 sm:px-6"

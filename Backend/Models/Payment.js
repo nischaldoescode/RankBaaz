@@ -1,3 +1,6 @@
+/**
+ * keeps the payment model focused and readable.
+ */
 import mongoose from "mongoose";
 
 const paymentSchema = new mongoose.Schema(
@@ -66,9 +69,9 @@ const paymentSchema = new mongoose.Schema(
   }
 );
 
-// Indexes for fast queries
+// indexes for fast queries
 paymentSchema.index({ user: 1, course: 1, status: 1 });
-// paymentSchema.index({ orderId: 1 });
+// paymentschema.index({ orderid: 1 });
 paymentSchema.index({ paymentId: 1 });
 
 export default mongoose.model("Payment", paymentSchema);

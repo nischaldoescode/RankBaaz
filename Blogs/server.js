@@ -1,3 +1,6 @@
+/**
+ * keeps the server module focused and readable.
+ */
 import http from "node:http";
 import { readFileSync } from "node:fs";
 import fs from "node:fs/promises";
@@ -370,81 +373,81 @@ const fetchJson = async (apiPath, options = {}) => {
   const response = await fetch(`${API_BASE}${apiPath}`, {
     headers: {
       Accept: "text/html,application/json;q=0.9,*/*;q=0.8",
-      "Accept-Language": "en-US,en;q=0.9",
-      "Accept-Encoding": "gzip, deflate, br",
-      Origin: BLOG_ORIGIN,
-      Referer: `${BLOG_ORIGIN}/`,
-      "Sec-Fetch-Site": "same-site",
-      "Sec-Fetch-Mode": "cors",
-      "Sec-Fetch-Dest": "empty",
-      "User-Agent": "VidhgrowBlogsSSR/1.0",
+      "accept-language": "en-us,en;q=0.9",
+      "accept-encoding": "gzip, deflate, br",
+      origin: blog_origin,
+      referer: `${blog_origin}/`,
+      "sec-fetch-site": "same-site",
+      "sec-fetch-mode": "cors",
+      "sec-fetch-dest": "empty",
+      "user-agent": "vidhgrowblogsssr/1.0",
     },
   });
 
   if (!response.ok) {
-    const error = new Error(`API ${response.status}`);
+    const error = error(`api ${response.status}`);
     error.status = response.status;
     throw error;
   }
 
   const json = await response.json();
-  return writeTimedCache(apiCache, apiPath, json, options.ttlMs ?? API_CACHE_TTL_MS);
+  return writetimedcache(apicache, apipath, json, options.ttlms ?? api_cache_ttl_ms);
 };
 
-const pageShell = ({
+const pageshell = ({
   title,
   description,
   canonical,
   image,
-  ogType = "website",
+  ogtype = "website",
   robots = "index,follow,max-image-preview:large",
   body,
-  jsonLd,
+  jsonld,
 }) => {
-  const shareImage = seoImage(image);
+  const shareimage = seoimage(image);
   return `<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="theme-color" content="#3b82f6" />
-  <title>${escapeHtml(title)}</title>
-  <meta name="description" content="${escapeHtml(description)}" />
-  <meta name="robots" content="${escapeHtml(robots)}" />
-  <link rel="canonical" href="${escapeHtml(canonical)}" />
+  <title>${escapehtml(title)}</title>
+  <meta name="description" content="${escapehtml(description)}" />
+  <meta name="robots" content="${escapehtml(robots)}" />
+  <link rel="canonical" href="${escapehtml(canonical)}" />
   <link rel="icon" href="/favicon.ico" sizes="any" />
   <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
   <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
   <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
   <link rel="manifest" href="/site.webmanifest" />
-  <meta property="og:locale" content="en_US" />
-  <meta property="og:type" content="${escapeHtml(ogType)}" />
-  <meta property="og:site_name" content="Vidhgrow Blogs" />
-  <meta property="og:title" content="${escapeHtml(title)}" />
-  <meta property="og:description" content="${escapeHtml(description)}" />
-  <meta property="og:url" content="${escapeHtml(canonical)}" />
-  <meta property="og:image" content="${escapeHtml(shareImage)}" />
-  <meta property="og:image:secure_url" content="${escapeHtml(shareImage)}" />
-  <meta property="og:image:alt" content="${escapeHtml(title)}" />
+  <meta property="og:locale" content="en_us" />
+  <meta property="og:type" content="${escapehtml(ogtype)}" />
+  <meta property="og:site_name" content="vidhgrow blogs" />
+  <meta property="og:title" content="${escapehtml(title)}" />
+  <meta property="og:description" content="${escapehtml(description)}" />
+  <meta property="og:url" content="${escapehtml(canonical)}" />
+  <meta property="og:image" content="${escapehtml(shareimage)}" />
+  <meta property="og:image:secure_url" content="${escapehtml(shareimage)}" />
+  <meta property="og:image:alt" content="${escapehtml(title)}" />
   <meta property="og:image:width" content="1200" />
   <meta property="og:image:height" content="630" />
   <meta name="twitter:card" content="summary_large_image" />
-  <meta name="twitter:title" content="${escapeHtml(title)}" />
-  <meta name="twitter:description" content="${escapeHtml(description)}" />
-  <meta name="twitter:image" content="${escapeHtml(shareImage)}" />
-  <meta name="twitter:image:alt" content="${escapeHtml(title)}" />
-  <link rel="alternate" type="application/rss+xml" title="Vidhgrow Blogs" href="${BLOG_PUBLIC_URL}/feed.xml" />
+  <meta name="twitter:title" content="${escapehtml(title)}" />
+  <meta name="twitter:description" content="${escapehtml(description)}" />
+  <meta name="twitter:image" content="${escapehtml(shareimage)}" />
+  <meta name="twitter:image:alt" content="${escapehtml(title)}" />
+  <link rel="alternate" type="application/rss+xml" title="vidhgrow blogs" href="${blog_public_url}/feed.xml" />
   <link rel="stylesheet" href="/assets/styles.css" />
-  ${jsonLd ? `<script type="application/ld+json">${JSON.stringify(jsonLd)}</script>` : ""}
+  ${jsonld ? `<script type="application/ld+json">${json.stringify(jsonld)}</script>` : ""}
 </head>
 <body>
-  <a class="skip-link" href="#main">Skip to content</a>
+  <a class="skip-link" href="#main">skip to content</a>
   ${body}
   <script>
-    window.__BLOG_CONFIG__ = ${JSON.stringify({
-      apiBase: PUBLIC_API_BASE,
-      loginUrl: "https://vidhgrow.online/login",
-      profileUrl: `${PUBLIC_API_BASE}/api/auth/profile`,
+    window.__blog_config__ = ${json.stringify({
+      apibase: public_api_base,
+      loginurl: "https://vidhgrow.online/login",
+      profileurl: `${public_api_base}/api/auth/profile`,
     })};
   </script>
   <script src="/assets/app.js" defer></script>
@@ -454,310 +457,310 @@ const pageShell = ({
 
 const header = () => `<header class="site-header">
   <a class="wordmark" href="/">
-    <img src="/logo.png" alt="Vidhgrow Blogs logo" width="40" height="40" />
-    <span>Vidhgrow <em>Blogs</em></span>
+    <img src="/logo.png" alt="vidhgrow blogs logo" width="40" height="40" />
+    <span>vidhgrow <em>blogs</em></span>
   </a>
-  <nav aria-label="Primary">
-    <a href="/">Latest</a>
-    ${TOPIC_LINKS.slice(0, 3)
-      .map((topic) => `<a href="/topic/${topic.slug}">${escapeHtml(topic.navLabel)}</a>`)
+  <nav aria-label="primary">
+    <a href="/">latest</a>
+    ${topic_links.slice(0, 3)
+      .map((topic) => `<a href="/topic/${topic.slug}">${escapehtml(topic.navlabel)}</a>`)
       .join("")}
-    <a href="https://vidhgrow.online">Vidhgrow</a>
+    <a href="https://vidhgrow.online">vidhgrow</a>
   </nav>
 </header>`;
 
 const footer = (settings = {}) => {
-  const social = settings.socialMedia || {};
-  const links = Object.entries(social).filter(([, url]) => url);
+  const social = settings.socialmedia || {};
+  const links = object.entries(social).filter(([, url]) => url);
   return `<footer class="site-footer">
     <div class="footer-copy">
-      <strong>Vidhgrow Blogs</strong>
-      <p>Product updates, teacher workflows, course builder notes, student practice improvements, and platform decisions from the Vidhgrow team.</p>
-      <nav class="footer-nav" aria-label="Blog topics">
-        ${ROOT_LINKS.map(([label, href]) => `<a href="${href}">${escapeHtml(label)}</a>`).join("")}
+      <strong>vidhgrow blogs</strong>
+      <p>product updates, teacher workflows, course builder notes, student practice improvements, and platform decisions from the vidhgrow team.</p>
+      <nav class="footer-nav" aria-label="blog topics">
+        ${root_links.map(([label, href]) => `<a href="${href}">${escapehtml(label)}</a>`).join("")}
       </nav>
     </div>
     ${
       links.length
         ? `<div class="footer-links">${links
-            .map(([name, url]) => `<a href="${escapeHtml(url)}" rel="me noopener noreferrer" target="_blank">${escapeHtml(name)}</a>`)
+            .map(([name, url]) => `<a href="${escapehtml(url)}" rel="me noopener noreferrer" target="_blank">${escapehtml(name)}</a>`)
             .join("")}</div>`
         : ""
     }
   </footer>`;
 };
 
-const postCardAuthor = (post = {}) => {
-  const name = post.author?.name || "Vidhgrow Editorial";
+const postcardauthor = (post = {}) => {
+  const name = post.author?.name || "vidhgrow editorial";
   return post.author?.slug
-    ? `<a href="/author/${escapeHtml(post.author.slug)}">${escapeHtml(name)}</a>`
-    : `<span>${escapeHtml(name)}</span>`;
+    ? `<a href="/author/${escapehtml(post.author.slug)}">${escapehtml(name)}</a>`
+    : `<span>${escapehtml(name)}</span>`;
 };
 
-const postCard = (post) => `<article class="post-card">
-  <a href="/${escapeHtml(post.slug)}" class="post-card-image">
-    <img src="${escapeHtml(seoImage(post.coverImage?.url))}" alt="${escapeHtml(imageAlt(post.coverImage, `Cover image for ${post.title}`))}" loading="lazy" />
+const postcard = (post) => `<article class="post-card">
+  <a href="/${escapehtml(post.slug)}" class="post-card-image">
+    <img src="${escapehtml(seoimage(post.coverimage?.url))}" alt="${escapehtml(imagealt(post.coverimage, `cover image for ${post.title}`))}" loading="lazy" />
   </a>
   <div class="post-card-copy">
-    <time datetime="${escapeHtml(post.publishedAt || post.createdAt)}">${formatDate(post.publishedAt || post.createdAt)}</time>
-    <h2><a href="/${escapeHtml(post.slug)}">${escapeHtml(post.title)}</a></h2>
-    <p>${escapeHtml(post.excerpt)}</p>
+    <time datetime="${escapehtml(post.publishedat || post.createdat)}">${formatdate(post.publishedat || post.createdat)}</time>
+    <h2><a href="/${escapehtml(post.slug)}">${escapehtml(post.title)}</a></h2>
+    <p>${escapehtml(post.excerpt)}</p>
     <div class="post-meta">
-      ${postCardAuthor(post)}
-      <span>${escapeHtml(readingTimeLabel(post))}</span>
+      ${postcardauthor(post)}
+      <span>${escapehtml(readingtimelabel(post))}</span>
     </div>
   </div>
 </article>`;
 
-const filterPostsForTopic = (posts = [], topic) => {
+const filterpostsfortopic = (posts = [], topic) => {
   if (!topic) return posts;
-  const terms = topic.terms.map((term) => term.toLowerCase());
+  const terms = topic.terms.map((term) => term.tolowercase());
   return posts.filter((post) =>
     [post.title, post.excerpt, post.category, post.author?.name, ...(post.topics || []), ...(post.tags || [])]
       .join(" ")
-      .toLowerCase()
+      .tolowercase()
       .split(/\s+/)
       .some((word) => terms.some((term) => word.includes(term))),
   );
 };
 
-const renderHome = async (url) => {
-  const query = sanitizeSearchQuery(url.searchParams.get("q") || "");
-  const queryNeedle = query.toLowerCase();
-  const [postsRes, settingsRes] = await Promise.all([
-    fetchJson("/api/blogs/public?limit=24&fresh=1", { ttlMs: LIST_API_CACHE_TTL_MS }),
-    fetchJson("/api/blogs/settings/share").catch(() => ({ data: {} })),
+const renderhome = async (url) => {
+  const query = sanitizesearchquery(url.searchparams.get("q") || "");
+  const queryneedle = query.tolowercase();
+  const [postsres, settingsres] = await promise.all([
+    fetchjson("/api/blogs/public?limit=24&fresh=1", { ttlms: list_api_cache_ttl_ms }),
+    fetchjson("/api/blogs/settings/share").catch(() => ({ data: {} })),
   ]);
-  let posts = postsRes.data.posts || [];
+  let posts = postsres.data.posts || [];
 
   if (query) {
     posts = posts.filter((post) =>
       [post.title, post.excerpt, post.author?.name, ...(post.tags || [])]
         .join(" ")
-        .toLowerCase()
-        .includes(queryNeedle),
+        .tolowercase()
+        .includes(queryneedle),
     );
   }
 
   const latest = posts[0];
-  const listedPosts = latest && !query ? posts.slice(1) : posts;
+  const listedposts = latest && !query ? posts.slice(1) : posts;
   const body = `${header()}
 <main id="main" class="home-shell">
-  ${renderArticleAmbient()}
+  ${renderarticleambient()}
   <section class="home-intro">
     <div class="home-copy">
-      <p class="eyebrow">Vidhgrow Blogs</p>
-      <h1>Vidhgrow Blogs for product updates, teaching workflows, and course news.</h1>
-      <p class="lede">Follow product updates, teacher workflows, course improvements, assessment design, and platform decisions from the Vidhgrow team.</p>
-      <div class="topic-links" aria-label="Editorial topics">
-        ${INTRO_LINKS.map(([label, href]) => `<a href="${href}">${escapeHtml(label)}</a>`).join("")}
+      <p class="eyebrow">vidhgrow blogs</p>
+      <h1>vidhgrow blogs for product updates, teaching workflows, and course s.</h1>
+      <p class="lede">follow product updates, teacher workflows, course improvements, assessment design, and platform decisions from the vidhgrow team.</p>
+      <div class="topic-links" aria-label="editorial topics">
+        ${intro_links.map(([label, href]) => `<a href="${href}">${escapehtml(label)}</a>`).join("")}
       </div>
     </div>
     <form class="search-form" method="get" action="/">
-      <label for="q">Search posts</label>
+      <label for="q">search posts</label>
       <div>
-        <input id="q" name="q" value="${escapeHtml(query)}" placeholder="Search updates..." maxlength="80" autocomplete="off" />
-        <button type="submit">Search</button>
+        <input id="q" name="q" value="${escapehtml(query)}" placeholder="search updates..." maxlength="80" autocomplete="off" />
+        <button type="submit">search</button>
       </div>
     </form>
   </section>
-  <section class="news-strip" aria-label="What we publish">
-    <article><span>01</span><strong>Product releases</strong><p>Clear notes on what changed, why it matters, and where it helps students or teachers.</p></article>
-    <article><span>02</span><strong>Platform decisions</strong><p>Short explanations of the design, security, and workflow choices behind Vidhgrow.</p></article>
-    <article><span>03</span><strong>Practice guidance</strong><p>Useful exam, course, and feedback ideas tied to real activity on the platform.</p></article>
+  <section class="s-strip" aria-label="what we publish">
+    <article><span>01</span><strong>product releases</strong><p>clear notes on what d, why it matters, and where it helps students or teachers.</p></article>
+    <article><span>02</span><strong>platform decisions</strong><p>short explanations of the design, security, and workflow choices behind vidhgrow.</p></article>
+    <article><span>03</span><strong>practice guidance</strong><p>useful exam, course, and feedback ideas tied to real activity on the platform.</p></article>
   </section>
   <section class="editorial-note" aria-labelledby="editorial-title">
-    <p class="eyebrow">Why this blog exists</p>
-    <h2 id="editorial-title">Product updates and teaching notes for serious practice</h2>
-    <p>Vidhgrow Blogs is where we explain the platform work behind better online learning. The writing covers product updates, teaching workflows, course news, assessment notes, security decisions, and the small interface changes that make daily practice easier for students and teachers.</p>
-    <p>Every post is written to be useful before it is promotional. When we ship a course builder improvement, a teacher profile change, a document verification update, or a student feedback feature, we explain what changed, who it helps, and how it fits into serious practice on Vidhgrow.</p>
-    <p>The blog also gives search engines and readers a stable place to understand our product direction. You will find course creation notes, teacher portal decisions, exam strategy ideas, student progress improvements, admin workflow updates, and practical context for new Vidhgrow releases.</p>
-    <p>Use these blogs to follow the platform, compare recent feature work, and understand how Vidhgrow is building a calmer learning system around courses, tests, feedback, completion signals, and trusted teacher-led education.</p>
+    <p class="eyebrow">why this blog exists</p>
+    <h2 id="editorial-title">product updates and teaching notes for serious practice</h2>
+    <p>vidhgrow blogs is where we explain the platform work behind better online learning. the writing covers product updates, teaching workflows, course s, assessment notes, security decisions, and the small interface s that make daily practice easier for students and teachers.</p>
+    <p>every post is written to be useful it is promotional. when we ship a course builder improvement, a teacher profile , a document verification update, or a student feedback feature, we explain what d, who it helps, and how it fits into serious practice on vidhgrow.</p>
+    <p>the blog also gives search engines and readers a stable place to understand our product direction. you will find course creation notes, teacher portal decisions, exam strategy ideas, student progress improvements, admin workflow updates, and practical context for vidhgrow releases.</p>
+    <p>use these blogs to follow the platform, compare recent feature work, and understand how vidhgrow is building a calmer learning system around courses, tests, feedback, completion signals, and trusted teacher-led education.</p>
   </section>
   ${
     latest && !query
       ? `<section class="featured-post">
-          <a href="/${escapeHtml(latest.slug)}"><img src="${escapeHtml(seoImage(latest.coverImage?.url))}" alt="${escapeHtml(imageAlt(latest.coverImage, `Featured cover for ${latest.title}`))}" /></a>
+          <a href="/${escapehtml(latest.slug)}"><img src="${escapehtml(seoimage(latest.coverimage?.url))}" alt="${escapehtml(imagealt(latest.coverimage, `featured cover for ${latest.title}`))}" /></a>
           <div>
-            <p class="section-kicker">Latest story</p>
-            <time datetime="${escapeHtml(latest.publishedAt || latest.createdAt)}">${formatDate(latest.publishedAt || latest.createdAt)}</time>
-            <h2><a href="/${escapeHtml(latest.slug)}">${escapeHtml(latest.title)}</a></h2>
-            <p>${escapeHtml(latest.excerpt)}</p>
-            <div class="post-meta">${postCardAuthor(latest)}<span>${escapeHtml(readingTimeLabel(latest))}</span></div>
+            <p class="section-kicker">latest story</p>
+            <time datetime="${escapehtml(latest.publishedat || latest.createdat)}">${formatdate(latest.publishedat || latest.createdat)}</time>
+            <h2><a href="/${escapehtml(latest.slug)}">${escapehtml(latest.title)}</a></h2>
+            <p>${escapehtml(latest.excerpt)}</p>
+            <div class="post-meta">${postcardauthor(latest)}<span>${escapehtml(readingtimelabel(latest))}</span></div>
           </div>
         </section>`
       : ""
   }
   <div class="section-heading">
-    <p class="eyebrow">${query ? "Search results" : "Platform notes"}</p>
-    <h2>${query ? `Posts matching "${escapeHtml(query)}"` : "Blog updates, features, and practical decisions from Vidhgrow."}</h2>
+    <p class="eyebrow">${query ? "search results" : "platform notes"}</p>
+    <h2>${query ? `posts matching "${escapehtml(query)}"` : "blog updates, features, and practical decisions from vidhgrow."}</h2>
   </div>
-  <section class="post-list" aria-label="Blog posts">
-    ${listedPosts.map(postCard).join("") || `<div class="empty-state">No posts found.</div>`}
+  <section class="post-list" aria-label="blog posts">
+    ${listedposts.map(postcard).join("") || `<div class="empty-state">no posts found.</div>`}
   </section>
   <section class="browse-links" aria-labelledby="browse-title">
     <div>
-      <p class="eyebrow">Browse</p>
-      <h2 id="browse-title">Explore Vidhgrow blog topics</h2>
+      <p class="eyebrow">browse</p>
+      <h2 id="browse-title">explore vidhgrow blog topics</h2>
     </div>
-    <nav aria-label="More blog topics">
-      ${BROWSE_LINKS.map(([label, href]) => `<a href="${href}">${escapeHtml(label)}</a>`).join("")}
+    <nav aria-label="more blog topics">
+      ${browse_links.map(([label, href]) => `<a href="${href}">${escapehtml(label)}</a>`).join("")}
     </nav>
   </section>
   <section class="reference-links" aria-labelledby="reference-title">
     <div>
-      <p class="eyebrow">References</p>
-      <h2 id="reference-title">Useful reading beyond Vidhgrow</h2>
-      <p>These external resources help readers understand how structured content, search visibility, and readable product writing fit together.</p>
+      <p class="eyebrow">references</p>
+      <h2 id="reference-title">useful reading beyond vidhgrow</h2>
+      <p>these external resources help readers understand how structured content, search visibility, and readable product writing fit together.</p>
     </div>
-    <nav aria-label="External SEO and publishing resources">
-      ${EXTERNAL_READING_LINKS.map(
-        ([label, href]) => `<a href="${href}" target="_blank" rel="noopener noreferrer">${escapeHtml(label)}</a>`,
+    <nav aria-label="external seo and publishing resources">
+      ${external_reading_links.map(
+        ([label, href]) => `<a href="${href}" target="_blank" rel="noopener noreferrer">${escapehtml(label)}</a>`,
       ).join("")}
     </nav>
   </section>
 </main>
-${footer(settingsRes.data)}`;
+${footer(settingsres.data)}`;
 
-  return pageShell({
-    title: HOME_SEO_TITLE,
-    description: HOME_SEO_DESCRIPTION,
-    canonical: BLOG_PUBLIC_URL,
-    image: latest?.coverImage?.url,
+  return pageshell({
+    title: home_seo_title,
+    description: home_seo_description,
+    canonical: blog_public_url,
+    image: latest?.coverimage?.url,
     body,
-    jsonLd: {
+    jsonld: {
       "@context": "https://schema.org",
-      "@type": "Blog",
-      name: "Vidhgrow Blogs",
-      description: HOME_SEO_DESCRIPTION,
-      url: BLOG_PUBLIC_URL,
+      "@type": "blog",
+      name: "vidhgrow blogs",
+      description: home_seo_description,
+      url: blog_public_url,
     },
   });
 };
 
-const topicPageTitle = (topic) =>
-  metaTitle(`${topic.title} | Vidhgrow Topic Archive`, HOME_SEO_TITLE);
+const topicpagetitle = (topic) =>
+  metatitle(`${topic.title} | vidhgrow topic archive`, home_seo_title);
 
-const topicPageDescription = (topic) =>
-  metaDescription(
-    `${topic.description} Browse Vidhgrow blog articles about ${topic.navLabel.toLowerCase()}, platform news, teacher workflows, course updates, student practice, and product decisions.`,
-    HOME_SEO_DESCRIPTION,
+const topicpagedescription = (topic) =>
+  metadescription(
+    `${topic.description} browse vidhgrow blog articles about ${topic.navlabel.tolowercase()}, platform s, teacher workflows, course updates, student practice, and product decisions.`,
+    home_seo_description,
   );
 
-const renderTopicOverview = (topic, posts = []) => {
-  const focusTerms = topic.terms.slice(0, 4).join(", ");
-  const postSummary = posts.length
-    ? `The posts below are ordered by freshness, so readers can start with recent Vidhgrow notes and then move through older context without using filtered URLs or temporary query parameters.`
-    : `When new writing is published in this topic, it will appear here on a stable URL that can be linked from search, newsletters, product pages, and related Vidhgrow blog posts.`;
+const rendertopicoverview = (topic, posts = []) => {
+  const focusterms = topic.terms.slice(0, 4).join(", ");
+  const postsummary = posts.length
+    ? `the posts below are ordered by freshness, so readers can start with recent vidhgrow notes and then move through older context without using filtered urls or temporary query parameters.`
+    : `when writing is published in this topic, it will appear here on a stable url that can be linked from search, sletters, product pages, and related vidhgrow blog posts.`;
 
   return `<section class="topic-overview" aria-labelledby="topic-overview-title">
-    <p class="eyebrow">Topic guide</p>
-    <h2 id="topic-overview-title">How to use this Vidhgrow topic archive</h2>
-    <p>The ${escapeHtml(topic.title)} archive brings together Vidhgrow writing about ${escapeHtml(focusTerms)} and the practical decisions behind the platform. It is designed for readers who want more than a headline: what changed, why the team made the change, and how the update affects teachers, students, course builders, and admins using Vidhgrow every day.</p>
-    <p>${escapeHtml(topic.description)} The page also gives crawlers a clean collection page for related blogs, with stable internal links to posts, other topic archives, and author pages. That keeps the browsing path simple for humans while making the structure easier for search engines and AI assistants to understand.</p>
-    <p>${postSummary} Each article should connect back to real product work, such as course creation, teacher verification, assessment quality, student progress, feedback, moderation, security, or publishing workflows. We avoid filler and keep the archive focused on notes that help someone understand the Vidhgrow product and learning experience.</p>
-    <p>Use this page as a starting point when comparing Vidhgrow feature releases, reading teacher portal updates, reviewing course builder changes, or following how the platform is improving online learning. For wider context, continue through the related topics below or open the linked author profiles from the article cards.</p>
+    <p class="eyebrow">topic guide</p>
+    <h2 id="topic-overview-title">how to use this vidhgrow topic archive</h2>
+    <p>the ${escapehtml(topic.title)} archive brings together vidhgrow writing about ${escapehtml(focusterms)} and the practical decisions behind the platform. it is designed for readers who want more than a headline: what d, why the team made the , and how the update affects teachers, students, course builders, and admins using vidhgrow every day.</p>
+    <p>${escapehtml(topic.description)} the page also gives crawlers a clean collection page for related blogs, with stable internal links to posts, other topic archives, and author pages. that keeps the browsing path simple for humans while making the structure easier for search engines and ai assistants to understand.</p>
+    <p>${postsummary} each article should connect back to real product work, such as course creation, teacher verification, assessment quality, student progress, feedback, moderation, security, or publishing workflows. we avoid filler and keep the archive focused on notes that help someone understand the vidhgrow product and learning experience.</p>
+    <p>use this page as a starting point when comparing vidhgrow feature releases, reading teacher portal updates, reviewing course builder s, or following how the platform is improving online learning. for wider context, continue through the related topics below or open the linked author profiles from the article cards.</p>
   </section>`;
 };
 
-const renderTopic = async (slug) => {
-  const topic = getTopic(slug);
+const rendertopic = async (slug) => {
+  const topic = gettopic(slug);
   if (!topic) {
-    const error = new Error("Topic not found");
+    const error = error("topic not found");
     error.status = 404;
     throw error;
   }
 
-  const [postsRes, settingsRes] = await Promise.all([
-    fetchJson(`/api/blogs/public?limit=24&topic=${encodeURIComponent(topic.slug)}&fresh=1`, { ttlMs: LIST_API_CACHE_TTL_MS }),
-    fetchJson("/api/blogs/settings/share").catch(() => ({ data: {} })),
+  const [postsres, settingsres] = await promise.all([
+    fetchjson(`/api/blogs/public?limit=24&topic=${encodeuricomponent(topic.slug)}&fresh=1`, { ttlms: list_api_cache_ttl_ms }),
+    fetchjson("/api/blogs/settings/share").catch(() => ({ data: {} })),
   ]);
-  const posts = postsRes.data.posts?.length
-    ? postsRes.data.posts
-    : filterPostsForTopic(postsRes.data.posts || [], topic);
+  const posts = postsres.data.posts?.length
+    ? postsres.data.posts
+    : filterpostsfortopic(postsres.data.posts || [], topic);
   const body = `${header()}
 <main id="main" class="home-shell topic-shell">
-  ${renderArticleAmbient()}
+  ${renderarticleambient()}
   <section class="topic-hero">
-    <p class="eyebrow">Vidhgrow topic</p>
-    <h1>${escapeHtml(topic.title)}</h1>
-    <p class="lede">${escapeHtml(topic.description)}</p>
-    <p>These articles collect related Vidhgrow blog updates in one clean place, without dynamic search parameters. The page helps readers and crawlers follow a stable topic path for ${escapeHtml(topic.navLabel.toLowerCase())}, platform improvements, and practical online learning decisions.</p>
+    <p class="eyebrow">vidhgrow topic</p>
+    <h1>${escapehtml(topic.title)}</h1>
+    <p class="lede">${escapehtml(topic.description)}</p>
+    <p>these articles collect related vidhgrow blog updates in one clean place, without dynamic search parameters. the page helps readers and crawlers follow a stable topic path for ${escapehtml(topic.navlabel.tolowercase())}, platform improvements, and practical online learning decisions.</p>
   </section>
-  ${renderTopicOverview(topic, posts)}
-  <section class="post-list" aria-label="${escapeHtml(topic.title)} posts">
-    ${posts.map(postCard).join("") || `<div class="empty-state">No posts found for this topic yet.</div>`}
+  ${rendertopicoverview(topic, posts)}
+  <section class="post-list" aria-label="${escapehtml(topic.title)} posts">
+    ${posts.map(postcard).join("") || `<div class="empty-state">no posts found for this topic yet.</div>`}
   </section>
   <section class="browse-links" aria-labelledby="topic-browse-title">
     <div>
-      <p class="eyebrow">More topics</p>
-      <h2 id="topic-browse-title">Continue through Vidhgrow Blogs</h2>
+      <p class="eyebrow">more topics</p>
+      <h2 id="topic-browse-title">continue through vidhgrow blogs</h2>
     </div>
-    <nav aria-label="Other blog topics">
-      ${BROWSE_LINKS.filter(([, href]) => href !== `/topic/${topic.slug}`)
-        .map(([label, href]) => `<a href="${href}">${escapeHtml(label)}</a>`)
+    <nav aria-label="other blog topics">
+      ${browse_links.filter(([, href]) => href !== `/topic/${topic.slug}`)
+        .map(([label, href]) => `<a href="${href}">${escapehtml(label)}</a>`)
         .join("")}
     </nav>
   </section>
 </main>
-${footer(settingsRes.data)}`;
+${footer(settingsres.data)}`;
 
-  return pageShell({
-    title: topicPageTitle(topic),
-    description: topicPageDescription(topic),
-    canonical: `${BLOG_PUBLIC_URL}/topic/${topic.slug}`,
-    image: posts[0]?.coverImage?.url,
+  return pageshell({
+    title: topicpagetitle(topic),
+    description: topicpagedescription(topic),
+    canonical: `${blog_public_url}/topic/${topic.slug}`,
+    image: posts[0]?.coverimage?.url,
     body,
-    jsonLd: {
+    jsonld: {
       "@context": "https://schema.org",
-      "@type": "CollectionPage",
+      "@type": "collectionpage",
       name: topic.title,
       description: topic.description,
-      url: `${BLOG_PUBLIC_URL}/topic/${topic.slug}`,
+      url: `${blog_public_url}/topic/${topic.slug}`,
     },
   });
 };
 
-const robotsString = (seo = {}) => {
+const robotsstring = (seo = {}) => {
   const robots = seo.robots || {};
   return [
     robots.index === false ? "noindex" : "index",
     robots.follow === false ? "nofollow" : "follow",
-    `max-image-preview:${robots.maxImagePreview || "large"}`,
-    `max-snippet:${Number.isFinite(robots.maxSnippet) ? robots.maxSnippet : -1}`,
+    `max-image-preview:${robots.maximagepreview || "large"}`,
+    `max-snippet:${number.isfinite(robots.maxsnippet) ? robots.maxsnippet : -1}`,
   ].join(",");
 };
 
-const renderComments = (post, comments = []) => `<section class="comments" aria-labelledby="comments-title">
-  <h2 id="comments-title">Comments</h2>
-  <p class="comments-note">Comments use your existing Vidhgrow account. One top-level comment per user, 100 characters max.</p>
+const rendercomments = (post, comments = []) => `<section class="comments" aria-labelledby="comments-title">
+  <h2 id="comments-title">comments</h2>
+  <p class="comments-note">comments use your existing vidhgrow account. one top-level comment per user, 100 characters max.</p>
   <div class="comment-auth" data-auth-panel>
-    <span data-auth-state>Checking Vidhgrow login...</span>
-    <a data-login-link href="https://vidhgrow.online/login">Log in to comment</a>
+    <span data-auth-state>checking vidhgrow login...</span>
+    <a data-login-link href="https://vidhgrow.online/login">log in to comment</a>
   </div>
-  <form class="comment-form" data-post-id="${escapeHtml(post._id)}">
-    <textarea name="content" maxlength="100" rows="3" placeholder="Write a short comment" disabled></textarea>
-    <div class="comment-actions"><span data-counter>0/100</span><button type="submit" disabled>Post comment</button></div>
+  <form class="comment-form" data-post-id="${escapehtml(post._id)}">
+    <textarea name="content" maxlength="100" rows="3" placeholder="write a short comment" disabled></textarea>
+    <div class="comment-actions"><span data-counter>0/100</span><button type="submit" disabled>post comment</button></div>
   </form>
   <div class="comment-list">
     ${comments
       .map((comment) => {
-        const id = `c-${String(comment._id).slice(-6)}`;
+        const id = `c-${string(comment._id).slice(-6)}`;
         return `<article class="comment" id="${id}">
-          <a class="comment-id" href="#${id}" data-preview="${escapeHtml(comment.content)}">#${id}</a>
-          <strong>${escapeHtml(comment.user?.name || comment.user?.username || "Reader")}</strong>
-          <p>${escapeHtml(comment.content)}</p>
-          <form class="comment-form reply" data-post-id="${escapeHtml(post._id)}" data-parent-comment="${escapeHtml(comment._id)}">
-            <textarea name="content" maxlength="100" rows="2" placeholder="Reply to your comment" disabled></textarea>
-            <div class="comment-actions"><span data-counter>0/100</span><button type="submit" disabled>Reply</button></div>
+          <a class="comment-id" href="#${id}" data-preview="${escapehtml(comment.content)}">#${id}</a>
+          <strong>${escapehtml(comment.user?.name || comment.user?.username || "reader")}</strong>
+          <p>${escapehtml(comment.content)}</p>
+          <form class="comment-form reply" data-post-id="${escapehtml(post._id)}" data-parent-comment="${escapehtml(comment._id)}">
+            <textarea name="content" maxlength="100" rows="2" placeholder="reply to your comment" disabled></textarea>
+            <div class="comment-actions"><span data-counter>0/100</span><button type="submit" disabled>reply</button></div>
           </form>
           ${
             comment.replies?.length
               ? `<div class="replies">${comment.replies
                   .map(
                     (reply) => `<article class="comment reply-item">
-                      <strong>${escapeHtml(reply.user?.name || reply.user?.username || "Reader")}</strong>
-                      <p>${escapeHtml(reply.content)}</p>
+                      <strong>${escapehtml(reply.user?.name || reply.user?.username || "reader")}</strong>
+                      <p>${escapehtml(reply.content)}</p>
                     </article>`,
                   )
                   .join("")}</div>`
@@ -769,25 +772,25 @@ const renderComments = (post, comments = []) => `<section class="comments" aria-
   </div>
 </section>`;
 
-const renderRelatedPosts = (posts = []) => {
+const renderrelatedposts = (posts = []) => {
   if (!posts.length) return "";
 
   return `<section class="related-posts" aria-labelledby="related-title">
     <div class="section-heading compact">
-      <p class="eyebrow">Read next</p>
-      <h2 id="related-title">Related blogs</h2>
+      <p class="eyebrow">read next</p>
+      <h2 id="related-title">related blogs</h2>
     </div>
     <div class="related-grid">
       ${posts
         .slice(0, 3)
         .map(
           (post) => `<article class="related-card">
-            <a href="/${escapeHtml(post.slug)}" class="related-image">
-              <img src="${escapeHtml(seoImage(post.coverImage?.url))}" alt="${escapeHtml(imageAlt(post.coverImage, `Related cover for ${post.title}`))}" loading="lazy" />
+            <a href="/${escapehtml(post.slug)}" class="related-image">
+              <img src="${escapehtml(seoimage(post.coverimage?.url))}" alt="${escapehtml(imagealt(post.coverimage, `related cover for ${post.title}`))}" loading="lazy" />
             </a>
-            <time datetime="${escapeHtml(post.publishedAt || post.createdAt)}">${formatDate(post.publishedAt || post.createdAt)}</time>
-            <h3><a href="/${escapeHtml(post.slug)}">${escapeHtml(post.title)}</a></h3>
-            <p>${escapeHtml(post.excerpt || "")}</p>
+            <time datetime="${escapehtml(post.publishedat || post.createdat)}">${formatdate(post.publishedat || post.createdat)}</time>
+            <h3><a href="/${escapehtml(post.slug)}">${escapehtml(post.title)}</a></h3>
+            <p>${escapehtml(post.excerpt || "")}</p>
           </article>`,
         )
         .join("")}
@@ -795,42 +798,42 @@ const renderRelatedPosts = (posts = []) => {
   </section>`;
 };
 
-const renderTopicPills = (topics = []) => {
-  const cleanTopics = [...new Set((topics || []).map(normalizeTopicSlug).filter(Boolean))].filter(getTopic);
-  if (!cleanTopics.length) return "";
+const rendertopicpills = (topics = []) => {
+  const cleantopics = [...set((topics || []).map(normalizetopicslug).filter(boolean))].filter(gettopic);
+  if (!cleantopics.length) return "";
 
-  return `<nav class="article-topics" aria-label="Blog topics">
-    ${cleanTopics
-      .map((topic) => `<a href="/topic/${escapeHtml(topic)}">${escapeHtml(topicLabel(topic))}</a>`)
+  return `<nav class="article-topics" aria-label="blog topics">
+    ${cleantopics
+      .map((topic) => `<a href="/topic/${escapehtml(topic)}">${escapehtml(topiclabel(topic))}</a>`)
       .join("")}
   </nav>`;
 };
 
-const renderArticleContext = (post, contentHtml = "") => {
-  const bodyWordCount = wordCountFromHtml(contentHtml);
-  const bodyParagraphCount = paragraphCountFromHtml(contentHtml);
-  const title = post.title || "this Vidhgrow update";
-  const seoTitle = post.seo?.metaTitle && post.seo.metaTitle !== title ? post.seo.metaTitle : "";
-  const visibleContext = `${title} ${post.excerpt || ""} ${post.category || ""} ${(post.tags || []).join(" ")} ${contentHtml}`;
-  const missingSeoTerms = missingImportantTerms(post.seo?.metaTitle || title, visibleContext);
-  if (bodyWordCount >= 250 && bodyParagraphCount >= 3 && !missingSeoTerms.length) return "";
+const renderarticlecontext = (post, contenthtml = "") => {
+  const bodywordcount = wordcountfromhtml(contenthtml);
+  const bodyparagraphcount = paragraphcountfromhtml(contenthtml);
+  const title = post.title || "this vidhgrow update";
+  const seotitle = post.seo?.metatitle && post.seo.metatitle !== title ? post.seo.metatitle : "";
+  const visiblecontext = `${title} ${post.excerpt || ""} ${post.category || ""} ${(post.tags || []).join(" ")} ${contenthtml}`;
+  const missingseoterms = missingimportantterms(post.seo?.metatitle || title, visiblecontext);
+  if (bodywordcount >= 250 && bodyparagraphcount >= 3 && !missingseoterms.length) return "";
 
   const category = post.category || "platform";
-  const tags = (post.tags || []).slice(0, 4).filter(Boolean);
-  const tagText = tags.length ? tags.join(", ") : "online learning, course creation, and student practice";
+  const tags = (post.tags || []).slice(0, 4).filter(boolean);
+  const tagtext = tags.length ? tags.join(", ") : "online learning, course creation, and student practice";
 
   return `<section class="article-context" aria-labelledby="article-context-title">
-    <p class="eyebrow">Article context</p>
-    <h2 id="article-context-title">More context on ${escapeHtml(title)}</h2>
-    <p>This Vidhgrow blog covers ${escapeHtml(title)} in the context of ${escapeHtml(category)} work, teaching workflows, course updates, student practice, and platform improvements.</p>
-    ${seoTitle ? `<p>Another way to read this piece is as a note on ${escapeHtml(seoTitle)}, with the details tied back to daily Vidhgrow work and reader questions.</p>` : ""}
-    <p>The note is connected to ${escapeHtml(tagText)} so readers can understand how the update fits into the wider Vidhgrow product and learning experience.</p>
-    <p>If you are comparing Vidhgrow feature releases, teacher portal changes, assessment updates, or course builder improvements, this article gives the practical background behind the change.</p>
-    <p>For readers coming from search, this context also makes the page easier to scan before moving into related blogs, author notes, comments, or future Vidhgrow platform updates.</p>
+    <p class="eyebrow">article context</p>
+    <h2 id="article-context-title">more context on ${escapehtml(title)}</h2>
+    <p>this vidhgrow blog covers ${escapehtml(title)} in the context of ${escapehtml(category)} work, teaching workflows, course updates, student practice, and platform improvements.</p>
+    ${seotitle ? `<p>another way to read this piece is as a note on ${escapehtml(seotitle)}, with the details tied back to daily vidhgrow work and reader questions.</p>` : ""}
+    <p>the note is connected to ${escapehtml(tagtext)} so readers can understand how the update fits into the wider vidhgrow product and learning experience.</p>
+    <p>if you are comparing vidhgrow feature releases, teacher portal s, assessment updates, or course builder improvements, this article gives the practical background behind the .</p>
+    <p>for readers coming from search, this context also makes the page easier to scan moving into related blogs, author notes, comments, or future vidhgrow platform updates.</p>
   </section>`;
 };
 
-const renderArticleAmbient = () => `<div class="article-ambient blog-ambient" aria-hidden="true">
+const renderarticleambient = () => `<div class="article-ambient blog-ambient" aria-hidden="true">
   <span class="ambient-field ambient-field-one" data-parallax="0.015" data-parallax-x="-0.012"></span>
   <span class="ambient-field ambient-field-two" data-parallax="-0.018" data-parallax-x="0.01"></span>
   <span class="ambient-field ambient-field-three" data-parallax="0.022" data-parallax-x="-0.006"></span>
@@ -838,267 +841,267 @@ const renderArticleAmbient = () => `<div class="article-ambient blog-ambient" ar
   <span class="ambient-rule ambient-rule-two" data-parallax="0.04" data-parallax-x="-0.012"></span>
   <span class="ambient-rule ambient-rule-three" data-parallax="-0.028" data-parallax-x="0.014"></span>
   <span class="ambient-icon ambient-brain" data-parallax="0.05" data-parallax-x="-0.018">
-    <svg viewBox="0 0 48 48" focusable="false"><path d="M18 10c-4 0-7 3-7 7 0 1 .2 2 .6 3A8 8 0 0 0 8 27c0 5 4 9 9 9h2V10h-1Zm12 0c4 0 7 3 7 7 0 1-.2 2-.6 3A8 8 0 0 1 40 27c0 5-4 9-9 9h-2V10h1ZM19 18h-4m4 8h-5m15-8h4m-4 8h5"/></svg>
+    <svg viewbox="0 0 48 48" focusable="false"><path d="m18 10c-4 0-7 3-7 7 0 1 .2 2 .6 3a8 8 0 0 0 8 27c0 5 4 9 9 9h2v10h-1zm12 0c4 0 7 3 7 7 0 1-.2 2-.6 3a8 8 0 0 1 40 27c0 5-4 9-9 9h-2v10h1zm19 18h-4m4 8h-5m15-8h4m-4 8h5"/></svg>
   </span>
-  <span class="ambient-icon ambient-news" data-parallax="-0.04" data-parallax-x="0.012">
-    <svg viewBox="0 0 48 48" focusable="false"><path d="M10 14h24v22H10zM34 20h4v16c0 3-2 5-5 5H15M15 20h14M15 26h14M15 32h9"/></svg>
+  <span class="ambient-icon ambient-s" data-parallax="-0.04" data-parallax-x="0.012">
+    <svg viewbox="0 0 48 48" focusable="false"><path d="m10 14h24v22h10zm34 20h4v16c0 3-2 5-5 5h15m15 20h14m15 26h14m15 32h9"/></svg>
   </span>
   <span class="ambient-icon ambient-pen" data-parallax="0.03" data-parallax-x="-0.01">
-    <svg viewBox="0 0 48 48" focusable="false"><path d="M12 36l4-11 16-16 7 7-16 16-11 4Zm18-25 7 7M16 25l7 7"/></svg>
+    <svg viewbox="0 0 48 48" focusable="false"><path d="m12 36l4-11 16-16 7 7-16 16-11 4zm18-25 7 7m16 25l7 7"/></svg>
   </span>
   <span class="ambient-icon ambient-comment" data-parallax="-0.06" data-parallax-x="0.02">
-    <svg viewBox="0 0 48 48" focusable="false"><path d="M12 14h24v18H20l-8 6V14Zm7 7h16M19 27h10"/></svg>
+    <svg viewbox="0 0 48 48" focusable="false"><path d="m12 14h24v18h20l-8 6v14zm7 7h16m19 27h10"/></svg>
   </span>
   <span class="ambient-icon ambient-chart" data-parallax="0.08" data-parallax-x="-0.014">
-    <svg viewBox="0 0 48 48" focusable="false"><path d="M10 38h28M15 34V22m9 12V14m9 20V26M12 12h24v26H12z"/></svg>
+    <svg viewbox="0 0 48 48" focusable="false"><path d="m10 38h28m15 34v22m9 12v14m9 20v26m12 12h24v26h12z"/></svg>
   </span>
   <span class="ambient-icon ambient-book" data-parallax="-0.03" data-parallax-x="0.009">
-    <svg viewBox="0 0 48 48" focusable="false"><path d="M12 12h11c3 0 5 2 5 5v21c0-3-2-5-5-5H12V12Zm24 0H25c-3 0-5 2-5 5v21c0-3 2-5 5-5h11V12Z"/></svg>
+    <svg viewbox="0 0 48 48" focusable="false"><path d="m12 12h11c3 0 5 2 5 5v21c0-3-2-5-5-5h12v12zm24 0h25c-3 0-5 2-5 5v21c0-3 2-5 5-5h11v12z"/></svg>
   </span>
   <span class="ambient-icon ambient-bell" data-parallax="0.04" data-parallax-x="-0.016">
-    <svg viewBox="0 0 48 48" focusable="false"><path d="M18 37h12m-8 4h4m10-8H12l4-5v-7c0-5 3-9 8-9s8 4 8 9v7l4 5Z"/></svg>
+    <svg viewbox="0 0 48 48" focusable="false"><path d="m18 37h12m-8 4h4m10-8h12l4-5v-7c0-5 3-9 8-9s8 4 8 9v7l4 5z"/></svg>
   </span>
   <span class="ambient-icon ambient-globe" data-parallax="-0.05" data-parallax-x="0.015">
-    <svg viewBox="0 0 48 48" focusable="false"><path d="M24 40a16 16 0 1 0 0-32 16 16 0 0 0 0 32Zm-14-16h28M24 8c4 4 6 9 6 16s-2 12-6 16M24 8c-4 4-6 9-6 16s2 12 6 16"/></svg>
+    <svg viewbox="0 0 48 48" focusable="false"><path d="m24 40a16 16 0 1 0 0-32 16 16 0 0 0 0 32zm-14-16h28m24 8c4 4 6 9 6 16s-2 12-6 16m24 8c-4 4-6 9-6 16s2 12 6 16"/></svg>
   </span>
   <span class="ambient-icon ambient-megaphone" data-parallax="0.072" data-parallax-x="-0.02">
-    <svg viewBox="0 0 48 48" focusable="false"><path d="M13 28h7l16 7V13l-16 7h-7v8Zm7 0 3 9h-6l-2-9m21-12 4-3m-4 19 4 3M38 24h5"/></svg>
+    <svg viewbox="0 0 48 48" focusable="false"><path d="m13 28h7l16 7v13l-16 7h-7v8zm7 0 3 9h-6l-2-9m21-12 4-3m-4 19 4 3m38 24h5"/></svg>
   </span>
   <span class="ambient-icon ambient-rss" data-parallax="-0.07" data-parallax-x="0.018">
-    <svg viewBox="0 0 48 48" focusable="false"><path d="M14 34h.1M14 24c6 0 10 4 10 10M14 14c12 0 20 8 20 20"/></svg>
+    <svg viewbox="0 0 48 48" focusable="false"><path d="m14 34h.1m14 24c6 0 10 4 10 10m14 14c12 0 20 8 20 20"/></svg>
   </span>
   <span class="ambient-icon ambient-search" data-parallax="0.052" data-parallax-x="-0.012">
-    <svg viewBox="0 0 48 48" focusable="false"><path d="M22 34a12 12 0 1 0 0-24 12 12 0 0 0 0 24Zm9-3 9 9M17 22h10"/></svg>
+    <svg viewbox="0 0 48 48" focusable="false"><path d="m22 34a12 12 0 1 0 0-24 12 12 0 0 0 0 24zm9-3 9 9m17 22h10"/></svg>
   </span>
   <span class="ambient-icon ambient-calendar" data-parallax="-0.045" data-parallax-x="0.014">
-    <svg viewBox="0 0 48 48" focusable="false"><path d="M13 14h22v24H13zM13 20h22M18 10v8m12-8v8M18 27h4m6 0h4m-14 6h4m6 0h4"/></svg>
+    <svg viewbox="0 0 48 48" focusable="false"><path d="m13 14h22v24h13zm13 20h22m18 10v8m12-8v8m18 27h4m6 0h4m-14 6h4m6 0h4"/></svg>
   </span>
   <span class="ambient-icon ambient-clipboard" data-parallax="0.065" data-parallax-x="-0.017">
-    <svg viewBox="0 0 48 48" focusable="false"><path d="M17 12h14l2 5H15l2-5Zm-3 5h20v23H14V17Zm6 9h10m-10 7h10"/></svg>
+    <svg viewbox="0 0 48 48" focusable="false"><path d="m17 12h14l2 5h15l2-5zm-3 5h20v23h14v17zm6 9h10m-10 7h10"/></svg>
   </span>
   <span class="ambient-icon ambient-target" data-parallax="-0.058" data-parallax-x="0.02">
-    <svg viewBox="0 0 48 48" focusable="false"><path d="M24 40a16 16 0 1 0 0-32 16 16 0 0 0 0 32Zm0-6a10 10 0 1 0 0-20 10 10 0 0 0 0 20Zm0-6a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z"/></svg>
+    <svg viewbox="0 0 48 48" focusable="false"><path d="m24 40a16 16 0 1 0 0-32 16 16 0 0 0 0 32zm0-6a10 10 0 1 0 0-20 10 10 0 0 0 0 20zm0-6a4 4 0 1 0 0-8 4 4 0 0 0 0 8z"/></svg>
   </span>
   <span class="ambient-icon ambient-lightbulb" data-parallax="0.038" data-parallax-x="-0.01">
-    <svg viewBox="0 0 48 48" focusable="false"><path d="M18 34h12m-10 5h8m-4-31a12 12 0 0 0-7 22c1 1 1 2 1 4h12c0-2 0-3 1-4A12 12 0 0 0 24 8Zm0 0v5m-12 7H8m32 0h-4M14 12l-3-3m23 3 3-3"/></svg>
+    <svg viewbox="0 0 48 48" focusable="false"><path d="m18 34h12m-10 5h8m-4-31a12 12 0 0 0-7 22c1 1 1 2 1 4h12c0-2 0-3 1-4a12 12 0 0 0 24 8zm0 0v5m-12 7h8m32 0h-4m14 12l-3-3m23 3 3-3"/></svg>
   </span>
   <span class="ambient-icon ambient-layers" data-parallax="-0.032" data-parallax-x="0.012">
-    <svg viewBox="0 0 48 48" focusable="false"><path d="M24 8 8 17l16 9 16-9-16-9Zm-12 17 12 7 12-7M12 33l12 7 12-7"/></svg>
+    <svg viewbox="0 0 48 48" focusable="false"><path d="m24 8 8 17l16 9 16-9-16-9zm-12 17 12 7 12-7m12 33l12 7 12-7"/></svg>
   </span>
   <span class="ambient-icon ambient-checklist" data-parallax="0.09" data-parallax-x="-0.022">
-    <svg viewBox="0 0 48 48" focusable="false"><path d="M15 12h22v28H15zM11 16h4m-4 8h4m-4 8h4m10-14 4 4 7-8m-11 16h11"/></svg>
+    <svg viewbox="0 0 48 48" focusable="false"><path d="m15 12h22v28h15zm11 16h4m-4 8h4m-4 8h4m10-14 4 4 7-8m-11 16h11"/></svg>
   </span>
   <span class="ambient-icon ambient-sparkline" data-parallax="-0.082" data-parallax-x="0.018">
-    <svg viewBox="0 0 48 48" focusable="false"><path d="M10 36h28M13 31l7-8 6 5 10-14m0 0v8m0-8h-8"/></svg>
+    <svg viewbox="0 0 48 48" focusable="false"><path d="m10 36h28m13 31l7-8 6 5 10-14m0 0v8m0-8h-8"/></svg>
   </span>
   <span class="ambient-icon ambient-compass" data-parallax="0.047" data-parallax-x="-0.016">
-    <svg viewBox="0 0 48 48" focusable="false"><path d="M24 40a16 16 0 1 0 0-32 16 16 0 0 0 0 32Zm6-22-4 10-10 4 4-10 10-4Z"/></svg>
+    <svg viewbox="0 0 48 48" focusable="false"><path d="m24 40a16 16 0 1 0 0-32 16 16 0 0 0 0 32zm6-22-4 10-10 4 4-10 10-4z"/></svg>
   </span>
   <span class="ambient-icon ambient-window" data-parallax="-0.062" data-parallax-x="0.016">
-    <svg viewBox="0 0 48 48" focusable="false"><path d="M10 12h28v24H10zM10 19h28M16 15h.1M21 15h.1M26 15h.1M16 26h16M16 31h10"/></svg>
+    <svg viewbox="0 0 48 48" focusable="false"><path d="m10 12h28v24h10zm10 19h28m16 15h.1m21 15h.1m26 15h.1m16 26h16m16 31h10"/></svg>
   </span>
   <span class="ambient-icon ambient-cap" data-parallax="0.055" data-parallax-x="-0.014">
-    <svg viewBox="0 0 48 48" focusable="false"><path d="M24 10 8 18l16 8 16-8-16-8Zm-10 12v8c5 5 15 5 20 0v-8M40 18v12"/></svg>
+    <svg viewbox="0 0 48 48" focusable="false"><path d="m24 10 8 18l16 8 16-8-16-8zm-10 12v8c5 5 15 5 20 0v-8m40 18v12"/></svg>
   </span>
 </div>`;
 
-const renderArticleEnding = (post) => `<section class="article-ending" aria-label="End of article">
+const renderarticleending = (post) => `<section class="article-ending" aria-label="end of article">
   <span class="ending-rule"></span>
   <div>
-    <p class="eyebrow">End of blog</p>
-    <h2>${escapeHtml(post.title)} continues through related notes and reader comments.</h2>
-    <p>Keep going with connected Vidhgrow stories below, or use the comments section to add a short response from your account.</p>
+    <p class="eyebrow">end of blog</p>
+    <h2>${escapehtml(post.title)} continues through related notes and reader comments.</h2>
+    <p>keep going with connected vidhgrow stories below, or use the comments section to a short response from your account.</p>
     <div>
-      <a href="#related-title">Related blogs</a>
-      <a href="#comments-title">Comments</a>
+      <a href="#related-title">related blogs</a>
+      <a href="#comments-title">comments</a>
     </div>
   </div>
 </section>`;
 
-const renderPost = async (slug) => {
-  const [postRes, settingsRes] = await Promise.all([
-    fetchJson(`/api/blogs/public/${encodeURIComponent(slug)}`),
-    fetchJson("/api/blogs/settings/share").catch(() => ({ data: {} })),
+const renderpost = async (slug) => {
+  const [postres, settingsres] = await promise.all([
+    fetchjson(`/api/blogs/public/${encodeuricomponent(slug)}`),
+    fetchjson("/api/blogs/settings/share").catch(() => ({ data: {} })),
   ]);
-  const { post, comments, relatedPosts } = postRes.data;
-  const defaultCanonical = `${BLOG_PUBLIC_URL}/${post.slug}`;
-  const canonical = absoluteUrl(post.seo?.canonicalUrl) || defaultCanonical;
-  const title = metaTitle(post.seo?.metaTitle || post.title, post.title);
-  const description = metaDescription(post.seo?.metaDescription || post.excerpt, post.excerpt || post.plainTextPreview);
-  const social = settingsRes.data?.socialMedia || {};
-  const shareUrl = canonical;
-  const shareTitle = post.social?.shareTitle || post.title;
-  const coverUrl = seoImage(post.coverImage?.url);
-  const coverAlt = imageAlt(post.coverImage, `${post.title} cover image`);
-  const contentHtml = prepareArticleContentHtml(post.contentHtml, post.title);
-  const readTime = readingTimeLabel(post, contentHtml);
-  const articleContext = renderArticleContext(post, contentHtml);
+  const { post, comments, relatedposts } = postres.data;
+  const defaultcanonical = `${blog_public_url}/${post.slug}`;
+  const canonical = absoluteurl(post.seo?.canonicalurl) || defaultcanonical;
+  const title = metatitle(post.seo?.metatitle || post.title, post.title);
+  const description = metadescription(post.seo?.metadescription || post.excerpt, post.excerpt || post.plaintextpreview);
+  const social = settingsres.data?.socialmedia || {};
+  const shareurl = canonical;
+  const sharetitle = post.social?.sharetitle || post.title;
+  const coverurl = seoimage(post.coverimage?.url);
+  const coveralt = imagealt(post.coverimage, `${post.title} cover image`);
+  const contenthtml = preparearticlecontenthtml(post.contenthtml, post.title);
+  const readtime = readingtimelabel(post, contenthtml);
+  const articlecontext = renderarticlecontext(post, contenthtml);
 
   const body = `${header()}
 <main id="main" class="article-shell">
-  ${renderArticleAmbient()}
+  ${renderarticleambient()}
   <article class="article">
-    <nav class="article-breadcrumb" aria-label="Breadcrumb">
-      <a href="/">Blogs</a>
+    <nav class="article-breadcrumb" aria-label="breadcrumb">
+      <a href="/">blogs</a>
       <span aria-hidden="true">&gt;</span>
-      <span>${escapeHtml(post.title)}</span>
+      <span>${escapehtml(post.title)}</span>
     </nav>
-    <p class="eyebrow">${escapeHtml(post.category || "learning")}</p>
-    <h1>${escapeHtml(post.title)}</h1>
-    ${renderTopicPills(post.topics)}
-    <p class="article-excerpt">${escapeHtml(post.excerpt)}</p>
+    <p class="eyebrow">${escapehtml(post.category || "learning")}</p>
+    <h1>${escapehtml(post.title)}</h1>
+    ${rendertopicpills(post.topics)}
+    <p class="article-excerpt">${escapehtml(post.excerpt)}</p>
     <div class="article-byline">
-      ${renderAuthorAvatar(post.author)}
+      ${renderauthoravatar(post.author)}
       <div>
-        <a href="/author/${escapeHtml(post.author?.slug || "")}">${escapeHtml(post.author?.name || "Vidhgrow Editorial")}</a>
-        <span>${formatDate(post.publishedAt || post.createdAt)} · ${escapeHtml(readTime)}</span>
+        <a href="/author/${escapehtml(post.author?.slug || "")}">${escapehtml(post.author?.name || "vidhgrow editorial")}</a>
+        <span>${formatdate(post.publishedat || post.createdat)} · ${escapehtml(readtime)}</span>
       </div>
     </div>
-    <img class="article-cover" src="${escapeHtml(coverUrl)}" alt="${escapeHtml(coverAlt)}" />
-    <div class="article-content">${contentHtml}</div>
-    ${articleContext}
-    ${renderArticleEnding(post)}
+    <img class="article-cover" src="${escapehtml(coverurl)}" alt="${escapehtml(coveralt)}" />
+    <div class="article-content">${contenthtml}</div>
+    ${articlecontext}
+    ${renderarticleending(post)}
     <div class="share-panel">
-      <span>Share</span>
-      <button data-share-copy="${escapeHtml(shareUrl)}">Copy link</button>
-      <a href="https://twitter.com/intent/tweet?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(shareTitle)}" target="_blank" rel="noopener noreferrer">Twitter/X</a>
-      <a href="https://www.linkedin.com/shareArticle?mini=true&url=${encodeURIComponent(shareUrl)}&title=${encodeURIComponent(shareTitle)}" target="_blank" rel="noopener noreferrer">LinkedIn</a>
-      <a href="https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}" target="_blank" rel="noopener noreferrer">Facebook</a>
+      <span>share</span>
+      <button data-share-copy="${escapehtml(shareurl)}">copy link</button>
+      <a href="https://twitter.com/intent/tweet?url=${encodeuricomponent(shareurl)}&text=${encodeuricomponent(sharetitle)}" target="_blank" rel="noopener noreferrer">twitter/x</a>
+      <a href="https://www.linkedin.com/sharearticle?mini=true&url=${encodeuricomponent(shareurl)}&title=${encodeuricomponent(sharetitle)}" target="_blank" rel="noopener noreferrer">linkedin</a>
+      <a href="https://www.facebook.com/sharer/sharer.php?u=${encodeuricomponent(shareurl)}" target="_blank" rel="noopener noreferrer">facebook</a>
     </div>
     ${
-      Object.values(social).some(Boolean)
-        ? `<div class="follow-panel"><span>Follow Vidhgrow</span>${Object.entries(social)
+      object.values(social).some(boolean)
+        ? `<div class="follow-panel"><span>follow vidhgrow</span>${object.entries(social)
             .filter(([, value]) => value)
-            .map(([key, value]) => `<a href="${escapeHtml(value)}" target="_blank" rel="noopener noreferrer">${escapeHtml(key)}</a>`)
+            .map(([key, value]) => `<a href="${escapehtml(value)}" target="_blank" rel="noopener noreferrer">${escapehtml(key)}</a>`)
             .join("")}</div>`
         : ""
     }
   </article>
-  ${renderRelatedPosts(relatedPosts || [])}
-  ${renderComments(post, comments || [])}
+  ${renderrelatedposts(relatedposts || [])}
+  ${rendercomments(post, comments || [])}
 </main>
-${footer(settingsRes.data)}`;
+${footer(settingsres.data)}`;
 
-  return pageShell({
+  return pageshell({
     title,
     description,
     canonical,
-    image: coverUrl,
-    ogType: "article",
-    robots: robotsString(post.seo),
+    image: coverurl,
+    ogtype: "article",
+    robots: robotsstring(post.seo),
     body,
-    jsonLd: {
+    jsonld: {
       "@context": "https://schema.org",
-      "@type": "BlogPosting",
+      "@type": "blogposting",
       headline: post.title,
       description,
-      image: coverUrl,
-      datePublished: post.publishedAt,
-      dateModified: post.updatedAt,
+      image: coverurl,
+      datepublished: post.publishedat,
+      datemodified: post.updatedat,
       author: {
-        "@type": "Person",
-        name: post.author?.name || "Vidhgrow Editorial",
-        url: post.author?.slug ? `${BLOG_PUBLIC_URL}/author/${post.author.slug}` : BLOG_PUBLIC_URL,
+        "@type": "person",
+        name: post.author?.name || "vidhgrow editorial",
+        url: post.author?.slug ? `${blog_public_url}/author/${post.author.slug}` : blog_public_url,
       },
       publisher: {
-        "@type": "Organization",
-        name: "Vidhgrow",
+        "@type": "organization",
+        name: "vidhgrow",
         url: "https://vidhgrow.online",
       },
-      mainEntityOfPage: canonical,
-      wordCount: post.wordCount,
+      mainentityofpage: canonical,
+      wordcount: post.wordcount,
     },
   });
 };
 
-const renderAuthorOverview = (author = {}, posts = []) => {
-  const name = author.name || "Vidhgrow Editorial";
-  const role = author.title || "Vidhgrow blog author";
-  const topicNames = [
-    ...new Set(
+const renderauthoroverview = (author = {}, posts = []) => {
+  const name = author.name || "vidhgrow editorial";
+  const role = author.title || "vidhgrow blog author";
+  const topicnames = [
+    ...set(
       posts
-        .flatMap((post) => post.topics || [])
-        .map((topic) => topicLabel(topic))
-        .filter(Boolean),
+        .flatmap((post) => post.topics || [])
+        .map((topic) => topiclabel(topic))
+        .filter(boolean),
     ),
   ].slice(0, 4);
-  const topicText = topicNames.length
-    ? topicNames.join(", ")
-    : "product updates, teaching workflows, course news, student practice, and platform operations";
-  const postCountText = posts.length
+  const topictext = topicnames.length
+    ? topicnames.join(", ")
+    : "product updates, teaching workflows, course s, student practice, and platform operations";
+  const postcounttext = posts.length
     ? `${posts.length} published ${posts.length === 1 ? "blog" : "blogs"}`
-    : "upcoming Vidhgrow blogs";
+    : "upcoming vidhgrow blogs";
 
   return `<section class="author-overview" aria-labelledby="author-overview-title">
-    <p class="eyebrow">Author profile</p>
-    <h2 id="author-overview-title">Editorial notes from ${escapeHtml(name)}</h2>
-    <p>${escapeHtml(name)} is listed on Vidhgrow Blogs as ${escapeHtml(role)}, with writing connected to ${escapeHtml(topicText)}. This author page gives readers and search engines a clear place to understand the voice behind the posts, the subjects covered, and the way each article fits into the wider Vidhgrow learning platform.</p>
-    <p>The archive currently includes ${escapeHtml(postCountText)}. Each article should explain real platform work in plain language: what changed, why it matters, who it helps, and what teachers, students, admins, or course builders should notice next. That makes the page useful for readers who want product context instead of scattered updates.</p>
-    <p>Author pages are also part of the blog trust model. They connect post cards, related articles, topic archives, comments, and social sharing back to a stable profile. When Vidhgrow publishes product news, teacher portal changes, course builder notes, security updates, feedback improvements, or student progress stories, the author profile helps readers follow that work over time.</p>
-    <p>Use the article list below to move through recent writing from ${escapeHtml(name)}, then continue into the linked topic pages for broader Vidhgrow blog coverage. The page stays simple on purpose: a clear author identity, readable archive links, and enough context for search crawlers, AI assistants, and human readers to understand the publishing trail.</p>
+    <p class="eyebrow">author profile</p>
+    <h2 id="author-overview-title">editorial notes from ${escapehtml(name)}</h2>
+    <p>${escapehtml(name)} is listed on vidhgrow blogs as ${escapehtml(role)}, with writing connected to ${escapehtml(topictext)}. this author page gives readers and search engines a clear place to understand the voice behind the posts, the subjects covered, and the way each article fits into the wider vidhgrow learning platform.</p>
+    <p>the archive currently includes ${escapehtml(postcounttext)}. each article should explain real platform work in plain language: what d, why it matters, who it helps, and what teachers, students, admins, or course builders should notice next. that makes the page useful for readers who want product context instead of scattered updates.</p>
+    <p>author pages are also part of the blog trust model. they connect post cards, related articles, topic archives, comments, and social sharing back to a stable profile. when vidhgrow publishes product s, teacher portal s, course builder notes, security updates, feedback improvements, or student progress stories, the author profile helps readers follow that work over time.</p>
+    <p>use the article list below to move through recent writing from ${escapehtml(name)}, then continue into the linked topic pages for broader vidhgrow blog coverage. the page stays simple on purpose: a clear author identity, readable archive links, and enough context for search crawlers, ai assistants, and human readers to understand the publishing trail.</p>
   </section>`;
 };
 
-const renderAuthor = async (slug) => {
-  const [authorRes, settingsRes] = await Promise.all([
-    fetchJson(`/api/blogs/authors/${encodeURIComponent(slug)}`),
-    fetchJson("/api/blogs/settings/share").catch(() => ({ data: {} })),
+const renderauthor = async (slug) => {
+  const [authorres, settingsres] = await promise.all([
+    fetchjson(`/api/blogs/authors/${encodeuricomponent(slug)}`),
+    fetchjson("/api/blogs/settings/share").catch(() => ({ data: {} })),
   ]);
-  const { author, posts = [] } = authorRes.data;
+  const { author, posts = [] } = authorres.data;
   const body = `${header()}
 <main id="main" class="author-shell">
   <section class="author-card">
-    ${renderAuthorAvatar(author, "author-fallback")}
+    ${renderauthoravatar(author, "author-fallback")}
     <div>
-      <p class="eyebrow">Author</p>
-      <h1>${escapeHtml(author.name)}</h1>
-      ${author.title ? `<p class="author-title">${escapeHtml(author.title)}</p>` : ""}
-      ${author.bio ? `<p>${escapeHtml(author.bio)}</p>` : ""}
+      <p class="eyebrow">author</p>
+      <h1>${escapehtml(author.name)}</h1>
+      ${author.title ? `<p class="author-title">${escapehtml(author.title)}</p>` : ""}
+      ${author.bio ? `<p>${escapehtml(author.bio)}</p>` : ""}
     </div>
   </section>
-  ${renderAuthorOverview(author, posts || [])}
-  <section class="post-list">${posts.map(postCard).join("")}</section>
+  ${renderauthoroverview(author, posts || [])}
+  <section class="post-list">${posts.map(postcard).join("")}</section>
 </main>
-  ${footer(settingsRes.data)}`;
-  return pageShell({
-    title: metaTitle(`${author.name} - Vidhgrow Blog Author Archive`, author.name),
-    description: metaDescription(
+  ${footer(settingsres.data)}`;
+  return pageshell({
+    title: metatitle(`${author.name} - vidhgrow blog author archive`, author.name),
+    description: metadescription(
       author.bio,
-      `Read posts by ${author.name} on Vidhgrow Blogs, including product updates, teacher workflows, course notes, and online learning insights.`,
+      `read posts by ${author.name} on vidhgrow blogs, including product updates, teacher workflows, course notes, and online learning insights.`,
     ),
-    canonical: `${BLOG_PUBLIC_URL}/author/${author.slug}`,
+    canonical: `${blog_public_url}/author/${author.slug}`,
     image: author.avatar?.url,
-    ogType: "profile",
+    ogtype: "profile",
     body,
   });
 };
 
 const render404 = () =>
-  pageShell({
-    title: "Page not found - Vidhgrow Blog",
-    description: "This Vidhgrow Blog page could not be found.",
-    canonical: `${BLOG_PUBLIC_URL}/404`,
+  pageshell({
+    title: "page not found - vidhgrow blog",
+    description: "this vidhgrow blog page could not be found.",
+    canonical: `${blog_public_url}/404`,
     robots: "noindex,follow",
-    body: `${header()}<main id="main" class="not-found"><p class="eyebrow">404</p><h1>That page is not here.</h1><p>The link may be old, or the post may have moved.</p><a href="/">Back to the blog</a></main>${footer()}`,
+    body: `${header()}<main id="main" class="not-found"><p class="eyebrow">404</p><h1>that page is not here.</h1><p>the link may be old, or the post may have moved.</p><a href="/">back to the blog</a></main>${footer()}`,
   });
 
-const renderFeed = async () => {
-  const res = await fetchJson("/api/blogs/public?limit=30");
+const renderfeed = async () => {
+  const res = await fetchjson("/api/blogs/public?limit=30");
   const posts = res.data.posts || [];
-  return `<?xml version="1.0" encoding="UTF-8"?>
+  return `<?xml version="1.0" encoding="utf-8"?>
 <rss version="2.0">
   <channel>
-    <title>Vidhgrow Blogs</title>
-    <link>${BLOG_PUBLIC_URL}</link>
-    <description>${escapeHtml(HOME_SEO_DESCRIPTION)}</description>
+    <title>vidhgrow blogs</title>
+    <link>${blog_public_url}</link>
+    <description>${escapehtml(home_seo_description)}</description>
     ${posts
       .map(
         (post) => `<item>
-      <title>${escapeHtml(post.title)}</title>
-      <link>${BLOG_PUBLIC_URL}/${escapeHtml(post.slug)}</link>
-      <guid>${BLOG_PUBLIC_URL}/${escapeHtml(post.slug)}</guid>
-      <pubDate>${new Date(post.publishedAt || post.createdAt).toUTCString()}</pubDate>
-      <description>${escapeHtml(post.excerpt)}</description>
+      <title>${escapehtml(post.title)}</title>
+      <link>${blog_public_url}/${escapehtml(post.slug)}</link>
+      <guid>${blog_public_url}/${escapehtml(post.slug)}</guid>
+      <pubdate>${date(post.publishedat || post.createdat).toutcstring()}</pubdate>
+      <description>${escapehtml(post.excerpt)}</description>
     </item>`,
       )
       .join("")}
@@ -1106,26 +1109,26 @@ const renderFeed = async () => {
 </rss>`;
 };
 
-const renderLlmsTxt = () => `# Vidhgrow Blogs
+const renderllmstxt = () => `# vidhgrow blogs
 
-Official blog for Vidhgrow product updates, teaching workflows, course news, assessment notes, student progress, security updates, admin workflows, and feedback notes.
+official blog for vidhgrow product updates, teaching workflows, course s, assessment notes, student progress, security updates, admin workflows, and feedback notes.
 
-Primary site: ${BLOG_PUBLIC_URL}
-Sitemap: ${BLOG_PUBLIC_URL}/sitemap.xml
-RSS feed: ${BLOG_PUBLIC_URL}/feed.xml
-Robots: ${BLOG_PUBLIC_URL}/robots.txt
+primary site: ${blog_public_url}
+sitemap: ${blog_public_url}/sitemap.xml
+rss feed: ${blog_public_url}/feed.xml
+robots: ${blog_public_url}/robots.txt
 
-Important public sections:
-${TOPIC_LINKS.map((topic) => `- ${topic.title}: ${BLOG_PUBLIC_URL}/topic/${topic.slug}`).join("\n")}
+important public sections:
+${topic_links.map((topic) => `- ${topic.title}: ${blog_public_url}/topic/${topic.slug}`).join("\n")}
 
-Use the canonical URLs on each page. Public blog pages are server-rendered HTML with article content, topic links, author links, structured data, Open Graph metadata, and readable comments. Admin-only blog APIs, unpublished drafts, upload URLs, encrypted records, and private Vidhgrow application APIs are not intended for model ingestion.
+use the canonical urls on each page. public blog pages are server-rendered html with article content, topic links, author links, structured data, open graph metadata, and readable comments. admin-only blog apis, unpublished drafts, upload urls, encrypted records, and private vidhgrow application apis are not intended for model ingestion.
 `;
 
-const assetCache = new Map();
+const assetcache = map();
 
-const minifyCss = (content) =>
-  String(content)
-    .replace(/\/\*[\s\S]*?\*\//g, "")
+const minifycss = (content) =>
+  string(content)
+    .replace(/\/\*[\s\s]*?\*\//g, "")
     .replace(/\s+/g, " ")
     .replace(/\s*([{}:;,>])\s*/g, "$1")
     .replace(/;}/g, "}")
@@ -1307,7 +1310,7 @@ Sitemap: ${BLOG_PUBLIC_URL}/sitemap.xml
       res.writeHead(404, { "Content-Type": "text/html; charset=utf-8", ...securityHeaders() });
       return res.end(render404());
     }
-    console.error("[BLOGS_SSR] Render error:", error);
+    console.error("Render error:", error);
     res.writeHead(500, { "Content-Type": "text/html; charset=utf-8", ...securityHeaders() });
     res.end(
       pageShell({

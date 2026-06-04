@@ -1,3 +1,6 @@
+/**
+ * keeps the teacher payout model focused and readable.
+ */
 import mongoose from "mongoose";
 
 /**

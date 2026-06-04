@@ -1,36 +1,39 @@
+/**
+ * keeps the pdf service service focused and readable.
+ */
 import PDFDocument from "pdfkit";
 
 /**
- * PDF Service for generating test result PDFs and course PDFs
- * @module services/pdfService
+ * pdf service for generating test result pdfs and course pdfs
+ * @module services/pdfservice
  *
- * Features:
- * - Rich text rendering (Markdown-like formatting)
- * - Image embedding (course logos, question images)
- * - Responsive layout with page break detection
- * - Professional typography with multiple font sizes
- * - Watermarks and footers
- * - Production-ready error handling
+ * features:
+ * - rich text rendering (markdown-like formatting)
+ * - image embedding (course logos, question images)
+ * - responsive layout with page break detection
+ * - professional typography with multiple font sizes
+ * - watermarks and footers
+ * - production-ready error handling
  */
 
 
 class PDFService {
   /**
-   * Rich Text Renderer for PDF
-   * Converts markdown-like text to formatted PDF content
-   * Similar to RichTextRenderer.jsx but for PDFKit
+   * rich text renderer for pdf
+   * converts markdown-like text to formatted pdf content
+   * similar to richtextrenderer.jsx but for pdfkit
    *
-   * Supported formats:
-   * - **bold text** → Bold
-   * - *italic text* → Italic
-   * - `code` → Monospace code
-   * - Line breaks preserved
+   * supported formats:
+   * - **bold text** → bold
+   * - *italic text* → italic
+   * - `code` → monospace code
+   * - line breaks preserved
    *
-   * @param {PDFDocument} doc - PDFKit document instance
-   * @param {string} text - Text to render with markdown
-   * @param {number} x - X position
-   * @param {number} y - Y position
-   * @param {object} options - Rendering options (fontSize, color, width, etc.)
+   * @param {pdfdocument} doc - pdfkit document instance
+   * @param {string} text - text to render with markdown
+   * @param {number} x - x position
+   * @param {number} y - y position
+   * @param {object} options - rendering options (fontsize, color, width, etc.)
    */
   renderRichText(doc, text, x, y, options = {}) {
     doc.registerFont("MathFont", "fonts/DejaVuSans.ttf");
@@ -49,7 +52,7 @@ class PDFService {
     let currentY = y;
     doc.fontSize(fontSize).fillColor(color);
 
-    // CRITICAL: Check for code blocks FIRST
+    // check for code blocks first
     const codeBlockPattern = /\[CODE_BLOCK:(\w+)\]([\s\S]*?)\[\/CODE_BLOCK\]/g;
     let lastIndex = 0;
     let hasCodeBlocks = false;
@@ -57,26 +60,26 @@ class PDFService {
     text.replace(codeBlockPattern, (match, lang, code, offset) => {
       hasCodeBlocks = true;
 
-      // Render text before code block
+      // render text code block
       if (offset > lastIndex) {
         const beforeText = text.substring(lastIndex, offset);
         currentY = this.renderRichText(doc, beforeText, x, currentY, options);
       }
 
-      // Render code block with styling
+      // render code block with styling
       currentY = this.renderCodeBlock(doc, code, lang, x, currentY, width);
       lastIndex = offset + match.length;
 
       return match;
     });
 
-    // Render remaining text after last code block
+    // render remaining text last code block
     if (hasCodeBlocks && lastIndex < text.length) {
       const remainingText = text.substring(lastIndex);
       return this.renderRichText(doc, remainingText, x, currentY, options);
     }
 
-    // If no code blocks, proceed with normal rendering
+    // if no code blocks, proceed with normal rendering
     if (hasCodeBlocks) {
       return currentY;
     }
@@ -117,26 +120,26 @@ class PDFService {
             doc.font("Helvetica-Oblique");
             break;
           case "code":
-            // Inline code styling
+            // inline code styling
             doc.font("Courier");
             doc.fontSize(fontSize);
 
-            // Draw background rectangle BEFORE text
+            // draw background rectangle text
             const bgPadding = 2;
             const bgWidth = Math.ceil(
               doc.widthOfString(" " + segment.text + " ")
             );
-            const lineHeight = fontSize * 1.8; // critical
+            const lineHeight = fontSize * 1.8; //
             const bgHeight = lineHeight;
             const bgY = currentY - fontSize * 0.65;
 
-            // Save current state
+            // save current state
             doc.save();
 
-            // Fill background (no stroke to avoid border overlap)
+            // fill background (no stroke to avoid border overlap)
             doc.rect(currentX - 4, bgY, bgWidth + 8, bgHeight).fill("#f3f4f6");
 
-            // Draw border
+            // draw border
             doc
               .rect(
                 currentX - bgPadding,
@@ -146,10 +149,10 @@ class PDFService {
               )
               .stroke("#e5e7eb");
 
-            // Restore state to continue with text
+            // restore state to continue with text
             doc.restore();
 
-            // Reset font and color for text rendering
+            // reset font and color for text rendering
             doc.font("Courier");
             doc.fontSize(fontSize);
             doc.fillColor("#dc2626");
@@ -198,14 +201,14 @@ class PDFService {
   }
 
   /**
-   * Render text with proper superscript/subscript sizing
-   * Uses PDFKit font size control for better readability than pure Unicode
-   * @param {PDFDocument} doc - PDFKit document instance
-   * @param {string} text - Text with Unicode super/subscripts
-   * @param {number} x - X position
-   * @param {number} y - Y position
-   * @param {object} options - Rendering options
-   * @returns {number} Final Y position after rendering
+   * render text with proper superscript/subscript sizing
+   * uses pdfkit font size control for better readability than pure unicode
+   * @param {pdfdocument} doc - pdfkit document instance
+   * @param {string} text - text with unicode super/subscripts
+   * @param {number} x - x position
+   * @param {number} y - y position
+   * @param {object} options - rendering options
+   * @returns {number} final y position rendering
    */
   renderMathText(doc, text, x, y, options = {}) {
     doc.registerFont("MathFont", "fonts/DejaVuSans.ttf");
@@ -216,30 +219,30 @@ class PDFService {
       font = "MathFont",
     } = options;
 
-    // Unicode character sets for detection
+    // unicode character sets for detection
     const superscripts = "⁰¹²³⁴⁵⁶⁷⁸⁹⁺⁻⁼⁽⁾ᵃᵇᶜᵈᵉᶠᵍʰⁱʲᵏˡᵐⁿᵒᵖʳˢᵗᵘᵛʷˣʸᶻ";
     const subscripts = "₀₁₂₃₄₅₆₇₈₉₊₋₌₍₎ₐₑₕᵢⱼₖₗₘₙₒₚᵣₛₜᵤᵥₓ";
 
-    // Check if text contains super/subscripts
+    // check if text contains super/subscripts
     const hasMath = text
       .split("")
       .some((char) => superscripts.includes(char) || subscripts.includes(char));
 
-    // If no math, render normally
+    // if no math, render normally
     if (!hasMath) {
       doc.fontSize(fontSize).font("MathFont").fillColor(color);
       doc.text(text, x, y, { width, lineBreak: false });
       return doc.y;
     }
 
-    // Render character by character with proper sizing
+    // render character by character with proper sizing
     doc.fontSize(fontSize).font("MathFont").fillColor(color);
 
     let currentX = x;
     const baseY = y;
     const scriptSize = Math.round(fontSize * 0.64); // 64% of base size
-    const superscriptOffset = -Math.round(fontSize * 0.4); // Raise by 40%
-    const subscriptOffset = Math.round(fontSize * 0.25); // Lower by 25%
+    const superscriptOffset = -Math.round(fontSize * 0.4); // raise by 40%
+    const subscriptOffset = Math.round(fontSize * 0.25); // lower by 25%
 
     for (let i = 0; i < text.length; i++) {
       const char = text[i];
@@ -260,56 +263,56 @@ class PDFService {
         continued: false,
       });
 
-      // Calculate width for next character position
+      // calculate width for next character position
       currentX += doc.widthOfString(char);
 
-      // Check for line wrap
+      // check for line wrap
       if (currentX > x + width) {
         currentX = x;
         baseY += fontSize + 3;
       }
     }
 
-    // Reset font size
+    // reset font size
     doc.fontSize(fontSize);
 
     return baseY + fontSize;
   }
 
   /**
-   * Render code block with proper styling
-   * Background: #f3f4f6 (light gray)
-   * Text: #1f2937 (dark gray)
-   * Font: Courier (monospace)
-   * Border: #e5e7eb (gray border)
+   * render code block with proper styling
+   * background: #f3f4f6 (light gray)
+   * text: #1f2937 (dark gray)
+   * font: courier (monospace)
+   * border: #e5e7eb (gray border)
    *
-   * @param {PDFDocument} doc - PDFKit document instance
-   * @param {string} code - Code content
-   * @param {string} language - Programming language
-   * @param {number} x - X position
-   * @param {number} y - Y position
-   * @param {number} width - Block width
-   * @returns {number} Final Y position after rendering
+   * @param {pdfdocument} doc - pdfkit document instance
+   * @param {string} code - code content
+   * @param {string} language - programming language
+   * @param {number} x - x position
+   * @param {number} y - y position
+   * @param {number} width - block width
+   * @returns {number} final y position rendering
    */
   renderCodeBlock(doc, code, language, x, y, width) {
     const padding = 12;
     const fontSize = 18;
     const lineHeight = fontSize * 1.45;
 
-    // Calculate block height
+    // calculate block height
     const lines = code.split("\n");
     const labelHeight = language && language !== "text" ? 18 : 0;
 
     const blockHeight =
       padding * 6 + labelHeight + lines.length * lineHeight + padding;
 
-    // Check if we need a new page
+    // check if we need a page
     if (y + blockHeight > doc.page.height - 100) {
-      // Return early - let caller handle page break
+      // return early - let caller handle page break
       return y;
     }
 
-    // Draw background rectangle
+    // draw background rectangle
     doc.save();
     doc
       .rect(x, y, width, blockHeight)
@@ -317,7 +320,7 @@ class PDFService {
       .lineWidth(1);
     doc.restore();
 
-    // Draw language label
+    // draw language label
     if (language && language !== "text") {
       doc
         .fontSize(11)
@@ -329,7 +332,7 @@ class PDFService {
         });
     }
 
-    // Render code lines
+    // render code lines
     let currentY = y + padding + (language !== "text" ? 20 : 0);
 
     doc.fontSize(fontSize).font("Courier").fillColor("#1f2937");
@@ -345,16 +348,16 @@ class PDFService {
       currentY += lineHeight;
     });
 
-    // Reset font
+    // reset font
     doc.font("Helvetica").fillColor("#1a1a1a");
 
-    return y + blockHeight + 10; // +10 for spacing after block
+    return y + blockHeight + 10; // +10 for spacing block
   }
 
   /**
-   * Parse markdown-like text into segments with formatting
-   * @param {string} text - Text to parse
-   * @returns {Array} Array of {type, text} objects
+   * parse markdown-like text into segments with formatting
+   * @param {string} text - text to parse
+   * @returns {array} array of {type, text} objects
    */
   parseMarkdown(text) {
     const segments = [];
@@ -362,7 +365,7 @@ class PDFService {
 
     text = this.convertMathToPlainText(text);
 
-    // Regex patterns for markdown
+    // regex patterns for markdown
     const patterns = [
       { regex: /\*\*(.+?)\*\*/g, type: "bold" }, // **bold**
       { regex: /\*(.+?)\*/g, type: "italic" }, // *italic*
@@ -371,7 +374,7 @@ class PDFService {
 
     let lastIndex = 0;
 
-    // Find all markdown patterns
+    // find all markdown patterns
     const matches = [];
     patterns.forEach((pattern) => {
       let match;
@@ -386,17 +389,17 @@ class PDFService {
       }
     });
 
-    // Sort matches by position
+    // sort matches by position
     matches.sort((a, b) => a.index - b.index);
 
-    // Build segments
+    // build segments
     if (matches.length === 0) {
-      // No formatting, return as plain text
+      // no formatting, return as plain text
       return [{ type: "plain", text }];
     }
 
     matches.forEach((match) => {
-      // Add plain text before this match
+      // plain text this match
       if (match.index > lastIndex) {
         segments.push({
           type: "plain",
@@ -404,7 +407,7 @@ class PDFService {
         });
       }
 
-      // Add formatted segment
+      // formatted segment
       segments.push({
         type: match.type,
         text: match.text,
@@ -413,7 +416,7 @@ class PDFService {
       lastIndex = match.index + match.length;
     });
 
-    // Add remaining plain text
+    // remaining plain text
     if (lastIndex < text.length) {
       segments.push({
         type: "plain",
@@ -427,8 +430,8 @@ class PDFService {
   processCodeBlocks = (text) => {
     if (!text) return "";
 
-    // Multi-line code blocks: ```language\ncode\n```
-    // CRITICAL FIX: Must handle with or without newlines
+    // multi-line code blocks: ```language\ncode\n```
+    // handle with or without lines
     text = text.replace(
       /```(\w+)?\s*\n?([\s\S]*?)```/g,
       (match, lang, code) => {
@@ -436,26 +439,26 @@ class PDFService {
       }
     );
 
-    // Inline code: `code`
-    // Leave as-is, will be handled by parseMarkdown
+    // inline code: `code`
+    // leave as-is, will be handled by parsemarkdown
     return text;
   };
 
   /**
-   * Convert LaTeX math to Unicode plain text for PDF
-   * Handles nested braces, multi-digit exponents, comprehensive math symbols
-   * Uses single conversion function for both inline and block math
-   * @param {string} text - Text with LaTeX math
-   * @returns {string} Text with simplified math
+   * convert latex math to unicode plain text for pdf
+   * handles nested braces, multi-digit exponents, comprehensive math symbols
+   * uses single conversion function for both inline and block math
+   * @param {string} text - text with latex math
+   * @returns {string} text with math
    */
   convertMathToPlainText(text) {
     if (!text) return "";
 
-    // CRITICAL: Process code blocks FIRST before math conversion
-    // This prevents math symbols inside code from being converted
+    // process code blocks first math conversion
+    // this prevents math symbols inside code from being converted
     text = this.processCodeBlocks(text);
     /**
-     * Helper: Convert string to superscript Unicode
+     * helper: convert string to superscript unicode
      */
     const toSuperscript = (str) => {
       const superscriptMap = {
@@ -508,7 +511,7 @@ class PDFService {
     };
 
     /**
-     * Helper: Convert string to subscript Unicode
+     * helper: convert string to subscript unicode
      */
     const toSubscript = (str) => {
       const subscriptMap = {
@@ -553,8 +556,8 @@ class PDFService {
     };
 
     /**
-     * Helper: Extract content from balanced braces
-     * Handles nested braces properly by counting depth
+     * helper: extract content from balanced braces
+     * handles nested braces properly by counting depth
      */
     const extractBalancedBraces = (str, startIndex) => {
       let depth = 1;
@@ -578,22 +581,22 @@ class PDFService {
     };
 
     /**
-     * CORE CONVERSION LOGIC
-     * Single source of truth for ALL math conversion
-     * Used by BOTH inline $...$ and block $$...$$ math
-     * @param {string} math - LaTeX math expression
-     * @returns {string} Unicode-converted math
+     * core conversion logic
+     * single source of truth for all math conversion
+     * used by both inline $...$ and block $$...$$ math
+     * @param {string} math - latex math expression
+     * @returns {string} unicode-converted math
      */
     const convertMath = (math) => {
       let converted = math;
 
-      // EXPONENTS (braced, with nesting support)
+      // exponents (braced, with nesting support)
       let expIndex = 0;
       while ((expIndex = converted.indexOf("^{", expIndex)) !== -1) {
         const braceStart = expIndex + 1;
         const exponent = extractBalancedBraces(converted, braceStart);
 
-        // Recursively convert nested content FIRST, then apply superscript
+        // recursively convert nested content first, then apply superscript
         const expConverted = toSuperscript(convertMath(exponent.content));
 
         converted =
@@ -604,8 +607,8 @@ class PDFService {
         expIndex += expConverted.length;
       }
 
-      // EXPONENTS (non-braced, no nesting possible)
-      // Only match if not already converted to Unicode superscript
+      // exponents (non-braced, no nesting possible)
+      // only match if not already converted to unicode superscript
       converted = converted.replace(
         /\^([0-9]+)(?![⁰¹²³⁴⁵⁶⁷⁸⁹])/g,
         (match, digits) => {
@@ -620,13 +623,13 @@ class PDFService {
         }
       );
 
-      // SUBSCRIPTS (braced, with nesting support)
+      // subscripts (braced, with nesting support)
       let subIndex = 0;
       while ((subIndex = converted.indexOf("_{", subIndex)) !== -1) {
         const braceStart = subIndex + 1;
         const subscript = extractBalancedBraces(converted, braceStart);
 
-        // Recursively convert nested content FIRST, then apply subscript
+        // recursively convert nested content first, then apply subscript
         const subConverted = toSubscript(convertMath(subscript.content));
 
         converted =
@@ -637,7 +640,7 @@ class PDFService {
         subIndex += subConverted.length;
       }
 
-      // SUBSCRIPTS (non-braced, no nesting possible)
+      // subscripts (non-braced, no nesting possible)
       converted = converted.replace(
         /\_([0-9]+)(?![₀₁₂₃₄₅₆₇₈₉])/g,
         (match, digits) => {
@@ -652,7 +655,7 @@ class PDFService {
         }
       );
 
-      // FRACTIONS (with nesting support)
+      // fractions (with nesting support)
       let fracIndex = 0;
       while ((fracIndex = converted.indexOf("\\frac{", fracIndex)) !== -1) {
         const numeratorStart = fracIndex + 6;
@@ -665,7 +668,7 @@ class PDFService {
             denominatorStart - 1
           );
 
-          // Recursively convert both numerator and denominator
+          // recursively convert both numerator and denominator
           const numConverted = convertMath(numerator.content);
           const denomConverted = convertMath(denominator.content);
 
@@ -681,27 +684,27 @@ class PDFService {
         }
       }
 
-      // LATEX SPACING COMMANDS - Remove before processing math
-      // These are LaTeX formatting commands that don't have Unicode equivalents
+      // latex spacing commands - remove processing math
+      // these are latex formatting commands that don't have unicode equivalents
       converted = converted
-        .replace(/\\:/g, "") // Medium space
-        .replace(/\\;/g, "") // Thick space
-        .replace(/\\!/g, "") // Negative thin space
-        .replace(/\\ /g, " ") // Normal space (backslash-space)
-        .replace(/~/g, " ") // Non-breaking space
-        .replace(/\\quad/g, "  ") // Quad space (approximate)
-        .replace(/\\qquad/g, "    "); // Double quad space (approximate)
+        .replace(/\\:/g, "") // medium space
+        .replace(/\\;/g, "") // thick space
+        .replace(/\\!/g, "") // negative thin space
+        .replace(/\\ /g, " ") // normal space (backslash-space)
+        .replace(/~/g, " ") // non-breaking space
+        .replace(/\\quad/g, "  ") // quad space (approximate)
+        .replace(/\\qquad/g, "    "); // double quad space (approximate)
 
-      // SQUARE ROOTS (with nesting support)
+      // square roots (with nesting support)
       let sqrtIndex = 0;
       while ((sqrtIndex = converted.indexOf("\\sqrt{", sqrtIndex)) !== -1) {
         const braceStart = sqrtIndex + 5;
         const content = extractBalancedBraces(converted, braceStart);
 
-        // Recursively convert nested content
+        // recursively convert nested content
         let contentConverted = convertMath(content.content);
 
-        // Handle empty sqrt or just whitespace (like \sqrt{\,})
+        // handle empty sqrt or just whitespace (like \sqrt{\,})
         if (
           !contentConverted ||
           contentConverted.trim() === "" ||
@@ -727,7 +730,7 @@ class PDFService {
 
         sqrtIndex += replacement.length;
       }
-      // NTH ROOTS (with nesting support)
+      // nth roots (with nesting support)
       let nthRootIndex = 0;
       while (
         (nthRootIndex = converted.indexOf("\\sqrt[", nthRootIndex)) !== -1
@@ -744,7 +747,7 @@ class PDFService {
         const braceStart = orderEnd + 1;
         const content = extractBalancedBraces(converted, braceStart);
 
-        // Recursively convert nested content
+        // recursively convert nested content
         const contentConverted = convertMath(content.content);
         const replacement = `${order}√(${contentConverted})`;
 
@@ -756,7 +759,7 @@ class PDFService {
         nthRootIndex += replacement.length;
       }
 
-      // GREEK LETTERS (lowercase)
+      // greek letters (lowercase)
       converted = converted
         .replace(/\\alpha/g, "α")
         .replace(/\\beta/g, "β")
@@ -782,7 +785,7 @@ class PDFService {
         .replace(/\\psi/g, "ψ")
         .replace(/\\omega/g, "ω");
 
-      // GREEK LETTERS (uppercase)
+      // greek letters (uppercase)
       converted = converted
         .replace(/\\Gamma/g, "Γ")
         .replace(/\\Delta/g, "Δ")
@@ -795,7 +798,7 @@ class PDFService {
         .replace(/\\Psi/g, "Ψ")
         .replace(/\\Omega/g, "Ω");
 
-      // OPERATORS
+      // operators
       converted = converted
         .replace(/\\times/g, "×")
         .replace(/\\cdot/g, "·")
@@ -803,7 +806,7 @@ class PDFService {
         .replace(/\\pm/g, "±")
         .replace(/\\mp/g, "∓");
 
-      // RELATIONS (longer patterns first to avoid prefix conflicts)
+      // relations (longer patterns first to avoid prefix conflicts)
       converted = converted
         .replace(/\\notin/g, "∉")
         .replace(/\\subseteq/g, "⊆")
@@ -819,7 +822,7 @@ class PDFService {
         .replace(/\\sim/g, "∼")
         .replace(/\\propto/g, "∝");
 
-      // CALCULUS (longer patterns first)
+      // calculus (longer patterns first)
       converted = converted
         .replace(/\\arcsin/g, "arcsin")
         .replace(/\\arccos/g, "arccos")
@@ -837,7 +840,7 @@ class PDFService {
         .replace(/\\log/g, "log")
         .replace(/\\ln/g, "ln");
 
-      // SET THEORY
+      // set theory
       converted = converted
         .replace(/\\forall/g, "∀")
         .replace(/\\exists/g, "∃")
@@ -845,7 +848,7 @@ class PDFService {
         .replace(/\\cap/g, "∩")
         .replace(/\\emptyset/g, "∅");
 
-      // LOGIC
+      // logic
       converted = converted
         .replace(/\\implies/g, "⇒")
         .replace(/\\iff/g, "⇔")
@@ -853,7 +856,7 @@ class PDFService {
         .replace(/\\lor/g, "∨")
         .replace(/\\neg/g, "¬");
 
-      // ARROWS (longer patterns first)
+      // arrows (longer patterns first)
       converted = converted
         .replace(/\\leftrightarrow/g, "↔")
         .replace(/\\Leftrightarrow/g, "⇔")
@@ -865,14 +868,14 @@ class PDFService {
       return converted;
     };
 
-    // INLINE MATH: $...$
-    // Uses convertMath helper
+    // inline math: $...$
+    // uses convertmath helper
     text = text.replace(/\$([^$]+)\$/g, (match, math) => {
       return convertMath(math);
     });
 
-    // BLOCK MATH: $$...$$
-    // Uses SAME convertMath helper, just adds newlines
+    // block math: $$...$$
+    // uses same convertmath helper, just s lines
     text = text.replace(/\$\$([^$]+)\$\$/g, (match, math) => {
       return "\n" + convertMath(math) + "\n";
     });
@@ -881,13 +884,13 @@ class PDFService {
   }
 
   /**
-   * Safely fetch and embed image from URL
-   * @param {PDFDocument} doc - PDF document
-   * @param {string} imageUrl - Image URL (Cloudinary, etc.)
-   * @param {number} x - X position
-   * @param {number} y - Y position
-   * @param {object} options - Image options (width, height, fit)
-   * @returns {Promise<boolean>} Success status
+   * safely fetch and embed image from url
+   * @param {pdfdocument} doc - pdf document
+   * @param {string} imageurl - image url (cloudinary, etc.)
+   * @param {number} x - x position
+   * @param {number} y - y position
+   * @param {object} options - image options (width, height, fit)
+   * @returns {promise<boolean>} success status
    */
   async embedImage(doc, imageUrl, x, y, options = {}) {
     try {
@@ -907,7 +910,7 @@ class PDFService {
 
       const imageBuffer = Buffer.from(await response.arrayBuffer());
 
-      // Validate image size (max 5MB for safety)
+      // validate image size (max 5mb for safety)
       if (imageBuffer.length > 5 * 1024 * 1024) {
         console.warn(
           `Image too large: ${imageUrl} - ${imageBuffer.length} bytes`
@@ -915,7 +918,7 @@ class PDFService {
         return false;
       }
 
-      // Embed image with error handling
+      // embed image with error handling
       doc.image(imageBuffer, x, y, {
         width: options.width || 400,
         fit: options.fit || [400, 300],
@@ -931,27 +934,27 @@ class PDFService {
   }
 
   /**
-   * Generate PDF for test result
-   * @param {Object} testResult - Test result data from database
-   * @param {Object} course - Course data from database
-   * @param {Object} user - User data (name, email)
-   * @param {Boolean} isAdmin - Whether requester is admin
-   * @returns {Promise<Buffer>} PDF buffer
+   * generate pdf for test result
+   * @param {object} testresult - test result data from database
+   * @param {object} course - course data from database
+   * @param {object} user - user data (name, email)
+   * @param {boolean} isadmin - whether requester is admin
+   * @returns {promise<buffer>} pdf buffer
    */
   async generateTestResultPDF(testResult, course, user, isAdmin = false) {
     return new Promise((resolve, reject) => {
       (async () => {
         try {
-          // Create PDF document with optimized settings
+          // create pdf document with optimized settings
           const doc = new PDFDocument({
             size: "A4",
             margins: {
               top: 50,
-              bottom: 70, // Increased for footer
+              bottom: 70, // increased for footer
               left: 50,
               right: 50,
             },
-            bufferPages: true, // Enable page buffering for better performance
+            bufferPages: true, // enable page buffering for better performance
             info: {
               Title: `${course.name} - Test Result`,
               Author: "Vidhgrow",
@@ -967,12 +970,12 @@ class PDFService {
           doc.on("end", () => resolve(Buffer.concat(chunks)));
           doc.on("error", reject);
 
-          // Page counter
+          // page counter
           let pageNumber = 1;
 
           /**
-           * Add watermark to current page
-           * Semi-transparent "Vidhgrow" text rotated 45 degrees
+           * watermark to current page
+           * semi-transparent "vidhgrow" text rotated 45 degrees
            */
           const addWatermark = () => {
             doc.save();
@@ -991,23 +994,23 @@ class PDFService {
           };
 
           /**
-           * Add footer with page number and user info
-           * Only adds footer if page has content (prevents blank page footers)
+           * footer with page number and user info
+           * only s footer if page has content (prevents blank page footers)
            */
           const addFooter = () => {
-            // Skip footer for empty or near-empty pages
-            // A page is "empty" if current Y is less than 200px from the top
+            // skip footer for empty or near-empty pages
+            // a page is "empty" if current y is less than 200px from the top
             // (accounting for margins and potential headers)
             const minimumContentThreshold = 500;
 
             if (doc.y < minimumContentThreshold) {
-              console.log(`[PDF] Skipping footer - empty page at Y=${doc.y}`);
+              console.log(`Skipping footer - empty page at Y=${doc.y}`);
               return;
             }
 
             const footerY = doc.page.height - 40;
 
-            // Separator line
+            // separator line
             doc
               .moveTo(50, footerY - 10)
               .lineTo(doc.page.width - 50, footerY - 10)
@@ -1015,7 +1018,7 @@ class PDFService {
               .lineWidth(1)
               .stroke();
 
-            // Page number (center)
+            // page number (center)
             doc
               .fontSize(10)
               .font("Helvetica")
@@ -1025,7 +1028,7 @@ class PDFService {
                 width: doc.page.width,
               });
 
-            // User identifier (right)
+            // user identifier (right)
             const displayName = isAdmin ? "Admin" : user.name || user.email;
             doc
               .fontSize(9)
@@ -1039,10 +1042,10 @@ class PDFService {
             pageNumber++;
           };
 
-          // ========== PAGE 1: TITLE PAGE ==========
+          // title page
           addWatermark();
 
-          // Course Name (Large, Bold, Centered)
+          // course name (large, bold, centered)
           doc
             .fontSize(36)
             .font("Helvetica-Bold")
@@ -1054,7 +1057,7 @@ class PDFService {
 
           doc.moveDown(0.5);
 
-          // Test Result Title
+          // test result title
           doc
             .fontSize(24)
             .font("Helvetica")
@@ -1065,7 +1068,7 @@ class PDFService {
 
           doc.moveDown(4);
 
-          // Candidate Information Box
+          // candidate information box
           const infoBoxY = doc.y;
           doc
             .roundedRect(75, infoBoxY, doc.page.width - 150, 140, 5)
@@ -1105,8 +1108,8 @@ class PDFService {
             doc.y
           );
 
-          // ========== ADD COURSE LOGO ==========
-          // Position logo to the right of the info box
+          // course logo
+          // position logo to the right of the info box
           if (course.image && course.image.url) {
             const logoSuccess = await this.embedImage(
               doc,
@@ -1121,7 +1124,7 @@ class PDFService {
             );
 
             if (!logoSuccess) {
-              // Add placeholder if logo fails
+              // placeholder if logo fails
               doc
                 .fontSize(9)
                 .font("Helvetica")
@@ -1138,7 +1141,7 @@ class PDFService {
             }
           }
 
-          // Test Statistics Box
+          // test statistics box
           doc.moveDown(3);
           const statsBoxY = doc.y;
           doc
@@ -1173,8 +1176,8 @@ class PDFService {
 
           addFooter();
 
-          // ========== QUESTIONS PAGES ==========
-          // Group questions by difficulty
+          // question pages
+          // group questions by difficulty
           const questionsByDifficulty = {};
           testResult.questions.forEach((q) => {
             const diff = q.difficulty || "Unknown";
@@ -1184,7 +1187,7 @@ class PDFService {
             questionsByDifficulty[diff].push(q);
           });
 
-          // Sort difficulties: Easy -> Medium -> Hard
+          // sort difficulties: easy -> medium -> hard
           const difficultyOrder = ["Easy", "Medium", "Hard"];
           const sortedDifficulties = Object.keys(questionsByDifficulty).sort(
             (a, b) => {
@@ -1192,15 +1195,15 @@ class PDFService {
             }
           );
 
-          // Iterate through each difficulty
+          // iterate through each difficulty
           for (const difficulty of sortedDifficulties) {
             const questions = questionsByDifficulty[difficulty];
 
-            // New page for each difficulty
+            // page for each difficulty
             doc.addPage();
             addWatermark();
 
-            // Difficulty Header
+            // difficulty header
             const difficultyColor =
               difficulty === "Easy"
                 ? "#16a34a"
@@ -1219,26 +1222,26 @@ class PDFService {
 
             doc.moveDown(1.5);
 
-            // Iterate through questions in this difficulty
+            // iterate through questions in this difficulty
             for (let qIndex = 0; qIndex < questions.length; qIndex++) {
               const questionData = questions[qIndex];
               const questionNum = qIndex + 1;
 
-              // Find full question details from course
+              // find full question details from course
               const fullQuestion = course.questions.find(
                 (q) => q._id.toString() === questionData.question.toString()
               );
 
               if (!fullQuestion) continue;
 
-              // ========== PAGE BREAK CHECK ==========
-              // Check if we need a new page (leave 250px for question + options + image)
+              // page break check
+              // check if we need a page (leave 250px for question + options + image)
               if (doc.y > doc.page.height - 250) {
                 addFooter();
                 doc.addPage();
                 addWatermark();
 
-                // Re-add difficulty header on new page
+                // re-difficulty header on page
                 doc
                   .fontSize(18)
                   .font("Helvetica-Bold")
@@ -1249,7 +1252,7 @@ class PDFService {
                 doc.moveDown(1);
               }
 
-              // ========== QUESTION NUMBER ==========
+              // question number
               doc
                 .fontSize(14)
                 .font("Helvetica-Bold")
@@ -1259,15 +1262,15 @@ class PDFService {
                   width: 40,
                 });
 
-              // ========== QUESTION TEXT (with rich text support) ==========
+              // question text with rich text support
               const questionStartY = doc.y;
-              doc.font("Helvetica"); // Reset to regular for question text
+              doc.font("Helvetica"); // reset to regular for question text
 
-              // Use rich text renderer for question text
+              // use rich text renderer for question text
               this.renderRichText(
                 doc,
                 fullQuestion.question,
-                100, // X position (indented)
+                100, // x position (indented)
                 questionStartY,
                 {
                   fontSize: 17,
@@ -1279,7 +1282,7 @@ class PDFService {
 
               doc.moveDown(0.8);
 
-              // ========== QUESTION TYPE INDICATOR ==========
+              // question type indicator
               const typeText =
                 fullQuestion.questionType === "multiple"
                   ? "Multiple Choice"
@@ -1295,11 +1298,11 @@ class PDFService {
 
               doc.moveDown(0.5);
 
-              // Question Image
+              // question image
               if (fullQuestion.image && fullQuestion.image.url) {
-                // Check if we need a new page for the image
-                const estimatedImageHeight = 280; // Max fit height
-                const imageBottomY = doc.y + estimatedImageHeight + 20; // Add padding
+                // check if we need a page for the image
+                const estimatedImageHeight = 280; // max fit height
+                const imageBottomY = doc.y + estimatedImageHeight + 20; // padding
 
                 if (imageBottomY > doc.page.height - 100) {
                   addFooter();
@@ -1323,12 +1326,12 @@ class PDFService {
                 );
 
                 if (imageSuccess) {
-                  // CRITICAL FIX: Manually set doc.y AFTER image
-                  // PDFKit doesn't automatically move Y after image()
-                  doc.y = imageStartY + estimatedImageHeight + 10; // Image height + spacing
+                  // manually set doc.y image
+                  // pdfkit doesn't automatically move y image()
+                  doc.y = imageStartY + estimatedImageHeight + 10; // image height + spacing
                   doc.moveDown(1);
                 } else {
-                  // Show placeholder if image fails
+                  // show placeholder if image fails
                   doc
                     .fontSize(12)
                     .font("Helvetica")
@@ -1338,7 +1341,7 @@ class PDFService {
                 }
               }
 
-              // ========== OPTIONS ==========
+              // options
               if (
                 fullQuestion.questionType === "multiple" ||
                 fullQuestion.questionType === "truefalse"
@@ -1358,9 +1361,9 @@ class PDFService {
                   const optionLetter = String.fromCharCode(65 + optIndex);
 
                   const optionColor = isCorrect ? "#16a34a" : "#4b5563";
-                  const optionPrefix = isCorrect ? "✓ " : "  ";
+                  const optionPrefix = isCorrect ? "correct " : "  ";
 
-                  // Use rich text renderer for option text
+                  // use rich text renderer for option text
                   doc
                     .fontSize(14)
                     .font("Helvetica")
@@ -1379,12 +1382,12 @@ class PDFService {
                   doc.moveDown(0.5);
                 });
               } else if (fullQuestion.questionType === "single") {
-                // Single answer type
+                // single answer type
                 doc
                   .fontSize(14)
                   .font("Helvetica-Bold")
                   .fillColor("#16a34a")
-                  .text("✓ Answer: ", 100, doc.y, { continued: true });
+                  .text("Answer: ", 100, doc.y, { continued: true });
 
                 doc
                   .font("Helvetica")
@@ -1393,7 +1396,7 @@ class PDFService {
                 doc.moveDown(0.5);
               }
 
-              // ========== EXPLANATION ==========
+              // explanation
               if (fullQuestion.explanation) {
                 doc.moveDown(0.5);
 
@@ -1405,7 +1408,7 @@ class PDFService {
 
                 doc.moveDown(0.3);
 
-                // Use rich text renderer for explanation
+                // use rich text renderer for explanation
                 this.renderRichText(doc, fullQuestion.explanation, 100, doc.y, {
                   fontSize: 14,
                   color: "#6b7280",
@@ -1416,7 +1419,7 @@ class PDFService {
 
               doc.moveDown(1);
 
-              // Separator line between questions
+              // separator line between questions
               doc
                 .moveTo(60, doc.y)
                 .lineTo(doc.page.width - 60, doc.y)
@@ -1427,17 +1430,17 @@ class PDFService {
               doc.moveDown(1);
             }
 
-            // Only add footer if we actually rendered questions
+            // only footer if we actually rendered questions
             if (questions.length > 0) {
               addFooter();
             }
           }
 
-          // ========== THANK YOU PAGE ==========
+          // closing page
           doc.addPage();
           addWatermark();
 
-          // Center content vertically
+          // center content vertically
           const thankYouStartY = (doc.page.height - 200) / 2;
           doc.y = thankYouStartY;
 
@@ -1499,14 +1502,14 @@ class PDFService {
               }
             );
 
-          // ADD FOOTER FOR THANK YOU PAGE
-          // Only add footer if we actually rendered questions
+          // footer for thank you page
+          // only footer if we actually rendered questions
           if (questions.length > 0) {
             addFooter();
           }
 
-          // CRITICAL: Do NOT add any more pages after this
-          // Finalize PDF immediately
+          // do not any more pages this
+          // finalize pdf immediately
           doc.end();
         } catch (error) {
           reject(error);
@@ -1516,9 +1519,9 @@ class PDFService {
   }
 
   /**
-   * Generate PDF for course data only (Admin download)
-   * @param {Object} course - Course data from database
-   * @returns {Promise<Buffer>} PDF buffer
+   * generate pdf for course data only (admin download)
+   * @param {object} course - course data from database
+   * @returns {promise<buffer>} pdf buffer
    */
   async generateCoursePDF(course) {
     return new Promise((resolve, reject) => {
@@ -1545,7 +1548,7 @@ class PDFService {
           let pageNumber = 1;
 
           /**
-           * Add watermark to page
+           * watermark to page
            */
           const addWatermark = () => {
             doc.save();
@@ -1564,7 +1567,7 @@ class PDFService {
           };
 
           /**
-           * Add footer with page number and admin indicator
+           * footer with page number and admin indicator
            */
           const addFooter = () => {
             const footerY = doc.page.height - 40;
@@ -1597,10 +1600,10 @@ class PDFService {
             pageNumber++;
           };
 
-          // ========== PAGE 1: COURSE OVERVIEW ==========
+          // course overview page
           addWatermark();
 
-          // Course Name
+          // course name
           doc
             .fontSize(36)
             .font("Helvetica-Bold")
@@ -1612,9 +1615,9 @@ class PDFService {
 
           doc.moveDown(0.8);
 
-          // Description with rich text support - CENTERED
+          // description with rich text support - centered
           if (course.description) {
-            // Calculate centered X position
+            // calculate centered x position
             const descWidth = doc.page.width - 150;
             const centeredX = (doc.page.width - descWidth) / 2;
 
@@ -1633,7 +1636,7 @@ class PDFService {
 
           doc.moveDown(3);
 
-          // ========== COURSE LOGO ==========
+          // course logo
           if (course.image && course.image.url) {
             const logoSuccess = await this.embedImage(
               doc,
@@ -1654,7 +1657,7 @@ class PDFService {
 
           doc.moveDown(2);
 
-          // Course Details Section
+          // course details section
           doc
             .fontSize(16)
             .font("Helvetica-Bold")
@@ -1687,7 +1690,7 @@ class PDFService {
 
           doc.moveDown(2);
 
-          // Difficulty Configuration Section
+          // difficulty configuration section
           doc
             .fontSize(16)
             .font("Helvetica-Bold")
@@ -1700,14 +1703,14 @@ class PDFService {
 
           if (course.difficulties && course.difficulties.length > 0) {
             course.difficulties.forEach((diff) => {
-              // Difficulty name with bold font
+              // difficulty name with bold font
               doc
                 .fontSize(14)
                 .font("Helvetica-Bold")
                 .fillColor("#2d3748")
                 .text(`${diff.name}:`, 75, doc.y, { continued: true });
 
-              // Marks info with regular font
+              // marks info with regular font
               doc
                 .font("Helvetica")
                 .fontSize(13)
@@ -1719,7 +1722,7 @@ class PDFService {
 
               doc.moveDown(0.4);
 
-              // Time limit -aligned with proper indentation (11 spaces)
+              // time limit -aligned with proper indentation (11 spaces)
               doc
                 .fontSize(12)
                 .font("Helvetica")
@@ -1735,7 +1738,7 @@ class PDFService {
 
           addFooter();
 
-          // ========== QUESTIONS PAGES ==========
+          // question pages
           if (course.questions && course.questions.length > 0) {
             const questionsByDifficulty = {};
 
@@ -1754,7 +1757,7 @@ class PDFService {
             for (const difficulty of sortedDifficulties) {
               const questions = questionsByDifficulty[difficulty];
 
-              // New page for each difficulty
+              // page for each difficulty
               doc.addPage();
               addWatermark();
 
@@ -1765,7 +1768,7 @@ class PDFService {
                     ? "#eab308"
                     : "#dc2626";
 
-              // Difficulty header
+              // difficulty header
               doc
                 .fontSize(24)
                 .font("Helvetica-Bold")
@@ -1777,11 +1780,11 @@ class PDFService {
 
               doc.moveDown(2);
 
-              // Iterate through questions
+              // iterate through questions
               for (let qIndex = 0; qIndex < questions.length; qIndex++) {
                 const question = questions[qIndex];
 
-                // Check if we need a new page (allow 200px buffer at bottom)
+                // check if we need a page (allow 200px buffer at bottom)
                 if (doc.y > doc.page.height - 200) {
                   addFooter();
                   doc.addPage();
@@ -1789,7 +1792,7 @@ class PDFService {
                   doc.moveDown(2);
                 }
 
-                // Question number
+                // question number
                 doc
                   .fontSize(13)
                   .font("Helvetica-Bold")
@@ -1799,7 +1802,7 @@ class PDFService {
                   });
                 doc.moveDown(0.4);
 
-                // Question type
+                // question type
                 const typeLabel =
                   question.questionType === "multiple"
                     ? "Multiple Choice"
@@ -1814,7 +1817,7 @@ class PDFService {
                   .text(`Type: ${typeLabel}`, 75, doc.y);
                 doc.moveDown(0.6);
 
-                // Question text with rich text support
+                // question text with rich text support
                 this.renderRichText(doc, question.question, 75, doc.y, {
                   fontSize: 12,
                   color: "#1a1a1a",
@@ -1824,7 +1827,7 @@ class PDFService {
 
                 doc.moveDown(0.7);
 
-                // Question image (if exists)
+                // question image (if exists)
                 if (question.image && question.image.url) {
                   const estimatedImageHeight = 260;
                   const imageBottomY = doc.y + estimatedImageHeight + 20;
@@ -1850,7 +1853,7 @@ class PDFService {
                   );
 
                   if (imageSuccess) {
-                    // CRITICAL FIX: Manually set doc.y AFTER image
+                    // manually set doc.y image
                     doc.y = imageStartY + estimatedImageHeight + 10;
                     doc.moveDown(1);
                   } else {
@@ -1863,7 +1866,7 @@ class PDFService {
                   }
                 }
 
-                // Options section
+                // options section
                 if (
                   question.questionType === "multiple" ||
                   question.questionType === "truefalse"
@@ -1898,7 +1901,7 @@ class PDFService {
                   doc.moveDown(0.3);
                 }
 
-                // Correct Answer section
+                // correct answer section
                 doc
                   .fontSize(11)
                   .font("Helvetica-Bold")
@@ -1926,7 +1929,7 @@ class PDFService {
 
                 doc.moveDown(0.6);
 
-                // Explanation with rich text support
+                // explanation with rich text support
                 if (question.explanation) {
                   doc
                     .fontSize(11)
@@ -1946,7 +1949,7 @@ class PDFService {
 
                 doc.moveDown(1);
 
-                // Separator line
+                // separator line
                 doc
                   .moveTo(75, doc.y)
                   .lineTo(doc.page.width - 75, doc.y)
@@ -1957,14 +1960,14 @@ class PDFService {
                 doc.moveDown(1);
               }
 
-              // Only add footer if we actually rendered questions
+              // only footer if we actually rendered questions
               if (questions.length > 0) {
                 addFooter();
               }
             }
           }
 
-          // Only add thank-you page if last page had content
+          // only thank-you page if last page had content
           if (doc.y > 200) {
             addFooter();
           }

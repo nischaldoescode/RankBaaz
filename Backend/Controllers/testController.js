@@ -1,3 +1,6 @@
+/**
+ * keeps the test controller controller focused and readable.
+ */
 import { body, validationResult } from "express-validator";
 import TestResult from "../Models/TestResult.js";
 import Course from "../Models/Course.js";
@@ -10,7 +13,7 @@ import Payment from "../Models/Payment.js";
 import questionCacheService from "../services/questionCacheService.js";
 import { invalidateCache } from "../Config/redis.js";
 
-// Test submission validation rules
+// test submission validation rules
 export const testSubmissionValidation = [
   body("courseId").isMongoId().withMessage("Invalid course ID"),
 
@@ -30,11 +33,11 @@ export const testSubmissionValidation = [
 
   body("answers")
     .custom((value, { req }) => {
-      // For multi-difficulty tests, answers can be empty since they're in difficultyResultsSummary
+      // for multi-difficulty tests, answers can be empty since they're in difficultyresultssummary
       if (req.body.testSettings?.isMultiDifficulty) {
         return Array.isArray(value);
       }
-      // For single difficulty tests, require at least 1 answer
+      // for single difficulty tests, require at least 1 answer
       return Array.isArray(value) && value.length >= 1;
     })
     .withMessage("Answers array is required for single difficulty tests"),
@@ -51,14 +54,14 @@ export const testSubmissionValidation = [
     .withMessage("Difficulty results summary must be an array"),
 ];
 
-// Start a new test
+// start a test
 export const startTest = async (req, res) => {
   try {
     const { courseId, difficulty } = req.params;
     const numberOfQuestions = parseInt(req.query.questions) || 20;
     const userId = req.user?.userId;
 
-    // Validate course and difficulty
+    // validate course and difficulty
     const course = await Course.findOne({ _id: courseId, isActive: true });
     if (!course) {
       return res.status(404).json({
@@ -67,7 +70,7 @@ export const startTest = async (req, res) => {
       });
     }
 
-    // SECURITY CHECK: If course is paid, verify purchase
+    // security check: if course is paid, verify purchase
     if (course.isPaid) {
       const payment = await Payment.findOne({
         user: userId,
@@ -96,7 +99,7 @@ export const startTest = async (req, res) => {
       });
     }
 
-    // Get random questions for the test from course.questions
+    // get random questions for the test from course.questions
     console.log(
       `Fetching questions for course: ${courseId}, difficulty: ${difficulty}`
     );
@@ -105,7 +108,7 @@ export const startTest = async (req, res) => {
       course.maxQuestionsPerTest
     );
 
-    // Filter questions by difficulty and active status
+    // filter questions by difficulty and active status
     const availableQuestions = course.questions.filter(
       (q) => q.difficulty === difficulty && q.isActive === true
     );
@@ -124,7 +127,7 @@ export const startTest = async (req, res) => {
       });
     }
 
-    // Randomly sample questions
+    // randomly sample questions
     const shuffled = availableQuestions.sort(() => 0.5 - Math.random());
     const questions = shuffled
       .slice(0, Math.min(maxQuestions, availableQuestions.length))
@@ -164,7 +167,7 @@ export const startTest = async (req, res) => {
   }
 };
 
-// Get question details for answer validation (server-side only)
+// get question details for answer validation (server-side only)
 const getQuestionDetails = async (courseId, questionId) => {
   try {
     const course = await Course.findById(courseId);
@@ -183,14 +186,14 @@ export const checkAnswer = async (req, res) => {
   try {
     const { courseId, questionId, answer, showAnswer = false } = req.body;
 
-    // NEW: Try cache first
+    // try cache first
     let question = await questionCacheService.getCachedQuestion(
       courseId,
       questionId
     );
 
     if (!question) {
-      // Cache miss - fetch from database
+      // cache miss - fetch from database
       const courseData = await Course.findOne(
         {
           _id: courseId,
@@ -214,11 +217,11 @@ export const checkAnswer = async (req, res) => {
 
       question = courseData.questions[0];
 
-      // NEW: Cache for future requests
+      // cache for future requests
       await questionCacheService.cacheQuestion(courseId, questionId, question);
     }
 
-    // Rest of validation logic remains same...
+    // rest of validation logic remains same...
     const correctAnswer = question.correctAnswer;
     const questionType = question.questionType;
 
@@ -255,7 +258,7 @@ export const checkAnswer = async (req, res) => {
   }
 };
 
-// Submit test results
+// submit test results
 export const submitTest = async (req, res) => {
   try {
     const errors = validationResult(req);
@@ -268,7 +271,7 @@ export const submitTest = async (req, res) => {
     }
 
     console.log(`=== SUBMIT TEST REQUEST ===`);
-    // console.log(`User ID: ${req.user?.id}`);
+    // console.log(`user id: ${req.user?.id}`);
     console.log(`Request body keys: ${Object.keys(req.body).join(", ")}`);
     console.log(`Answers count: ${req.body.answers?.length || 0}`);
 
@@ -282,7 +285,7 @@ export const submitTest = async (req, res) => {
     } = req.body;
     const userId = req.user?.userId;
 
-    // Validate course
+    // validate course
     const course = await Course.findOne({ _id: courseId, isActive: true });
     if (!course) {
       return res.status(404).json({
@@ -294,11 +297,11 @@ export const submitTest = async (req, res) => {
     let finalTestResult;
 
     if (testSettings.isMultiDifficulty && difficultyResultsSummary) {
-      // FIRST: Create detailed questions array from all difficulties
+      // first: create detailed questions array from all difficulties
       const allQuestions = [];
 
       difficultyResultsSummary.forEach((diffResult) => {
-        // Initialize counters for THIS difficulty
+        // initialize counters for this difficulty
         let diffCorrectCount = 0;
         let diffTotalScore = 0;
 
@@ -333,7 +336,7 @@ export const submitTest = async (req, res) => {
                 if (isCorrect) diffCorrectCount++;
                 diffTotalScore += marksAwarded;
 
-                // Store questions in the difficulty result toooo ohhhhh yeahh
+                // store questions in the difficulty result toooo ohhhhh yeahh
                 if (!diffResult.questions) {
                   diffResult.questions = [];
                 }
@@ -348,7 +351,7 @@ export const submitTest = async (req, res) => {
                   difficulty: diffResult.difficulty,
                 });
 
-                // Add to main questions array
+                // to main questions array
                 allQuestions.push({
                   question: questionId,
                   userAnswer: String(userAnswer),
@@ -364,13 +367,13 @@ export const submitTest = async (req, res) => {
           );
         }
 
-        // UPDATE THE DIFFICULTY RESULT WITH CORRECT VALUES
+        // update the difficulty result with correct values
         diffResult.correctAnswers = diffCorrectCount;
         diffResult.wrongAnswers = diffResult.totalQuestions - diffCorrectCount;
         diffResult.totalScore = diffTotalScore;
       });
 
-      // NOW: Calculate aggregated stats from populated allQuestions array
+      // now: calculate aggregated stats from populated allquestions array
       const aggregated = {
         totalQuestions: allQuestions.length,
         correctAnswers: allQuestions.filter((q) => q.isCorrect).length,
@@ -393,7 +396,7 @@ export const submitTest = async (req, res) => {
 
       console.log("Aggregated multi-difficulty results:", aggregated);
 
-      // Calculate percentage for multi-difficulty test
+      // calculate percentage for multi-difficulty test
       const percentage =
         aggregated.maxPossibleScore > 0
           ? Math.round(
@@ -403,8 +406,8 @@ export const submitTest = async (req, res) => {
       finalTestResult = new TestResult({
         user: userId,
         course: courseId,
-        difficulty: testSettings.difficulties, // Store as array
-        questions: allQuestions, // Include all questions from all difficulties
+        difficulty: testSettings.difficulties, // store as array
+        questions: allQuestions, // include all questions from all difficulties
         totalQuestions: aggregated.totalQuestions,
         correctAnswers: aggregated.correctAnswers,
         wrongAnswers: aggregated.wrongAnswers,
@@ -420,7 +423,7 @@ export const submitTest = async (req, res) => {
         },
       });
     } else {
-      // Single difficulty test - process normally
+      // single difficulty test - process normally
       const difficultyConfig = course.difficulties.find(
         (diff) => diff.name === difficulty
       );
@@ -431,7 +434,7 @@ export const submitTest = async (req, res) => {
         });
       }
 
-      // Process single difficulty normally (your existing logic)
+      // process single difficulty normally (your existing logic)
       const questionIds = answers.map((ans) => ans.questionId);
       const questions = course.questions.filter(
         (q) =>
@@ -447,7 +450,7 @@ export const submitTest = async (req, res) => {
         });
       }
 
-      // Calculate results for single difficulty
+      // calculate results for single difficulty
       const questionMap = new Map();
       questions.forEach((q) => questionMap.set(q._id.toString(), q));
 
@@ -532,7 +535,7 @@ export const submitTest = async (req, res) => {
       });
     }
 
-    // Calculate percentile BEFORE saving
+    // calculate percentile saving
     const allTestsForCourse = await TestResult.find({
       course: courseId,
       difficulty: finalTestResult.difficulty,
@@ -548,7 +551,7 @@ export const submitTest = async (req, res) => {
       percentile = Math.round((lowerScores / allTestsForCourse.length) * 100);
     }
 
-    // Add percentile to the test result
+    // percentile to the test result
     finalTestResult.percentile = percentile;
 
     const pointsService = (await import("../services/pointsService.js"))
@@ -559,20 +562,20 @@ export const submitTest = async (req, res) => {
     finalTestResult.pointsEarned = pointsEarned;
     finalTestResult.wasAbandoned = false;
 
-    // Save test result
+    // save test result
     await finalTestResult.save();
 
-    // Update user points and stats
+    // update user points and stats
     await pointsService.updateUserPoints(
       userId,
       pointsEarned,
       "test_completion"
     );
 
-    // Get previous rank before updating points
+    // get previous rank updating points
     const previousRank = await pointsService.getUserRank(userId);
 
-    // Update user stats
+    // update user stats
     await User.findByIdAndUpdate(userId, {
       $inc: {
         "stats.testsCompleted": 1,
@@ -585,13 +588,13 @@ export const submitTest = async (req, res) => {
       },
     });
 
-    // Store previous rank in test result for frontend
+    // store previous rank in test result for frontend
     finalTestResult.previousRank = previousRank;
 
-    // Check for badge eligibility
+    // check for badge eligibility
     await badgeService.checkAndAwardBadges(userId);
 
-    // Update leaderboard with points
+    // update leaderboard with points
     if (
       finalTestResult.difficulty &&
       finalTestResult.percentage !== undefined
@@ -600,7 +603,7 @@ export const submitTest = async (req, res) => {
         ? finalTestResult.difficulty
         : [finalTestResult.difficulty];
 
-      // Ensure userId is string for Redis operations
+      // ensure userid is string for redis operations
       const userIdForRedis = userId.toString();
 
       for (const diff of difficulties) {
@@ -630,7 +633,7 @@ export const submitTest = async (req, res) => {
       );
     }
 
-    // Populate course name
+    // populate course name
     const populatedResult = await TestResult.findById(finalTestResult._id)
       .populate({
         path: "course",
@@ -642,13 +645,13 @@ export const submitTest = async (req, res) => {
       })
       .lean();
 
-    // Add courseTitle for frontend
+    // coursetitle for frontend
     populatedResult.courseTitle = populatedResult.course.name;
 
-    // Get new rank after points update
+    // get rank points update
     const newRank = await pointsService.getUserRank(userId);
     const rankChange = previousRank && newRank ? previousRank - newRank : null;
-    // Invalidate leaderboard and user caches after test submission
+    // invalidate leaderboard and user caches test submission
     await invalidateCache.leaderboard(courseId);
     await invalidateCache.test(userId, finalTestResult._id);
 
@@ -676,22 +679,22 @@ export const submitTest = async (req, res) => {
   }
 };
 
-// Get test result by ID with detailed answers
+// get test result by id with detailed answers
 export const getTestResult = async (req, res) => {
   try {
     const { testId } = req.params;
     const userId = req.user.userId;
 
-    // Parallel execution - fetch test and course data simultaneously
+    // parallel execution - fetch test and course data simultaneously
     const [testResult, courseData] = await Promise.all([
       TestResult.findOne({
         _id: testId,
         user: userId,
       })
-        .select("-__v") // Exclude version key
-        .lean(), // Convert to plain object immediately
+        .select("-__v") // exclude version key
+        .lean(), // convert to plain object immediately
 
-      // We'll get course after checking if test exists
+      // we'll get course checking if test exists
       null,
     ]);
 
@@ -702,7 +705,7 @@ export const getTestResult = async (req, res) => {
       });
     }
 
-    // Now fetch course with only needed fields
+    // now fetch course with only needed fields
     const course = await Course.findById(testResult.course)
       .select("name teacher questions._id questions.question questions.explanation")
       .populate("teacher", "name username profileImage")
@@ -715,12 +718,12 @@ export const getTestResult = async (req, res) => {
       });
     }
 
-    // Create question lookup map for O(1) access instead of O(n) find operations
+    // create question lookup map for o(1) access instead of o(n) find operations
     const questionMap = new Map(
       course.questions.map((q) => [q._id.toString(), q])
     );
 
-    // Efficiently populate questions with explanations
+    // efficiently populate questions with explanations
     testResult.questions = testResult.questions.map((resultQ) => {
       const courseQ = questionMap.get(resultQ.question.toString());
 
@@ -736,7 +739,7 @@ export const getTestResult = async (req, res) => {
       };
     });
 
-    // Add course info
+    // course info
     testResult.course = {
       _id: course._id,
       name: course.name,
@@ -900,25 +903,25 @@ export const submitCourseFeedback = async (req, res) => {
 };
 
 /**
- * Download test result as PDF
- * @route GET /api/tests/download-pdf/:testId
- * @access Private (User who took test OR Admin)
- * @param {string} testId - Test result ID
- * @returns {Buffer} PDF file
+ * download test result as pdf
+ * @route get /api/tests/download-pdf/:testid
+ * @access private (user who took test or admin)
+ * @param {string} testid - test result id
+ * @returns {buffer} pdf file
  *
- * Security:
- * - Users can only download PDF once
- * - Admins can download unlimited times
- * - Requires authentication
- * - Validates test ownership
- * - One-time download token for users
+ * security:
+ * - users can only download pdf once
+ * - admins can download unlimited times
+ * - requires authentication
+ * - validates test ownership
+ * - one-time download token for users
  */
 export const downloadTestPDF = async (req, res) => {
   try {
     const { testId } = req.params;
     const userId = req.user?.userId;
     const isAdmin = req.admin?.isAdmin === true;
-    const downloadToken = req.query.token; // One-time token for users
+    const downloadToken = req.query.token; // one-time token for users
 
     console.log(`=== PDF DOWNLOAD REQUEST ===`);
     console.log(`Test ID: ${testId}`);
@@ -926,7 +929,7 @@ export const downloadTestPDF = async (req, res) => {
     console.log(`Is Admin: ${isAdmin}`);
     console.log(`Token: ${downloadToken ? "Present" : "None"}`);
 
-    // Validate testId format
+    // validate testid format
     if (!mongoose.Types.ObjectId.isValid(testId)) {
       return res.status(400).json({
         success: false,
@@ -934,7 +937,7 @@ export const downloadTestPDF = async (req, res) => {
       });
     }
 
-    // Fetch test result with populated data
+    // fetch test result with populated data
     const testResult = await TestResult.findById(testId)
       .populate({
         path: "course",
@@ -953,10 +956,10 @@ export const downloadTestPDF = async (req, res) => {
       });
     }
 
-    // Security Check 1: Verify ownership (unless admin)
+    // security check 1: verify ownership (unless admin)
     if (!isAdmin && testResult.user._id.toString() !== userId) {
       console.log(
-        `[SECURITY] Unauthorized PDF access attempt by user ${userId}`
+        `Unauthorized PDF access attempt by user ${userId}`
       );
       return res.status(403).json({
         success: false,
@@ -964,7 +967,7 @@ export const downloadTestPDF = async (req, res) => {
       });
     }
 
-    // Security Check 2: Check if user is banned from this course (non-admin only)
+    // security check 2: check if user is banned from this course (non-admin only)
     if (!isAdmin) {
       const User = (await import("../Models/User.js")).default;
       const user = await User.findById(userId);
@@ -983,7 +986,7 @@ export const downloadTestPDF = async (req, res) => {
       }
     }
 
-    // Security Check 3: Check if course has PDF export enabled (skip for admin)
+    // security check 3: check if course has pdf export enabled (skip for admin)
     if (!isAdmin && !testResult.course.hasPdfExport) {
       return res.status(403).json({
         success: false,
@@ -991,7 +994,7 @@ export const downloadTestPDF = async (req, res) => {
       });
     }
 
-    // Security Check 4: Validate one-time download token (non-admin only)
+    // security check 4: validate one-time download token (non-admin only)
     if (!isAdmin) {
       if (!downloadToken) {
         return res.status(403).json({
@@ -1000,7 +1003,7 @@ export const downloadTestPDF = async (req, res) => {
         });
       }
 
-      // Verify token hasn't been used
+      // verify token hasn't been used
       const crypto = await import("crypto");
       const expectedToken = crypto
         .createHash("sha256")
@@ -1016,7 +1019,7 @@ export const downloadTestPDF = async (req, res) => {
         });
       }
 
-      // Check if already downloaded
+      // check if already downloaded
       if (testResult.pdfDownloaded) {
         return res.status(403).json({
           success: false,
@@ -1027,10 +1030,10 @@ export const downloadTestPDF = async (req, res) => {
       }
     }
 
-    // Import PDF service
+    // import pdf service
     const pdfService = (await import("../services/pdfService.js")).default;
 
-    // Generate PDF
+    // generate pdf
     console.log(`Generating PDF for test ${testId}...`);
     const pdfBuffer = await pdfService.generateTestResultPDF(
       testResult,
@@ -1039,7 +1042,7 @@ export const downloadTestPDF = async (req, res) => {
       isAdmin
     );
 
-    // Update download status (only for non-admin users)
+    // update download status (only for non-admin users)
     if (!isAdmin) {
       await TestResult.findByIdAndUpdate(testId, {
         pdfDownloaded: true,
@@ -1050,7 +1053,7 @@ export const downloadTestPDF = async (req, res) => {
       console.log(`Admin download - no download limit applied`);
     }
 
-    // Set response headers
+    // set response headers
     const filename = `Vidhgrow_${testResult.course.name.replace(/[^a-z0-9]/gi, "_")}_${
       new Date().toISOString().split("T")[0]
     }.pdf`;
@@ -1062,7 +1065,7 @@ export const downloadTestPDF = async (req, res) => {
     res.setHeader("Pragma", "no-cache");
     res.setHeader("Expires", "0");
 
-    // Send PDF
+    // send pdf
     res.send(pdfBuffer);
 
     console.log(`PDF sent successfully: ${filename}`);
@@ -1077,18 +1080,18 @@ export const downloadTestPDF = async (req, res) => {
 };
 
 /**
- * Generate one-time download token for PDF
- * @route GET /api/tests/generate-pdf-token/:testId
- * @access Private (User only)
- * @param {string} testId - Test result ID
- * @returns {Object} Download token
+ * generate one-time download token for pdf
+ * @route get /api/tests/generate-pdf-token/:testid
+ * @access private (user only)
+ * @param {string} testid - test result id
+ * @returns {object} download token
  */
 export const generatePDFDownloadToken = async (req, res) => {
   try {
     const { testId } = req.params;
     const userId = req.user?.userId;
 
-    // Validate testId
+    // validate testid
     if (!mongoose.Types.ObjectId.isValid(testId)) {
       return res.status(400).json({
         success: false,
@@ -1096,7 +1099,7 @@ export const generatePDFDownloadToken = async (req, res) => {
       });
     }
 
-    // Fetch test result
+    // fetch test result
     const testResult = await TestResult.findById(testId)
       .populate({
         path: "course",
@@ -1112,7 +1115,7 @@ export const generatePDFDownloadToken = async (req, res) => {
       });
     }
 
-    // Verify ownership
+    // verify ownership
     if (testResult.user.toString() !== userId) {
       return res.status(403).json({
         success: false,
@@ -1120,7 +1123,7 @@ export const generatePDFDownloadToken = async (req, res) => {
       });
     }
 
-    // Check if course has PDF export enabled
+    // check if course has pdf export enabled
     if (!testResult.course.hasPdfExport) {
       return res.status(403).json({
         success: false,
@@ -1128,7 +1131,7 @@ export const generatePDFDownloadToken = async (req, res) => {
       });
     }
 
-    // Check if already downloaded
+    // check if already downloaded
     if (testResult.pdfDownloaded) {
       return res.status(403).json({
         success: false,
@@ -1136,7 +1139,7 @@ export const generatePDFDownloadToken = async (req, res) => {
       });
     }
 
-    // Generate one-time token
+    // generate one-time token
     const crypto = await import("crypto");
     const token = crypto
       .createHash("sha256")
@@ -1164,26 +1167,26 @@ export const abandonTest = async (req, res) => {
     const { courseId, difficulty, completedDifficulties } = req.body;
     const userId = req.user.userId;
 
-    // Calculate deduction based on where they quit
+    // calculate deduction based on where they quit
     const pointsService = (await import("../services/pointsService.js"))
       .default;
     let deduction = 0;
 
     if (!completedDifficulties || completedDifficulties.length === 0) {
-      // Quit at first difficulty
+      // quit at first difficulty
       deduction = pointsService.POINTS_CONFIG.DEDUCTION_EASY;
     } else if (
       completedDifficulties.includes("Easy") &&
       !completedDifficulties.includes("Medium")
     ) {
-      // Quit after Easy
+      // quit easy
       deduction = pointsService.POINTS_CONFIG.DEDUCTION_MEDIUM;
     } else if (completedDifficulties.includes("Medium")) {
-      // Quit after Medium or during Hard
+      // quit medium or during hard
       deduction = pointsService.POINTS_CONFIG.DEDUCTION_HARD;
     }
 
-    // Record abandoned test
+    // record abandoned test
     const abandonedTest = new TestResult({
       user: userId,
       course: courseId,
@@ -1210,7 +1213,7 @@ export const abandonTest = async (req, res) => {
 
     await abandonedTest.save();
 
-    // Deduct points
+    // deduct points
     await pointsService.updateUserPoints(userId, -deduction, "test_abandoned");
 
     res.status(200).json({
@@ -1278,7 +1281,7 @@ export const getLeaderboardInfo = async (req, res) => {
   }
 };
 
-// Get user's test history
+// get user's test history
 export const getTestHistory = async (req, res) => {
   try {
     const userId = req.user.userId;
@@ -1287,7 +1290,7 @@ export const getTestHistory = async (req, res) => {
     const skip = (page - 1) * limit;
     const courseId = req.query.course;
 
-    // Build filter query
+    // build filter query
     let filterQuery = { user: userId };
     if (courseId) {
       filterQuery.course = courseId;
@@ -1295,7 +1298,7 @@ export const getTestHistory = async (req, res) => {
 
     const testHistory = await TestResult.find(filterQuery)
       .populate("course", "name")
-      .select("-questions") // Exclude detailed questions for list view
+      .select("-questions") // exclude detailed questions for list view
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit);
@@ -1326,13 +1329,13 @@ export const getTestHistory = async (req, res) => {
   }
 };
 
-// Get user performance statistics
+// get user performance statistics
 export const getPerformanceStats = async (req, res) => {
   try {
     const userId = req.user.userId;
     console.log(`Fetching performance stats for user: ${userId}`);
 
-    // Early return for users with no tests
+    // early return for users with no tests
     const testCount = await TestResult.countDocuments({ user: userId });
     if (testCount === 0) {
       console.log(`No tests found for user: ${userId}`);
@@ -1356,7 +1359,7 @@ export const getPerformanceStats = async (req, res) => {
       });
     }
 
-    // Overall statistics
+    // overall statistics
     const overallStats = await TestResult.aggregate([
       { $match: { user: userId } },
       {
@@ -1373,7 +1376,7 @@ export const getPerformanceStats = async (req, res) => {
       },
     ]);
 
-    // Course-wise performance
+    // course-wise performance
     const courseStats = await TestResult.aggregate([
       { $match: { user: userId } },
       {
@@ -1406,7 +1409,7 @@ export const getPerformanceStats = async (req, res) => {
       { $sort: { testsTaken: -1 } },
     ]);
 
-    // Difficulty-wise performance
+    // difficulty-wise performance
     const difficultyStats = await TestResult.aggregate([
       { $match: { user: userId } },
       {
@@ -1427,7 +1430,7 @@ export const getPerformanceStats = async (req, res) => {
       },
     ]);
 
-    // Recent performance trend (last 10 tests)
+    // recent performance trend (last 10 tests)
     const recentTests = await TestResult.find({ user: userId })
       .populate("course", "name")
       .select("course difficulty percentage completedAt")
@@ -1461,14 +1464,14 @@ export const getPerformanceStats = async (req, res) => {
   }
 };
 
-// Get leaderboard for a course
+// get leaderboard for a course
 export const getLeaderboard = async (req, res) => {
   try {
     const { courseId } = req.params;
     const difficulty = req.query.difficulty || "all";
     const limit = parseInt(req.query.limit) || 100;
 
-    // Validate course exists
+    // validate course exists
     const Course = (await import("../Models/Course.js")).default;
     const course = await Course.findById(courseId);
     if (!course) {
@@ -1478,14 +1481,14 @@ export const getLeaderboard = async (req, res) => {
       });
     }
 
-    // Get leaderboard from service (handles Redis + MongoDB fallback)
+    // get leaderboard from service (handles redis + mongodb fallback)
     const leaderboard = await leaderboardService.getLeaderboard(
       courseId,
       difficulty,
       limit
     );
 
-    // Get current user's rank if authenticated
+    // get current user's rank if authenticated
     let userRank = null;
     if (req.user?.userId) {
       userRank = await leaderboardService.getUserRank(
@@ -1495,7 +1498,7 @@ export const getLeaderboard = async (req, res) => {
       );
     }
 
-    // Handle all edge cases
+    // handle all edge cases
     if (!leaderboard || leaderboard.length === 0) {
       return res.status(200).json({
         success: true,
@@ -1504,12 +1507,12 @@ export const getLeaderboard = async (req, res) => {
           leaderboard: [],
           userRank: null,
           total: 0,
-          isEmpty: true, // Flag for frontend
+          isEmpty: true, // flag for frontend
         },
       });
     }
 
-    // Success with data
+    // success with data
     res.status(200).json({
       success: true,
       message: "Leaderboard retrieved successfully",

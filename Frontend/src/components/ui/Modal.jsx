@@ -1,3 +1,6 @@
+/**
+ * keeps the modal component focused and readable.
+ */
 import React, { useEffect, useRef, useCallback, useState } from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
@@ -5,7 +8,7 @@ import { useTheme } from "../../context/ThemeContext";
 import { XMarkIcon } from "@heroicons/react/24/outline";
 import { Button } from "./Button";
 
-// Focus trap hook
+// focus trap hook
 const useFocusTrap = (isOpen, containerRef) => {
   const previousFocusRef = useRef(null);
 
@@ -15,10 +18,10 @@ const useFocusTrap = (isOpen, containerRef) => {
     const container = containerRef.current;
     if (!container) return;
 
-    // Save current focus
+    // save current focus
     previousFocusRef.current = document.activeElement;
 
-    // Get focusable elements
+    // get focusable elements
     const getFocusableElements = () => {
       const focusableSelectors = [
         "button:not([disabled])",
@@ -52,17 +55,17 @@ const useFocusTrap = (isOpen, containerRef) => {
       }
     };
 
-    // Focus first element
+    // focus first element
     const focusableElements = getFocusableElements();
     focusableElements[0]?.focus();
 
-    // Add event listener
+    // event listener
     container.addEventListener("keydown", handleKeyDown);
 
     return () => {
       container.removeEventListener("keydown", handleKeyDown);
 
-      // Restore previous focus
+      // restore previous focus
       if (previousFocusRef.current) {
         previousFocusRef.current.focus();
       }
@@ -70,7 +73,7 @@ const useFocusTrap = (isOpen, containerRef) => {
   }, [isOpen, containerRef]);
 };
 
-// Advanced Modal Component
+// advanced modal component
 const Modal = ({
   isOpen = false,
   onClose,
@@ -107,46 +110,46 @@ const Modal = ({
   const overlayRef = useRef(null);
   const contentRef = useRef(null);
 
-  // Enable focus trap
+  // enable focus trap
   useFocusTrap(isOpen, modalRef);
 
-  // Mount/unmount effect
+  // mount/unmount effect
   useEffect(() => {
     setIsMounted(true);
     return () => setIsMounted(false);
   }, []);
 
-  // Handle open/close side effects
-  // Handle open/close side effects
+  // handle open/close side effects
+  // handle open/close side effects
   useEffect(() => {
     if (isOpen) {
       onOpen?.();
 
-      // Prevent body scroll
+      // prevent body scroll
       if (preventBodyScroll) {
         document.body.style.overflow = "hidden";
       }
 
-      // Call after open callback
+      // call open callback
       const timer = setTimeout(() => {
         onAfterOpen?.();
       }, 200);
 
-      // Cleanup function that ALWAYS runs when effect cleans up or component unmounts
+      // cleanup function that always runs when effect cleans up or component unmounts
       return () => {
         clearTimeout(timer);
-        // Always restore scroll when modal closes or component unmounts
+        // always restore scroll when modal closes or component unmounts
         if (preventBodyScroll) {
           document.body.style.overflow = "";
         }
       };
     } else {
-      // Modal is closed, ensure body scroll is restored
+      // modal is closed, ensure body scroll is restored
       if (preventBodyScroll) {
         document.body.style.overflow = "";
       }
 
-      // Call after close callback
+      // call close callback
       const timer = setTimeout(() => {
         onAfterClose?.();
       }, 200);
@@ -157,15 +160,15 @@ const Modal = ({
     }
   }, [isOpen, preventBodyScroll, onOpen, onAfterOpen, onAfterClose]);
 
-  // Safety cleanup on component unmount
+  // safety cleanup on component unmount
   useEffect(() => {
     return () => {
-      // Ensure body scroll is always restored when modal component unmounts
+      // ensure body scroll is always restored when modal component unmounts
       document.body.style.overflow = "";
     };
   }, []);
 
-  // Handle escape key
+  // handle escape key
   useEffect(() => {
     if (!closeOnEscape || !isOpen) return;
 
@@ -179,7 +182,7 @@ const Modal = ({
     return () => document.removeEventListener("keydown", handleEscape);
   }, [closeOnEscape, isOpen, onClose]);
 
-  // Handle overlay click
+  // handle overlay click
   const handleOverlayClick = useCallback(
     (event) => {
       if (!closeOnOverlay || !closable) return;
@@ -190,14 +193,14 @@ const Modal = ({
     [closeOnOverlay, closable, onClose]
   );
 
-  // Handle close button click
+  // handle close button click
   const handleCloseClick = useCallback(() => {
     if (closable) {
       onClose?.();
     }
   }, [closable, onClose]);
 
-  // Get size classes
+  // get size classes
   const getSizeClasses = () => {
     const sizes = {
       xs: "max-w-xs",
@@ -216,7 +219,7 @@ const Modal = ({
     return sizes[size] || sizes.md;
   };
 
-  // Get variant classes
+  // get variant classes
   const getVariantClasses = () => {
     const variants = {
       default: [
@@ -277,7 +280,7 @@ const Modal = ({
     return variants[variant] || variants.default;
   };
 
-  // Animation variants
+  // animation variants
   const overlayVariants = {
     hidden: {
       opacity: 0,
@@ -339,7 +342,7 @@ const Modal = ({
           style={style}
           {...rest}
         >
-          {/* Overlay */}
+          {/* overlay */}
           <motion.div
             ref={overlayRef}
             className={`
@@ -354,7 +357,7 @@ const Modal = ({
             onClick={handleOverlayClick}
           />
 
-          {/* Content */}
+          {/* content */}
           <motion.div
             ref={contentRef}
             className={`
@@ -371,7 +374,7 @@ const Modal = ({
             animate={animate && !reducedMotion ? "visible" : false}
             exit={animate && !reducedMotion ? "exit" : false}
           >
-            {/* Header */}
+            {/* header */}
             {(title || description || showCloseButton) && (
               <div
                 className={`
@@ -392,7 +395,7 @@ const Modal = ({
                   )}
                 </div>
 
-                {/* Close Button */}
+                {/* close button */}
                 {showCloseButton && closable && (
                   <Button
                     variant="ghost"
@@ -407,7 +410,7 @@ const Modal = ({
               </div>
             )}
 
-            {/* Body */}
+            {/* body */}
             <div
               className={`
               p-6
@@ -426,7 +429,7 @@ const Modal = ({
   return createPortal(modalContent, document.body);
 };
 
-// Modal Header Component
+// modal header component
 const ModalHeader = ({ children, className = "", ...rest }) => (
   <div
     className={`
@@ -440,7 +443,7 @@ const ModalHeader = ({ children, className = "", ...rest }) => (
   </div>
 );
 
-// Modal Title Component
+// modal title component
 const ModalTitle = ({ children, className = "", ...rest }) => (
   <h2
     className={`
@@ -453,7 +456,7 @@ const ModalTitle = ({ children, className = "", ...rest }) => (
   </h2>
 );
 
-// Modal Body Component
+// modal body component
 const ModalBody = ({ children, className = "", ...rest }) => (
   <div
     className={`
@@ -466,7 +469,7 @@ const ModalBody = ({ children, className = "", ...rest }) => (
   </div>
 );
 
-// Modal Footer Component
+// modal footer component
 const ModalFooter = ({
   children,
   className = "",
@@ -495,7 +498,7 @@ const ModalFooter = ({
   );
 };
 
-// Confirmation Modal Component
+// confirmation modal component
 const ConfirmModal = ({
   isOpen,
   onClose,
@@ -546,7 +549,7 @@ const ConfirmModal = ({
   );
 };
 
-// Alert Modal Component
+// alert modal component
 const AlertModal = ({
   isOpen,
   onClose,
@@ -559,13 +562,13 @@ const AlertModal = ({
   const getIcon = () => {
     switch (variant) {
       case "success":
-        return "✅";
+        return "done";
       case "warning":
-        return "⚠️";
+        return "note";
       case "danger":
-        return "❌";
+        return "error";
       default:
-        return "ℹ️";
+        return "info";
     }
   };
 
@@ -579,7 +582,9 @@ const AlertModal = ({
     >
       <ModalBody>
         <div className="text-center">
-          <div className="text-4xl mb-4">{getIcon()}</div>
+          <div className="mb-4 text-xs font-semibold uppercase tracking-[0.24em] text-primary">
+            {getIcon()}
+          </div>
           <h3 className="text-lg font-medium text-gray-900 dark:text-slate-100 mb-4">
             {title}
           </h3>
@@ -593,7 +598,7 @@ const AlertModal = ({
   );
 };
 
-// Compound exports
+// compound exports
 Modal.Header = ModalHeader;
 Modal.Title = ModalTitle;
 Modal.Body = ModalBody;

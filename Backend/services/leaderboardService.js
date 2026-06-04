@@ -1,3 +1,6 @@
+/**
+ * keeps the leaderboard service service focused and readable.
+ */
 import redisClient from "../Config/redis.js";
 import TestResult from "../Models/TestResult.js";
 import User from "../Models/User.js";
@@ -8,7 +11,7 @@ class LeaderboardService {
     return `leaderboard:${courseId}:${difficulty}`;
   }
 
-  // Course-specific leaderboard (best performance in a course)
+  // course-specific leaderboard (best performance in a course)
   async getLeaderboard(courseId, difficulty = "all", limit = 100, offset = 0) {
     try {
       const key = this.getLeaderboardKey(courseId, difficulty);
@@ -17,8 +20,8 @@ class LeaderboardService {
       if (exists) {
         const userIds = await redisClient.zrevrange(
           key,
-          offset, // Start from offset
-          offset + limit - 1, // End at offset + limit
+          offset, // start from offset
+          offset + limit - 1, // end at offset + limit
           "WITHSCORES"
         );
 
@@ -48,7 +51,7 @@ class LeaderboardService {
 
         return leaderboard;
       } else {
-        // Fallback to MongoDB
+        // fallback to mongodb
         return await this.getCourseLeaderboardFromDB(
           courseId,
           difficulty,
@@ -61,7 +64,7 @@ class LeaderboardService {
     }
   }
 
-  // MongoDB fallback for course leaderboards
+  // mongodb fallback for course leaderboards
   async getCourseLeaderboardFromDB(courseId, difficulty = "all", limit = 100) {
     try {
       const matchCriteria = { course: courseId };
@@ -108,7 +111,7 @@ class LeaderboardService {
     }
   }
 
-  // Update course-specific leaderboard
+  // update course-specific leaderboard
   async updateLeaderboard(userId, courseId, difficulty, percentage, timeTaken) {
     try {
       const key = this.getLeaderboardKey(courseId, difficulty);
@@ -124,7 +127,7 @@ class LeaderboardService {
     }
   }
 
-  // Points-based course leaderboard (total points in a course)
+  // points-based course leaderboard (total points in a course)
   async getCourseLeaderboardWithPoints(
     courseId,
     difficulty = "all",
@@ -200,7 +203,7 @@ class LeaderboardService {
       })
     );
 
-    // Cache in Redis
+    // cache in redis
     const key = `leaderboard:points:${courseId}:${difficulty}`;
     const pipeline = redisClient.pipeline();
 
@@ -215,24 +218,24 @@ class LeaderboardService {
   }
 
   async formatCourseLeaderboard(redisResults, courseId, difficulty) {
-    // Extract all user IDs first
+    // extract all user ids first
     const userIds = [];
     for (let i = 0; i < redisResults.length; i += 2) {
       userIds.push(redisResults[i]);
     }
 
-    // SINGLE database query to get all users at once
+    // single database query to get all users at once
     const users = await User.find({ _id: { $in: userIds } })
       .select("username name badges")
       .lean();
 
-    // Create a lookup map for O(1) access
+    // create a lookup map for o(1) access
     const userMap = new Map();
     users.forEach((user) => {
       userMap.set(user._id.toString(), user);
     });
 
-    // Get all test stats in a SINGLE aggregation query
+    // get all test stats in a single aggregation query
     const mongoose = await import("mongoose");
     const courseObjectId = mongoose.Types.ObjectId.createFromHexString(courseId);
 
@@ -253,13 +256,13 @@ class LeaderboardService {
       },
     ]);
 
-    // Create stats lookup map
+    // create stats lookup map
     const statsMap = new Map();
     testStatsArray.forEach((stat) => {
       statsMap.set(stat._id.toString(), stat);
     });
 
-    // Now build leaderboard array using the maps
+    // now build leaderboard array using the maps
     const leaderboard = [];
     for (let i = 0; i < redisResults.length; i += 2) {
       const userId = redisResults[i];
@@ -268,7 +271,7 @@ class LeaderboardService {
       const user = userMap.get(userId);
       const stats = statsMap.get(userId) || {};
 
-      // Decode the composite score
+      // decode the composite score
       const percentage = Math.floor(score / 1000);
       const timeTaken = 1000000 - (score % 1000);
 
@@ -277,24 +280,24 @@ class LeaderboardService {
         userId,
         username: user?.username || "unknown",
         name: user?.name || "Unknown User",
-        points: score, // This is the composite score for sorting
+        points: score, // this is the composite score for sorting
         percentage: stats.bestPercentage || percentage,
         timeTaken: stats.fastestTime || timeTaken,
         testsCompleted: stats.testsCompleted || 0,
         badges: user?.badges || [],
-        score, // Keep for reference
+        score, // keep for reference
       });
     }
 
     return leaderboard;
   }
 
-  // Add this method to initialize leaderboards on server startup
+  // this method to initialize leaderboards on server startup
   async initialize() {
     try {
       console.log("Initializing leaderboard service...");
-      // Optional: You can pre-populate Redis cache here if needed
-      // For now, just confirm the service is ready
+      // optional: you can pre-populate redis cache here if needed
+      // for now, just confirm the service is ready
       console.log("Leaderboard service initialized successfully");
       return true;
     } catch (error) {
@@ -303,18 +306,18 @@ class LeaderboardService {
     }
   }
 
-  // Add this method to get a user's rank in a course leaderboard
+  // this method to get a user's rank in a course leaderboard
   async getUserRank(userId, courseId, difficulty = "all") {
     try {
       const key = this.getLeaderboardKey(courseId, difficulty);
       const exists = await redisClient.exists(key);
 
       if (exists) {
-        // Get rank from Redis (0-based, so add 1)
+        // get rank from redis (0-based, so 1)
         const rank = await redisClient.zrevrank(key, userId.toString());
         return rank !== null ? rank + 1 : null;
       } else {
-        // Fallback to MongoDB
+        // fallback to mongodb
         return await this.getUserRankFromDB(userId, courseId, difficulty);
       }
     } catch (error) {
@@ -323,7 +326,7 @@ class LeaderboardService {
     }
   }
 
-  // Add this helper method for MongoDB rank lookup
+  // this helper method for mongodb rank lookup
   async getUserRankFromDB(userId, courseId, difficulty = "all") {
     try {
       const matchCriteria = { course: courseId };
