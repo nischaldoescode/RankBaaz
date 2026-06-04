@@ -7,6 +7,56 @@ import redisClient, {
   summarizeRedisError,
 } from "../Config/redis.js";
 
+const MEMORY_SECRET_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+const MEMORY_NONCE_TTL_MS = 5 * 60 * 1000;
+const memorySecrets = new Map();
+const memoryNonces = new Map();
+
+const getSecretKey = (userId, isAdmin = false) => {
+  const prefix = isAdmin ? "signing:secret:admin" : "signing:secret";
+  return `${prefix}:${userId}`;
+};
+
+const pruneExpiredMemoryEntries = (store) => {
+  const now = Date.now();
+  for (const [key, value] of store.entries()) {
+    if (!value?.expiresAt || value.expiresAt <= now) {
+      store.delete(key);
+    }
+  }
+};
+
+const setMemorySecret = (key, secret, ttlMs = MEMORY_SECRET_TTL_MS) => {
+  pruneExpiredMemoryEntries(memorySecrets);
+  memorySecrets.set(key, {
+    value: secret,
+    expiresAt: Date.now() + ttlMs,
+  });
+};
+
+const getMemorySecret = (key) => {
+  const entry = memorySecrets.get(key);
+  if (!entry) return null;
+  if (entry.expiresAt <= Date.now()) {
+    memorySecrets.delete(key);
+    return null;
+  }
+  return entry.value;
+};
+
+const markMemoryNonce = (key) => {
+  pruneExpiredMemoryEntries(memoryNonces);
+  const existing = memoryNonces.get(key);
+  if (existing && existing.expiresAt > Date.now()) {
+    return false;
+  }
+  memoryNonces.set(key, {
+    value: "used",
+    expiresAt: Date.now() + MEMORY_NONCE_TTL_MS,
+  });
+  return true;
+};
+
 /**
  * generate signing secret for authenticated session
  *
@@ -19,13 +69,19 @@ import redisClient, {
  */
 export const generateSigningSecret = async (userId, isAdmin = false) => {
   const secret = crypto.randomBytes(32).toString("hex");
-
-  // use different redis key prefix for admin vs user
-  const prefix = isAdmin ? "signing:secret:admin" : "signing:secret";
-  const key = `${prefix}:${userId}`;
+  const key = getSecretKey(userId, isAdmin);
 
   // store in redis with 7-day expiry (matches auth token)
-  await redisClient.setex(key, 7 * 24 * 60 * 60, secret);
+  try {
+    await redisClient.setex(key, 7 * 24 * 60 * 60, secret);
+  } catch (error) {
+    if (!isRedisConnectionError(error)) throw error;
+    setMemorySecret(key, secret);
+    console.warn(
+      "Redis unavailable while storing signing secret; using process memory:",
+      summarizeRedisError(error),
+    );
+  }
 
   console.log(
     `Generated new secret for ${isAdmin ? "admin" : "user"} ${userId}`
@@ -42,10 +98,23 @@ export const generateSigningSecret = async (userId, isAdmin = false) => {
  * @returns {promise<string|null>} - secret or null if not found
  */
 const getSigningSecret = async (userId, isAdmin = false) => {
-  const prefix = isAdmin ? "signing:secret:admin" : "signing:secret";
-  const key = `${prefix}:${userId}`;
+  const key = getSecretKey(userId, isAdmin);
 
-  const secret = await redisClient.get(key);
+  let secret = null;
+
+  try {
+    secret = await redisClient.get(key);
+    if (secret) {
+      setMemorySecret(key, secret);
+    }
+  } catch (error) {
+    if (!isRedisConnectionError(error)) throw error;
+    secret = getMemorySecret(key);
+    console.warn(
+      "Redis unavailable while reading signing secret; checking process memory:",
+      summarizeRedisError(error),
+    );
+  }
 
   if (!secret && process.env.NODE_ENV === "development") {
     console.warn(
@@ -177,21 +246,19 @@ export const verifyRequestSignature = async (req, res, next) => {
     const noncePrefix = isAdmin ? "nonce:admin" : "nonce";
     const nonceKey = `${noncePrefix}:${userId}:${nonce}`;
 
-    let nonceExists;
+    let nonceExists = false;
+    let nonceCheckedWithRedis = true;
 
     try {
       nonceExists = await redisClient.get(nonceKey);
     } catch (redisError) {
-      console.error(
-        "Redis error checking nonce:",
+      if (!isRedisConnectionError(redisError)) throw redisError;
+      nonceCheckedWithRedis = false;
+      nonceExists = !markMemoryNonce(nonceKey);
+      console.warn(
+        "Redis unavailable while checking nonce; using process memory:",
         summarizeRedisError(redisError),
       );
-      // security: reject request if redis is down (fail secure)
-      return res.status(503).json({
-        success: false,
-        message: "Service temporarily unavailable",
-        code: "SERVICE_ERROR",
-      });
     }
 
     if (nonceExists) {
@@ -289,39 +356,51 @@ export const verifyRequestSignature = async (req, res, next) => {
       });
     }
 
-    try {
-      const storedNonce = await redisClient.set(
-        nonceKey,
-        "used",
-        "EX",
-        5 * 60,
-        "NX",
-      );
+    if (nonceCheckedWithRedis) {
+      try {
+        const storedNonce = await redisClient.set(
+          nonceKey,
+          "used",
+          "EX",
+          5 * 60,
+          "NX",
+        );
 
-      if (storedNonce !== "OK") {
-        console.warn("Replay attack detected:", {
-          userId,
-          isAdmin,
-          nonce: nonce.substring(0, 10) + "...",
-          path: req.originalUrl,
-        });
+        if (storedNonce !== "OK") {
+          console.warn("Replay attack detected:", {
+            userId,
+            isAdmin,
+            nonce: nonce.substring(0, 10) + "...",
+            path: req.originalUrl,
+          });
 
-        return res.status(403).json({
-          success: false,
-          message: "Request already processed",
-          code: "REPLAY_ATTACK",
-        });
+          return res.status(403).json({
+            success: false,
+            message: "Request already processed",
+            code: "REPLAY_ATTACK",
+          });
+        }
+      } catch (redisError) {
+        if (!isRedisConnectionError(redisError)) throw redisError;
+        if (!markMemoryNonce(nonceKey)) {
+          console.warn("Replay attack detected:", {
+            userId,
+            isAdmin,
+            nonce: nonce.substring(0, 10) + "...",
+            path: req.originalUrl,
+          });
+
+          return res.status(403).json({
+            success: false,
+            message: "Request already processed",
+            code: "REPLAY_ATTACK",
+          });
+        }
+        console.warn(
+          "Redis unavailable while storing nonce; using process memory:",
+          summarizeRedisError(redisError),
+        );
       }
-    } catch (redisError) {
-      console.error(
-        "Redis error storing nonce:",
-        summarizeRedisError(redisError),
-      );
-      return res.status(503).json({
-        success: false,
-        message: "Service temporarily unavailable",
-        code: "SERVICE_ERROR",
-      });
     }
 
     // signature valid - log in development
