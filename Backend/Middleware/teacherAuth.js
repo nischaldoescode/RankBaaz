@@ -6,6 +6,8 @@ import Teacher from "../Models/Teacher.js";
 import redisClient from "../Config/redis.js";
 import { verifyRequestSignature } from "./requestSignature.js";
 
+const teacherAuthCacheKey = (id) => `teacher:auth:${id}`;
+
 /**
  * authenticate teacher via jwt cookie
  * also checks accessblocked status from cache or db
@@ -43,7 +45,7 @@ export const authenticateTeacher = async (req, res, next) => {
     }
 
     // try cache first
-    const cacheKey = `teacher:${decoded.teacherId}`;
+    const cacheKey = teacherAuthCacheKey(decoded.teacherId);
     let teacherData = null;
 
     try {

@@ -19,7 +19,9 @@ import redisClient, { invalidateCache } from "../Config/redis.js";
 const PLATFORM_FEE_PERCENT = 20;
 const TEACHER_CACHE_TTL = 300; // 5 min
 
-const teacherCacheKey = (id) => `teacher:${id}`;
+const teacherCacheKey = (id) => `teacher:profile:data:${id}`;
+const teacherAuthCacheKey = (id) => `teacher:auth:${id}`;
+const legacyTeacherCacheKey = (id) => `teacher:${id}`;
 const publicProfileCacheKey = (username) => `teacher:profile:${username}`;
 
 const normalizeNameParts = (name = "") =>
@@ -84,7 +86,11 @@ const setTeacherCookie = (res, token) => {
 
 const invalidateTeacherCache = async (teacherId) => {
   try {
-    await redisClient.del(teacherCacheKey(teacherId));
+    await redisClient.del(
+      teacherCacheKey(teacherId),
+      teacherAuthCacheKey(teacherId),
+      legacyTeacherCacheKey(teacherId),
+    );
   } catch {}
 };
 
@@ -1162,7 +1168,11 @@ export const getTeacherProfile = async (req, res) => {
     const cacheKey = teacherCacheKey(teacherId);
     const cached = await redisClient.get(cacheKey);
     if (cached) {
-      return res.status(200).json({ success: true, data: JSON.parse(cached) });
+      const cachedData = JSON.parse(cached);
+      if (cachedData?.teacher) {
+        return res.status(200).json({ success: true, data: cachedData });
+      }
+      await redisClient.del(cacheKey);
     }
 
     const teacher = await Teacher.findById(teacherId)
@@ -2352,7 +2362,7 @@ export const approveTeacherCourse = async (req, res) => {
 
     // invalidate caches
     await Promise.allSettled([
-      redisClient.del(`teacher:${course.teacher._id}`),
+      invalidateTeacherCache(course.teacher._id),
       redisClient.del(
         publicProfileCacheKey(course.teacher?.username || "unknown"),
       ),
