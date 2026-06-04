@@ -53,6 +53,15 @@ const escapeHtml = (value = "") =>
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#39;");
 
+const cleanProfileText = (value = "", maxLength = 500) =>
+  String(value || "")
+    .replace(/\u0000/g, "")
+    .replace(/\r\n?/g, "\n")
+    .replace(/[^\S\n]+/g, " ")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim()
+    .slice(0, maxLength);
+
 const generateTeacherToken = (teacherId) =>
   jwt.sign(
     { teacherId, role: "teacher" },
@@ -1386,30 +1395,30 @@ export const getTeacherAnalytics = async (req, res) => {
 };
 
 export const updateTeacherProfile = async (req, res) => {
+  let uploadedProfileImage = null;
+
   try {
     const { bio, qualification, showQualification } = req.body;
     const teacherId = req.teacher.teacherId;
 
     const updates = {};
-    if (bio !== undefined) updates.bio = bio.trim().slice(0, 500);
+    if (bio !== undefined) updates.bio = cleanProfileText(bio, 500);
     if (qualification !== undefined)
-      updates.qualification = qualification.trim().slice(0, 300);
+      updates.qualification = cleanProfileText(qualification, 300);
     if (showQualification !== undefined) {
       updates.showQualification =
         showQualification === true || showQualification === "true";
     }
 
+    let previousProfileImage = null;
     if (req.file) {
       const teacher = await Teacher.findById(teacherId).select("profileImage");
-      if (teacher?.profileImage?.public_id) {
-        await cloudinary.uploader
-          .destroy(teacher.profileImage.public_id)
-          .catch(() => {});
-      }
-      updates.profileImage = {
+      previousProfileImage = teacher?.profileImage || null;
+      uploadedProfileImage = {
         public_id: req.file.filename,
         url: req.file.path,
       };
+      updates.profileImage = uploadedProfileImage;
     }
 
     const teacher = await Teacher.findByIdAndUpdate(teacherId, updates, {
@@ -1417,10 +1426,29 @@ export const updateTeacherProfile = async (req, res) => {
       runValidators: true,
     }).select("-password -otp");
 
+    if (!teacher) {
+      return res.status(404).json({ success: false, message: "Teacher not found" });
+    }
+
+    if (
+      previousProfileImage?.public_id &&
+      previousProfileImage.public_id !== uploadedProfileImage?.public_id
+    ) {
+      await cloudinary.uploader
+        .destroy(previousProfileImage.public_id)
+        .catch(() => {});
+    }
+
     await invalidateTeacherPublicCaches(teacher);
 
     return res.status(200).json({ success: true, data: { teacher } });
   } catch (error) {
+    if (uploadedProfileImage?.public_id) {
+      await cloudinary.uploader
+        .destroy(uploadedProfileImage.public_id)
+        .catch(() => {});
+    }
+
     res.status(500).json({ success: false, message: "Update failed" });
   }
 };

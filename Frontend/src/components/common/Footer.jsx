@@ -5,9 +5,7 @@ import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
-  GraduationCap,
   Mail,
-  Phone,
   Instagram,
   Twitter,
   Facebook,
@@ -50,9 +48,8 @@ const Footer = () => {
           { name: "Contact", href: "/contact" },
         ];
 
-  // resources (static)
+  // resources
   const resources = [
-    { name: "Help Center", href: "/help" },
     { name: "FAQs", href: "/#faqs" },
   ];
 
@@ -122,15 +119,15 @@ const Footer = () => {
                     alt={siteName}
                     className="h-12 w-auto object-contain rounded-xl"
                     fallback={
-                      <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-                        <GraduationCap className="w-5 h-5 text-primary-foreground" />
-                      </div>
+                      <span className="rounded-lg bg-primary/10 px-3 py-2 text-sm font-bold text-primary">
+                        {siteName}
+                      </span>
                     }
                   />
                 ) : (
-                  <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-                    <GraduationCap className="w-5 h-5 text-primary-foreground" />
-                  </div>
+                  <span className="rounded-lg bg-primary/10 px-3 py-2 text-sm font-bold text-primary">
+                    {siteName}
+                  </span>
                 )}
                 <span className="text-lg font-bold text-foreground">
                   {siteName}

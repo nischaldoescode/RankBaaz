@@ -210,17 +210,16 @@ const Sidebar = ({ isOpen, onClose }) => {
                         transition-all duration-300 ease-out hover:scale-[1.02] active:scale-[0.98]
                         ${
                           isActive
-                            ? "bg-gradient-to-r from-blue-50 via-blue-50 to-blue-100 text-blue-700 shadow-lg shadow-blue-100/50 border border-blue-200/50"
-                            : "text-gray-600 hover:bg-gradient-to-r hover:from-gray-50 hover:to-gray-100 hover:text-gray-900 hover:shadow-md"
+                            ? "bg-blue-50 text-blue-700 border border-blue-100"
+                            : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
                         }
                       `}
                       style={{
                         animationDelay: `${index * 50}ms`,
                       }}
                     >
-                      {/* background gradient for active state */}
                       {isActive && (
-                        <div className="absolute inset-0 bg-gradient-to-r from-blue-600/5 to-blue-700/5 rounded-2xl" />
+                        <div className="absolute inset-0 rounded-2xl bg-blue-500/5" />
                       )}
 
                       {/* icon with enhanced styling */}
@@ -230,7 +229,7 @@ const Sidebar = ({ isOpen, onClose }) => {
                         transition-all duration-300
                         ${
                           isActive
-                            ? `bg-gradient-to-br ${item.color} text-white shadow-lg`
+                            ? "bg-blue-500 text-white"
                             : "text-gray-400 group-hover:text-gray-600 group-hover:bg-gray-100"
                         }
                       `}
@@ -245,36 +244,13 @@ const Sidebar = ({ isOpen, onClose }) => {
                         {item.name}
                       </span>
 
-                      {/* active indicator with pulse effect */}
                       {isActive && (
-                        <>
-                          <div className="ml-auto w-2 h-2 bg-blue-600 rounded-full animate-pulse" />
-                          <div className="absolute right-0 top-1/2 transform -translate-y-1/2 w-1 h-8 bg-gradient-to-b from-blue-500 to-blue-600 rounded-l-full" />
-                        </>
+                        <div className="ml-auto h-2 w-2 rounded-full bg-blue-500" />
                       )}
                     </Link>
                   );
                 })}
               </nav>
-
-              {/* enhanced bottom section */}
-              <div className="flex-shrink-0 border-t border-gray-200/80 p-4 sm:p-6 mt-6">
-                <div className="relative overflow-hidden group">
-                  <div className="absolute inset-0 bg-gradient-to-r from-blue-50 to-purple-50 rounded-2xl opacity-50 group-hover:opacity-100 transition-opacity duration-300" />
-                  <div className="relative flex items-center p-4 rounded-2xl bg-gradient-to-r from-gray-50/80 to-gray-100/80 border border-gray-200/60 hover:shadow-lg transition-all duration-300 hover:scale-[1.02]">
-                    <div className="w-12 h-12 bg-gradient-to-br from-blue-500 via-blue-600 to-blue-700 rounded-2xl flex items-center justify-center shadow-lg">
-                      <Users className="w-6 h-6 text-white" />
-                    </div>
-                    <div className="ml-4 min-w-0 flex-1">
-                      <p className="text-sm font-bold text-gray-800">
-                        Management
-                      </p>
-                      <p className="text-xs text-gray-500">Control Panel</p>
-                    </div>
-                    <div className="w-2 h-2 bg-blue-500 rounded-full" />
-                  </div>
-                </div>
-              </div>
             </div>
           </div>
         </div>

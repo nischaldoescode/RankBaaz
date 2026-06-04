@@ -209,22 +209,6 @@ export const verifyRequestSignature = async (req, res, next) => {
       });
     }
 
-    // store nonce for 5 minutes
-    try {
-      await redisClient.setex(nonceKey, 5 * 60, "used");
-    } catch (redisError) {
-      console.error(
-        "Redis error storing nonce:",
-        summarizeRedisError(redisError),
-      );
-      // security: reject if we can't store nonce (fail secure)
-      return res.status(503).json({
-        success: false,
-        message: "Service temporarily unavailable",
-        code: "SERVICE_ERROR",
-      });
-    }
-
     // get signing secret (with admin flag)
     const secret = await getSigningSecret(userId, isAdmin);
 
@@ -245,8 +229,12 @@ export const verifyRequestSignature = async (req, res, next) => {
     // create signature payload
     const method = req.method;
     const path = req.originalUrl;
+    const requestBody =
+      req.body && typeof req.body === "object" && !Buffer.isBuffer(req.body)
+        ? req.body
+        : {};
     const body =
-      Object.keys(req.body).length > 0 ? JSON.stringify(req.body) : "";
+      Object.keys(requestBody).length > 0 ? JSON.stringify(requestBody) : "";
     const payload = `${timestamp}:${nonce}:${method}:${path}:${body}`;
 
     // calculate expected signature
@@ -298,6 +286,41 @@ export const verifyRequestSignature = async (req, res, next) => {
         success: false,
         message: "Invalid request signature. Please refresh and try again.",
         code: "SIGNATURE_INVALID",
+      });
+    }
+
+    try {
+      const storedNonce = await redisClient.set(
+        nonceKey,
+        "used",
+        "EX",
+        5 * 60,
+        "NX",
+      );
+
+      if (storedNonce !== "OK") {
+        console.warn("Replay attack detected:", {
+          userId,
+          isAdmin,
+          nonce: nonce.substring(0, 10) + "...",
+          path: req.originalUrl,
+        });
+
+        return res.status(403).json({
+          success: false,
+          message: "Request already processed",
+          code: "REPLAY_ATTACK",
+        });
+      }
+    } catch (redisError) {
+      console.error(
+        "Redis error storing nonce:",
+        summarizeRedisError(redisError),
+      );
+      return res.status(503).json({
+        success: false,
+        message: "Service temporarily unavailable",
+        code: "SERVICE_ERROR",
       });
     }
 

@@ -49,7 +49,11 @@ class TeacherRequestSigner {
 
   generateSignature(method, path, body, timestamp, nonce) {
     if (!this.signingSecret) throw new Error("Signing secret not available");
-    const bodyString = body && Object.keys(body).length > 0 ? JSON.stringify(body) : "";
+    const isFormData = typeof FormData !== "undefined" && body instanceof FormData;
+    const bodyString =
+      body && !isFormData && Object.keys(body).length > 0
+        ? JSON.stringify(body)
+        : "";
     const payload = `${timestamp}:${nonce}:${method}:${path}:${bodyString}`;
     return crypto.HmacSHA256(payload, this.signingSecret).toString();
   }

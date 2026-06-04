@@ -16,6 +16,7 @@ import {
   Plus,
   ChevronDown,
   ChevronRight,
+  MoreVertical,
   Clock,
   Target,
   Play,
@@ -636,6 +637,7 @@ const Courses = () => {
   const [videoPlayerModal, setVideoPlayerModal] = useState(null);
   const [showEditPreview, setShowEditPreview] = useState(false);
   const [editingCourse, setEditingCourse] = useState(null);
+  const [openActionMenu, setOpenActionMenu] = useState(null);
   const [deleteConfirmCourse, setDeleteConfirmCourse] = useState(null);
   const [bulkDeleteConfirmation, setBulkDeleteConfirmation] = useState(null);
   const [editFormData, setEditFormData] = useState({});
@@ -680,18 +682,29 @@ const Courses = () => {
 
     if (editCourseId) {
       const courseToEdit = courses.find((c) => c._id === editCourseId);
-      if (courseToEdit) {
+      if (courseToEdit && editingCourse?._id !== editCourseId) {
         handleEditCourse(courseToEdit);
       }
     }
 
     if (manageCourseId) {
       const courseToManage = courses.find((c) => c._id === manageCourseId);
-      if (courseToManage) {
+      if (courseToManage && expandedCourse !== manageCourseId) {
         handleExpandCourse(manageCourseId);
       }
     }
-  }, [courses]); // run when courses are loaded
+  }, [courses, editingCourse?._id, expandedCourse]); // run when courses are loaded
+
+  useEffect(() => {
+    const closeActionMenu = (event) => {
+      if (!event.target.closest("[data-course-actions-menu]")) {
+        setOpenActionMenu(null);
+      }
+    };
+
+    document.addEventListener("mousedown", closeActionMenu);
+    return () => document.removeEventListener("mousedown", closeActionMenu);
+  }, []);
 
   const loadCourseCoupons = async (courseId) => {
     setLoadingCoupons((prev) => ({ ...prev, [courseId]: true }));
@@ -1883,14 +1896,14 @@ const Courses = () => {
   return (
     <div className="space-y-4 sm:space-y-6 p-3 sm:p-6 bg-gray-50 min-h-screen">
       {/* header */}
-      <div className="bg-white rounded-xl shadow-lg p-4 sm:p-6 border border-gray-100">
+      <div className="bg-white rounded-xl shadow-sm p-4 sm:p-6 border border-gray-100">
         <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4 sm:gap-6">
           <div className="flex items-center space-x-4">
-            <div className="p-3 bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl shadow-lg">
+            <div className="p-3 bg-blue-500 rounded-xl">
               <BookOpen className="h-8 w-8 text-white" />
             </div>
             <div>
-              <h1 className="text-3xl font-bold text-gray-900 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text">
+              <h1 className="text-3xl font-bold text-gray-900">
                 Course Management
               </h1>
               <p className="text-gray-600 mt-1">
@@ -1962,7 +1975,7 @@ const Courses = () => {
 
             <button
               onClick={() => navigate("/courses/create")}
-              className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-2 rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all duration-200 flex items-center space-x-2 shadow-lg hover:shadow-xl cursor-pointer"
+              className="bg-blue-500 text-white px-6 py-2 rounded-lg hover:bg-blue-600 transition-all duration-200 flex items-center space-x-2 cursor-pointer"
             >
               <Plus className="h-4 w-4" />
               <span>Create Course</span>
@@ -2267,7 +2280,7 @@ const Courses = () => {
                           </div>
                         </div>
 
-                        {/* action buttons */}
+                        {/* action menu */}
                         <div className="flex flex-row items-start justify-start lg:justify-end gap-1 sm:gap-2 mt-4 lg:mt-0 lg:ml-2 w-full lg:w-auto lg:flex-shrink-0">
                           <button
                             onClick={() => handleExpandCourse(course._id)}
@@ -2280,39 +2293,68 @@ const Courses = () => {
                               <ChevronRight className="h-4 w-4 sm:h-5 sm:w-5 group-hover:scale-110 transition-transform" />
                             )}
                           </button>
-                          <button
-                            onClick={() => handleToggleCourseStatus(course)}
-                            className={`p-2 rounded-lg transition-all duration-200 group cursor-pointer flex-shrink-0 ${
-                              course.isActive || course.status === "active"
-                                ? "text-green-600 hover:text-green-700 hover:bg-green-50"
-                                : "text-gray-400 hover:text-red-600 hover:bg-red-50"
-                            }`}
-                            title={`${
-                              course.isActive || course.status === "active"
-                                ? "Deactivate"
-                                : "Activate"
-                            } Course`}
-                          >
-                            {course.isActive || course.status === "active" ? (
-                              <Eye className="h-4 w-4 sm:h-5 sm:w-5 group-hover:scale-110 transition-transform" />
-                            ) : (
-                              <Eye className="h-4 w-4 sm:h-5 sm:w-5 group-hover:scale-110 transition-transform opacity-50" />
+                          <div className="relative" data-course-actions-menu>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setOpenActionMenu((current) =>
+                                  current === course._id ? null : course._id,
+                                )
+                              }
+                              className="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all duration-200 cursor-pointer flex-shrink-0"
+                              aria-haspopup="menu"
+                              aria-expanded={openActionMenu === course._id}
+                              title="Course actions"
+                            >
+                              <MoreVertical className="h-4 w-4 sm:h-5 sm:w-5" />
+                            </button>
+
+                            {openActionMenu === course._id && (
+                              <div
+                                role="menu"
+                                className="absolute right-0 top-11 z-40 w-56 overflow-hidden rounded-lg border border-gray-200 bg-white py-1 shadow-lg"
+                              >
+                                <button
+                                  type="button"
+                                  role="menuitem"
+                                  onClick={() => {
+                                    setOpenActionMenu(null);
+                                    handleEditCourse(course);
+                                  }}
+                                  className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-700"
+                                >
+                                  <Edit2 className="h-4 w-4" />
+                                  Edit course
+                                </button>
+                                <button
+                                  type="button"
+                                  role="menuitem"
+                                  onClick={() => {
+                                    setOpenActionMenu(null);
+                                    handleToggleCourseStatus(course);
+                                  }}
+                                  className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-700"
+                                >
+                                  <Eye className="h-4 w-4" />
+                                  {course.isActive || course.status === "active"
+                                    ? "Deactivate course"
+                                    : "Activate course"}
+                                </button>
+                                <button
+                                  type="button"
+                                  role="menuitem"
+                                  onClick={() => {
+                                    setOpenActionMenu(null);
+                                    setDeleteConfirmCourse(course);
+                                  }}
+                                  className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm text-red-600 hover:bg-red-50"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                  Delete course
+                                </button>
+                              </div>
                             )}
-                          </button>
-                          <button
-                            onClick={() => handleEditCourse(course)}
-                            className="p-2 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-all duration-200 group cursor-pointer flex-shrink-0"
-                            title="Edit Course"
-                          >
-                            <Edit2 className="h-4 w-4 sm:h-5 sm:w-5 group-hover:scale-110 transition-transform" />
-                          </button>
-                          <button
-                            onClick={() => setDeleteConfirmCourse(course)}
-                            className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all duration-200 group cursor-pointer flex-shrink-0"
-                            title="Delete Course"
-                          >
-                            <Trash2 className="h-4 w-4 sm:h-5 sm:w-5 group-hover:scale-110 transition-transform" />
-                          </button>
+                          </div>
                         </div>
                       </div>
                     </div>

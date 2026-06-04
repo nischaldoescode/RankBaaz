@@ -107,8 +107,34 @@ const uploadDocumentFiles = multer({
 
 const handleProfileUpload = (req, res, next) => {
   uploadProfileImage(req, res, (err) => {
-    if (err)
-      return res.status(400).json({ success: false, message: err.message });
+    if (err) {
+      if (err instanceof multer.MulterError) {
+        if (err.code === "LIMIT_FILE_SIZE") {
+          return res.status(400).json({
+            success: false,
+            message: "Profile image must be under 1MB",
+          });
+        }
+
+        if (err.code === "LIMIT_UNEXPECTED_FILE") {
+          return res.status(400).json({
+            success: false,
+            message: "Use profileImage as the upload field",
+          });
+        }
+      }
+
+      const isBrokenMultipart = String(err.message || "").includes(
+        "Unexpected end of form",
+      );
+
+      return res.status(400).json({
+        success: false,
+        message: isBrokenMultipart
+          ? "The profile upload was incomplete. Please choose the image again and retry."
+          : err.message,
+      });
+    }
     next();
   });
 };

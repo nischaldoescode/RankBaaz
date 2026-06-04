@@ -1,7 +1,7 @@
 /**
  * keeps the profile tab page focused and readable.
  */
-import React, { useState, useRef } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { useTeacher } from "../../context/TeacherContext.jsx";
 import { teacherApi } from "../../services/api.js";
@@ -21,18 +21,38 @@ const inputStyle = {
   transition: "border-color 0.2s",
 };
 
+const dicebearUrl = (seed) =>
+  `https://api.dicebear.com/9.x/croodles-neutral/svg?seed=${encodeURIComponent(seed)}`;
+
 const ProfileTab = () => {
   const { teacher, updateTeacher } = useTeacher();
+  const fallbackAvatar = useMemo(
+    () => dicebearUrl(teacher?.username || teacher?.name || "teacher"),
+    [teacher?.name, teacher?.username],
+  );
+  const savedAvatar = teacher?.profileImage?.url || fallbackAvatar;
   const [form, setForm] = useState({
     bio: teacher?.bio || "",
     qualification: teacher?.qualification || "",
     showQualification: teacher?.showQualification !== false,
   });
   const [imageFile, setImageFile] = useState(null);
-  const [imagePreview, setImagePreview] = useState(teacher?.profileImage?.url || null);
+  const [imagePreview, setImagePreview] = useState(savedAvatar);
+  const [objectPreviewUrl, setObjectPreviewUrl] = useState(null);
   const [loading, setLoading] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const fileRef = useRef();
+
+  useEffect(() => {
+    if (!imageFile) setImagePreview(savedAvatar);
+  }, [imageFile, savedAvatar]);
+
+  useEffect(
+    () => () => {
+      if (objectPreviewUrl) URL.revokeObjectURL(objectPreviewUrl);
+    },
+    [objectPreviewUrl],
+  );
 
   const handleImageChange = (file) => {
     if (!file) return;
@@ -44,8 +64,11 @@ const ProfileTab = () => {
       toast.error("Image must be under 1MB");
       return;
     }
+    const nextPreview = URL.createObjectURL(file);
+    if (objectPreviewUrl) URL.revokeObjectURL(objectPreviewUrl);
     setImageFile(file);
-    setImagePreview(URL.createObjectURL(file));
+    setObjectPreviewUrl(nextPreview);
+    setImagePreview(nextPreview);
   };
 
   const handleDrop = (e) => {
@@ -56,20 +79,54 @@ const ProfileTab = () => {
   };
 
   const handleSave = async () => {
-      setLoading(true);
+    const cleanBio = form.bio.trim();
+    const cleanQualification = form.qualification.trim();
+
+    if (cleanBio.length > 500) {
+      toast.error("Bio must be 500 characters or less");
+      return;
+    }
+
+    if (cleanQualification.length > 300) {
+      toast.error("Qualification must be 300 characters or less");
+      return;
+    }
+
+    setLoading(true);
     try {
-      const payload = new FormData();
-      payload.append("bio", form.bio);
-      payload.append("qualification", form.qualification);
-      payload.append("showQualification", form.showQualification ? "true" : "false");
-      if (imageFile) payload.append("profileImage", imageFile);
+      let payload;
+
+      if (imageFile) {
+        payload = new FormData();
+        payload.append("bio", cleanBio);
+        payload.append("qualification", cleanQualification);
+        payload.append("showQualification", form.showQualification ? "true" : "false");
+        payload.append("profileImage", imageFile);
+      } else {
+        payload = {
+          bio: cleanBio,
+          qualification: cleanQualification,
+          showQualification: form.showQualification,
+        };
+      }
 
       const res = await teacherApi.profile.update(payload);
-      updateTeacher(res.data.data.teacher);
+      const updatedTeacher = res.data.data.teacher;
+      updateTeacher(updatedTeacher);
+      setForm({
+        bio: updatedTeacher?.bio || "",
+        qualification: updatedTeacher?.qualification || "",
+        showQualification: updatedTeacher?.showQualification !== false,
+      });
       setImageFile(null);
+      if (fileRef.current) fileRef.current.value = "";
+      if (objectPreviewUrl) {
+        URL.revokeObjectURL(objectPreviewUrl);
+        setObjectPreviewUrl(null);
+      }
       toast.success("Profile updated");
-    } catch {
-      toast.error("Failed to update profile");
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Failed to update profile");
     } finally {
       setLoading(false);
     }
@@ -134,11 +191,16 @@ const ProfileTab = () => {
                 </svg>
               )}
             </div>
-            {imagePreview && (
+            {imageFile && (
               <button
                 onClick={() => {
-                  setImagePreview(teacher?.profileImage?.url || null);
+                  setImagePreview(savedAvatar);
+                  if (objectPreviewUrl) {
+                    URL.revokeObjectURL(objectPreviewUrl);
+                    setObjectPreviewUrl(null);
+                  }
                   setImageFile(null);
+                  if (fileRef.current) fileRef.current.value = "";
                 }}
                 style={{
                   position: "absolute",

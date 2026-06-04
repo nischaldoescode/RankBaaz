@@ -12,6 +12,7 @@ import {
   Check,
   ChevronLeft,
   ChevronRight,
+  Edit,
   Eye,
   FileText,
   Globe,
@@ -48,6 +49,14 @@ import {
 const BLOG_URL = "https://blogs.vidhgrow.online";
 const MAX_IMAGE_SIZE = 5 * 1024 * 1024;
 const MAX_VIDEO_SIZE = 10 * 1024 * 1024;
+
+const notifyAdminOperation = (operation, success = true, data = {}) => {
+  window.dispatchEvent(
+    new CustomEvent("adminOperation", {
+      detail: { operation, success, data },
+    }),
+  );
+};
 const BLOG_TOPIC_OPTIONS = [
   { slug: "product-updates", label: "Product updates" },
   { slug: "teaching-workflows", label: "Teaching workflows" },
@@ -545,9 +554,15 @@ const BlogManagement = () => {
       setIndexingAction("indexnow");
       const res = await axios.post("/blogs/admin/indexing/indexnow");
       toast.success(res.data.message || "IndexNow submission completed");
+      notifyAdminOperation("submitIndexNow", true, {
+        message: res.data.message || "IndexNow submission completed",
+      });
       await fetchIndexingStatus();
     } catch (error) {
       toast.error(error.response?.data?.message || "Failed to submit URLs to IndexNow");
+      notifyAdminOperation("submitIndexNow", false, {
+        message: error.response?.data?.message || "Failed to submit URLs to IndexNow",
+      });
       await fetchIndexingStatus();
     } finally {
       setIndexingAction("");
@@ -1269,11 +1284,17 @@ const BlogManagement = () => {
       setBaseline(buildSnapshot(next));
       setSlugState({ status: "available", message: "Current blog slug" });
       toast.success(mode === "published" ? "Blog published" : "Draft saved");
+      notifyAdminOperation(mode === "published" ? "publishBlog" : "saveBlogDraft", true, {
+        title: next.title,
+      });
       await fetchAll();
       options.after?.();
       return true;
     } catch (error) {
       toast.error(error.response?.data?.message || "Failed to save blog");
+      notifyAdminOperation("saveBlog", false, {
+        message: error.response?.data?.message || "Failed to save blog",
+      });
       return false;
     } finally {
       setSaving(false);
@@ -1285,10 +1306,14 @@ const BlogManagement = () => {
     try {
       await axios.delete(`/blogs/admin/posts/${postId}`);
       toast.success("Blog deleted");
+      notifyAdminOperation("deleteBlog", true);
       if (editingPostId === postId) resetPostForm();
       await fetchAll();
     } catch (error) {
       toast.error(error.response?.data?.message || "Failed to delete blog");
+      notifyAdminOperation("deleteBlog", false, {
+        message: error.response?.data?.message || "Failed to delete blog",
+      });
     }
   };
 
@@ -1459,6 +1484,9 @@ const BlogManagement = () => {
         : axios.post("/blogs/admin/authors", payload);
       await request;
       toast.success(editingAuthorId ? "Author saved" : "Author created");
+      notifyAdminOperation(editingAuthorId ? "updateBlogAuthor" : "createBlogAuthor", true, {
+        title: payload.name,
+      });
       resetMediaSession();
       originalAuthorSlugRef.current = "";
       slugCheckCacheRef.current.clear();
@@ -1470,6 +1498,9 @@ const BlogManagement = () => {
       await fetchAll();
     } catch (error) {
       toast.error(error.response?.data?.message || "Failed to save author");
+      notifyAdminOperation("saveBlogAuthor", false, {
+        message: error.response?.data?.message || "Failed to save author",
+      });
     } finally {
       setSavingAuthor(false);
     }
@@ -1507,9 +1538,13 @@ const BlogManagement = () => {
     try {
       await axios.delete(`/blogs/admin/authors/${authorId}`);
       toast.success("Author deleted");
+      notifyAdminOperation("deleteBlogAuthor", true);
       await fetchAll();
     } catch (error) {
       toast.error(error.response?.data?.message || "Failed to delete author");
+      notifyAdminOperation("deleteBlogAuthor", false, {
+        message: error.response?.data?.message || "Failed to delete author",
+      });
     }
   };
 
@@ -2367,7 +2402,7 @@ const BlogManagement = () => {
             Indexing
           </button>
           {[
-            ["posts", FileText, "Blogs"],
+            ["posts", FileText, "Create"],
             ["authors", UserRound, "Authors"],
             ["comments", MessageSquare, "Comments"],
           ].map(([id, Icon, label]) => (
@@ -2398,12 +2433,24 @@ const BlogManagement = () => {
           <aside className="space-y-4">
             <div className="rounded-md border border-gray-200 bg-white">
               <div className="border-b border-gray-200 px-4 py-3">
-                <h2 className="font-semibold">Blogs</h2>
+                <h2 className="font-semibold">Blog library</h2>
+                <p className="mt-1 text-xs leading-5 text-gray-500">
+                  Published and draft posts live here. Open one to edit it in the create flow.
+                </p>
               </div>
               <div className="max-h-[720px] divide-y divide-gray-100 overflow-auto">
                 {posts.map((post) => (
-                  <div key={post._id} className="p-4">
-                    <button type="button" onClick={() => editPost(post._id)} className="block w-full text-left">
+                  <div
+                    key={post._id}
+                    className={`p-4 transition ${
+                      editingPostId === post._id ? "bg-blue-50/70" : "bg-white"
+                    }`}
+                  >
+                    <button
+                      type="button"
+                      onClick={() => editPost(post._id)}
+                      className="block w-full text-left"
+                    >
                       <div className="flex items-start justify-between gap-3">
                         <h3 className="text-sm font-bold leading-5 text-gray-950">{post.title}</h3>
                         <span
@@ -2416,19 +2463,32 @@ const BlogManagement = () => {
                           {post.status === "published" ? "Published" : "Draft"}
                         </span>
                       </div>
-                      <p className="mt-1 line-clamp-2 text-xs leading-5 text-gray-500">{post.excerpt}</p>
+                      <p className="mt-1 line-clamp-2 text-xs leading-5 text-gray-500">
+                        {post.excerpt || "No excerpt yet"}
+                      </p>
                     </button>
                     <div className="mt-3 flex items-center justify-between text-xs text-gray-500">
                       <span>{post.author?.name || "No author"}</span>
-                      <button
-                        type="button"
-                        disabled={loading || saving}
-                        onClick={() => deletePost(post._id)}
-                        className="inline-flex items-center gap-1 text-red-600 hover:text-red-700 disabled:cursor-not-allowed disabled:opacity-50"
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                        Delete
-                      </button>
+                      <div className="flex items-center gap-3">
+                        <button
+                          type="button"
+                          disabled={loading || saving}
+                          onClick={() => editPost(post._id)}
+                          className="inline-flex items-center gap-1 font-bold text-blue-700 hover:text-blue-800 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          <Edit className="h-3.5 w-3.5" />
+                          Edit
+                        </button>
+                        <button
+                          type="button"
+                          disabled={loading || saving}
+                          onClick={() => deletePost(post._id)}
+                          className="inline-flex items-center gap-1 text-red-600 hover:text-red-700 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                          Delete
+                        </button>
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -2438,6 +2498,39 @@ const BlogManagement = () => {
           </aside>
 
           <section className="space-y-5">
+            <div className="rounded-md border border-gray-200 bg-white p-4 shadow-sm">
+              <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-[0.18em] text-blue-700">
+                    {editingPostId ? "Edit blog" : "Create blog"}
+                  </p>
+                  <h2 className="mt-1 text-xl font-bold text-gray-950">
+                    {editingPostId
+                      ? postForm.status === "published"
+                        ? "Update published post"
+                        : "Edit draft"
+                      : "Create a new draft"}
+                  </h2>
+                  <p className="mt-1 text-sm leading-6 text-gray-500">
+                    {editingPostId
+                      ? "Changes stay in this editor until you save draft or publish again."
+                      : "Start with setup, write the body, tune SEO, then preview the full page."}
+                  </p>
+                </div>
+                {editingPostId && (
+                  <button
+                    type="button"
+                    disabled={saving || loading || !!uploading}
+                    onClick={() => guardUnsaved(() => resetPostForm())}
+                    className="inline-flex items-center justify-center gap-2 rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-bold text-gray-700 transition hover:border-blue-300 hover:text-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    <Plus className="h-4 w-4" />
+                    New draft
+                  </button>
+                )}
+              </div>
+            </div>
+
             <div className="grid gap-2 md:grid-cols-4">
               {steps.map((_, index) => (
                 <StepButton key={steps[index].id} index={index} />

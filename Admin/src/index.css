@@ -22,14 +22,14 @@ input[type=number]::-webkit-inner-spin-button {
 }
 
 :root {
-  --admin-primary: #2563eb;
-  --admin-primary-rgb: 37, 99, 235;
+  --admin-primary: #3b82f6;
+  --admin-primary-rgb: 59, 130, 246;
   --admin-ink: #0f172a;
   --admin-muted: #64748b;
   --admin-bg: #f8fbff;
   --admin-surface: rgba(255, 255, 255, 0.90);
   --admin-line: rgba(148, 163, 184, 0.30);
-  --admin-shadow: 0 1px 2px rgba(15, 23, 42, 0.08), 0 14px 40px rgba(37, 99, 235, 0.08);
+  --admin-shadow: 0 1px 2px rgba(15, 23, 42, 0.08), 0 10px 30px rgba(15, 23, 42, 0.06);
 }
 
 body {
@@ -44,8 +44,7 @@ body {
 .admin-app-frame,
 .admin-main-surface {
   background:
-    linear-gradient(180deg, rgba(248, 251, 255, 0.96), rgba(255, 255, 255, 0.92)),
-    radial-gradient(circle at 8% 10%, rgba(var(--admin-primary-rgb), 0.08), transparent 34%) !important;
+    linear-gradient(180deg, rgba(248, 251, 255, 0.96), rgba(255, 255, 255, 0.92)) !important;
 }
 
 .admin-main-surface {
@@ -244,6 +243,18 @@ body {
 .admin-material-shell [class*="modal"],
 .Toastify__toast {
   border-radius: 8px !important;
+}
+
+.admin-material-shell [class*="fixed"][class*="inset-0"][class*="z-50"] {
+  align-items: flex-start !important;
+  overflow-y: auto !important;
+  padding-top: max(1.5rem, env(safe-area-inset-top)) !important;
+  padding-bottom: max(1.5rem, env(safe-area-inset-bottom)) !important;
+}
+
+.admin-material-shell [class*="fixed"][class*="inset-0"][class*="z-50"] > div {
+  margin-top: 0 !important;
+  margin-bottom: auto !important;
 }
 
 .admin-auth-page {

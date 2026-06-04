@@ -65,10 +65,10 @@ const SectionLabel = ({ children }) => (
 );
 
 const humanDefaultCopy = {
-  heroTitle: "Learn the next thing clearly",
-  heroHighlight: "then practice until it stays",
+  heroTitle: "Learn clearly. Practice with purpose.",
+  heroHighlight: "Keep progress visible",
   heroDescription:
-    "Vidhgrow keeps courses, tests, teacher notes, and progress reports in one calm workspace, so every attempt tells you what to revise next.",
+    "Vidhgrow brings teacher-led courses, exam-style tests, and progress reports into one calm workspace, so every attempt points to the next useful step.",
   featuresTitle: "A quieter way to keep moving",
   featuresDescription:
     "Study material, test attempts, and progress signals sit close together without turning the page into noise.",
@@ -96,154 +96,64 @@ const copyOrHumanDefault = (value, oldDefault, fallback) =>
 const platformHighlights = [
   {
     title: "Course notes that stay usable",
-    description: "Lessons, files, and teacher context kept close to the work.",
+    kicker: "Read",
+    description:
+      "Open a lesson, keep the teacher's context nearby, and revise from material that still feels usable after the first read.",
+    imageSrc: "/images/home-course-notes.webp",
+    imageName: "home-course-notes.webp",
   },
   {
     title: "Tests with real feedback",
-    description: "Timed attempts, answer checks, and review points after each run.",
+    kicker: "Practice",
+    description:
+      "Take a timed attempt, review the weak spots, and understand what changed before moving to the next round.",
+    imageSrc: "/images/home-practice-test.webp",
+    imageName: "home-practice-test.webp",
   },
   {
     title: "Progress you can read",
-    description: "Scores, rank movement, and attempts shown without extra decoration.",
+    kicker: "Review",
+    description:
+      "See scores, rank movement, attempts, and course progress in a way that helps you decide what to do next.",
+    imageSrc: "/images/home-progress-review.webp",
+    imageName: "home-progress-review.webp",
   },
 ];
 
-const LearningFlowIllustration = ({ animations, reducedMotion }) => (
-  <svg
-    className="vg-learning-illustration"
-    viewBox="0 0 680 520"
-    role="img"
-    aria-label="Learning path from course notes to practice test and progress review"
-  >
-    <defs>
-      <linearGradient id="storyBlue" x1="0" y1="0" x2="1" y2="1">
-        <stop offset="0%" stopColor="#2563eb" stopOpacity="0.92" />
-        <stop offset="100%" stopColor="#38bdf8" stopOpacity="0.72" />
-      </linearGradient>
-      <linearGradient id="storySoft" x1="0" y1="0" x2="1" y2="1">
-        <stop offset="0%" stopColor="#eff6ff" />
-        <stop offset="100%" stopColor="#ffffff" />
-      </linearGradient>
-      <filter id="storyShadow" x="-20%" y="-20%" width="140%" height="140%">
-        <feDropShadow
-          dx="0"
-          dy="18"
-          stdDeviation="18"
-          floodColor="#1e3a8a"
-          floodOpacity="0.13"
-        />
-      </filter>
-    </defs>
+const isOldHeroCopy = (value, oldDefault, fallback) => {
+  if (!value || value === oldDefault) return fallback;
+  const normalized = value.toLowerCase().replace(/\s+/g, " ").trim();
+  if (
+    normalized === "master your skills with vidhgrow" ||
+    normalized === "with courses curated by professionals"
+  ) {
+    return fallback;
+  }
+  return value;
+};
 
-    <motion.g
-      className="vg-illustration-grid"
-      animate={
-        animations && !reducedMotion
-          ? { x: [0, 12, 0], y: [0, -8, 0] }
-          : {}
-      }
-      transition={{ duration: 9, repeat: Infinity, ease: "easeInOut" }}
-    >
-      <path d="M64 116h540M64 196h540M64 276h540M64 356h540" />
-      <path d="M138 70v360M258 70v360M378 70v360M498 70v360" />
-    </motion.g>
+const StoryImageSlot = ({ item }) => {
+  const [hasImage, setHasImage] = useState(true);
 
-    <motion.g
-      filter="url(#storyShadow)"
-      animate={
-        animations && !reducedMotion
-          ? { y: [0, -10, 0], rotate: [0, -1.2, 0] }
-          : {}
-      }
-      transition={{ duration: 7, repeat: Infinity, ease: "easeInOut" }}
-    >
-      <rect x="90" y="116" width="214" height="156" rx="18" fill="url(#storySoft)" />
-      <path d="M124 154h92M124 184h148M124 214h118" className="vg-svg-line" />
-      <path
-        d="M256 138c18 18 18 50 0 68-18-18-18-50 0-68Z"
-        fill="#dbeafe"
-      />
-      <path
-        d="M255 154v42M240 174h30"
-        stroke="#2563eb"
-        strokeWidth="6"
-        strokeLinecap="round"
-      />
-    </motion.g>
+  if (!hasImage) {
+    return (
+      <div className="vg-story-image-fallback">
+        <span>{item.imageName}</span>
+        <p>Place the generated image in Frontend/public/images.</p>
+      </div>
+    );
+  }
 
-    <motion.g
-      filter="url(#storyShadow)"
-      animate={
-        animations && !reducedMotion
-          ? { y: [0, 12, 0], rotate: [0, 1.4, 0] }
-          : {}
-      }
-      transition={{ duration: 8, repeat: Infinity, ease: "easeInOut", delay: 0.5 }}
-    >
-      <rect x="382" y="170" width="214" height="160" rx="18" fill="#ffffff" />
-      <rect x="414" y="206" width="150" height="18" rx="9" fill="#dbeafe" />
-      <rect x="414" y="244" width="108" height="14" rx="7" fill="#bfdbfe" />
-      <rect x="414" y="276" width="132" height="14" rx="7" fill="#e0f2fe" />
-      <circle cx="556" cy="278" r="24" fill="url(#storyBlue)" />
-      <path
-        d="M546 278l8 8 18-22"
-        stroke="#ffffff"
-        strokeWidth="6"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </motion.g>
-
-    <motion.g
-      animate={
-        animations && !reducedMotion
-          ? { pathLength: [0.25, 1, 0.25] }
-          : {}
-      }
-      transition={{ duration: 5.5, repeat: Infinity, ease: "easeInOut" }}
-    >
-      <path
-        d="M296 218C350 186 380 198 414 226"
-        fill="none"
-        stroke="url(#storyBlue)"
-        strokeWidth="8"
-        strokeLinecap="round"
-        strokeDasharray="12 16"
-      />
-    </motion.g>
-
-    <motion.g
-      filter="url(#storyShadow)"
-      animate={
-        animations && !reducedMotion
-          ? { y: [0, -16, 0], x: [0, 8, 0] }
-          : {}
-      }
-      transition={{ duration: 6.6, repeat: Infinity, ease: "easeInOut", delay: 0.2 }}
-    >
-      <rect x="206" y="332" width="260" height="88" rx="18" fill="#ffffff" />
-      <path d="M242 382h210" stroke="#dbeafe" strokeWidth="12" strokeLinecap="round" />
-      <path d="M242 382h132" stroke="url(#storyBlue)" strokeWidth="12" strokeLinecap="round" />
-      <circle cx="242" cy="382" r="18" fill="#2563eb" />
-      <circle cx="374" cy="382" r="18" fill="#38bdf8" />
-      <circle cx="452" cy="382" r="18" fill="#dbeafe" />
-    </motion.g>
-
-    <motion.g
-      className="vg-illustration-orbits"
-      animate={
-        animations && !reducedMotion
-          ? { rotate: [0, 4, -4, 0] }
-          : {}
-      }
-      transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }}
-    >
-      <circle cx="120" cy="360" r="28" />
-      <circle cx="568" cy="122" r="36" />
-      <path d="M544 122h72M568 86v72" />
-    </motion.g>
-  </svg>
-);
+  return (
+    <img
+      src={item.imageSrc}
+      alt={`${item.title} illustration`}
+      className="vg-story-image"
+      loading="lazy"
+      onError={() => setHasImage(false)}
+    />
+  );
+};
 
 const LearningStorySection = ({ animations, reducedMotion, isAuthenticated }) => {
   const sectionRef = useRef(null);
@@ -251,68 +161,73 @@ const LearningStorySection = ({ animations, reducedMotion, isAuthenticated }) =>
     target: sectionRef,
     offset: ["start end", "end start"],
   });
-  const textX = useTransform(scrollYProgress, [0, 0.5, 1], [-38, 0, 28]);
-  const artX = useTransform(scrollYProgress, [0, 0.5, 1], [56, 0, -42]);
-  const artY = useTransform(scrollYProgress, [0, 0.5, 1], [26, -12, -42]);
+  const textX = useTransform(scrollYProgress, [0, 0.5, 1], [-32, 0, 20]);
+  const imageY = useTransform(scrollYProgress, [0, 0.5, 1], [42, -8, -48]);
   const fade = useTransform(scrollYProgress, [0, 0.18, 0.78, 1], [0.4, 1, 1, 0.24]);
 
   const motionStyle = reducedMotion ? undefined : { x: textX, opacity: fade };
-  const artStyle = reducedMotion ? undefined : { x: artX, y: artY, opacity: fade };
+  const imageStyle = reducedMotion ? undefined : { y: imageY };
 
   return (
     <section
       ref={sectionRef}
       className="vg-story-horizontal relative px-4 py-16 sm:px-6 lg:px-8"
     >
-      <div className="mx-auto grid max-w-6xl items-center gap-10 lg:grid-cols-[0.92fr_1.08fr]">
+      <div className="mx-auto max-w-6xl">
         <motion.div
           style={motionStyle}
           initial={animations && !reducedMotion ? { opacity: 0, y: 24 } : {}}
           whileInView={animations && !reducedMotion ? { opacity: 1, y: 0 } : {}}
           viewport={{ once: true, margin: "-80px" }}
-          className="space-y-6"
+          className="mx-auto max-w-3xl space-y-5 text-center"
         >
           <SectionLabel>How the work moves</SectionLabel>
-          <h2 className="max-w-xl text-3xl font-bold leading-tight text-foreground sm:text-4xl">
-            Read the lesson, try the test, keep the next step visible.
+          <h2 className="text-3xl font-bold leading-tight text-foreground sm:text-4xl">
+            A study rhythm that feels easy to return to.
           </h2>
-          <p className="max-w-xl text-base leading-8 text-muted-foreground sm:text-lg">
-            Vidhgrow is built around the actual study loop: course material,
-            timed attempts, feedback, and a cleaner view of what changed after
-            every round.
+          <p className="text-base leading-8 text-muted-foreground sm:text-lg">
+            Learn from the course, test the idea, then use the result to choose
+            the next revision. The page stays quiet, but the work keeps moving.
           </p>
+        </motion.div>
 
-          <div className="vg-story-rail" aria-label="Vidhgrow learning flow">
-            {platformHighlights.map((item, index) => (
-              <div className="vg-story-point" key={item.title}>
-                <span>{String(index + 1).padStart(2, "0")}</span>
-                <strong>{item.title}</strong>
+        <div className="mt-12 space-y-10" aria-label="Vidhgrow learning flow">
+          {platformHighlights.map((item, index) => (
+            <motion.article
+              key={item.title}
+              initial={animations && !reducedMotion ? { opacity: 0, y: 28 } : {}}
+              whileInView={animations && !reducedMotion ? { opacity: 1, y: 0 } : {}}
+              viewport={{ once: true, margin: "-80px" }}
+              transition={{ duration: 0.55, delay: index * 0.08 }}
+              className={`vg-story-chapter vg-story-chapter-${index + 1}`}
+            >
+              <div className="vg-story-chapter-copy">
+                <span className="vg-story-index">
+                  {String(index + 1).padStart(2, "0")}
+                </span>
+                <p className="vg-story-kicker">{item.kicker}</p>
+                <h3>{item.title}</h3>
                 <p>{item.description}</p>
               </div>
-            ))}
-          </div>
 
+              <motion.div
+                style={imageStyle}
+                className="vg-story-image-frame"
+              >
+                <StoryImageSlot item={item} />
+              </motion.div>
+            </motion.article>
+          ))}
+        </div>
+
+        <div className="mt-10 flex justify-center">
           <Button asChild size="lg" className="gap-2 px-6">
             <Link to={isAuthenticated ? "/courses" : "/register"}>
-              {isAuthenticated ? "Open courses" : "Start the loop"}
+              {isAuthenticated ? "Open courses" : "Start practicing"}
               <ArrowRight className="h-4 w-4" />
             </Link>
           </Button>
-        </motion.div>
-
-        <motion.div
-          style={artStyle}
-          initial={animations && !reducedMotion ? { opacity: 0, scale: 0.96 } : {}}
-          whileInView={animations && !reducedMotion ? { opacity: 1, scale: 1 } : {}}
-          viewport={{ once: true, margin: "-80px" }}
-          transition={{ duration: 0.7, ease: "easeOut" }}
-          className="vg-story-illustration-card"
-        >
-          <LearningFlowIllustration
-            animations={animations}
-            reducedMotion={reducedMotion}
-          />
-        </motion.div>
+        </div>
       </div>
     </section>
   );
@@ -347,6 +262,16 @@ const Home = () => {
   const { isAuthenticated } = useAuth();
   const { animations, reducedMotion } = useTheme();
   const { contentSettings, faqs, fetchFAQs, loading } = useContent();
+  const pageRef = useRef(null);
+  const { scrollYProgress: pageScrollProgress } = useScroll({
+    target: pageRef,
+    offset: ["start start", "end end"],
+  });
+  const pageDriftY = useTransform(pageScrollProgress, [0, 1], [-24, 42]);
+  const pageDriftX = useTransform(pageScrollProgress, [0, 1], [18, -36]);
+  const pageArtifactStyle = reducedMotion
+    ? undefined
+    : { y: pageDriftY, x: pageDriftX };
 
   useSEO({
     title:
@@ -371,12 +296,12 @@ const Home = () => {
       displayValue: stat.value,
     })) || [];
 
-  const heroTitle = copyOrHumanDefault(
+  const heroTitle = isOldHeroCopy(
     contentSettings?.heroTitle,
     oldDefaultCopy.heroTitle,
     humanDefaultCopy.heroTitle,
   );
-  const heroHighlight = copyOrHumanDefault(
+  const heroHighlight = isOldHeroCopy(
     contentSettings?.heroHighlight,
     oldDefaultCopy.heroHighlight,
     humanDefaultCopy.heroHighlight,
@@ -514,7 +439,17 @@ const Home = () => {
   }
 
   return (
-    <div className="overflow-x-hidden">
+    <div ref={pageRef} className="relative overflow-x-hidden">
+      <motion.div
+        aria-hidden="true"
+        className="vg-home-page-parallax vg-home-page-parallax-a"
+        style={pageArtifactStyle}
+      />
+      <motion.div
+        aria-hidden="true"
+        className="vg-home-page-parallax vg-home-page-parallax-b"
+        style={reducedMotion ? undefined : { y: pageDriftY }}
+      />
       <section className="relative flex min-h-[calc(100vh-4rem)] items-center px-4 pb-16 pt-24 sm:px-6 sm:pb-20 lg:px-8">
         <div
           className="absolute inset-0 pointer-events-none"

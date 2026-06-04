@@ -13,19 +13,19 @@ const buttonVariants = cva(
     variants: {
       variant: {
         default:
-          "bg-primary text-primary-foreground shadow-[0_1px_2px_rgba(15,23,42,0.10),0_8px_22px_rgba(37,99,235,0.18)] hover:bg-primary/90 hover:shadow-[0_2px_6px_rgba(15,23,42,0.12),0_14px_34px_rgba(37,99,235,0.22)]",
+          "bg-primary text-primary-foreground shadow-[0_1px_2px_rgba(15,23,42,0.08),0_8px_22px_rgba(59,130,246,0.14)] hover:bg-primary/90 hover:shadow-[0_2px_6px_rgba(15,23,42,0.10),0_14px_34px_rgba(59,130,246,0.18)]",
         destructive:
           "bg-destructive text-white shadow-[0_8px_22px_rgba(220,38,38,0.16)] hover:bg-destructive/90 focus-visible:ring-destructive/20 dark:focus-visible:ring-destructive/40 dark:bg-destructive/60",
         success:
-          "bg-blue-600 text-white shadow-[0_8px_22px_rgba(37,99,235,0.18)] hover:bg-blue-700",
+          "bg-blue-500 text-white shadow-[0_8px_22px_rgba(59,130,246,0.14)] hover:bg-blue-600",
         warning:
           "bg-amber-500 text-slate-950 shadow-[0_8px_22px_rgba(245,158,11,0.16)] hover:bg-amber-400",
         outline:
-          "border border-blue-200 bg-white/80 text-blue-700 shadow-sm backdrop-blur-md hover:bg-blue-50 hover:border-blue-300 dark:bg-input/30 dark:border-input dark:hover:bg-input/50",
+          "border border-blue-200 bg-white/80 text-blue-600 shadow-sm backdrop-blur-md hover:bg-blue-50 hover:border-blue-300 dark:bg-input/30 dark:border-input dark:hover:bg-input/50",
         secondary:
-          "bg-blue-50 text-blue-700 shadow-sm hover:bg-blue-100",
+          "bg-blue-50 text-blue-600 shadow-sm hover:bg-blue-100",
         ghost:
-          "text-slate-700 hover:bg-blue-50 hover:text-blue-700 dark:hover:bg-accent/50",
+          "text-slate-700 hover:bg-blue-50 hover:text-blue-600 dark:hover:bg-accent/50",
         link: "rounded-md px-0 text-primary underline-offset-4 hover:underline",
       },
       size: {

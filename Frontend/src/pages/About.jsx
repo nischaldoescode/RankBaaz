@@ -1,35 +1,66 @@
 /**
  * keeps the about page focused and readable.
  */
-import React, { useEffect } from "react";
+import React, { useState } from "react";
 import { motion } from "framer-motion";
-import {
-  Target,
-  Heart,
-  Users,
-  TrendingUp,
-  Award,
-  BookOpen,
-  Zap,
-  Shield,
-} from "lucide-react";
+import { Link } from "react-router-dom";
+import { ArrowRight } from "lucide-react";
 import { useTheme } from "../context/ThemeContext";
 import { useContent } from "../context/ContentContext";
-import { Link } from "react-router-dom";
 import Loading from "../components/common/Loading";
 import { useSEO } from "../hooks/useSEO";
-// icon mapping
-const iconMap = {
-  Target,
-  Heart,
-  Users,
-  Award,
-  BookOpen,
-  Zap,
-  TrendingUp,
-  Shield,
+
+const fallbackStats = [
+  { value: "Teacher-led", label: "Courses and notes" },
+  { value: "Timed", label: "Practice tests" },
+  { value: "Clear", label: "Progress reports" },
+];
+
+const storyPoints = [
+  {
+    title: "Mission",
+    text: "Make serious practice easier to begin, easier to repeat, and easier to understand after every attempt.",
+  },
+  {
+    title: "Values",
+    text: "Keep the product accessible, readable, and useful for students and teachers doing real work.",
+  },
+  {
+    title: "Community",
+    text: "Support learners who want structured courses, calm testing, and feedback they can act on.",
+  },
+];
+
+const looksInflated = (value = "") => /50,?000|1m\+|95%/i.test(value);
+
+const getDisplayStats = (stats = []) => {
+  if (!stats.length || stats.some((stat) => looksInflated(stat.value))) {
+    return fallbackStats;
+  }
+  return stats.slice(0, 3);
 };
-import { useHead } from "@unhead/react";
+
+const AboutImageSlot = () => {
+  const [hasImage, setHasImage] = useState(true);
+
+  if (!hasImage) {
+    return (
+      <div className="vg-about-image-fallback">
+        <span>image</span>
+      </div>
+    );
+  }
+
+  return (
+    <img
+      src="/images/about-learning-workspace.webp"
+      alt="Students and teachers reviewing course progress together"
+      className="vg-about-image"
+      loading="lazy"
+      onError={() => setHasImage(false)}
+    />
+  );
+};
 
 const About = () => {
   const { animations, reducedMotion } = useTheme();
@@ -39,178 +70,100 @@ const About = () => {
     title: "About Us",
     description: `Learn more about ${
       contentSettings?.siteName || "Vidhgrow"
-    }, our mission, and our vision for online learning.`,
-    keywords: "about, company, mission, online learning",
+    }, a course and test practice platform for clearer study progress.`,
+    keywords: "about, vidhgrow, courses, practice tests, student progress",
     type: "website",
-
     canonicalUrl: `${contentSettings?.siteUrl || window.location.origin}/about`,
   });
-
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: { staggerChildren: 0.15 },
-    },
-  };
-
-  const itemVariants = {
-    hidden: { opacity: 0, y: 20 },
-    visible: { opacity: 1, y: 0 },
-  };
 
   if (loading || !contentSettings) {
     return <Loading variant="page" />;
   }
-  // fallback values if content not loaded
-  const values = contentSettings?.aboutValues || [];
-  const features = contentSettings?.aboutFeatures || [];
-  const stats = contentSettings?.aboutStats || [];
+
+  const siteName = contentSettings?.siteName || "Vidhgrow";
+  const stats = getDisplayStats(contentSettings?.aboutStats || []);
+  const motionProps =
+    animations && !reducedMotion
+      ? {
+          initial: { opacity: 0, y: 24 },
+          whileInView: { opacity: 1, y: 0 },
+          viewport: { once: true, margin: "-80px" },
+          transition: { duration: 0.55 },
+        }
+      : {};
 
   return (
-    <div className="vg-static-page min-h-screen pt-20 pb-16">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <motion.div
-          initial={animations && !reducedMotion ? "hidden" : "visible"}
-          animate="visible"
-          variants={containerVariants}
-          className="space-y-16"
-        >
-          {/* hero section */}
-          <motion.div variants={itemVariants} className="text-center">
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-foreground mb-6">
-              About {contentSettings?.siteName || "Vidhgrow"}
-            </h1>
-            <p className="text-xl text-muted-foreground max-w-3xl mx-auto leading-relaxed">
-              {contentSettings?.siteDescription ||
-                "We're on a mission to transform how students learn and prepare for exams through intelligent testing and personalized insights."}
+    <div className="vg-static-page min-h-screen pb-16 pt-20">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <section className="vg-about-hero">
+          <motion.div {...motionProps} className="vg-about-copy">
+            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-primary/70">
+              About {siteName}
             </p>
-          </motion.div>
+            <h1>
+              A calmer place for courses, tests, and the next revision.
+            </h1>
+            <p>
+              Vidhgrow is built for learners who want structure without noise:
+              course material, timed practice, teacher context, and progress
+              signals in one focused workspace.
+            </p>
 
-          {/* stats section */}
-          {stats.length > 0 && (
-            <motion.div
-              variants={itemVariants}
-              className="grid grid-cols-2 lg:grid-cols-4 gap-6"
-            >
-              {stats.map((stat, index) => (
-                <div
-                  key={index}
-                  className="bg-card border border-border rounded-xl p-6 text-center hover:shadow-lg transition-shadow"
-                >
-                  <div className="text-3xl sm:text-4xl font-bold text-primary mb-2">
-                    {stat.value}
-                  </div>
-                  <div className="text-sm text-muted-foreground">
-                    {stat.label}
-                  </div>
+            <div className="vg-about-stats" aria-label="Vidhgrow platform focus">
+              {stats.map((stat) => (
+                <div key={`${stat.value}-${stat.label}`}>
+                  <strong>{stat.value}</strong>
+                  <span>{stat.label}</span>
                 </div>
               ))}
-            </motion.div>
-          )}
-
-          {/* values section */}
-          {values.length > 0 && (
-            <motion.div variants={itemVariants} className="space-y-8">
-              <div className="text-center">
-                <h2 className="text-3xl font-bold text-foreground mb-4">
-                  What Drives Us
-                </h2>
-                <p className="text-muted-foreground max-w-2xl mx-auto">
-                  Our core values shape every decision we make and every feature
-                  we build
-                </p>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                {values.map((value, index) => {
-                  const IconComponent = iconMap[value.icon] || Target;
-                  return (
-                    <div
-                      key={index}
-                      className="bg-card border border-border rounded-2xl p-8 hover:shadow-xl transition-shadow"
-                    >
-                      <div
-                        className={`w-14 h-14 ${value.bgColor} rounded-xl flex items-center justify-center mb-6`}
-                      >
-                        <IconComponent className={`w-7 h-7 ${value.color}`} />
-                      </div>
-                      <h3 className="text-xl font-bold text-foreground mb-3">
-                        {value.title}
-                      </h3>
-                      <p className="text-muted-foreground leading-relaxed">
-                        {value.description}
-                      </p>
-                    </div>
-                  );
-                })}
-              </div>
-            </motion.div>
-          )}
-
-          {/* features grid */}
-          {features.length > 0 && (
-            <motion.div variants={itemVariants} className="space-y-8">
-              <div className="text-center">
-                <h2 className="text-3xl font-bold text-foreground mb-4">
-                  Platform Features
-                </h2>
-                <p className="text-muted-foreground max-w-2xl mx-auto">
-                  Everything you need to succeed in your learning journey
-                </p>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                {features.map((feature, index) => {
-                  const IconComponent = iconMap[feature.icon] || BookOpen;
-                  return (
-                    <div
-                      key={index}
-                      className="bg-card border border-border rounded-xl p-6 hover:shadow-lg transition-all hover:scale-105"
-                    >
-                      <IconComponent className="w-8 h-8 text-primary mb-4" />
-                      <h3 className="text-lg font-semibold text-foreground mb-2">
-                        {feature.title}
-                      </h3>
-                      <p className="text-sm text-muted-foreground">
-                        {feature.description}
-                      </p>
-                    </div>
-                  );
-                })}
-              </div>
-            </motion.div>
-          )}
-
-          {/* cta section */}
-          <motion.div
-            variants={itemVariants}
-            className="bg-gradient-to-br from-primary/10 to-purple-500/10 rounded-2xl p-8 md:p-12 text-center"
-          >
-            <h2 className="text-3xl font-bold text-foreground mb-4">
-              Ready to Start Your Journey?
-            </h2>
-            <p className="text-muted-foreground mb-8 max-w-2xl mx-auto">
-              Join our community of learners and experience personalized
-              education like never before
-            </p>
-            <div className="flex flex-wrap justify-center gap-4">
-              <Link
-                to="/register"
-                className="px-8 py-3 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors font-medium cursor-pointer"
-              >
-                Get Started Free
-              </Link>
-
-              <Link
-                to="/courses"
-                className="px-8 py-3 bg-card border border-border rounded-lg hover:bg-muted transition-colors font-medium cursor-pointer"
-              >
-                Browse Courses
-              </Link>
             </div>
           </motion.div>
-        </motion.div>
+
+          <motion.div
+            {...motionProps}
+            transition={{ duration: 0.6, delay: 0.08 }}
+            className="vg-about-image-frame"
+          >
+            <AboutImageSlot />
+          </motion.div>
+        </section>
+
+        <motion.section {...motionProps} className="vg-about-values">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-primary/70">
+              What drives us
+            </p>
+            <h2>Useful tools for real study habits.</h2>
+          </div>
+
+          <div className="vg-about-value-list">
+            {storyPoints.map((point) => (
+              <article key={point.title}>
+                <span>{point.title}</span>
+                <p>{point.text}</p>
+              </article>
+            ))}
+          </div>
+        </motion.section>
+
+        <motion.section {...motionProps} className="vg-about-cta">
+          <div>
+            <h2>Start with one course. Keep the work visible.</h2>
+            <p>
+              Browse available courses or create an account to keep attempts,
+              reports, and revision steps together.
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-3">
+            <Link to="/register" className="vg-about-link-primary">
+              Get started
+              <ArrowRight className="h-4 w-4" />
+            </Link>
+            <Link to="/courses" className="vg-about-link-secondary">
+              Browse courses
+            </Link>
+          </div>
+        </motion.section>
       </div>
     </div>
   );

@@ -15,6 +15,37 @@ import {
 } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 
+const NOTIFICATION_STORAGE_KEY = "vidhgrow-admin-notifications";
+
+const operationMessages = {
+  createCategory: ["success", "Category created", "A new category was added."],
+  updateCategory: ["info", "Category updated", "Category details were saved."],
+  deleteCategory: ["success", "Category deleted", "The category was removed."],
+  createCourse: ["success", "Course created", "A new course was created."],
+  updateCourse: ["info", "Course updated", "Course changes were saved."],
+  deleteCourse: ["success", "Course deleted", "The course was removed."],
+  createQuestion: ["success", "Question added", "A question was added to the course."],
+  updateQuestion: ["info", "Question updated", "Question changes were saved."],
+  deleteQuestion: ["success", "Question deleted", "The question was removed."],
+  publishBlog: ["success", "Blog published", "The blog post is live on the blogs site."],
+  saveBlogDraft: ["info", "Draft saved", "The blog draft was saved."],
+  deleteBlog: ["success", "Blog deleted", "The blog post and related comments were removed."],
+  createBlogAuthor: ["success", "Author created", "A blog author profile was added."],
+  updateBlogAuthor: ["info", "Author updated", "The blog author profile was saved."],
+  deleteBlogAuthor: ["success", "Author deleted", "The blog author was removed."],
+  submitIndexNow: ["info", "IndexNow submitted", "Fresh blog URLs were sent for indexing."],
+  ProfileUpdate: ["info", "Profile updated", "Your admin profile was saved."],
+  PasswordChange: ["info", "Password changed", "Your password was updated."],
+};
+
+const formatNotificationTime = (createdAt) => {
+  const elapsed = Date.now() - new Date(createdAt).getTime();
+  if (elapsed < 60_000) return "Just now";
+  if (elapsed < 3_600_000) return `${Math.floor(elapsed / 60_000)}m ago`;
+  if (elapsed < 86_400_000) return `${Math.floor(elapsed / 3_600_000)}h ago`;
+  return new Date(createdAt).toLocaleDateString();
+};
+
 const Navbar = ({ onToggleSidebar, sidebarOpen }) => {
   const { user, logout } = useAuth();
   const [dropdownOpen, setDropdownOpen] = useState(false);
@@ -25,116 +56,54 @@ const Navbar = ({ onToggleSidebar, sidebarOpen }) => {
   const dropdownRef = useRef(null);
   const notificationRef = useRef(null);
 
-  // api call tracking for notifications
+  // add an admin activity notification
   const addNotification = (type, title, message) => {
+    const createdAt = new Date().toISOString();
     const notification = {
-      id: Date.now() + Math.random(),
+      id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
       title,
       message,
-      time: "Just now",
+      createdAt,
       read: false,
       type,
     };
 
-    setNotifications((prev) => [notification, ...prev.slice(0, 19)]); // keep max 20
-    setUnreadCount((prev) => prev + 1);
+    setNotifications((prev) => [notification, ...prev].slice(0, 30));
   };
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(NOTIFICATION_STORAGE_KEY);
+      if (saved) {
+        setNotifications(JSON.parse(saved).slice(0, 30));
+      }
+    } catch {
+      setNotifications([]);
+    }
+  }, []);
+
+  useEffect(() => {
+    setUnreadCount(notifications.filter((notification) => !notification.read).length);
+    localStorage.setItem(NOTIFICATION_STORAGE_KEY, JSON.stringify(notifications.slice(0, 30)));
+  }, [notifications]);
 
   useEffect(() => {
     // create a custom event listener for admin operations
     const handleAdminOperation = (event) => {
-      const { type, operation, success, data } = event.detail;
+      const { operation, success, data } = event.detail;
 
       if (success) {
-        switch (operation) {
-          case "createCategory":
-            addNotification(
-              "success",
-              "Category Created",
-              "New category has been successfully created"
-            );
-            break;
-          case "updateCategory":
-            addNotification(
-              "info",
-              "Category Updated",
-              "Category has been successfully updated"
-            );
-            break;
-          case "deleteCategory":
-            addNotification(
-              "success",
-              "Category Deleted",
-              "Category has been successfully deleted"
-            );
-            break;
-          case "createCourse":
-            addNotification(
-              "success",
-              "Course Created",
-              "New course has been successfully published"
-            );
-            break;
-          case "updateCourse":
-            addNotification(
-              "info",
-              "Course Updated",
-              "Course has been successfully updated"
-            );
-            break;
-          case "deleteCourse":
-            addNotification(
-              "success",
-              "Course Deleted",
-              "Course has been successfully deleted"
-            );
-            break;
-          case "createQuestion":
-            addNotification(
-              "success",
-              "Question Created",
-              "New question has been successfully added"
-            );
-            break;
-          case "updateQuestion":
-            addNotification(
-              "info",
-              "Question Updated",
-              "Question has been successfully updated"
-            );
-            break;
-          case "deleteQuestion":
-            addNotification(
-              "success",
-              "Question Deleted",
-              "Question has been successfully deleted"
-            );
-            break;
-          case "ProfileUpdate":
-            addNotification(
-              "info",
-              "Profile Updated",
-              "Your profile has been successfully updated"
-            );
-            break;
-          case "PasswordChange":
-            addNotification(
-              "info",
-              "Password Changed",
-              "Your password has been successfully changed"
-            );
-            break;
-          default:
-            addNotification(
-              "success",
-              "Operation Complete",
-              "Operation completed successfully"
-            );
-        }
+        const [notificationType, title, fallbackMessage] =
+          operationMessages[operation] || ["success", "Activity complete", "The action finished successfully."];
+        addNotification(
+          notificationType,
+          title,
+          data?.title ? `${data.title}: ${fallbackMessage}` : data?.message || fallbackMessage,
+        );
       } else {
         addNotification(
           "error",
-          "Operation Failed",
+          operationMessages[operation]?.[1] || "Operation failed",
           data?.message || "An error occurred. Please try again."
         );
       }
@@ -155,7 +124,6 @@ const Navbar = ({ onToggleSidebar, sidebarOpen }) => {
         notif.id === notificationId ? { ...notif, read: true } : notif
       )
     );
-    setUnreadCount((prev) => Math.max(0, prev - 1));
   };
 
   // delete notification
@@ -165,14 +133,12 @@ const Navbar = ({ onToggleSidebar, sidebarOpen }) => {
       prev.filter((notif) => notif.id !== notificationId)
     );
     if (deletedNotif && !deletedNotif.read) {
-      setUnreadCount((prev) => Math.max(0, prev - 1));
     }
   };
 
   // mark all as read
   const markAllAsRead = () => {
     setNotifications((prev) => prev.map((notif) => ({ ...notif, read: true })));
-    setUnreadCount(0);
   };
 
   // close dropdowns when clicking outside
@@ -271,7 +237,7 @@ const Navbar = ({ onToggleSidebar, sidebarOpen }) => {
                 >
                   <Bell className="h-5 w-5 sm:h-6 sm:w-6" />
                   {unreadCount > 0 && (
-                    <span className="absolute -top-1 -right-1 h-5 w-5 sm:h-6 sm:w-6 bg-red-500 text-white text-xs font-medium rounded-full flex items-center justify-center animate-pulse">
+                    <span className="absolute -top-1 -right-1 h-5 w-5 sm:h-6 sm:w-6 bg-red-500 text-white text-xs font-medium rounded-full flex items-center justify-center">
                       {unreadCount > 99 ? "99+" : unreadCount}
                     </span>
                   )}
@@ -338,7 +304,7 @@ const Navbar = ({ onToggleSidebar, sidebarOpen }) => {
                                   {notification.message}
                                 </p>
                                 <p className="text-xs text-gray-400 mt-1">
-                                  {notification.time}
+                                  {formatNotificationTime(notification.createdAt || Date.now())}
                                 </p>
                               </div>
                               <div className="flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -378,7 +344,6 @@ const Navbar = ({ onToggleSidebar, sidebarOpen }) => {
                           onClick={(e) => {
                             e.stopPropagation();
                             setNotifications([]);
-                            setUnreadCount(0);
                           }}
                           className="w-full text-center text-xs text-red-600 hover:text-red-700 font-medium py-1 transition-colors cursor-pointer"
                         >
