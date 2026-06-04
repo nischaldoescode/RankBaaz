@@ -66,7 +66,6 @@ body {
 
 .admin-main-surface > div {
   position: relative;
-  z-index: 1;
 }
 
 .admin-material-shell button,
@@ -260,11 +259,19 @@ body {
 }
 
 .admin-material-shell [class*="fixed"][class*="inset-0"][class*="z-50"] {
+  position: fixed !important;
+  inset: 0 !important;
+  background: rgba(15, 23, 42, 0.42) !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  backdrop-filter: blur(12px) saturate(1.08) !important;
+  -webkit-backdrop-filter: blur(12px) saturate(1.08) !important;
   align-items: flex-start !important;
+  justify-content: center !important;
   overflow-y: auto !important;
-  padding-top: max(1.5rem, env(safe-area-inset-top)) !important;
+  padding-top: max(1rem, env(safe-area-inset-top)) !important;
   padding-bottom: max(1.5rem, env(safe-area-inset-bottom)) !important;
-  z-index: 10000 !important;
+  z-index: 2147483000 !important;
 }
 
 .admin-material-shell [class*="fixed"][class*="inset-0"][class*="z-50"] > div {
@@ -273,11 +280,15 @@ body {
 }
 
 .admin-material-shell [style*="position: fixed"][style*="inset: 0"] {
+  background: rgba(15, 23, 42, 0.42) !important;
+  backdrop-filter: blur(12px) saturate(1.08) !important;
+  -webkit-backdrop-filter: blur(12px) saturate(1.08) !important;
   align-items: flex-start !important;
+  justify-content: center !important;
   overflow-y: auto !important;
-  padding-top: max(1.5rem, env(safe-area-inset-top)) !important;
+  padding-top: max(1rem, env(safe-area-inset-top)) !important;
   padding-bottom: max(1.5rem, env(safe-area-inset-bottom)) !important;
-  z-index: 10000 !important;
+  z-index: 2147483000 !important;
 }
 
 .admin-auth-page {
