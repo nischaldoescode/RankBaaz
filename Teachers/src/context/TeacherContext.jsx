@@ -1,3 +1,6 @@
+/**
+ * keeps the teacher context context focused and readable.
+ */
 import React, {
   createContext,
   useContext,
@@ -24,13 +27,13 @@ export const TeacherProvider = ({ children }) => {
       setTeacher(res.data.data.teacher);
       setCourses(res.data.data.courses || []);
     } catch (err) {
-      // only clear session on 401 — not on network errors etc.
+      // only clear session on 401.
       if (err.response?.status === 401) {
         localStorage.removeItem("teacher");
         teacherRequestSigner.clearSigningSecret();
         setTeacher(null);
       }
-      // do NOT redirect here — let the ProtectedRoute handle redirection
+      // protected routes handle redirection.
     } finally {
       setLoading(false);
     }

@@ -1,3 +1,6 @@
+/**
+ * keeps the use seo module focused and readable.
+ */
 import { useEffect } from "react";
 import { useHead } from "@unhead/react";
 import { useContent } from "../context/ContentContext";
@@ -24,8 +27,7 @@ export const useSEO = ({
     "Transform how students learn and prepare for exams through intelligent testing.";
   const siteUrl = contentSettings?.siteUrl || window.location.origin;
 
-  // Use logo from contentSettings if available
-  const siteLogo = contentSettings?.logo?.url || `${siteUrl}/logo.png`;
+  const siteLogo = contentSettings?.logo?.url || null;
   const defaultImage = contentSettings?.ogImage || siteLogo;
 
   const twitterHandle = contentSettings?.social?.twitter || "@testmasterpro";
@@ -37,9 +39,9 @@ export const useSEO = ({
   const cleanPath = window.location.pathname;
   const finalUrl = canonicalUrl || `${siteUrl}${cleanPath}`;
 
-  // Prepare meta tags array
+  // prepare meta tags array
   const metaTags = [
-    // Basic Meta Tags
+    // basic meta tags
     { name: "description", content: finalDescription },
     {
       name: "keywords",
@@ -48,7 +50,7 @@ export const useSEO = ({
     },
     { name: "author", content: author || siteName },
 
-    // Robots
+    // robots
     ...(noindex
       ? [{ name: "robots", content: "noindex, nofollow" }]
       : [
@@ -59,20 +61,24 @@ export const useSEO = ({
           },
         ]),
 
-    // Open Graph - Basic
+    // open graph - basic
     { property: "og:type", content: type },
     { property: "og:title", content: fullTitle },
     { property: "og:description", content: finalDescription },
-    { property: "og:image", content: finalImage },
-    { property: "og:image:secure_url", content: finalImage },
-    { property: "og:image:width", content: "1200" },
-    { property: "og:image:height", content: "630" },
-    { property: "og:image:alt", content: fullTitle },
+    ...(finalImage
+      ? [
+          { property: "og:image", content: finalImage },
+          { property: "og:image:secure_url", content: finalImage },
+          { property: "og:image:width", content: "1200" },
+          { property: "og:image:height", content: "630" },
+          { property: "og:image:alt", content: fullTitle },
+        ]
+      : []),
     { property: "og:url", content: finalUrl },
     { property: "og:site_name", content: siteName },
     { property: "og:locale", content: "en_US" },
 
-    // Open Graph - Optional
+    // open graph - optional
     ...(publishedTime
       ? [{ property: "article:published_time", content: publishedTime }]
       : []),
@@ -80,16 +86,20 @@ export const useSEO = ({
       ? [{ property: "article:modified_time", content: modifiedTime }]
       : []),
 
-    // Twitter Card
+    // twitter card
     { name: "twitter:card", content: "summary_large_image" },
     { name: "twitter:site", content: twitterHandle },
     { name: "twitter:creator", content: twitterHandle },
     { name: "twitter:title", content: fullTitle },
     { name: "twitter:description", content: finalDescription },
-    { name: "twitter:image", content: finalImage },
-    { name: "twitter:image:alt", content: fullTitle },
+    ...(finalImage
+      ? [
+          { name: "twitter:image", content: finalImage },
+          { name: "twitter:image:alt", content: fullTitle },
+        ]
+      : []),
 
-    // Additional SEO
+    // itional seo
     { name: "theme-color", content: themeColor },
     {
       name: "viewport",
@@ -98,33 +108,37 @@ export const useSEO = ({
     { name: "format-detection", content: "telephone=no" },
     { httpEquiv: "x-ua-compatible", content: "IE=edge" },
 
-    // Apple Mobile Web App
+    // apple mobile web app
     { name: "apple-mobile-web-app-capable", content: "yes" },
     {
       name: "apple-mobile-web-app-status-bar-style",
       content: "black-translucent",
     },
     { name: "apple-mobile-web-app-title", content: siteName },
-    
+
   ];
 
-  // Prepare link tags array
+  // prepare link tags array
   const linkTags = [
     ...(!noindex ? [{ rel: "canonical", href: finalUrl }] : []),
-    { rel: "icon", type: "image/png", href: siteLogo },
-    { rel: "apple-touch-icon", href: siteLogo },
+    ...(siteLogo
+      ? [
+          { rel: "icon", type: "image/png", href: siteLogo },
+          { rel: "apple-touch-icon", href: siteLogo },
+        ]
+      : []),
   ];
 
-  // Prepare script tags for structured data
+  // prepare script tags for structured data
   const scriptTags = [];
 
-  // Add Google Analytics
+  // google analytics
   scriptTags.push({
     src: "https://www.googletagmanager.com/gtag/js?id=G-GQK7Y7WTG1",
     async: true,
   });
 
-  // Added Google Aanlytics
+  // ed google aanlytics
   scriptTags.push({
     innerHTML: `
       window.dataLayer = window.dataLayer || [];
@@ -133,7 +147,7 @@ export const useSEO = ({
       gtag("config", "G-GQK7Y7WTG1");
     `,
   });
-  // CLEANER to remove null, undefined, empty strings, empty arrays, empty objects
+  // cleaner to remove null, undefined, empty strings, empty arrays, empty objects
   const removeNulls = (obj) =>
     JSON.parse(
       JSON.stringify(obj, (key, value) => {
@@ -152,7 +166,7 @@ export const useSEO = ({
       }),
     );
 
-  // Add basic Organization structured data
+  // basic organization structured data
   const organizationSchema = removeNulls({
     "@context": "https://schema.org",
     "@type": "Organization",
@@ -187,7 +201,7 @@ export const useSEO = ({
     innerHTML: JSON.stringify(removeNulls(websiteSchema)),
   });
 
-  // Add custom structured data if provided
+  // custom structured data if provided
   if (structuredData) {
     scriptTags.push({
       type: "application/ld+json",

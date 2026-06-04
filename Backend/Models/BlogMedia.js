@@ -1,3 +1,6 @@
+/**
+ * keeps the blog media model focused and readable.
+ */
 import mongoose from "mongoose";
 
 const blogMediaSchema = new mongoose.Schema(

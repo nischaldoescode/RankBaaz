@@ -1,3 +1,6 @@
+/**
+ * keeps the sitemap service service focused and readable.
+ */
 import { apiMethods } from './api';
 
 class SitemapService {
@@ -8,7 +11,7 @@ class SitemapService {
   }
 
   /**
-   * Check if cache is valid
+   * check if cache is valid
    */
   isCacheValid() {
     if (!this.cache || !this.cacheTime) return false;
@@ -16,27 +19,27 @@ class SitemapService {
   }
 
   /**
-   * Get profiles sitemap (with caching)
+   * get profiles sitemap (with caching)
    */
   async getProfilesSitemap() {
     try {
-      // Return cached data if valid
+      // return cached data if valid
       if (this.isCacheValid()) {
         console.log('[SitemapService] Serving from memory cache');
         return this.cache;
       }
 
       console.log('[SitemapService] Fetching fresh sitemap from backend');
-      
-      // Fetch from backend
+
+      // fetch from backend
       const response = await apiMethods.sitemap.getProfilesSitemap();
-      
-      // Validate response
+
+      // validate response
       if (!response.data || typeof response.data !== 'string') {
         throw new Error('Invalid sitemap response from backend');
       }
 
-      // Cache the response
+      // cache the response
       this.cache = response.data;
       this.cacheTime = Date.now();
 
@@ -45,8 +48,8 @@ class SitemapService {
 
     } catch (error) {
       console.error('[SitemapService] Error fetching sitemap:', error);
-      
-      // Return cached data even if expired (fallback)
+
+      // return cached data even if expired (fallback)
       if (this.cache) {
         console.warn('[SitemapService] Using stale cache due to error');
         return this.cache;
@@ -57,7 +60,7 @@ class SitemapService {
   }
 
   /**
-   * Clear cache (useful for testing or forced refresh)
+   * clear cache (useful for testing or forced refresh)
    */
   clearCache() {
     this.cache = null;
@@ -66,5 +69,5 @@ class SitemapService {
   }
 }
 
-// Export singleton instance
+// export singleton instance
 export default new SitemapService();

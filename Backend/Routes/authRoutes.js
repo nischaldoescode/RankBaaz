@@ -1,3 +1,6 @@
+/**
+ * keeps the auth routes route focused and readable.
+ */
 import express from "express";
 import {
   register,
@@ -34,7 +37,7 @@ const router = express.Router();
 
 router.get("/username-available/:username", quickCheckUsername);
 
-// Public routes - NO CSRF (users are not authenticated yet)
+// public routes - no csrf (users are not authenticated yet)
 router.post("/register", registerValidation, register);
 router.post("/initiate-login", initiateLogin);
 router.post("/verify-login-otp", verifyLoginOTP);
@@ -45,19 +48,19 @@ router.post("/forgot-password", forgotPasswordValidation, forgotPassword);
 router.post("/verify-forgot-password-otp", verifyForgotPasswordOTP);
 router.post("/reset-password", resetPasswordValidation, resetPassword);
 
-// Semi-authenticated routes - Keep CSRF
+// semi-authenticated routes - keep csrf
 router.post("/refresh-token", refreshToken);
 
 /**
- * GET /profile - Retrieve user profile
- * Auth: Cookie-based authentication only (no signature required)
- * Note: Signature not required on GET to prevent chicken-egg problem during auth init
+ * get /profile - retrieve user profile
+ * auth: cookie-based authentication only (no signature required)
+ * note: signature not required on get to prevent chicken-egg problem during auth init
  */
 router.get("/profile", authenticateUser, getProfile);
 
 /**
- * PUT /profile - Update user profile
- * Auth: Cookie + Request signature required
+ * put /profile - update user profile
+ * auth: cookie + request signature required
  */
 router.put(
   "/profile",

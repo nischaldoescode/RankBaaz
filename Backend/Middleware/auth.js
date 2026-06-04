@@ -1,3 +1,6 @@
+/**
+ * keeps the auth middleware focused and readable.
+ */
 import jwt from "jsonwebtoken";
 import User from "../Models/User.js";
 import Admin from "../Models/Admin.js";
@@ -34,28 +37,28 @@ const isBootstrapProfileRequest = (req, type) => {
 };
 
 /**
- * Authenticate user with JWT token validation and request signature verification
+ * authenticate user with jwt token validation and request signature verification
  *
- * Security Layers:
- * 1. Check for encrypted auth session cookie
- * 2. Decrypt and verify JWT token
- * 3. Validate device fingerprint
- * 4. Validate IP address and User-Agent
- * 5. Verify request signature (prevents Postman/Insomnia access)
- * 6. Check user exists and is verified
+ * security layers:
+ * 1. check for encrypted auth session cookie
+ * 2. decrypt and verify jwt token
+ * 3. validate device fingerprint
+ * 4. validate ip ress and user-agent
+ * 5. verify request signature (prevents postman/insomnia access)
+ * 6. check user exists and is verified
  *
- * @param {Object} req - Express request object
- * @param {Object} res - Express response object
- * @param {Function} next - Next middleware function
+ * @param {object} req - express request object
+ * @param {object} res - express response object
+ * @param {function} next - next middleware function
  *
- * @throws {401} Authentication failed
- * @throws {403} Signature verification failed
+ * @throws {401} authentication failed
+ * @throws {403} signature verification failed
  */
 export const authenticateUser = async (req, res, next) => {
   try {
     const encryptedCookie = req.signedCookies.auth_session;
 
-    // LAYER 1: Check auth cookie exists
+    // layer 1: check auth cookie exists
     if (!encryptedCookie) {
       return res.status(401).json({
         success: false,
@@ -64,7 +67,7 @@ export const authenticateUser = async (req, res, next) => {
       });
     }
 
-    // LAYER 2: Decrypt and verify JWT
+    // layer 2: decrypt and verify jwt
     const cookieData = decryptCookieData(encryptedCookie);
     if (!cookieData || !cookieData.token) {
       return res.status(401).json({
@@ -76,7 +79,7 @@ export const authenticateUser = async (req, res, next) => {
 
     const decoded = jwt.verify(cookieData.token, process.env.JWT_SECRET);
 
-    // LAYER 3: Validate device fingerprint
+    // layer 3: validate device fingerprint
     const currentDeviceId = generateDeviceFingerprint(req);
     if (decoded.deviceId !== currentDeviceId) {
       return res.status(401).json({
@@ -86,7 +89,7 @@ export const authenticateUser = async (req, res, next) => {
       });
     }
 
-    // LAYER 4: Validate IP and User-Agent
+    // layer 4: validate ip and user-agent
     const currentIp = req.ip || req.connection.remoteAddress;
     const currentUserAgent = req.get("User-Agent");
 
@@ -98,14 +101,14 @@ export const authenticateUser = async (req, res, next) => {
       });
     }
 
-    // LAYER 5: Verify request signature (CRITICAL SECURITY CHECK)
-    // This prevents Postman/Insomnia/curl access even with valid cookies
+    // layer 5: verify request signature (security check)
+    // this prevents postman/insomnia/curl access even with valid cookies
     const signature = req.headers["x-request-signature"];
     const timestamp = req.headers["x-request-timestamp"];
     const nonce = req.headers["x-request-nonce"];
 
     if (!signature || !timestamp || !nonce) {
-      console.warn("[AUTH] Missing signature headers:", {
+      console.warn("Missing signature headers:", {
         userId: decoded.userId,
         path: req.originalUrl,
         ip: currentIp,
@@ -119,10 +122,10 @@ export const authenticateUser = async (req, res, next) => {
       });
     }
 
-    // Note: Detailed signature verification happens in requestSigning middleware
-    // This check ensures headers are present
+    // note: detailed signature verification happens in requestsigning middleware
+    // this check ensures headers are present
 
-    // LAYER 6: Verify user exists and is verified
+    // layer 6: verify user exists and is verified
     const user = await User.findById(decoded.userId).select("-password -otp");
 
     if (!user || !user.isVerified) {
@@ -139,7 +142,7 @@ export const authenticateUser = async (req, res, next) => {
     }
     return verifyRequestSignature(req, res, next);
   } catch (error) {
-    console.error("[AUTH_USER] Error:", error.message);
+    console.error("Error:", error.message);
 
     if (error.name === "JsonWebTokenError") {
       return res.status(401).json({
@@ -166,26 +169,26 @@ export const authenticateUser = async (req, res, next) => {
 };
 
 /**
- * Authenticate admin with JWT token validation and request signature verification
+ * authenticate admin with jwt token validation and request signature verification
  *
- * Security Layers:
- * 1. Check for admin token cookie
- * 2. Verify JWT token with admin secret
- * 3. Verify request signature (prevents Postman/Insomnia access)
- * 4. Check admin exists in database
+ * security layers:
+ * 1. check for admin token cookie
+ * 2. verify jwt token with admin secret
+ * 3. verify request signature (prevents postman/insomnia access)
+ * 4. check admin exists in database
  *
- * @param {Object} req - Express request object
- * @param {Object} res - Express response object
- * @param {Function} next - Next middleware function
+ * @param {object} req - express request object
+ * @param {object} res - express response object
+ * @param {function} next - next middleware function
  *
- * @throws {401} Authentication failed
- * @throws {403} Signature verification failed
+ * @throws {401} authentication failed
+ * @throws {403} signature verification failed
  */
 export const authenticateAdmin = async (req, res, next) => {
   try {
     const token = req.cookies.adminToken;
 
-    // LAYER 1: Check admin token exists
+    // layer 1: check admin token exists
     if (!token) {
       return res.status(401).json({
         success: false,
@@ -194,16 +197,16 @@ export const authenticateAdmin = async (req, res, next) => {
       });
     }
 
-    // LAYER 2: Verify JWT with admin secret
+    // layer 2: verify jwt with admin secret
     const decoded = jwt.verify(token, process.env.ADMIN_JWT_SECRET);
 
-    // LAYER 3: Verify request signature
+    // layer 3: verify request signature
     const signature = req.headers["x-request-signature"];
     const timestamp = req.headers["x-request-timestamp"];
     const nonce = req.headers["x-request-nonce"];
 
     if (!signature || !timestamp || !nonce) {
-      console.warn("[ADMIN_AUTH] Missing signature headers:", {
+      console.warn("Missing signature headers:", {
         adminId: decoded.adminId,
         path: req.originalUrl,
         ip: req.ip,
@@ -216,7 +219,7 @@ export const authenticateAdmin = async (req, res, next) => {
       });
     }
 
-    // LAYER 4: Verify admin exists
+    // layer 4: verify admin exists
     const admin = await Admin.findById(decoded.adminId).select("-password");
 
     if (!admin) {
@@ -227,10 +230,10 @@ export const authenticateAdmin = async (req, res, next) => {
       });
     }
 
-    console.log("[ADMIN_AUTH] Admin authenticated:", admin.email);
+    console.log("Admin authenticated:", admin.email);
 
     if (process.env.NODE_ENV === "development") {
-      console.log("[ADMIN_AUTH] Request path details:", {
+      console.log("Request path details:", {
         originalUrl: req.originalUrl,
         path: req.path,
         baseUrl: req.baseUrl,
@@ -251,7 +254,7 @@ export const authenticateAdmin = async (req, res, next) => {
 
     return verifyRequestSignature(req, res, next);
   } catch (error) {
-    console.error("[ADMIN_AUTH] Error:", error.message);
+    console.error("Error:", error.message);
 
     if (error.name === "JsonWebTokenError") {
       return res.status(401).json({
@@ -279,10 +282,10 @@ export const authenticateAdmin = async (req, res, next) => {
 
 export const authenticateAny = async (req, res, next) => {
   try {
-    const adminToken = req.cookies.adminToken; // Keep admin as-is
+    const adminToken = req.cookies.adminToken; // keep admin as-is
     const encryptedUserCookie = req.signedCookies.auth_session;
 
-    // Handle admin token (unchanged)
+    // handle admin token (unchanged)
     if (adminToken) {
       try {
         const decoded = jwt.verify(adminToken, process.env.JWT_SECRET);
@@ -303,7 +306,7 @@ export const authenticateAny = async (req, res, next) => {
       }
     }
 
-    // Handle user token (with decryption)
+    // handle user token (with decryption)
     if (!encryptedUserCookie) {
       return res.status(401).json({
         success: false,
@@ -321,7 +324,7 @@ export const authenticateAny = async (req, res, next) => {
 
     const decoded = jwt.verify(cookieData.token, process.env.JWT_SECRET);
 
-    // Validate device and context
+    // validate device and context
     const currentDeviceId = generateDeviceFingerprint(req);
     if (decoded.deviceId !== currentDeviceId) {
       return res.status(401).json({

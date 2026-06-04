@@ -35,7 +35,7 @@ export default {
         white: colors.white,
         slate: colors.slate,
 
-        // shadcn/ui colors that map to CSS variables
+        // shadcn/ui colors that map to css variables.
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",
         background: "hsl(var(--background))",

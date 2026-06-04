@@ -1,3 +1,6 @@
+/**
+ * keeps the analytics tab page focused and readable.
+ */
 import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { teacherApi } from "../../services/api.js";

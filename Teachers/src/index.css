@@ -1,3 +1,6 @@
+/**
+ * keeps the index stylesheet focused and readable.
+ */
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 @import "@fontsource-variable/inter";
@@ -123,7 +126,7 @@ a {
   border-radius: 3px;
 }
 
-/* Teacher portal responsive shell */
+/* teacher portal responsive shell */
 .teacher-dashboard-shell,
 .teacher-main,
 .teacher-content,
@@ -349,5 +352,124 @@ a {
     animation: none !important;
     transition: none !important;
     transform: none !important;
+  }
+}
+
+:root {
+  --teacher-primary: #2563eb;
+  --teacher-primary-rgb: 37, 99, 235;
+  --teacher-ink: #0f172a;
+  --teacher-muted: #64748b;
+  --teacher-bg: #f8fbff;
+  --teacher-surface: rgba(255, 255, 255, 0.90);
+  --teacher-line: rgba(148, 163, 184, 0.30);
+  --teacher-shadow: 0 1px 2px rgba(15, 23, 42, 0.08), 0 16px 44px rgba(37, 99, 235, 0.08);
+}
+
+body {
+  background:
+    linear-gradient(180deg, #f8fbff 0%, #ffffff 44%, #f8fafc 100%),
+    #f8fbff;
+}
+
+.teacher-dashboard-shell {
+  background:
+    linear-gradient(180deg, rgba(248, 251, 255, 0.96), rgba(255, 255, 255, 0.92)),
+    radial-gradient(circle at 8% 12%, rgba(var(--teacher-primary-rgb), 0.08), transparent 34%) !important;
+  color: var(--teacher-ink);
+  position: relative;
+  isolation: isolate;
+}
+
+.teacher-dashboard-shell::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    linear-gradient(90deg, rgba(37, 99, 235, 0.045) 1px, transparent 1px),
+    linear-gradient(180deg, rgba(37, 99, 235, 0.045) 1px, transparent 1px);
+  background-size: 42px 42px;
+  mask-image: linear-gradient(180deg, black, transparent 88%);
+}
+
+.teacher-auth-page::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(90deg, rgba(37, 99, 235, 0.045) 1px, transparent 1px),
+    linear-gradient(180deg, rgba(37, 99, 235, 0.045) 1px, transparent 1px);
+  background-size: 42px 42px;
+  mask-image: linear-gradient(180deg, black, transparent 86%);
+}
+
+.teacher-auth-page > div {
+  position: relative;
+  z-index: 1;
+}
+
+.teacher-sidebar-desktop,
+.teacher-sidebar-mobile,
+.teacher-topbar {
+  background: var(--teacher-surface) !important;
+  border-color: var(--teacher-line) !important;
+  backdrop-filter: blur(18px);
+}
+
+.teacher-dashboard-shell button {
+  border-radius: 999px !important;
+  cursor: pointer;
+  transition: transform 0.16s ease, box-shadow 0.16s ease, background 0.16s ease, border-color 0.16s ease !important;
+}
+
+.teacher-dashboard-shell button:active {
+  transform: scale(0.985);
+}
+
+.teacher-dashboard-shell button:disabled {
+  cursor: not-allowed !important;
+  opacity: 0.48 !important;
+  transform: none !important;
+}
+
+.teacher-dashboard-shell input,
+.teacher-dashboard-shell textarea,
+.teacher-dashboard-shell select {
+  border-radius: 8px !important;
+  border-color: var(--teacher-line) !important;
+}
+
+.teacher-dashboard-shell input:focus,
+.teacher-dashboard-shell textarea:focus,
+.teacher-dashboard-shell select:focus {
+  border-color: var(--teacher-primary) !important;
+  box-shadow: 0 0 0 4px rgba(var(--teacher-primary-rgb), 0.14) !important;
+  outline: none !important;
+}
+
+.teacher-dashboard-shell [style*="border-radius: 16"],
+.teacher-dashboard-shell [style*="borderRadius: 16"],
+.teacher-course-card,
+.teacher-modal-panel,
+.teacher-delete-panel,
+.teacher-narrow-tab > div {
+  border-radius: 8px !important;
+  box-shadow: var(--teacher-shadow) !important;
+}
+
+.teacher-dashboard-shell [style*="#10b981"],
+.teacher-dashboard-shell [style*="#22c55e"],
+.teacher-dashboard-shell [style*="green"],
+.teacher-dashboard-shell [style*="emerald"] {
+  color: var(--teacher-primary) !important;
+}
+
+@media (max-width: 767px) {
+  .teacher-topbar {
+    border-radius: 0 0 8px 8px;
   }
 }

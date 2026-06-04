@@ -1,3 +1,6 @@
+/**
+ * keeps the legal pages model focused and readable.
+ */
 import mongoose from "mongoose";
 import connection2 from "../Config/mongodb2.js";
 
@@ -5,7 +8,7 @@ const legalPageSchema = new mongoose.Schema(
   {
     type: {
       type: String,
-      enum: ["privacy", "terms"], // CHANGED: Only 2 types now
+      enum: ["privacy", "terms"], // d: only 2 types now
       required: true,
       unique: true,
     },
@@ -13,7 +16,7 @@ const legalPageSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
-    // CHANGED: New structure for headers with subheaders and points
+    // d: structure for headers with subheaders and points
     sections: [
       {
         id: {
@@ -61,7 +64,7 @@ const legalPageSchema = new mongoose.Schema(
       type: Date,
       default: Date.now,
     },
-    // REMOVED: version field
+    // version field
     isActive: {
       type: Boolean,
       default: true,
@@ -90,7 +93,7 @@ const legalPageSchema = new mongoose.Schema(
   }
 );
 
-// UPDATED: Template hints for only 2 types
+// updated: template hints for only 2 types
 legalPageSchema.statics.getTemplateHints = function (type) {
   const hints = {
     privacy: `Privacy Policy Structure:

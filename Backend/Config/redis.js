@@ -1,3 +1,6 @@
+/**
+ * keeps the redis module focused and readable.
+ */
 import Redis from "ioredis";
 import dotenv from "dotenv";
 
@@ -58,7 +61,7 @@ const logRedisWarning = (label, error) => {
 
 if (process.env.NODE_ENV === "production" && !process.env.REDIS_URL && !process.env.REDIS_PRIVATE_URL) {
   console.warn(
-    "[REDIS] REDIS_URL is not set in production. Falling back to localhost will fail on Render unless Redis runs in the same service.",
+    "REDIS_URL is not set in production. Falling back to localhost will fail on Render unless Redis runs in the same service.",
   );
 }
 
@@ -75,7 +78,7 @@ const redisClient = new Redis(redisConnectionUrl, {
   maxRetriesPerRequest: 1,
   enableReadyCheck: true,
   enableOfflineQueue: false,
-  
+
   // Retry strategy with exponential backoff
   retryStrategy: (times) => {
     const delay = Math.min(500 + times * 250, 10000);
@@ -84,19 +87,19 @@ const redisClient = new Redis(redisConnectionUrl, {
     }
     return delay;
   },
-  
+
   // Connection timeout protection
   connectTimeout: REDIS_CONNECT_TIMEOUT_MS,
-  
+
   // Command timeout (prevent hung requests)
   commandTimeout: REDIS_COMMAND_TIMEOUT_MS,
-  
+
   // Keep-alive to prevent connection drops
   keepAlive: 30000,
-  
+
   // Keep command failure paths predictable when Redis is unavailable.
   enableAutoPipelining: false,
-  
+
   // Lazy connection (connect on first command)
   lazyConnect: false,
 
@@ -123,7 +126,7 @@ redisClient.sendCommand = (command, stream) => {
     if (isRedisConnectionError(error)) {
       redisReady = false;
       redisCircuitOpenUntil = Date.now() + REDIS_CIRCUIT_OPEN_MS;
-      logRedisWarning("[REDIS] Command failed; opening short circuit breaker:", error);
+      logRedisWarning("Command failed; opening short circuit breaker:", error);
     }
 
     throw error;
@@ -156,7 +159,7 @@ redisClient.on("ready", () => {
 
 redisClient.on("error", (err) => {
   redisReady = false;
-  logRedisWarning("[REDIS] Connection error:", err);
+  logRedisWarning("Connection error:", err);
 });
 
 redisClient.on("close", () => {
@@ -183,37 +186,37 @@ export const CacheKeys = {
   userProfile: (username) => `profile:${username}`,
   userSettings: (userId) => `settings:${userId}`,
   userStats: (userId) => `stats:${userId}`,
-  
+
   // Course-related cache keys
   course: (courseId) => `course:${courseId}`,
   allCourses: () => `courses:all`,
   courseQuestions: (courseId) => `course:${courseId}:questions`,
   courseStats: () => `admin:stats`,
-  
+
   // Category cache keys
   category: (categoryId) => `category:${categoryId}`,
   allCategories: () => `categories:all`,
-  
+
   // Content management cache keys
   contentSettings: () => `content:settings`,
   faqs: () => `content:faqs`,
   contactInfo: () => `content:contact`,
   legalPage: (type) => `legal:${type}`,
-  
+
   // Leaderboard cache keys
   leaderboard: (courseId) => `leaderboard:${courseId}`,
   globalLeaderboard: () => `leaderboard:global`,
   userRank: (userId) => `rank:${userId}`,
-  
+
   // Test-related cache keys
   testHistory: (userId) => `test:history:${userId}`,
   testResult: (testId) => `test:result:${testId}`,
-  
+
   // Preview cache keys
   homePreview: () => `preview:home`,
   aboutPreview: () => `preview:about`,
   footerPreview: () => `preview:footer`,
-  
+
   // Sitemap cache
   sitemap: () => `sitemap:profiles`,
 };
@@ -233,15 +236,15 @@ export const invalidateCache = {
       CacheKeys.userStats(userId),
       CacheKeys.userSettings(userId),
     ];
-    
+
     if (username) {
       keys.push(CacheKeys.userProfile(username));
     }
-    
+
     await redisClient.del(...keys);
     console.log(`Invalidated cache for user ${userId}`);
   },
-  
+
   /**
    * Invalidate course-related caches
    * Call this when course data changes (edit, questions added, etc.)
@@ -255,7 +258,7 @@ export const invalidateCache = {
     );
     console.log(`Invalidated cache for course ${courseId}`);
   },
-  
+
   /**
    * Invalidate all courses cache
    * Call this when any course is added/removed or categories change
@@ -268,7 +271,7 @@ export const invalidateCache = {
     );
     console.log(`Invalidated all courses cache`);
   },
-  
+
   /**
    * Invalidate content management caches
    * Call this when CMS content is updated
@@ -284,7 +287,7 @@ export const invalidateCache = {
     );
     console.log(`Invalidated content cache`);
   },
-  
+
   /**
    * Invalidate legal page cache
    * Call this when legal pages are updated
@@ -293,7 +296,7 @@ export const invalidateCache = {
     await redisClient.del(CacheKeys.legalPage(type));
     console.log(`Invalidated legal page cache: ${type}`);
   },
-  
+
   /**
    * Invalidate leaderboard caches
    * Call this when test scores are submitted or user ranking changes
@@ -310,7 +313,7 @@ export const invalidateCache = {
       console.log(`Invalidated all leaderboard caches`);
     }
   },
-  
+
   /**
    * Invalidate test-related caches
    * Call this when user completes a test
@@ -323,7 +326,7 @@ export const invalidateCache = {
     await redisClient.del(...keys);
     console.log(`Invalidated test cache for user ${userId}`);
   },
-  
+
   /**
    * Clear all caches (use sparingly, only for critical updates)
    */
@@ -351,7 +354,7 @@ export const cacheUtils = {
       return null;
     }
   },
-  
+
   /**
    * Set cached data with TTL
    * @param {string} key - Cache key
@@ -365,7 +368,7 @@ export const cacheUtils = {
       console.error(`Cache SET error for key ${key}:`, error.message);
     }
   },
-  
+
   /**
    * Delete specific cache key
    * @param {string} key - Cache key to delete
@@ -377,7 +380,7 @@ export const cacheUtils = {
       console.error(`Cache DEL error for key ${key}:`, error.message);
     }
   },
-  
+
   /**
    * Check if key exists in cache
    * @param {string} key - Cache key

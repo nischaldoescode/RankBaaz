@@ -1,17 +1,20 @@
+/**
+ * keeps the admin request signer utility focused and readable.
+ */
 import crypto from "crypto-js";
 import axios from "axios";
 
 /**
- * Admin Request Signer
- * Handles HMAC-SHA256 signing for admin panel API requests
+ * admin request signer
+ * handles hmac-sha256 signing for admin panel api requests
  *
- * Security Features:
- * - Separate signing secret from user frontend
- * - HMAC-SHA256 signatures
- * - Nonce for replay protection
- * - Timestamp validation (5min window)
+ * security features:
+ * - separate signing secret from user frontend
+ * - hmac-sha256 signatures
+ * - nonce for replay protection
+ * - timestamp validation (5min window)
  *
- * @class AdminRequestSigner
+ * @class adminrequestsigner
  */
 class AdminRequestSigner {
   constructor() {
@@ -20,10 +23,10 @@ class AdminRequestSigner {
   }
 
   /**
-   * Set signing secret and expiration time
+   * set signing secret and expiration time
    *
-   * @param {string} secret - HMAC secret key
-   * @param {number} expiresIn - Expiration time in seconds
+   * @param {string} secret - hmac secret key
+   * @param {number} expiresin - expiration time in seconds
    */
   setSigningSecret(secret, expiresIn) {
     this.signingSecret = secret;
@@ -37,9 +40,9 @@ class AdminRequestSigner {
   }
 
   /**
-   * Load signing secret from localStorage
+   * load signing secret from localstorage
    *
-   * @returns {boolean} True if valid secret loaded, false otherwise
+   * @returns {boolean} true if valid secret loaded, false otherwise
    */
   loadSigningSecret() {
     const secret = localStorage.getItem("admin_signing_secret");
@@ -55,7 +58,7 @@ class AdminRequestSigner {
   }
 
   /**
-   * Clear signing secret from memory and storage
+   * clear signing secret from memory and storage
    */
   clearSigningSecret() {
     this.signingSecret = null;
@@ -65,39 +68,39 @@ class AdminRequestSigner {
   }
 
   /**
-   * Check if signing secret is still valid
+   * check if signing secret is still valid
    *
-   * @returns {boolean} True if secret exists and not expired
+   * @returns {boolean} true if secret exists and not expired
    */
   isSecretValid() {
     return this.signingSecret && Date.now() < this.secretExpiry;
   }
 
   /**
-   * Generate cryptographically secure random nonce
+   * generate cryptographically secure random nonce
    *
    * @returns {string} 16-byte hex nonce
    */
   generateNonce() {
-    // Use Web Crypto API for cryptographically strong randomness
+    // use web crypto api for cryptographically strong randomness
     const array = new Uint8Array(16);
     window.crypto.getRandomValues(array);
-    // Convert to hex string (32 characters)
+    // convert to hex string (32 characters)
     return Array.from(array, (byte) => byte.toString(16).padStart(2, "0")).join(
       ""
     );
   }
 
   /**
-   * Generate HMAC-SHA256 signature for request
+   * generate hmac-sha256 signature for request
    *
-   * @param {string} method - HTTP method (GET, POST, etc.)
-   * @param {string} path - Request path
-   * @param {Object} body - Request body
-   * @param {string} timestamp - Request timestamp
-   * @param {string} nonce - Request nonce
-   * @returns {string} HMAC-SHA256 signature
-   * @throws {Error} If signing secret not available
+   * @param {string} method - http method (get, post, etc.)
+   * @param {string} path - request path
+   * @param {object} body - request body
+   * @param {string} timestamp - request timestamp
+   * @param {string} nonce - request nonce
+   * @returns {string} hmac-sha256 signature
+   * @throws {error} if signing secret not available
    */
   generateSignature(method, path, body, timestamp, nonce) {
     if (!this.signingSecret) {
@@ -113,11 +116,11 @@ class AdminRequestSigner {
   }
 
   /**
-   * Build the exact path Axios will send, including query params.
+   * build the exact path axios will send, including query params.
    *
-   * Axios drops null/undefined params from the real request URL. Using
-   * URLSearchParams directly turns undefined into "undefined", which breaks
-   * HMAC checks for optional params such as excludeId.
+   * axios drops null/undefined params from the real request url. using
+   * urlsearchparams directly turns undefined into "undefined", which breaks
+   * hmac checks for optional params such as excludeid.
    */
   buildSignedPath(config) {
     const baseURL = config.baseURL || axios.defaults.baseURL || window.location.origin;
@@ -127,36 +130,36 @@ class AdminRequestSigner {
       const parsedUrl = new URL(requestUri, baseURL || window.location.origin);
       return parsedUrl.pathname + parsedUrl.search;
     } catch (error) {
-      console.error("[ADMIN_SIGNER] Failed to build signed path:", error);
+      console.error("Failed to build signed path:", error);
       return config.url || "/";
     }
   }
 
   /**
-   * Sign axios request config with HMAC-SHA256 signature
+   * sign axios request config with hmac-sha256 signature
    *
-   * CRITICAL PATH CONSTRUCTION LOGIC:
-   * Backend uses req.path which includes the full API path.
+   * path construction logic:
+   * backend uses req.path which includes the full api path.
    *
-   * Examples:
-   * - Axios config.url = "/content/settings"
-   * - Axios config.baseURL = "http://localhost:7000/api"
-   * - Backend req.path = "/api/content/settings"
+   * examples:
+   * - axios config.url = "/content/settings"
+   * - axios config.baseurl = "http://localhost:7000/api"
+   * - backend req.path = "/api/content/settings"
    *
-   * Therefore, we must reconstruct the FULL path including /api prefix
+   * therefore, we reconstruct the full path including /api prefix
    * to match what the backend verification middleware sees.
    *
-   * @param {Object} config - Axios request configuration object
-   * @param {string} config.url - Relative or absolute request URL
-   * @param {string} config.method - HTTP method (GET, POST, etc.)
-   * @param {Object} config.data - Request body data
-   * @param {Object} config.params - URL query parameters
-   * @param {string} config.baseURL - Axios instance base URL
-   * @returns {Object} Modified config with signature headers added
+   * @param {object} config - axios request configuration object
+   * @param {string} config.url - relative or absolute request url
+   * @param {string} config.method - http method (get, post, etc.)
+   * @param {object} config.data - request body data
+   * @param {object} config.params - url query parameters
+   * @param {string} config.baseurl - axios instance base url
+   * @returns {object} modified config with signature headers
    */
   signRequest(config) {
     if (!this.isSecretValid()) {
-      console.warn("[ADMIN_SIGNER] Signing secret expired or missing");
+      console.warn("Signing secret expired or missing");
       return config;
     }
 
@@ -176,15 +179,15 @@ class AdminRequestSigner {
         nonce
       );
 
-      // Add signature headers
+      // signature headers
       config.headers = config.headers || {};
       config.headers["X-Request-Signature"] = signature;
       config.headers["X-Request-Timestamp"] = timestamp;
       config.headers["X-Request-Nonce"] = nonce;
 
-      // Development logging
+      // development logging
       if (import.meta.env.VITE_MODE === "development") {
-        console.log("[ADMIN_SIGNER] Request signed:", {
+        console.log("Request signed:", {
           method,
           originalUrl: config.url,
           reconstructedPath: path,
@@ -195,8 +198,8 @@ class AdminRequestSigner {
         });
       }
     } catch (error) {
-      console.error("[ADMIN_SIGNER] Signing failed:", error);
-      throw error; // Propagate error to prevent unsigned requests
+      console.error("Signing failed:", error);
+      throw error; // propagate error to prevent unsigned requests
     }
 
     return config;

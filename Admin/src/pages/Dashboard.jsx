@@ -1,3 +1,6 @@
+/**
+ * keeps the dashboard page focused and readable.
+ */
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import {
@@ -41,7 +44,7 @@ const Dashboard = () => {
     loadData();
   }, []);
 
-  // Animate stats when they change
+  // animate stats when they
   useEffect(() => {
     if (stats && Object.keys(stats).length > 0) {
       const newAnimatedStats = {
@@ -60,7 +63,7 @@ const Dashboard = () => {
           ),
         },
         totalQuestions: {
-          value: stats.totalQuestions || 0, // Now comes directly from stats
+          value: stats.totalQuestions || 0, // now comes directly from stats
           change: calculateChange(
             previousStats.totalQuestions,
             stats.totalQuestions || 0
@@ -71,7 +74,7 @@ const Dashboard = () => {
           ),
         },
         totalUsers: {
-          value: stats.totalUsers || 0, // Now comes directly from stats
+          value: stats.totalUsers || 0, // now comes directly from stats
           change: calculateChange(
             previousStats.totalUsers,
             stats.totalUsers || 0
@@ -79,7 +82,7 @@ const Dashboard = () => {
           trend: getTrend(previousStats.totalUsers, stats.totalUsers || 0),
         },
         totalTests: {
-          value: stats.totalTests || 0, // Now comes directly from stats
+          value: stats.totalTests || 0, // now comes directly from stats
           change: calculateChange(
             previousStats.totalTests,
             stats.totalTests || 0
@@ -96,7 +99,7 @@ const Dashboard = () => {
   const calculateChange = (previous, current) => {
     if (!previous || previous === 0) return current > 0 ? 100 : 0;
     const change = ((current - previous) / previous) * 100;
-    return Math.round(change * 10) / 10; // Round to 1 decimal place
+    return Math.round(change * 10) / 10; // round to 1 decimal place
   };
 
   const getTrend = (previous, current) => {
@@ -120,15 +123,15 @@ const Dashboard = () => {
   };
 
   const getCategoryName = (category) => {
-    // If no category provided
+    // if no category provided
     if (!category) return "Uncategorized";
 
-    // If category is already a populated object with name
+    // if category is already a populated object with name
     if (typeof category === "object" && category.name) {
       return category.name;
     }
 
-    // If category is just an ID string, find it in categories array
+    // if category is just an id string, find it in categories array
     if (typeof category === "string") {
       if (!categories || categories.length === 0) {
         return "Loading...";
@@ -244,7 +247,7 @@ const Dashboard = () => {
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-8">
-        {/* Header */}
+        {/* header */}
         <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center space-y-4 sm:space-y-0">
           <div>
             <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">
@@ -263,7 +266,7 @@ const Dashboard = () => {
           </Link>
         </div>
 
-        {/* Stats Grid */}
+        {/* stats grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
           <StatCard
             title="Total Courses"
@@ -291,7 +294,7 @@ const Dashboard = () => {
           />
         </div>
 
-        {/* Courses Overview */}
+        {/* courses overview */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
           <div className="px-4 sm:px-6 py-4 border-b border-gray-200 bg-gray-50">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-2 sm:space-y-0">
@@ -432,7 +435,7 @@ const Dashboard = () => {
                     </div>
                   </div>
 
-                  {/* Expanded Course Details */}
+                  {/* expanded course details */}
                   {expandedCourse === course._id && (
                     <div className="mt-6 pt-6 border-t border-gray-100 animate-fadeIn">
                       <h4 className="text-sm font-medium text-gray-900 mb-4 uppercase tracking-wide">
@@ -502,11 +505,11 @@ const Dashboard = () => {
           from { opacity: 0; transform: translateY(-10px); }
           to { opacity: 1; transform: translateY(0); }
         }
-        
+
         .animate-fadeIn {
           animation: fadeIn 0.3s ease-out;
         }
-        
+
         .line-clamp-2 {
           display: -webkit-box;
           -webkit-line-clamp: 2;

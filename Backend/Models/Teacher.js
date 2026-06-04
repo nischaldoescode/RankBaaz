@@ -1,9 +1,12 @@
+/**
+ * keeps the teacher model focused and readable.
+ */
 import mongoose from "mongoose";
 
 /**
  * teacher account schema
  * - invite-only
- * - document verification required before access
+ * - document verification required access
  * - supports india (razorpay) and nepal (khalti)
  */
 const teacherSchema = new mongoose.Schema(
@@ -61,7 +64,7 @@ const teacherSchema = new mongoose.Schema(
       required: true,
       enum: ["india", "nepal"],
     },
-    // ── verification documents ──
+    // verification documents
     documents: [
       {
         public_id: { type: String, required: true },
@@ -88,12 +91,12 @@ const teacherSchema = new mongoose.Schema(
     documentRequestedAt: { type: Date, default: null },
     documentRequestNote: { type: String, default: null },
 
-    // ── access control ──
+    // access control
     // account is fully blocked until documents verified (when requested)
     accessBlocked: { type: Boolean, default: false },
     accessBlockReason: { type: String, default: null },
 
-    // ── payment ──
+    // payment
     paymentDetails: {
       india: {
         accountNumber: { type: String, default: null },

@@ -1,3 +1,6 @@
+/**
+ * keeps the blog author model focused and readable.
+ */
 import mongoose from "mongoose";
 
 const blogAuthorSchema = new mongoose.Schema(

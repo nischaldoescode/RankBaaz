@@ -1,10 +1,13 @@
+/**
+ * keeps the admin register page focused and readable.
+ */
 import React, { useState } from "react";
 import { useAuth } from "../contexts/AuthContext";
 import { Mail, Lock, User, Calendar, Users, Eye, EyeOff, AlertCircle, CheckCircle, X } from "lucide-react";
 
 const AdminRegister = ({ onSwitchToLogin }) => {
   const { register, loading } = useAuth();
-  
+
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -13,7 +16,7 @@ const AdminRegister = ({ onSwitchToLogin }) => {
     age: "",
     gender: "",
   });
-  
+
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [errors, setErrors] = useState({});
@@ -128,7 +131,7 @@ const AdminRegister = ({ onSwitchToLogin }) => {
           </div>
         )}
 
-        {/* Name Field */}
+        {/* name field */}
         <div>
           <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
             Full Name
@@ -150,7 +153,7 @@ const AdminRegister = ({ onSwitchToLogin }) => {
           {errors.name && <p className="text-red-600 text-sm mt-1">{errors.name}</p>}
         </div>
 
-        {/* Email Field */}
+        {/* email field */}
         <div>
           <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
             Email Address
@@ -172,7 +175,7 @@ const AdminRegister = ({ onSwitchToLogin }) => {
           {errors.email && <p className="text-red-600 text-sm mt-1">{errors.email}</p>}
         </div>
 
-        {/* Age and Gender Row */}
+        {/* age and gender row */}
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label htmlFor="age" className="block text-sm font-medium text-gray-700 mb-1">
@@ -220,7 +223,7 @@ const AdminRegister = ({ onSwitchToLogin }) => {
           </div>
         </div>
 
-        {/* Password Field */}
+        {/* password field */}
         <div>
           <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
             Password
@@ -249,7 +252,7 @@ const AdminRegister = ({ onSwitchToLogin }) => {
           {errors.password && <p className="text-red-600 text-sm mt-1">{errors.password}</p>}
         </div>
 
-        {/* Confirm Password Field */}
+        {/* confirm password field */}
         <div>
           <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-1">
             Confirm Password
@@ -278,7 +281,7 @@ const AdminRegister = ({ onSwitchToLogin }) => {
           {errors.confirmPassword && <p className="text-red-600 text-sm mt-1">{errors.confirmPassword}</p>}
         </div>
 
-        {/* Submit Button */}
+        {/* submit button */}
         <button
           type="submit"
           disabled={loading}

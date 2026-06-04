@@ -1,3 +1,6 @@
+/**
+ * keeps the teacher routes route focused and readable.
+ */
 import express from "express";
 import multer from "multer";
 import { v2 as cloudinary } from "cloudinary";
@@ -78,7 +81,7 @@ const uploadProfileImage = multer({
   },
 }).single("profileImage");
 
-// document storage (pdf, jpg, png — max 1mb each)
+// document storage accepts pdf, jpg, and png up to 1mb each.
 const documentStorage = new CloudinaryStorage({
   cloudinary,
   params: (req, file) => ({
@@ -120,7 +123,7 @@ const handleDocumentUpload = (req, res, next) => {
 
 const router = express.Router();
 
-// ── public ──
+// public routes
 router.post("/apply", submitTeacherApplication);
 router.post("/application/status", async (req, res) => {
   try {
@@ -164,7 +167,7 @@ router.post("/check-email", async (req, res) => {
     const exists = await Teacher.exists({
       email: req.body.email?.toLowerCase(),
     });
-    // don't reveal whether account is active or blocked — just existence
+    // return only existence, not account state.
     return res.status(200).json({ success: true, exists: !!exists });
   } catch {
     res.status(500).json({ success: false, exists: false });
@@ -193,7 +196,7 @@ router.post("/forgot-password/verify-otp", teacherVerifyForgotOtp);
 router.post("/forgot-password/reset", teacherResetPassword);
 router.get("/public/:username", getPublicTeacherProfile);
 
-// ── teacher authenticated ──
+// teacher authenticated routes
 router.get("/me", authenticateTeacher, getTeacherProfile);
 router.get(
   "/me/courses/all",
@@ -254,7 +257,7 @@ router.post(
   authenticateTeacher,
   handleDocumentUpload,
   uploadDocuments,
-  // note: NO requireDocumentVerification here — documents tab must always work
+  // documents tab remains available during verification.
 );
 router.put(
   "/me/courses/:courseId/questions/:questionId",
@@ -269,7 +272,7 @@ router.delete(
   teacherDeleteQuestion,
 );
 
-// ── admin ──
+// admin routes
 router.get("/applications", authenticateAdmin, getTeacherApplications);
 router.post("/applications/invite", authenticateAdmin, sendTeacherInvite);
 router.post(

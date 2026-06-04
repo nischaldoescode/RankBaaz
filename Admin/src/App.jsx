@@ -1,3 +1,6 @@
+/**
+ * keeps the app module focused and readable.
+ */
 import React, { useState } from "react";
 import {
   BrowserRouter as Router,
@@ -44,7 +47,7 @@ function App() {
   return (
     <AuthProvider>
       <Router>
-        <div className="min-h-screen w-full bg-gray-50">
+        <div className="admin-material-shell min-h-screen w-full bg-gray-50">
           <ToastContainer
             position="bottom-center"
             autoClose={5000}
@@ -65,7 +68,14 @@ function App() {
           />
 
           <Routes>
-            <Route path="/login" element={<Login />} />
+            <Route
+              path="/login"
+              element={
+                <ContentProvider>
+                  <Login />
+                </ContentProvider>
+              }
+            />
 
             <Route
               path="/*"
@@ -73,14 +83,14 @@ function App() {
                 <ProtectedRoute>
                   <AdminProvider>
                     <ContentProvider>
-                      <div className="flex h-screen w-full bg-gray-50 overflow-hidden">
+                      <div className="admin-app-frame flex h-screen w-full overflow-hidden">
                         <Sidebar isOpen={sidebarOpen} onClose={closeSidebar} />
                         <div className="flex-1 flex flex-col min-w-0 w-full">
                           <Navbar
                             onToggleSidebar={toggleSidebar}
                             sidebarOpen={sidebarOpen}
                           />
-                          <main className="flex-1 overflow-x-hidden overflow-y-auto bg-gray-50 p-3 sm:p-4 md:p-6 lg:p-8 xl:p-10 w-full">
+                          <main className="admin-main-surface flex-1 overflow-x-hidden overflow-y-auto p-3 sm:p-4 md:p-6 lg:p-8 xl:p-10 w-full">
                             <div className="w-full max-w-none">
                               <Routes>
                                 <Route

@@ -1,3 +1,6 @@
+/**
+ * keeps the payment tab page focused and readable.
+ */
 import React, { useState } from "react";
 import { motion } from "framer-motion";
 import { useTeacher } from "../../context/TeacherContext.jsx";

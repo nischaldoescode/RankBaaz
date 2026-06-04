@@ -1,3 +1,6 @@
+/**
+ * keeps the terms of service page focused and readable.
+ */
 import React, { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Scale, Calendar, FileText } from "lucide-react";
@@ -25,7 +28,7 @@ const TermsOfService = () => {
     loadPage();
   }, [legalPages.terms]);
 
-  // SEO Configuration - only runs when page is loaded
+  // seo setup - only runs when page is loaded
   useSEO({
     title: page?.title || "Terms of Service",
     description: `Read ${
@@ -57,12 +60,12 @@ const TermsOfService = () => {
       publisher: {
         "@type": "Organization",
         name: contentSettings?.siteName || "Vidhgrow",
-        logo: {
-          "@type": "ImageObject",
-          url:
-            contentSettings?.logo?.url ||
-            `${contentSettings?.siteUrl || window.location.origin}/logo.png`,
-        },
+        ...(contentSettings?.logo?.url && {
+          logo: {
+            "@type": "ImageObject",
+            url: contentSettings.logo.url,
+          },
+        }),
       },
     },
   });
@@ -82,7 +85,7 @@ const TermsOfService = () => {
   }
 
   return (
-    <div className="min-h-screen pt-20 pb-16">
+    <div className="vg-static-page min-h-screen pt-20 pb-16">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
         <motion.div
           initial={animations && !reducedMotion ? "hidden" : "visible"}
@@ -90,7 +93,7 @@ const TermsOfService = () => {
           variants={containerVariants}
           className="space-y-8"
         >
-          {/* Header */}
+          {/* header */}
           <motion.div variants={itemVariants} className="text-center">
             <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-6">
               <Scale className="w-8 h-8 text-primary" />
@@ -117,7 +120,7 @@ const TermsOfService = () => {
             </div>
           </motion.div>
 
-          {/* Content */}
+          {/* content */}
           <motion.div
             variants={itemVariants}
             className="bg-card border border-border rounded-2xl p-8 md:p-12"
@@ -194,26 +197,26 @@ const TermsOfService = () => {
                 .sort((a, b) => a.order - b.order)
                 .map((section, index) => (
                   <div key={index} className="space-y-4">
-                    {/* Section Header */}
+                    {/* section header */}
                     <h2 className="text-2xl font-bold text-foreground border-b border-border pb-2">
                       {section.header}
                     </h2>
 
-                    {/* Section Content (paragraph text if exists) */}
+                    {/* section content (paragraph text if exists) */}
                     {section.content && section.content.trim() !== "" && (
                       <p className="text-muted-foreground leading-relaxed whitespace-pre-wrap">
                         {section.content}
                       </p>
                     )}
 
-                    {/* Subheaders with titles and points */}
+                    {/* subheaders with titles and points */}
                     {section.subheaders && section.subheaders.length > 0 && (
                       <div className="space-y-4">
                         {section.subheaders
                           .sort((a, b) => a.order - b.order)
                           .map((subheader, subIndex) => (
                             <div key={subIndex} className="ml-6">
-                              {/* Subheader Title (if exists) */}
+                              {/* subheader title (if exists) */}
                               {subheader.title &&
                                 subheader.title.trim() !== "" && (
                                   <h3 className="text-lg font-semibold text-foreground mb-2">
@@ -221,7 +224,7 @@ const TermsOfService = () => {
                                   </h3>
                                 )}
 
-                              {/* Bullet Points (if exist) */}
+                              {/* bullet points (if exist) */}
                               {subheader.points &&
                                 subheader.points.length > 0 && (
                                   <ul className="list-disc list-inside space-y-1 text-muted-foreground ml-4">
@@ -246,7 +249,7 @@ const TermsOfService = () => {
             </motion.div>
           )}
 
-          {/* Important Notice */}
+          {/* important notice */}
           <motion.div
             variants={itemVariants}
             className="bg-yellow-500/10 border border-yellow-500/20 rounded-xl p-6"
@@ -261,7 +264,7 @@ const TermsOfService = () => {
             </p>
           </motion.div>
 
-          {/* Contact Section */}
+          {/* contact section */}
           <motion.div
             variants={itemVariants}
             className="bg-muted/50 rounded-xl p-6 text-center"

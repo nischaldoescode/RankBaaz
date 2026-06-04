@@ -1,3 +1,6 @@
+/**
+ * keeps the scroll area component focused and readable.
+ */
 import * as React from "react"
 import * as ScrollAreaPrimitive from "@radix-ui/react-scroll-area"
 

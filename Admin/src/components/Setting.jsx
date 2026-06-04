@@ -1,3 +1,6 @@
+/**
+ * keeps the setting component focused and readable.
+ */
 import React, { useState, useEffect } from "react";
 import { useAuth } from "../contexts/AuthContext";
 import {
@@ -18,7 +21,7 @@ import {
 const AdminSettings = () => {
   const { user, updateProfile, changePassword, loading } = useAuth();
 
-  // Profile form state
+  // profile form state
   const [profileData, setProfileData] = useState({
     name: "",
     email: "",
@@ -26,14 +29,14 @@ const AdminSettings = () => {
     gender: "",
   });
 
-  // Password form state
+  // password form state
   const [passwordData, setPasswordData] = useState({
     currentPassword: "",
     newPassword: "",
     confirmPassword: "",
   });
 
-  // UI states
+  // ui states
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -45,11 +48,11 @@ const AdminSettings = () => {
     number: false,
     special: false,
   });
-  // Validation states
+  // validation states
   const [formErrors, setFormErrors] = useState({});
   const [apiErrors, setApiErrors] = useState({});
   const [isValidating, setIsValidating] = useState(false);
-  // Initialize profile data
+  // initialize profile data
   useEffect(() => {
     if (user) {
       setProfileData({
@@ -60,14 +63,14 @@ const AdminSettings = () => {
       });
     }
   }, [user]);
-  // Redirect if not authenticated
+  // redirect if not authenticated
   useEffect(() => {
     if (!user) {
       window.location.href = "/login";
     }
   }, [user]);
 
-  // Password validation
+  // password validation
   useEffect(() => {
     const password = passwordData.newPassword;
     setPasswordValidation({
@@ -121,7 +124,7 @@ const AdminSettings = () => {
   const handleProfileSubmit = async (e) => {
     e.preventDefault();
 
-    // Clear previous API errors
+    // clear previous api errors.
     setApiErrors({});
 
     if (!validateProfileForm()) {
@@ -133,7 +136,7 @@ const AdminSettings = () => {
       // Profile updated successfully
       setApiErrors({});
     } else {
-      // Handle API errors
+      // handle api errors.
       if (result.message && result.message.includes("Email is already taken")) {
         setApiErrors({ email: result.message });
       } else {

@@ -1,3 +1,6 @@
+/**
+ * keeps the api service focused and readable.
+ */
 import axios from "axios";
 import { teacherRequestSigner } from "../utils/requestSigning.js";
 
@@ -8,7 +11,7 @@ const api = axios.create({
   withCredentials: true,
 });
 
-// these routes don't require HMAC signing — teacher has no secret yet
+// public teacher routes do not have a signing secret yet.
 const UNSIGNED_ROUTES = [
   "/teachers/login",
   "/teachers/logout",
@@ -54,7 +57,7 @@ api.interceptors.request.use((config) => {
 // list of endpoints that are allowed to return 401 without triggering session expiry
 const AUTH_PASSTHROUGH_URLS = [
   "/teachers/login",
-  "/teachers/me", // fails on signup page — expected
+  "/teachers/me", // expected on signup before a session exists
   "/teachers/otp/send",
   "/teachers/otp/verify",
   "/teachers/signup",
@@ -117,6 +120,9 @@ api.interceptors.response.use(
 );
 
 export const teacherApi = {
+  content: {
+    settings: () => api.get("/content/settings"),
+  },
   auth: {
     login: (data) => api.post("/teachers/login", data),
     logout: () => api.post("/teachers/logout"),

@@ -1,10 +1,10 @@
 /**
- * Branded HTML Error Pages
- * Returns styled HTML instead of JSON for blocked requests
+ * branded html error pages
+ * returns styled html instead of json for blocked requests
  */
 
 /**
- * Bot/Challenge Required Error Page
+ * bot/challenge required error page
  */
 export const botBlockedPage = (reason = "Security verification required") => {
   return `
@@ -149,7 +149,7 @@ export const botBlockedPage = (reason = "Security verification required") => {
 };
 
 /**
- * Rate Limited Error Page
+ * rate limited error page
  */
 export const rateLimitPage = () => {
   return botBlockedPage(
@@ -158,7 +158,7 @@ export const rateLimitPage = () => {
 };
 
 /**
- * CORS Error Page
+ * cors error page
  */
 export const corsErrorPage = (origin) => {
   return botBlockedPage(

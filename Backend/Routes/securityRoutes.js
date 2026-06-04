@@ -1,3 +1,6 @@
+/**
+ * keeps the security routes route focused and readable.
+ */
 import express from "express";
 import {
   verifyRequestSignature,
@@ -12,7 +15,7 @@ import CryptoJS from "crypto-js";
 const router = express.Router();
 
 /**
- * HELPER: Decrypt cookie data (for user auth)
+ * helper: decrypt cookie data (for user auth)
  */
 const decryptCookieData = (encryptedData) => {
   try {
@@ -25,25 +28,25 @@ const decryptCookieData = (encryptedData) => {
 };
 
 /**
- * Cookie-only authentication middleware for /signing-secret endpoint
+ * cookie-only authentication middleware for /signing-secret endpoint
  *
- * Validates ONLY auth cookies, NOT request signatures
- * This breaks the chicken-and-egg problem where signing-secret
+ * validates only auth cookies, not request signatures
+ * this breaks the chicken-and-egg problem where signing-secret
  * endpoint would require a signature to get a signature
  *
  * @middleware
- * @param {Object} req - Express request
- * @param {Object} res - Express response
- * @param {Function} next - Next middleware
+ * @param {object} req - express request
+ * @param {object} res - express response
+ * @param {function} next - next middleware
  */
 const authCookieOnly = async (req, res, next) => {
   try {
-    // Check for admin token first
+    // check for admin token first
     const adminToken = req.cookies.adminToken;
 
     if (adminToken) {
       try {
-        // Verify admin JWT
+        // verify admin jwt
         const decoded = jwt.verify(adminToken, process.env.ADMIN_JWT_SECRET);
         const admin = await Admin.findById(decoded.adminId).select("-password");
 
@@ -55,7 +58,7 @@ const authCookieOnly = async (req, res, next) => {
           });
         }
 
-        // CRITICAL: Set BOTH admin and user fields consistently
+        // set both admin and user fields consistently
         req.admin = {
           userId: admin._id,
           adminId: admin._id,
@@ -63,13 +66,13 @@ const authCookieOnly = async (req, res, next) => {
           ...admin.toObject(),
         };
 
-        // IMPORTANT: Also set req.user for backward compatibility
+        // important: also set req.user for backward compatibility
         req.user = {
           userId: admin._id,
-          isAdmin: true, // Add this flag
+          isAdmin: true, // this flag
         };
 
-        console.log("[SIGNING_SECRET] Admin authenticated via cookie:", {
+        console.log("Admin authenticated via cookie:", {
           adminId: admin._id,
           email: admin.email,
         });
@@ -77,7 +80,7 @@ const authCookieOnly = async (req, res, next) => {
         return next();
       } catch (jwtError) {
         console.error(
-          "[SIGNING_SECRET] Admin JWT verification failed:",
+          "Admin JWT verification failed:",
           jwtError.message
         );
         return res.status(401).json({
@@ -88,7 +91,7 @@ const authCookieOnly = async (req, res, next) => {
       }
     }
 
-    // Check for user token
+    // check for user token
     const encryptedUserCookie = req.signedCookies.auth_session;
 
     if (!encryptedUserCookie) {
@@ -99,7 +102,7 @@ const authCookieOnly = async (req, res, next) => {
       });
     }
 
-    // Decrypt and verify user JWT
+    // decrypt and verify user jwt
     const cookieData = decryptCookieData(encryptedUserCookie);
 
     if (!cookieData || !cookieData.token) {
@@ -121,13 +124,13 @@ const authCookieOnly = async (req, res, next) => {
       });
     }
 
-    // Set user in request
+    // set user in request
     req.user = { userId: user._id, ...user.toObject() };
 
-    console.log("[SIGNING_SECRET] User authenticated via cookie only");
+    console.log("User authenticated via cookie only");
     next();
   } catch (error) {
-    console.error("[SIGNING_SECRET] Auth error:", error.message);
+    console.error("Auth error:", error.message);
 
     if (error.name === "JsonWebTokenError") {
       return res.status(401).json({
@@ -154,15 +157,15 @@ const authCookieOnly = async (req, res, next) => {
 };
 
 /**
- * GET /signing-secret - Retrieve request signing secret
- * Auth: Cookie-based authentication ONLY (signature NOT required)
+ * get /signing-secret - retrieve request signing secret
+ * auth: cookie-based authentication only (signature not required)
  *
- * Security considerations:
- * - Requires valid authentication cookie (admin or user)
- * - Does NOT require request signature (breaks chicken-and-egg)
- * - Returns user-specific secret with 7-day expiry
- * - Nonce system prevents replay attacks
- * - Bot protection applies via global middleware
+ * security considerations:
+ * - requires valid authentication cookie (admin or user)
+ * - does not require request signature (breaks chicken-and-egg)
+ * - returns user-specific secret with 7-day expiry
+ * - nonce system prevents replay attacks
+ * - bot protection applies via global middleware
  */
 router.get("/signing-secret", authCookieOnly, getSigningSecretEndpoint);
 

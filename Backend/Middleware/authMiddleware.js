@@ -1,3 +1,6 @@
+/**
+ * keeps the auth middleware middleware focused and readable.
+ */
 import jwt from "jsonwebtoken";
 import User from "../Models/User.js";
 import Admin from "../Models/Admin.js";
@@ -5,12 +8,12 @@ import CryptoJS from "crypto-js";
 import redisClient from "../Config/redis.js";
 import { verifyRequestSignature } from "./requestSignature.js";
 
-// Cache decoded cookie data to avoid repeated decryption
+// cache decoded cookie data to avoid repeated decryption
 const cookieCache = new Map();
 const COOKIE_CACHE_SIZE = 1000;
 
 const decryptCookieData = (encryptedData) => {
-  // Check cache first
+  // check cache first
   if (cookieCache.has(encryptedData)) {
     return cookieCache.get(encryptedData);
   }
@@ -20,7 +23,7 @@ const decryptCookieData = (encryptedData) => {
     const bytes = CryptoJS.AES.decrypt(encryptedData, encryptionKey);
     const decrypted = JSON.parse(bytes.toString(CryptoJS.enc.Utf8));
 
-    // Cache the result (with size limit)
+    // cache the result (with size limit)
     if (cookieCache.size >= COOKIE_CACHE_SIZE) {
       const firstKey = cookieCache.keys().next().value;
       cookieCache.delete(firstKey);
@@ -43,7 +46,7 @@ const generateDeviceFingerprint = (req) => {
   ).toString();
 };
 
-// Cache user data in Redis to avoid DB queries
+// cache user data in redis to avoid db queries
 const getCachedUser = async (userId) => {
   const cacheKey = `user:${userId}`;
   try {
@@ -58,49 +61,49 @@ const getCachedUser = async (userId) => {
   }
 };
 
-// Change TTL from 300 seconds (5 min) to 600 seconds (10 min)
+// ttl from 300 seconds (5 min) to 600 seconds (10 min)
 const setCachedUser = async (userId, userData) => {
   const cacheKey = `user:${userId}`;
   try {
-    // Increased to 10 minutes for better performance
+    // increased to 10 minutes for better performance
     await redisClient.setex(cacheKey, 600, JSON.stringify(userData));
   } catch (error) {
     console.warn("Redis cache write failed:", error);
   }
 };
 
-// Add pending auth requests tracking
+// pending auth requests tracking
 const pendingAuthRequests = new Map();
 
 /**
- * Authenticate user with JWT token validation
+ * authenticate user with jwt token validation
  *
- * Security layers:
- * 1. Check encrypted auth session cookie
- * 2. Decrypt and verify JWT token
- * 3. Check user exists and is verified
+ * security layers:
+ * 1. check encrypted auth session cookie
+ * 2. decrypt and verify jwt token
+ * 3. check user exists and is verified
  *
  * @middleware
- * @param {Object} req - Express request
- * @param {Object} res - Express response
- * @param {Function} next - Next middleware
+ * @param {object} req - express request
+ * @param {object} res - express response
+ * @param {function} next - next middleware
  */
 export const authenticateUser = async (req, res, next) => {
   try {
     const encryptedCookie = req.signedCookies.auth_session;
 
-    // REMOVED: Debug logging that exposes cookie information
-    // Only log in development console, never send to client
+    // debug logging that exposes cookie information
+    // only log in development console, never send to client
 
     if (!encryptedCookie) {
-      // Development-only console logging
+      // development-only console logging
       if (process.env.NODE_ENV === "development") {
-        console.error("[AUTH_MIDDLEWARE] No auth_session cookie found");
-        console.error("[AUTH_MIDDLEWARE] Path:", req.path);
-        console.error("[AUTH_MIDDLEWARE] Cookies:", Object.keys(req.cookies));
+        console.error("No auth_session cookie found");
+        console.error("Path:", req.path);
+        console.error("Cookies:", Object.keys(req.cookies));
       }
 
-      // CRITICAL: Never send cookie information to client
+      // never send cookie information to client
       return res.status(401).json({
         success: false,
         message: "Authentication required. Please log in.",
@@ -108,7 +111,7 @@ export const authenticateUser = async (req, res, next) => {
       });
     }
 
-    // Decrypt cookie (now cached)
+    // decrypt cookie (now cached)
     const cookieData = decryptCookieData(encryptedCookie);
     if (!cookieData || !cookieData.token) {
       return res.status(401).json({
@@ -132,20 +135,20 @@ export const authenticateUser = async (req, res, next) => {
 
     const userId = decoded.userId;
 
-    // Request deduplication: Check if auth is already pending for this user
+    // request deduplication: check if auth is already pending for this user
     if (pendingAuthRequests.has(userId)) {
       const pendingRequest = await pendingAuthRequests.get(userId);
       req.user = pendingRequest;
       return next();
     }
 
-    // Create pending promise
+    // create pending promise
     const authPromise = (async () => {
-      // Try cache first
+      // try cache first
       let user = await getCachedUser(userId);
 
       if (!user) {
-        // Cache miss - query database
+        // cache miss - query database
         user = await User.findById(userId).select("-password -otp").lean();
 
         if (!user || !user.isVerified) {
@@ -153,7 +156,7 @@ export const authenticateUser = async (req, res, next) => {
           return null;
         }
 
-        // Cache for next request (increase TTL to 10 minutes)
+        // cache for next request (increase ttl to 10 minutes)
         await setCachedUser(userId, user);
       }
 
@@ -193,14 +196,14 @@ export const authenticateAdmin = async (req, res, next) => {
       });
     }
 
-    // FIXED: Use ADMIN_JWT_SECRET instead of JWT_SECRET
+    // ed: use admin_jwt_secret instead of jwt_secret
     const decoded = jwt.verify(token, process.env.ADMIN_JWT_SECRET);
 
-    // Try cache first
-    let admin = await getCachedUser(`admin:${decoded.adminId}`); // Use adminId
+    // try cache first
+    let admin = await getCachedUser(`admin:${decoded.adminId}`); // use adminid
 
     if (!admin) {
-      // Use adminId from decoded token
+      // use adminid from decoded token
       admin = await Admin.findById(decoded.adminId).select("-password").lean();
 
       if (!admin) {
@@ -210,7 +213,7 @@ export const authenticateAdmin = async (req, res, next) => {
         });
       }
 
-      //  Cache with adminId
+      //  cache with adminid
       await setCachedUser(`admin:${decoded.adminId}`, admin);
     }
 
@@ -230,16 +233,16 @@ export const authenticateAny = async (req, res, next) => {
     const adminToken = req.cookies.adminToken;
     const encryptedUserCookie = req.signedCookies.auth_session;
 
-    // Handle admin token
+    // handle admin token
     if (adminToken) {
       try {
-        // Use ADMIN_JWT_SECRET
+        // use admin_jwt_secret
         const decoded = jwt.verify(adminToken, process.env.ADMIN_JWT_SECRET);
 
-        // Use adminId
+        // use adminid
         let admin = await getCachedUser(`admin:${decoded.adminId}`);
         if (!admin) {
-          // Use adminId
+          // use adminid
           admin = await Admin.findById(decoded.adminId)
             .select("-password")
             .lean();
@@ -262,7 +265,7 @@ export const authenticateAny = async (req, res, next) => {
       }
     }
 
-    // Handle user token
+    // handle user token
     if (!encryptedUserCookie) {
       return res.status(401).json({
         success: false,
@@ -306,6 +309,6 @@ export const authenticateAny = async (req, res, next) => {
   }
 };
 
-// Alias exports for compatibility with different route files
+// alias exports for compatibility with different route files
 export const protect = authenticateUser;
 export const adminOnly = authenticateAdmin;

@@ -1,6 +1,9 @@
-// Legal Page Preview Component
+/**
+ * keeps the legal page preview utility focused and readable.
+ */
+// legal page preview component
 export const LegalPagePreview = ({ title, sections, metadata, content }) => {
-  // If no sections but has old content (markdown), show that
+  // if no sections but has old content (markdown), show that
   if ((!sections || sections.length === 0) && content) {
     return (
       <div className="space-y-6 bg-gradient-to-br from-muted/30 to-background p-8 rounded-xl border border-border">
@@ -12,11 +15,11 @@ export const LegalPagePreview = ({ title, sections, metadata, content }) => {
             Legacy content (Markdown format)
           </p>
           <p className="text-xs text-yellow-600 bg-yellow-50 inline-block px-3 py-1 rounded mt-2">
-            ⚠️ This is old format. Edit in Legal Pages tab to use new structure.
+             This is old format. Edit in Legal Pages tab to use new structure.
           </p>
         </div>
 
-        {/* Metadata Display */}
+        {/* metadata display */}
         {metadata && (
           <div className="bg-card rounded-xl p-4 border border-border">
             <div className="flex gap-6 text-sm flex-wrap">
@@ -40,7 +43,7 @@ export const LegalPagePreview = ({ title, sections, metadata, content }) => {
           </div>
         )}
 
-        {/* Old Content Display */}
+        {/* old content display */}
         <div className="bg-card rounded-xl p-6 border border-border">
           <pre className="whitespace-pre-wrap text-sm text-muted-foreground font-sans">
             {content}
@@ -50,7 +53,7 @@ export const LegalPagePreview = ({ title, sections, metadata, content }) => {
     );
   }
 
-  // Show message if no sections AND no content
+  // show message if no sections and no content
   if (!sections || sections.length === 0) {
     return (
       <div className="space-y-6 bg-gradient-to-br from-muted/30 to-background p-8 rounded-xl border border-border">
@@ -80,7 +83,7 @@ export const LegalPagePreview = ({ title, sections, metadata, content }) => {
         </p>
       </div>
 
-      {/* Metadata Display */}
+      {/* metadata display */}
       {metadata && (
         <div className="bg-card rounded-xl p-4 border border-border">
           <div className="flex gap-6 text-sm flex-wrap">
@@ -104,39 +107,39 @@ export const LegalPagePreview = ({ title, sections, metadata, content }) => {
         </div>
       )}
 
-      {/* Sections */}
+      {/* sections */}
       <div className="bg-card rounded-xl p-6 border border-border space-y-6">
         {sections
           .sort((a, b) => a.order - b.order)
           .map((section, idx) => (
             <div key={idx} className="space-y-3">
-              {/* Section Header */}
+              {/* section header */}
               <h4 className="text-lg font-semibold text-foreground border-b border-border pb-2">
                 {section.header}
               </h4>
 
-              {/* Section Content */}
+              {/* section content */}
               {section.content && section.content.trim() !== "" && (
                 <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-wrap">
                   {section.content}
                 </p>
               )}
 
-              {/* Subheaders */}
+              {/* subheaders */}
               {section.subheaders &&
                 section.subheaders.length > 0 &&
                 section.subheaders
                   .sort((a, b) => a.order - b.order)
                   .map((sub, subIdx) => (
                     <div key={subIdx} className="ml-4 space-y-2">
-                      {/* Subheader Title */}
+                      {/* subheader title */}
                       {sub.title && sub.title.trim() !== "" && (
                         <h5 className="text-md font-medium text-foreground">
                           {sub.title}
                         </h5>
                       )}
 
-                      {/* Bullet Points */}
+                      {/* bullet points */}
                       {sub.points && sub.points.length > 0 && (
                         <ul className="list-disc list-inside space-y-1">
                           {sub.points.map((point, pointIdx) => (

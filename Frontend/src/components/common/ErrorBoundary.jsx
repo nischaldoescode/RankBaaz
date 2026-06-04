@@ -1,3 +1,6 @@
+/**
+ * keeps the error boundary component focused and readable.
+ */
 import React from "react";
 import { motion } from "framer-motion";
 import { AlertTriangle, RefreshCw, Home, Mail, Bug } from "lucide-react";
@@ -23,7 +26,7 @@ class ErrorBoundary extends React.Component {
   }
 
   componentDidCatch(error, errorInfo) {
-    // Store all error information including console logs
+    // store all error information including console logs
     const errorDetails = {
       errorId:
         this.state.errorId ||
@@ -37,7 +40,7 @@ class ErrorBoundary extends React.Component {
       componentStack: errorInfo.componentStack,
       userAgent: navigator.userAgent,
       url: window.location.href,
-      // Capture recent console logs if available
+      // capture recent console logs if available
       recentLogs: this.captureConsoleLogs(),
     };
 
@@ -46,20 +49,20 @@ class ErrorBoundary extends React.Component {
     this.setState({
       error: error,
       errorInfo: errorInfo,
-      errorDetails: errorDetails, // NEW: Store for email reporting
+      errorDetails: errorDetails, // store for email reporting
     });
 
-    // In production, send error to monitoring service
+    // in production, send error to monitoring service
     if (process.env.NODE_ENV === "production") {
       console.error("Error logged to monitoring service:", errorDetails);
     }
   }
 
-  // NEW METHOD: Capture recent console logs
+  // method: capture recent console logs
   captureConsoleLogs = () => {
     try {
-      // If you've implemented console log capture elsewhere, use it
-      // Otherwise return placeholder
+      // if you've implemented console log capture elsewhere, use it
+      // otherwise return placeholder
       return "Console logs captured at error time";
     } catch (e) {
       return "Unable to capture console logs";
@@ -75,50 +78,48 @@ class ErrorBoundary extends React.Component {
   };
 
   handleReportError = () => {
-    // Get contact email from localStorage/context or use fallback
+    // get contact email from localstorage/context or use fallback
     const contentSettings = this.getContentSettings();
     const supportEmail =
       contentSettings?.contactInfo?.email?.support || "support@crazydukaan.store";
 
-    // Comprehensive error report with ALL details
+    // comprehensive error report with all details
     const errorReport = {
-      // Basic Info
+      // basic info
       errorId: this.state.errorId,
       timestamp: new Date().toISOString(),
 
-      // Error Details
+      // error details
       errorMessage: this.state.error?.message || "Unknown error",
       errorName: this.state.error?.name || "Error",
       errorStack: this.state.error?.stack || "No stack trace available",
 
-      // Component Stack
+      // component stack
       componentStack:
         this.state.errorInfo?.componentStack || "No component stack",
 
-      // Environment
+      // environment
       userAgent: navigator.userAgent,
       url: window.location.href,
       viewport: `${window.innerWidth}x${window.innerHeight}`,
 
-      // User Info (if available)
+      // user info (if available)
       userId: localStorage.getItem("userId") || "Anonymous",
       userEmail: localStorage.getItem("userEmail") || "Not logged in",
 
-      // Additional Context
+      // extra context
       localStorage: this.getSafeLocalStorage(),
       consoleErrors: this.state.errorDetails?.recentLogs || "Not captured",
     };
 
-    // Format email body for readability
+    // format email body for readability
     const emailBody = `
-ERROR REPORT
-============
+Error report
 
 Error ID: ${errorReport.errorId}
 Timestamp: ${errorReport.timestamp}
 
-ERROR DETAILS
--------------
+Error details
 Message: ${errorReport.errorMessage}
 Type: ${errorReport.errorName}
 
@@ -128,19 +129,16 @@ ${errorReport.errorStack}
 Component Stack:
 ${errorReport.componentStack}
 
-ENVIRONMENT
------------
+Environment
 URL: ${errorReport.url}
 User Agent: ${errorReport.userAgent}
 Viewport: ${errorReport.viewport}
 
-USER INFO
----------
+User info
 User ID: ${errorReport.userId}
 Email: ${errorReport.userEmail}
 
-ADDITIONAL DATA
----------------
+Additional data
 ${JSON.stringify(errorReport.localStorage, null, 2)}
 
 Console Logs:
@@ -153,7 +151,7 @@ ${errorReport.consoleErrors}
     window.location.href = mailtoLink;
   };
 
-  // NEW METHOD: Safely get localStorage data
+  // method: safely get localstorage data
   getSafeLocalStorage = () => {
     try {
       const storage = {};
@@ -161,9 +159,9 @@ ${errorReport.consoleErrors}
 
       for (let i = 0; i < localStorage.length; i++) {
         const key = localStorage.key(i);
-        // Skip sensitive data
+        // skip sensitive data
         if (!sensitiveKeys.some((sk) => key.toLowerCase().includes(sk))) {
-          storage[key] = localStorage.getItem(key)?.substring(0, 100); // Limit length
+          storage[key] = localStorage.getItem(key)?.substring(0, 100); // limit length
         }
       }
       return storage;
@@ -172,7 +170,7 @@ ${errorReport.consoleErrors}
     }
   };
 
-  // NEW METHOD: Get content settings from localStorage fallback
+  // method: get content settings from localstorage fallback
   getContentSettings = () => {
     try {
       const settings = localStorage.getItem("contentSettings");
@@ -193,7 +191,7 @@ ${errorReport.consoleErrors}
             className="max-w-2xl w-full"
           >
             <Card className="p-8 shadow-xl border-2 border-red-100 dark:border-red-900/30">
-              {/* Error Icon */}
+              {/* error icon */}
               <motion.div
                 initial={{ scale: 0, rotate: -180 }}
                 animate={{ scale: 1, rotate: 0 }}
@@ -208,7 +206,7 @@ ${errorReport.consoleErrors}
                 <AlertTriangle className="w-10 h-10 text-white" />
               </motion.div>
 
-              {/* Error Title */}
+              {/* error title */}
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -355,7 +353,7 @@ ${errorReport.consoleErrors}
               className="text-center text-sm text-gray-500 dark:text-gray-400 mt-6"
             >
               Need help? Contact us at{' '}
-              <a 
+              <a
                 href={`mailto:${this.getContentSettings()?.contactInfo?.email?.support || 'support@crazydukaan.store'}`}
                 className="text-blue-600 dark:text-blue-400 hover:underline font-medium"
               >

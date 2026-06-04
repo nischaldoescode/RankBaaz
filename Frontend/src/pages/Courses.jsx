@@ -1,3 +1,6 @@
+/**
+ * keeps the courses page focused and readable.
+ */
 import React, { useState, useEffect, useCallback } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
@@ -123,14 +126,14 @@ const CourseCard = React.memo(
   },
   (prevProps, nextProps) => {
     if (prevProps.isExpanded !== nextProps.isExpanded) {
-      return false; // Allow re-render
+      return false; // allow re-render
     }
-    // Nothing changed, prevent re-render
+    // nothing d, prevent re-render
     return true;
   },
 );
 
-// MOVE CourseListItem HERE TOO - OUTSIDE the Courses component
+// move courselistitem here too - outside the courses component
 const CourseListItem = React.memo(
   ({
     course,
@@ -153,7 +156,7 @@ const CourseListItem = React.memo(
       <Card className="h-full hover:shadow-md transition-shadow duration-200 cursor-pointer group bg-white border border-gray-200 hover:border-gray-300">
         <CardContent className="p-0">
           <div className="flex items-start p-2 space-x-6">
-            {/* Course Image */}
+            {/* course image */}
             <motion.div className="flex-shrink-0" whileHover={{ scale: 1.05 }}>
               <div className="flex-shrink-0 aspect-square h-full w-49 max-w-[11rem] bg-gray-100 rounded-lg overflow-hidden border border-gray-200">
                 {course.image?.url ? (
@@ -170,7 +173,7 @@ const CourseListItem = React.memo(
               </div>
             </motion.div>
 
-            {/* Course Content */}
+            {/* course content */}
             <div className="flex-1 min-w-0">
               <div className="flex items-start justify-between mb-3">
                 <h3 className="text-xl font-semibold text-gray-800 line-clamp-2">
@@ -212,7 +215,7 @@ const CourseListItem = React.memo(
     </motion.div>
   ),
   (prevProps, nextProps) => {
-    // Only re-render if these specific props change for THIS course
+    // only re-render if these specific props for this course
     const shouldNotRerender =
       prevProps.course._id === nextProps.course._id &&
       prevProps.isExpanded === nextProps.isExpanded;
@@ -271,7 +274,7 @@ const Courses = () => {
     }/courses`,
   });
 
-  // const navigate = useNavigate();
+  // const navigate = usenavigate();
   const { animations, reducedMotion } = useTheme();
 
   const handleExpandChange = useCallback((courseId, isExpanded) => {
@@ -291,12 +294,12 @@ const Courses = () => {
       rating: filters.rating || "all",
     });
     setSearchTerm(filters.searchTerm || "");
-  }, []); // Remove filters dependency to prevent loops
+  }, []); // remove filters dependency to prevent loops
 
   const handleSearch = (e) => {
     const value = e.target.value;
     setSearchTerm(value);
-    // Remove the automatic debounced search
+    // remove the automatic debounced search
   };
 
   const handleSearchSubmit = (e) => {
@@ -306,7 +309,7 @@ const Courses = () => {
     }
   };
 
-  // Add this useEffect after your existing useEffect
+  // this useeffect your existing useeffect
   useEffect(() => {
     const checkMobile = () => {
       const mobile = window.innerWidth < 500;
@@ -328,14 +331,14 @@ const Courses = () => {
     };
     setLocalFilters(newLocalFilters);
 
-    // Build the complete filter object
+    // build the complete filter object
     const newFilters = { ...filters };
 
     if (value === "all") {
-      // Remove this specific filter
+      // remove this specific filter
       delete newFilters[filterType];
     } else {
-      // Set this specific filter
+      // set this specific filter
       newFilters[filterType] = value;
     }
 
@@ -344,7 +347,7 @@ const Courses = () => {
 
   const handleViewModeChange = (mode) => {
     if (mode === "list" && isMobile) {
-      return; // Prevent list view on mobile
+      return; // prevent list view on mobile
     }
     setViewMode(mode);
   };
@@ -387,7 +390,7 @@ const Courses = () => {
   return (
     <div className="min-h-screen py-12 relative">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Header */}
+        {/* header */}
         <motion.div
           initial={animations && !reducedMotion ? { opacity: 0, y: 20 } : {}}
           animate={animations && !reducedMotion ? { opacity: 1, y: 0 } : {}}
@@ -404,7 +407,7 @@ const Courses = () => {
           </p>
         </motion.div>
 
-        {/* Search and Filters */}
+        {/* search and filters */}
         <motion.div
           initial={animations && !reducedMotion ? { opacity: 0, y: 20 } : {}}
           animate={animations && !reducedMotion ? { opacity: 1, y: 0 } : {}}
@@ -459,7 +462,7 @@ const Courses = () => {
               )}
             </div>
           </div>
-          {/* Filters Panel */}
+          {/* filters panel */}
           <AnimatePresence>
             {showFilters && (
               <motion.div
@@ -585,7 +588,7 @@ const Courses = () => {
           </AnimatePresence>
         </motion.div>
 
-        {/* Results Summary */}
+        {/* results summary */}
         <motion.div
           initial={animations && !reducedMotion ? { opacity: 0 } : {}}
           animate={animations && !reducedMotion ? { opacity: 1 } : {}}
@@ -606,7 +609,7 @@ const Courses = () => {
           )}
         </motion.div>
 
-        {/* Error State */}
+        {/* error state */}
         {error && (
           <motion.div
             initial={animations && !reducedMotion ? { opacity: 0, y: 20 } : {}}
@@ -620,7 +623,7 @@ const Courses = () => {
           </motion.div>
         )}
 
-        {/* No Results */}
+        {/* no results */}
         {!loading && !error && courses.length === 0 && (
           <motion.div
             initial={animations && !reducedMotion ? { opacity: 0, y: 20 } : {}}
@@ -634,7 +637,7 @@ const Courses = () => {
             <p className="text-slate-400 mb-6">
               {hasFiltersApplied
                 ? (() => {
-                    // Build dynamic message based on active filters
+                    // build dynamic message based on active filters
                     const activeFilters = [];
                     if (filters.category && filters.category !== "all") {
                       const categoryName =
@@ -670,7 +673,7 @@ const Courses = () => {
           </motion.div>
         )}
 
-        {/* Courses Grid/List */}
+        {/* courses grid/list */}
         {courses.length > 0 && (
           <motion.div
             initial={animations && !reducedMotion ? { opacity: 0 } : {}}
@@ -711,7 +714,7 @@ const Courses = () => {
           </motion.div>
         )}
 
-        {/* Pagination */}
+        {/* pagination */}
         {pagination.totalPages > 1 && (
           <motion.div
             initial={animations && !reducedMotion ? { opacity: 0, y: 20 } : {}}

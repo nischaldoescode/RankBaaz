@@ -1,3 +1,6 @@
+/**
+ * keeps the badge service service focused and readable.
+ */
 import User from "../Models/User.js";
 import TestResult from "../Models/TestResult.js";
 import pointsService from "./pointsService.js";
@@ -30,17 +33,17 @@ class BadgeService {
 
     const earnedBadges = user.badges.map((b) => b.type);
 
-    // Check Leaderboard Legend
+    // check leaderboard legend
     if (!earnedBadges.includes("leaderboard_legend")) {
       await this.checkLeaderboardLegend(user);
     }
 
-    // Check Perfectionist
+    // check perfectionist
     if (!earnedBadges.includes("perfectionist")) {
       await this.checkPerfectionist(user);
     }
 
-    // Check Speed Demon
+    // check speed demon
     if (!earnedBadges.includes("speed_demon")) {
       await this.checkSpeedDemon(user);
     }
@@ -56,10 +59,10 @@ class BadgeService {
         : null;
 
       if (lastCheck === today - 86400000) {
-        // Consecutive day
+        // consecutive day
         user.stats.leaderboardDaysOnTop += 1;
       } else if (lastCheck !== today) {
-        // Reset if missed a day
+        // reset if missed a day
         user.stats.leaderboardDaysOnTop = 1;
       }
 
@@ -72,7 +75,7 @@ class BadgeService {
         await this.awardBadge(user, "leaderboard_legend");
       }
     } else {
-      // Not in top position, reset counter
+      // not in top position, reset counter
       user.stats.leaderboardDaysOnTop = 0;
     }
 

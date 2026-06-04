@@ -1,3 +1,6 @@
+/**
+ * keeps the terms of service component focused and readable.
+ */
 import React, { useState } from "react";
 import {
   Card,
@@ -43,7 +46,7 @@ const TermsOfService = ({ onAccept, onCancel, courseName, difficulty }) => {
                     <AlertTriangle className="w-6 h-6 text-red-600 flex-shrink-0 mt-1" />
                     <div>
                       <h3 className="text-xl font-bold text-red-900 dark:text-red-200 mb-2">
-                        ⚠️ ZERO-TOLERANCE POLICY
+                         ZERO-TOLERANCE POLICY
                       </h3>
                       <p className="text-red-800 dark:text-red-300 font-semibold">
                         Opening Developer Tools, Inspector, or Console during
@@ -80,7 +83,7 @@ const TermsOfService = ({ onAccept, onCancel, courseName, difficulty }) => {
                   </ul>
                 </div>
 
-                {/* Monitored Actions */}
+                {/* monitored actions */}
                 <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
                   <div className="flex items-center gap-2 mb-3">
                     <Eye className="w-5 h-5 text-yellow-600" />
@@ -89,12 +92,12 @@ const TermsOfService = ({ onAccept, onCancel, courseName, difficulty }) => {
                     </h4>
                   </div>
                   <ul className="space-y-1 text-sm text-yellow-800 dark:text-yellow-300">
-                    <li>✗ Opening Browser DevTools (F12, Ctrl+Shift+I)</li>
-                    <li>✗ Right-click "Inspect Element"</li>
-                    <li>✗ Console access</li>
-                    <li>✗ Window resize manipulation</li>
-                    <li>✗ Performance debugging</li>
-                    <li>✗ Copy-pasting code/answers</li>
+                    <li>x Opening Browser DevTools (F12, Ctrl+Shift+I)</li>
+                    <li>x Right-click "Inspect Element"</li>
+                    <li>x Console access</li>
+                    <li>x Window resize manipulation</li>
+                    <li>x Performance debugging</li>
+                    <li>x Copy-pasting code/answers</li>
                   </ul>
                 </div>
 

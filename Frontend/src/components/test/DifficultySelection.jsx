@@ -1,3 +1,6 @@
+/**
+ * keeps the difficulty selection component focused and readable.
+ */
 import React, { useState, useEffect, useCallback } from "react";
 import {
   Card,
@@ -23,10 +26,10 @@ const DifficultySelection = ({ courseId, onSelectDifficulty, onCancel }) => {
 
   useEffect(() => {
     loadCourseData();
-    checkBanStatus(); // NEW
+    checkBanStatus(); //
   }, [courseId]);
 
-  // NEW: Check if user is banned
+  // check if user is banned
   const checkBanStatus = async () => {
     try {
       const response = await apiMethods.get(
@@ -98,12 +101,12 @@ const DifficultySelection = ({ courseId, onSelectDifficulty, onCancel }) => {
 
   const handleConfirmSelection = () => {
     if (selectedDiff) {
-      // Pass all difficulties starting from selected one
+      // pass all difficulties starting from selected one
       const allDifficultyOrder = ["Easy", "Medium", "Hard"];
       const startIndex = allDifficultyOrder.indexOf(selectedDiff.name);
       const remainingDifficulties = allDifficultyOrder.slice(startIndex);
 
-      // Filter to only include difficulties that exist in the course
+      // filter to only include difficulties that exist in the course
       const availableDifficulties = remainingDifficulties.filter((diffName) =>
         course.difficulties.some((d) => d.name === diffName)
       );
@@ -114,7 +117,7 @@ const DifficultySelection = ({ courseId, onSelectDifficulty, onCancel }) => {
   const getAvailableDifficulties = useCallback(() => {
     if (!course?.difficulties) return [];
 
-    // Filter to only include difficulties that have questions
+    // filter to only include difficulties that have questions
     return course.difficulties.filter((difficulty) => {
       const questionsForDifficulty =
         course.questions?.filter(
@@ -133,13 +136,13 @@ const DifficultySelection = ({ courseId, onSelectDifficulty, onCancel }) => {
   }
 
   if (error) {
-    // NEW: Handle banned state with custom UI
+    // handle banned state with custom ui
     if (error === "banned" && banInfo) {
       return (
         <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-red-50 to-orange-50 dark:from-red-950 dark:to-orange-950 p-4">
           <Card className="max-w-2xl w-full border-2 border-red-200 dark:border-red-800 shadow-2xl">
             <CardContent className="p-8 text-center">
-              {/* Icon */}
+              {/* icon */}
               <div className="w-24 h-24 bg-gradient-to-br from-red-500 to-orange-600 rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg">
                 <svg
                   className="w-12 h-12 text-white"
@@ -156,14 +159,14 @@ const DifficultySelection = ({ courseId, onSelectDifficulty, onCancel }) => {
                 </svg>
               </div>
 
-              {/* Title */}
+              {/* title */}
               <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">
                 Access Denied
               </h1>
 
               <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-6 mb-6">
                 <p className="text-xl font-bold text-red-900 dark:text-red-200 mb-3">
-                  🚫 PERMANENTLY BANNED
+                   PERMANENTLY BANNED
                 </p>
                 <p className="text-lg font-semibold text-red-900 dark:text-red-200 mb-2">
                   Course: {banInfo.courseName}
@@ -183,7 +186,7 @@ const DifficultySelection = ({ courseId, onSelectDifficulty, onCancel }) => {
                 </div>
               </div>
 
-              {/* Support Info */}
+              {/* support info */}
               <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 mb-6">
                 <p className="text-sm text-gray-700 dark:text-gray-300 mb-2">
                   If you believe this is a mistake, please contact our support
@@ -197,7 +200,7 @@ const DifficultySelection = ({ courseId, onSelectDifficulty, onCancel }) => {
                 </a>
               </div>
 
-              {/* Action Button */}
+              {/* action button */}
               <Button onClick={onCancel} className="w-full max-w-xs" size="lg">
                 Return to Courses
               </Button>
@@ -207,12 +210,12 @@ const DifficultySelection = ({ courseId, onSelectDifficulty, onCancel }) => {
       );
     }
 
-    // Polished + centered + professional error UI
+    // polished + centered + professional error ui
     return (
       <div className="flex items-center justify-center min-h-[60vh] bg-white px-4">
         <Card className="w-full max-w-xl shadow-lg border bg-white text-black">
           <CardContent className="p-8 text-center">
-            <div className="text-6xl mb-4">⚠️</div>
+            <div className="text-6xl mb-4"></div>
 
             <h1 className="text-3xl font-semibold mb-3">
               Error Loading Course
@@ -233,7 +236,7 @@ const DifficultySelection = ({ courseId, onSelectDifficulty, onCancel }) => {
   }
   return (
     <div className="max-w-4xl mx-auto p-4 bg-white/90 dark:bg-gray-900/90 backdrop-blur-sm rounded-lg">
-      {/* Header */}
+      {/* header */}
       <div className="mb-6">
         <Button variant="ghost" onClick={onCancel} className="mb-4">
           <ArrowLeft className="w-4 h-4 mr-2" />
@@ -248,7 +251,7 @@ const DifficultySelection = ({ courseId, onSelectDifficulty, onCancel }) => {
         </div>
       </div>
 
-      {/* Course Info */}
+      {/* course info */}
       <Card className="mb-6">
         <CardHeader>
           <CardTitle className="text-lg">Course Information</CardTitle>
@@ -280,7 +283,7 @@ const DifficultySelection = ({ courseId, onSelectDifficulty, onCancel }) => {
         </CardContent>
       </Card>
 
-      {/* Difficulty Selection */}
+      {/* difficulty selection */}
       <div
         className={cn(
           "mb-6",
@@ -375,7 +378,7 @@ const DifficultySelection = ({ courseId, onSelectDifficulty, onCancel }) => {
         ))}
       </div>
 
-      {/* Confirm Button */}
+      {/* confirm button */}
       <div className="text-center">
         <Button
           onClick={handleConfirmSelection}
@@ -389,7 +392,7 @@ const DifficultySelection = ({ courseId, onSelectDifficulty, onCancel }) => {
         </Button>
       </div>
 
-      {/* Additional Info */}
+      {/* itional info */}
       <Card className="mt-6">
         <CardContent className="p-4">
           <div className="text-sm text-muted-foreground text-center space-y-2">

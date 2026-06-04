@@ -1,3 +1,6 @@
+/**
+ * keeps the admin model focused and readable.
+ */
 import mongoose from "mongoose";
 
 const adminSchema = new mongoose.Schema(

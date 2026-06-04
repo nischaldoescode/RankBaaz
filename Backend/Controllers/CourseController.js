@@ -1,3 +1,6 @@
+/**
+ * keeps the course controller controller focused and readable.
+ */
 import { body, validationResult } from "express-validator";
 import Course from "../Models/Course.js";
 import TestResult from "../Models/TestResult.js";
@@ -28,7 +31,7 @@ export const parseFormDataArrays = (req, res, next) => {
   next();
 };
 
-// Course validation rules
+// course validation rules
 export const courseValidation = [
   body("name")
     .trim()
@@ -78,7 +81,7 @@ export const courseValidation = [
     .withMessage("Max questions per test must be at least 2"),
   body("isPaid")
     .custom((value) => {
-      // Accept both boolean and string representations
+      // accept both boolean and string representations
       return (
         value === true ||
         value === false ||
@@ -92,7 +95,7 @@ export const courseValidation = [
     const isPaidBoolean =
       req.body.isPaid === "true" || req.body.isPaid === true;
 
-    // Only validate price if course is paid
+    // only validate price if course is paid
     if (isPaidBoolean) {
       if (!value || value <= 0) {
         throw new Error("Price must be greater than 0 for paid courses");
@@ -101,7 +104,7 @@ export const courseValidation = [
         throw new Error("Price cannot exceed ₹1,00,000");
       }
     }
-    // For free courses, always return true (no validation needed)
+    // for free courses, always return true (no validation needed)
     return true;
   }),
 
@@ -113,7 +116,7 @@ export const courseValidation = [
   body("currency").optional().isIn(["INR"]).withMessage("Currency must be INR"),
 ];
 
-// Question validation rules for course questions
+// question validation rules for course questions
 export const updateCourseValidation = [
   body("name")
     .optional()
@@ -157,7 +160,7 @@ export const updateCourseValidation = [
   body("difficulties.*.timerSettings.maxTime")
     .optional()
     .custom((value, { req, path }) => {
-      if (!req.body.difficulties) return true; // Skip if no difficulties being updated
+      if (!req.body.difficulties) return true; // skip if no difficulties being updated
       const index = path.split("[")[1].split("]")[0];
       const minTime = req.body.difficulties[index].timerSettings.minTime;
       if (value < minTime) {
@@ -178,9 +181,9 @@ export const updateCourseValidation = [
     .isBoolean()
     .withMessage("isActive must be a boolean"),
   body("isPaid")
-    .optional() // Make it optional for updates
+    .optional() // make it optional for updates
     .custom((value) => {
-      // Accept both boolean and string representations
+      // accept both boolean and string representations
       if (value === undefined || value === null) return true;
       return (
         value === true ||
@@ -195,7 +198,7 @@ export const updateCourseValidation = [
     const isPaidBoolean =
       req.body.isPaid === "true" || req.body.isPaid === true;
 
-    // Only validate price if course is paid
+    // only validate price if course is paid
     if (isPaidBoolean) {
       if (!value || value <= 0) {
         throw new Error("Price must be greater than 0 for paid courses");
@@ -204,7 +207,7 @@ export const updateCourseValidation = [
         throw new Error("Price cannot exceed ₹50,000");
       }
     }
-    // For free courses, always return true (no validation needed)
+    // for free courses, always return true (no validation needed)
     return true;
   }),
 ];
@@ -267,10 +270,10 @@ export const createCourse = async (req, res) => {
     if (!errors.isEmpty()) {
       console.log("Validation errors:", errors.array());
 
-      // Cleanup uploaded files on validation failure
+      // cleanup uploaded files on validation failure
       if (req.files) {
         try {
-          // Delete course image if uploaded
+          // delete course image if uploaded
           if (req.files.image && req.files.image[0]) {
             await cloudinary.uploader.destroy(req.files.image[0].filename);
             console.log(
@@ -279,7 +282,7 @@ export const createCourse = async (req, res) => {
             );
           }
 
-          // Delete question images if uploaded
+          // delete question images if uploaded
           if (req.files.questionImages && req.files.questionImages.length > 0) {
             for (const file of req.files.questionImages) {
               await cloudinary.uploader.destroy(file.filename);
@@ -322,7 +325,7 @@ export const createCourse = async (req, res) => {
           let questionImageIndex = 0;
 
           parsedQuestions = parsedQuestions.map((question, questionIndex) => {
-            // Remove frontend-only properties
+            // remove frontend-only properties
             const {
               questionImage,
               imagePreview,
@@ -330,7 +333,7 @@ export const createCourse = async (req, res) => {
               ...cleanQuestion
             } = question;
 
-            // Check if THIS specific question has an image
+            // check if this specific question has an image
             if (
               hasImageAtIndex !== undefined &&
               hasImageAtIndex === questionIndex &&
@@ -364,7 +367,7 @@ export const createCourse = async (req, res) => {
         }
       } catch (error) {
         console.error("Error parsing questions:", error);
-        // Cleanup uploaded files on error
+        // cleanup uploaded files on error
         if (req.files) {
           try {
             if (req.files.image && req.files.image[0]) {
@@ -389,7 +392,7 @@ export const createCourse = async (req, res) => {
       }
     }
 
-    // Handle course image upload
+    // handle course image upload
     let image = null;
     if (req.files && req.files.image && req.files.image[0]) {
       console.log("Course image uploaded successfully:", {
@@ -405,7 +408,7 @@ export const createCourse = async (req, res) => {
       console.log("No course image file uploaded");
     }
 
-    //Handle video LINKS ONLY for paid courses
+    //handle video links only for paid courses
     let videoContent = {
       type: "none",
       courseVideo: { links: [] },
@@ -416,7 +419,7 @@ export const createCourse = async (req, res) => {
       const videoType = req.body.videoType || "none";
 
       if (videoType === "course") {
-        // Handle course-level video LINKS ONLY
+        // handle course-level video links only
         if (req.body.courseVideoLinks) {
           try {
             const links =
@@ -438,7 +441,7 @@ export const createCourse = async (req, res) => {
               throw new Error("Maximum 2 video links allowed for course video");
             }
 
-            // Validate each link
+            // validate each link
             const validatedLinks = links.map((link) => {
               if (!link.url || typeof link.url !== "string") {
                 throw new Error("Each link must have a valid URL");
@@ -470,7 +473,7 @@ export const createCourse = async (req, res) => {
           });
         }
       } else if (videoType === "difficulty") {
-        // Handle difficulty-level video LINKS ONLY
+        // handle difficulty-level video links only
         if (req.body.difficultyVideosData) {
           try {
             const diffVideosData =
@@ -481,7 +484,7 @@ export const createCourse = async (req, res) => {
             videoContent.type = "difficulty";
             videoContent.difficultyVideos = [];
 
-            // Process each difficulty's links
+            // process each difficulty's links
             for (const [diffName, diffData] of Object.entries(diffVideosData)) {
               if (!diffData.links || !Array.isArray(diffData.links)) {
                 throw new Error(`Links required for ${diffName} difficulty`);
@@ -499,7 +502,7 @@ export const createCourse = async (req, res) => {
                 );
               }
 
-              // Validate each link
+              // validate each link
               const validatedLinks = diffData.links.map((link) => {
                 if (!link.url || typeof link.url !== "string") {
                   throw new Error(
@@ -541,7 +544,7 @@ export const createCourse = async (req, res) => {
       }
     }
 
-    // Check if course already exists
+    // check if course already exists
     const existingCourse = await Course.findOne({ name: name.trim() });
     if (existingCourse) {
       return res.status(400).json({
@@ -550,7 +553,7 @@ export const createCourse = async (req, res) => {
       });
     }
 
-    // Validate questions if provided
+    // validate questions if provided
     if (parsedQuestions && parsedQuestions.length > 0) {
       for (const question of parsedQuestions) {
         const difficultyExists = difficulties.find(
@@ -589,7 +592,7 @@ export const createCourse = async (req, res) => {
       categoryId = category._id;
     }
 
-    // Calculate maxQuestionsPerTest and add totalMarks to each difficulty
+    // calculate maxquestionspertest and totalmarks to each difficulty
     const processedDifficulties = difficulties.map((diff) => ({
       ...diff,
       totalMarks: diff.marksPerQuestion * diff.maxQuestions,
@@ -616,12 +619,12 @@ export const createCourse = async (req, res) => {
       ...(isPaidBoolean && { videoContent }),
     };
 
-    // Only add price if course is paid
+    // only price if course is paid
     if (isPaidBoolean) {
       courseData.price = parseFloat(price) || 0;
     }
 
-    // Handle PDF export toggle
+    // handle pdf export toggle
     if (req.body.hasPdfExport !== undefined) {
       courseData.hasPdfExport =
         req.body.hasPdfExport === "true" || req.body.hasPdfExport === true;
@@ -647,7 +650,7 @@ export const createCourse = async (req, res) => {
   }
 };
 
-// Update course
+// update course
 export const updateCourse = async (req, res) => {
   try {
     const { courseId } = req.params;
@@ -694,7 +697,7 @@ export const updateCourse = async (req, res) => {
       price,
     } = req.body;
 
-    // Handle image upload
+    // handle image upload
     let image = null;
     if (req.file) {
       image = {
@@ -703,21 +706,21 @@ export const updateCourse = async (req, res) => {
       };
     }
 
-    // ✅ SIMPLIFIED: Handle video LINKS ONLY updates
+    // handle video links when that is the only requested change
     let videoContentUpdate = null;
 
     if (req.body.isPaid === "true" || req.body.isPaid === true) {
       const videoType = req.body.videoType;
 
       if (videoType === "remove") {
-        // ✅ Simply remove video content (no Cloudinary cleanup needed)
+        // remove video content without cloudinary cleanup
         videoContentUpdate = {
           type: "none",
           courseVideo: { links: [] },
           difficultyVideos: [],
         };
       } else if (videoType === "course") {
-        // ✅ Update course-level video links
+        // update course-level video links
         if (req.body.courseVideoLinks) {
           try {
             const links =
@@ -757,7 +760,7 @@ export const updateCourse = async (req, res) => {
           }
         }
       } else if (videoType === "difficulty") {
-        // Handle difficulty-level video LINKS ONLY (OPTIONAL)
+        // handle difficulty-level video links only (optional)
         if (req.body.difficultyVideosData) {
           try {
             const diffVideosData =
@@ -768,23 +771,23 @@ export const updateCourse = async (req, res) => {
             videoContent.type = "difficulty";
             videoContent.difficultyVideos = [];
 
-            // Process each difficulty's links
+            // process each difficulty's links
             for (const [diffName, diffData] of Object.entries(diffVideosData)) {
-              //  SKIP if no links provided (make it optional)
+              //  skip if no links provided (make it optional)
               if (!diffData.links || diffData.links.length === 0) {
-                continue; // Skip this difficulty, don't throw error
+                continue; // skip this difficulty, don't throw error
               }
 
-              // Validate: Maximum 2 links per difficulty
+              // validate: maximum 2 links per difficulty
               if (diffData.links.length > 2) {
                 throw new Error(
                   `Maximum 2 video links allowed for ${diffName} difficulty`
                 );
               }
 
-              // Validate and process links
+              // validate and process links
               const validatedLinks = diffData.links
-                .filter((link) => link.url && link.url.trim()) // Filter out empty URLs
+                .filter((link) => link.url && link.url.trim()) // filter out empty urls
                 .map((link) => {
                   if (!videoProcessingService.validateVideoUrl(link.url)) {
                     throw new Error(
@@ -799,7 +802,7 @@ export const updateCourse = async (req, res) => {
                   };
                 });
 
-              // Only add if there are valid links after filtering
+              // only if there are valid links filtering
               if (validatedLinks.length > 0) {
                 videoContent.difficultyVideos.push({
                   difficulty: diffName,
@@ -808,7 +811,7 @@ export const updateCourse = async (req, res) => {
               }
             }
 
-            // If no valid difficulty videos were added, set type to "none"
+            // if no valid difficulty videos were ed, set type to "none"
             if (videoContent.difficultyVideos.length === 0) {
               videoContent.type = "none";
               videoContent.courseVideo = { links: [] };
@@ -821,14 +824,14 @@ export const updateCourse = async (req, res) => {
             });
           }
         } else {
-          // No difficultyVideosData provided - that's okay, videos are optional
+          // no difficultyvideosdata provided - that's okay, videos are optional
           videoContent.type = "none";
           videoContent.courseVideo = { links: [] };
           videoContent.difficultyVideos = [];
         }
       }
     } else if (req.body.isPaid === "false" || req.body.isPaid === false) {
-      // Changing from paid to free - remove video content
+      // changing from paid to free - remove video content
       videoContentUpdate = {
         type: "none",
         courseVideo: { links: [] },
@@ -836,7 +839,7 @@ export const updateCourse = async (req, res) => {
       };
     }
 
-    // Handle category update
+    // handle category update
     let categoryUpdate = {};
     if (req.body.category !== undefined) {
       if (
@@ -865,7 +868,7 @@ export const updateCourse = async (req, res) => {
       }
     }
 
-    // Check if name is being changed and if it already exists
+    // check if name is being d and if it already exists
     if (name && name.trim() !== course.name) {
       const existingCourse = await Course.findOne({
         name: name.trim(),
@@ -890,7 +893,7 @@ export const updateCourse = async (req, res) => {
       ...(videoContentUpdate && { videoContent: videoContentUpdate }),
     };
 
-    // CRITICAL FIX: Handle isPaid and price logic
+    // handle ispaid and price logic
     if (req.body.isPaid !== undefined) {
       const isPaidBoolean =
         req.body.isPaid === "true" || req.body.isPaid === true;
@@ -910,7 +913,7 @@ export const updateCourse = async (req, res) => {
       }
     }
 
-    // CRITICAL FIX: Handle PDF export toggle update
+    // handle pdf export toggle update
     if (req.body.hasPdfExport !== undefined) {
       const hasPdfExportBoolean =
         req.body.hasPdfExport === "true" ||
@@ -920,20 +923,20 @@ export const updateCourse = async (req, res) => {
 
       updateData.hasPdfExport = hasPdfExportBoolean;
 
-      console.log(`[UPDATE] Setting hasPdfExport:`, {
+      console.log(`Setting hasPdfExport:`, {
         original: req.body.hasPdfExport,
         converted: hasPdfExportBoolean,
         type: typeof hasPdfExportBoolean,
       });
     }
 
-    // CRITICAL FIX: Use findByIdAndUpdate with explicit fields
+    // use findbyidandupdate with explicit fields
     const updatedCourse = await Course.findByIdAndUpdate(courseId, updateData, {
       new: true,
       runValidators: true,
     }).populate("category", "name description");
 
-    console.log(`[UPDATE] Course updated:`, {
+    console.log(`Course updated:`, {
       courseId,
       hasPdfExport: updatedCourse.hasPdfExport,
       isPaid: updatedCourse.isPaid,
@@ -943,12 +946,12 @@ export const updateCourse = async (req, res) => {
     await invalidateCache.course(courseId);
     await invalidateCache.allCourses();
 
-    // CRITICAL FIX: Return proper response structure
+    // return proper response structure
     return res.status(200).json({
       success: true,
       message: "Course updated successfully",
       data: {
-        course: updatedCourse.toObject(), // Convert Mongoose doc to plain object
+        course: updatedCourse.toObject(), // convert mongoose doc to plain object
       },
     });
   } catch (error) {
@@ -986,7 +989,7 @@ const validateVideoLink = (url) => {
   }
 };
 
-// New endpoint to validate video links
+// endpoint to validate video links
 export const validateVideoLinks = async (req, res) => {
   try {
     const { links } = req.body;
@@ -1021,7 +1024,7 @@ export const validateVideoLinks = async (req, res) => {
   }
 };
 
-// Delete course
+// delete course
 export const deleteCourse = async (req, res) => {
   try {
     const { courseId } = req.params;
@@ -1034,7 +1037,7 @@ export const deleteCourse = async (req, res) => {
       });
     }
 
-    // Check if course has questions
+    // check if course has questions
     if (course.questions && course.questions.length > 0) {
       console.log(
         `Delete attempt blocked: Course ${courseId} has ${course.questions.length} questions`
@@ -1046,7 +1049,7 @@ export const deleteCourse = async (req, res) => {
       });
     }
 
-    // STEP 1: Get all test results for this course BEFORE deletion
+    // step 1: get all test results for this course deletion
     const testResults = await TestResult.find({ course: courseId }).select(
       "user pointsEarned totalQuestions percentage"
     );
@@ -1055,7 +1058,7 @@ export const deleteCourse = async (req, res) => {
       `Found ${testResults.length} test results to process for course ${courseId}`
     );
 
-    // STEP 2: Group by user and calculate what to subtract
+    // step 2: group by user and calculate what to subtract
     const userUpdates = new Map();
 
     testResults.forEach((test) => {
@@ -1066,7 +1069,7 @@ export const deleteCourse = async (req, res) => {
           testsToSubtract: 0,
           questionsToSubtract: 0,
           pointsToSubtract: 0,
-          percentages: [], // To recalculate average percentile
+          percentages: [], // to recalculate average percentile
         });
       }
 
@@ -1077,14 +1080,14 @@ export const deleteCourse = async (req, res) => {
       update.percentages.push(test.percentage || 0);
     });
 
-    // STEP 3: Update each affected user
+    // step 3: update each affected user
     const userUpdatePromises = [];
 
     for (const [userId, updates] of userUpdates) {
       const user = await User.findById(userId);
 
       if (user) {
-        // Calculate new values
+        // calculate values
         const newTestsCompleted = Math.max(
           0,
           (user.stats.testsCompleted || 0) - updates.testsToSubtract
@@ -1098,11 +1101,11 @@ export const deleteCourse = async (req, res) => {
           (user.points || 0) - updates.pointsToSubtract
         );
 
-        // Recalculate average percentile (excluding this course's tests)
-        // Get remaining tests for this user from OTHER courses
+        // recalculate average percentile (excluding this course's tests)
+        // get remaining tests for this user from other courses
         const remainingTests = await TestResult.find({
           user: userId,
-          course: { $ne: courseId }, // Not this course
+          course: { $ne: courseId }, // not this course
         }).select("percentage");
 
         let newAveragePercentile = 0;
@@ -1114,7 +1117,7 @@ export const deleteCourse = async (req, res) => {
           newAveragePercentile = totalPercentage / remainingTests.length;
         }
 
-        // Update user document
+        // update user document
         userUpdatePromises.push(
           User.findByIdAndUpdate(userId, {
             $set: {
@@ -1132,11 +1135,11 @@ export const deleteCourse = async (req, res) => {
       }
     }
 
-    // Execute all user updates in parallel
+    // execute all user updates in parallel
     await Promise.all(userUpdatePromises);
     console.log(`Updated ${userUpdatePromises.length} users' stats`);
 
-    // STEP 4: Now delete all test results for this course
+    // step 4: now delete all test results for this course
     const deletedTestResults = await TestResult.deleteMany({
       course: courseId,
     });
@@ -1144,7 +1147,7 @@ export const deleteCourse = async (req, res) => {
       `Deleted ${deletedTestResults.deletedCount} test results for course ${courseId}`
     );
 
-    // STEP 5: Clear Redis leaderboard caches for this course
+    // step 5: clear redis leaderboard caches for this course
     try {
       const redisClient = (await import("../Config/redis.js")).default;
       const difficulties = ["Easy", "Medium", "Hard", "all"];
@@ -1156,23 +1159,23 @@ export const deleteCourse = async (req, res) => {
         await redisClient.del(pointsKey);
       }
 
-      // Also clear global leaderboard since points changed
+      // also clear global leaderboard since points d
       await redisClient.del("global:leaderboard:points");
 
       console.log(`Cleared Redis leaderboard caches for course ${courseId}`);
     } catch (redisError) {
       console.error("Failed to clear Redis caches:", redisError);
-      // Continue even if Redis fails
+      // continue even if redis fails
     }
 
-    // Delete associated Cloudinary image if exists
+    // delete associated cloudinary image if exists
     if (course.image && course.image.public_id) {
       try {
         await cloudinary.uploader.destroy(course.image.public_id);
         console.log("Cloudinary image deleted:", course.image.public_id);
       } catch (cloudinaryError) {
         console.error("Failed to delete Cloudinary image:", cloudinaryError);
-        // Continue with course deletion even if image deletion fails
+        // continue with course deletion even if image deletion fails
       }
     }
 
@@ -1203,43 +1206,43 @@ export const getAllCourses = async (req, res) => {
     const isAdmin = req.user?.role === "admin" || req.admin?.isAdmin === true;
     const { category, difficulty, isPaid, sortBy = "newest" } = req.query;
 
-    // CRITICAL CHANGE: Force active courses for non-admin, even if isActive filter is passed
+    // force active courses for non-admin, even if isactive filter is passed
     let baseQuery;
     if (isAdmin) {
-      // Admin can see all courses OR filter by isActive
+      // admin can see all courses or filter by isactive
       baseQuery = {};
       if (isActive !== undefined) {
         baseQuery.isActive = isActive === "true";
       }
     } else {
-      // Non-admin (frontend) ALWAYS sees only active courses
+      // non-admin (frontend) always sees only active courses
       baseQuery = { isActive: true };
     }
 
     let filterQuery = { ...baseQuery };
 
-    // Add search filter
+    // search filter
     if (search) {
       filterQuery.name = { $regex: search, $options: "i" };
     }
 
-    // Add category filter
+    // category filter
     if (category) {
       filterQuery.category =
         mongoose.Types.ObjectId.createFromHexString(category);
     }
 
-    // Add difficulty filter
+    // difficulty filter
     if (difficulty) {
       filterQuery["difficulties.name"] = difficulty;
     }
 
-    // Add price filter
+    // price filter
     if (isPaid !== undefined) {
       filterQuery.isPaid = isPaid === "true" || isPaid === true;
     }
 
-    // Build sort criteria
+    // build sort criteria
     let sortCriteria = {};
     switch (sortBy) {
       case "oldest":
@@ -1257,7 +1260,7 @@ export const getAllCourses = async (req, res) => {
         break;
     }
 
-    // Aggregation pipeline
+    // aggregation pipeline
     const pipeline = [
       { $match: filterQuery },
       {
@@ -1376,7 +1379,7 @@ export const getAllCourses = async (req, res) => {
   }
 };
 
-// Get course by ID
+// get course by id
 export const getCourseById = async (req, res) => {
   try {
     const { courseId } = req.params;
@@ -1420,7 +1423,7 @@ export const getCourseById = async (req, res) => {
       };
     }
 
-    // Add computed totalQuestions field
+    // computed totalquestions field
     course.totalQuestions =
       course.questions?.filter((q) => q.isActive !== false).length || 0;
 
@@ -1428,7 +1431,7 @@ export const getCourseById = async (req, res) => {
       course.questions = [];
     }
 
-    // ADD THIS: Get active coupons count for paid courses
+    // this: get active coupons count for paid courses
     if (course.isPaid) {
       const Coupon = (await import("../Models/Coupon.js")).default;
       const activeCouponsCount = await Coupon.countDocuments({
@@ -1452,7 +1455,7 @@ export const getCourseById = async (req, res) => {
   }
 };
 
-// Add question to course
+// question to course
 export const addQuestionToCourse = async (req, res) => {
   try {
     const { courseId } = req.params;
@@ -1474,7 +1477,7 @@ export const addQuestionToCourse = async (req, res) => {
       });
     }
 
-    // Check if difficulty exists in course
+    // check if difficulty exists in course
     const difficultyExists = course.difficulties.find(
       (diff) => diff.name === difficulty
     );
@@ -1503,7 +1506,7 @@ export const addQuestionToCourse = async (req, res) => {
             : 0
           : questionType === "truefalse"
             ? 2
-            : 0, // Calculate number of options based on question type
+            : 0, // calculate number of options based on question type
       options:
         questionType === "multiple"
           ? options || []
@@ -1524,7 +1527,7 @@ export const addQuestionToCourse = async (req, res) => {
     course.questions.push(newQuestion);
     course.totalQuestions = course.questions.filter((q) => q.isActive).length;
 
-    // Recalculate total marks for the course
+    // recalculate total marks for the course
     course.totalMarks = course.questions
       .filter((q) => q.isActive)
       .reduce((total, q) => total + (q.marksPerQuestion || 0), 0);
@@ -1551,7 +1554,7 @@ export const addQuestionToCourse = async (req, res) => {
   }
 };
 
-// ADD THIS NEW FUNCTION after getUserStats
+// this function getuserstats
 export const getDifficultyBreakdown = async (req, res) => {
   try {
     const { courseId, difficulty, timeRange } = req.query;
@@ -1559,7 +1562,7 @@ export const getDifficultyBreakdown = async (req, res) => {
     console.log("=== getDifficultyBreakdown ===");
     console.log("Filters:", { courseId, difficulty, timeRange });
 
-    // Build match criteria
+    // build match criteria
     const matchCriteria = {};
 
     if (
@@ -1594,7 +1597,7 @@ export const getDifficultyBreakdown = async (req, res) => {
       .populate("course", "name")
       .lean();
 
-    // Group by course and difficulty
+    // group by course and difficulty
     const breakdown = new Map();
 
     testResults.forEach((result) => {
@@ -1644,7 +1647,7 @@ export const getDifficultyBreakdown = async (req, res) => {
       }
     });
 
-    // Format response
+    // format response
     const formattedBreakdown = Array.from(breakdown.entries()).map(
       ([courseId, data]) => ({
         courseId,
@@ -1686,10 +1689,10 @@ export const getUserStats = async (req, res) => {
     console.log("=== getUserStats Query Params ===");
     console.log("Filters:", { courseId, difficulty, timeRange });
 
-    // Build match criteria
+    // build match criteria
     const matchCriteria = {};
 
-    // Course filter
+    // course filter
     if (
       courseId &&
       courseId.trim() !== "" &&
@@ -1699,7 +1702,7 @@ export const getUserStats = async (req, res) => {
       matchCriteria.course = new mongoose.Types.ObjectId(courseId);
     }
 
-    // Time range filter
+    // time range filter
     if (timeRange && timeRange.trim() !== "" && timeRange !== "all") {
       const daysAgo =
         timeRange === "30d"
@@ -1713,7 +1716,7 @@ export const getUserStats = async (req, res) => {
       matchCriteria.createdAt = { $gte: startDate };
     }
 
-    // Difficulty filter - handle both single and array difficulties
+    // difficulty filter - handle both single and array difficulties
     if (difficulty && difficulty.trim() !== "" && difficulty !== "all") {
       const difficultyArray = Array.isArray(difficulty)
         ? difficulty
@@ -1726,22 +1729,22 @@ export const getUserStats = async (req, res) => {
 
     console.log("Match criteria:", JSON.stringify(matchCriteria, null, 2));
 
-    // PARALLEL EXECUTION - Fetch all data at once
+    // parallel execution - fetch all data at once
     const [totalUsers, testResults] = await Promise.all([
       User.countDocuments(),
       TestResult.find(matchCriteria)
         .populate("user", "name email points badges")
         .populate("course", "name image category")
         .sort({ createdAt: -1 })
-        .limit(1000) // Reasonable limit for performance
+        .limit(1000) // reasonable limit for performance
         .lean(),
     ]);
 
     console.log(`Found ${testResults.length} test results`);
 
-    // PROCESS DATA IN MEMORY (Much faster than aggregation)
+    // process data in memory (much faster than aggregation)
 
-    // 1. Overview stats
+    // 1. overview stats
     const uniqueUserIds = new Set();
     let totalScore = 0;
     testResults.forEach((result) => {
@@ -1754,7 +1757,7 @@ export const getUserStats = async (req, res) => {
     const averageScore =
       totalTests > 0 ? Math.round(totalScore / totalTests) : 0;
 
-    // 2. Top Performers - Group by user
+    // 2. top performers - group by user
     const userPerformanceMap = new Map();
     testResults.forEach((result) => {
       const userId = result.user._id.toString();
@@ -1794,7 +1797,7 @@ export const getUserStats = async (req, res) => {
       .sort((a, b) => b.averageScore - a.averageScore)
       .slice(0, 10);
 
-    // 3. Course Performance
+    // 3. course performance
     const coursePerformanceMap = new Map();
     testResults.forEach((result) => {
       const courseId = result.course._id.toString();
@@ -1803,7 +1806,7 @@ export const getUserStats = async (req, res) => {
           _id: result.course._id,
           name: result.course.name,
           image: result.course.image?.url || null,
-          category: "Uncategorized", // Will populate if needed
+          category: "Uncategorized", // will populate if needed
           totalScore: 0,
           totalAttempts: 0,
           completedTests: 0,
@@ -1842,7 +1845,7 @@ export const getUserStats = async (req, res) => {
       }))
       .sort((a, b) => b.totalAttempts - a.totalAttempts);
 
-    // 4. Difficulty Stats - CORRECTED: Separate multi-difficulty from single-difficulty tests
+    // 4. difficulty stats - corrected: separate multi-difficulty from single-difficulty tests
     const difficultyStatsMap = new Map([
       [
         "Easy",
@@ -1883,19 +1886,19 @@ export const getUserStats = async (req, res) => {
     ]);
 
     testResults.forEach((result) => {
-      // Check if this is a multi-difficulty test
+      // check if this is a multi-difficulty test
       const isMultiDifficulty =
         Array.isArray(result.difficulty) && result.difficulty.length > 1;
 
       if (isMultiDifficulty) {
-        // For multi-difficulty tests, use the detailed breakdown from difficultyResults
+        // for multi-difficulty tests, use the detailed breakdown from difficultyresults
         if (result.testSettings?.difficultyResults) {
           result.testSettings.difficultyResults.forEach((diffResult) => {
             const diffKey = diffResult.difficulty;
             if (difficultyStatsMap.has(diffKey)) {
               const stats = difficultyStatsMap.get(diffKey);
 
-              // Use the specific difficulty's data
+              // use the specific difficulty's data
               const diffPercentage =
                 diffResult.maxPossibleScore > 0
                   ? (diffResult.totalScore / diffResult.maxPossibleScore) * 100
@@ -1911,7 +1914,7 @@ export const getUserStats = async (req, res) => {
           });
         }
       } else {
-        // For single-difficulty tests, process normally
+        // for single-difficulty tests, process normally
         const difficulties = Array.isArray(result.difficulty)
           ? result.difficulty
           : [result.difficulty];
@@ -1952,7 +1955,7 @@ export const getUserStats = async (req, res) => {
       })
     );
 
-    // 5. Recent Activity
+    // 5. recent activity
     const recentActivity = testResults.slice(0, 10).map((result) => ({
       userName: result.user.name,
       userEmail: result.user.email,
@@ -1963,7 +1966,7 @@ export const getUserStats = async (req, res) => {
         : result.difficulty,
       percentage: Math.round((result.percentage || 0) * 10) / 10,
       timeTaken: result.timeTaken || 0,
-      completedAt: result.completedAt || result.createdAt, // Use completedAt instead of createdAt
+      completedAt: result.completedAt || result.createdAt, // use completedat instead of createdat
       createdAt: result.createdAt,
     }));
 
@@ -1995,10 +1998,10 @@ export const getUserStats = async (req, res) => {
   }
 };
 
-// Get course statistics
+// get course statistics
 export const getCourseStats = async (req, res) => {
   try {
-    // we will Use Promise.all for parallel execution
+    // we will use promise.all for parallel execution
     const [
       totalCourses,
       activeCourses,
@@ -2103,13 +2106,13 @@ export const getCourseQuestions = async (req, res) => {
 
     const skip = (parseInt(page) - 1) * parseInt(limit);
 
-    // Build match conditions
+    // build match conditions
     let matchConditions = {};
     if (difficulty) matchConditions["questions.difficulty"] = difficulty;
     if (isActive !== undefined)
       matchConditions["questions.isActive"] = isActive === "true";
 
-    // Use aggregation for better performance
+    // use aggregation for better performance
     const pipeline = [
       {
         $match: { _id: mongoose.Types.ObjectId.createFromHexString(courseId) },
@@ -2187,7 +2190,7 @@ export const deleteCourseQuestion = async (req, res) => {
       });
     }
 
-    // Delete question image from Cloudinary before removing question
+    // delete question image from cloudinary removing question
     const question = course.questions[questionIndex];
     if (question.image && question.image.public_id) {
       try {
@@ -2198,7 +2201,7 @@ export const deleteCourseQuestion = async (req, res) => {
           "Failed to delete question image from Cloudinary:",
           cloudinaryError
         );
-        // Continue with question deletion even if image deletion fails
+        // continue with question deletion even if image deletion fails
       }
     }
 
@@ -2257,7 +2260,7 @@ export const bulkDeleteQuestions = async (req, res) => {
       });
     }
 
-    // Collect all image public_ids before deletion
+    // collect all image public_ids deletion
     const imagesToDelete = [];
     const questionsToDelete = course.questions.filter((q) =>
       questionIds.includes(q._id.toString())
@@ -2269,7 +2272,7 @@ export const bulkDeleteQuestions = async (req, res) => {
       }
     });
 
-    // Delete all images from Cloudinary
+    // delete all images from cloudinary
     if (imagesToDelete.length > 0) {
       console.log(
         `Deleting ${imagesToDelete.length} question images from Cloudinary...`
@@ -2278,7 +2281,7 @@ export const bulkDeleteQuestions = async (req, res) => {
       const deletePromises = imagesToDelete.map((publicId) =>
         cloudinary.uploader.destroy(publicId).catch((err) => {
           console.error(`Failed to delete image ${publicId}:`, err);
-          return null; // Continue even if one fails
+          return null; // continue even if one fails
         })
       );
 
@@ -2288,7 +2291,7 @@ export const bulkDeleteQuestions = async (req, res) => {
       );
     }
 
-    // Remove questions from course
+    // remove questions from course
     const initialLength = course.questions.length;
     course.questions = course.questions.filter(
       (q) => !questionIds.includes(q._id.toString())
@@ -2353,9 +2356,9 @@ export const updateCourseQuestion = async (req, res) => {
       });
     }
 
-    // Handle image upload if present
+    // handle image upload if present
     if (req.file) {
-      // Delete old image if exists
+      // delete old image if exists
       if (question.image && question.image.public_id) {
         try {
           await cloudinary.uploader.destroy(question.image.public_id);
@@ -2364,16 +2367,16 @@ export const updateCourseQuestion = async (req, res) => {
         }
       }
 
-      // Use the uploaded file (already processed by multer-storage-cloudinary)
+      // use the uploaded file (already processed by multer-storage-cloudinary)
       updates.image = {
         public_id: req.file.filename,
         url: req.file.path,
       };
     }
 
-    // NEW: Handle explicit image deletion
+    // handle explicit image deletion
     if (updates.image === null || updates.image === "null") {
-      // Delete from Cloudinary if exists
+      // delete from cloudinary if exists
       if (question.image && question.image.public_id) {
         try {
           await cloudinary.uploader.destroy(question.image.public_id);
@@ -2385,11 +2388,11 @@ export const updateCourseQuestion = async (req, res) => {
         }
       }
 
-      // Clear the image field completely
+      // clear the image field completely
       question.image = undefined;
-      question.markModified("image"); // Ensure Mongoose detects the change
+      question.markModified("image"); // ensure mongoose detects the
 
-      // Remove image from updates to prevent it being set again
+      // remove image from updates to prevent it being set again
       delete updates.image;
     }
 
@@ -2411,7 +2414,7 @@ export const updateCourseQuestion = async (req, res) => {
       }
     });
 
-    // Recalculate totalQuestions after update
+    // recalculate totalquestions update
     course.totalQuestions = course.questions.filter((q) => q.isActive).length;
     await course.save();
 
@@ -2423,7 +2426,7 @@ export const updateCourseQuestion = async (req, res) => {
         );
       }
     } catch (cacheError) {
-      // Log but don't fail the request if cache invalidation fails
+      // log but don't fail the request if cache invalidation fails
       if (process.env.NODE_ENV === "development") {
         console.error("Failed to invalidate question cache:", cacheError);
       }
@@ -2444,7 +2447,7 @@ export const updateCourseQuestion = async (req, res) => {
   }
 };
 
-// Toggle course status
+// toggle course status
 export const toggleCourseStatus = async (req, res) => {
   try {
     const { courseId } = req.params;
@@ -2475,12 +2478,12 @@ export const toggleCourseStatus = async (req, res) => {
   }
 };
 
-// Create category
+// create category
 export const createCategory = async (req, res) => {
   try {
     const { name, description } = req.body;
 
-    // Validation
+    // validation
     if (!name || name.trim().length < 2) {
       return res.status(400).json({
         success: false,
@@ -2488,7 +2491,7 @@ export const createCategory = async (req, res) => {
       });
     }
 
-    // Check if category already exists
+    // check if category already exists
     const existingCategory = await Category.findOne({ name: name.trim() });
     if (existingCategory) {
       return res.status(400).json({
@@ -2518,10 +2521,10 @@ export const createCategory = async (req, res) => {
   }
 };
 
-// Get all categories
+// get all categories
 export const getAllCategories = async (req, res) => {
   try {
-    // Use aggregation to get categories with course count in single query
+    // use aggregation to get categories with course count in single query
     const categories = await Category.aggregate([
       {
         $lookup: {
@@ -2557,7 +2560,7 @@ export const getAllCategories = async (req, res) => {
   }
 };
 
-// Get category by ID with courses
+// get category by id with courses
 export const getCategoryById = async (req, res) => {
   try {
     const { categoryId } = req.params;
@@ -2570,7 +2573,7 @@ export const getCategoryById = async (req, res) => {
       });
     }
 
-    // Get courses in this category
+    // get courses in this category
     const courses = await Course.find({ category: categoryId }).select(
       "name description isActive createdAt"
     ).populate("teacher", "name username profileImage");
@@ -2595,7 +2598,7 @@ export const getCategoryById = async (req, res) => {
   }
 };
 
-// Update category
+// update category
 export const updateCategory = async (req, res) => {
   try {
     const { categoryId } = req.params;
@@ -2609,7 +2612,7 @@ export const updateCategory = async (req, res) => {
       });
     }
 
-    // Check if name is being changed and if it already exists
+    // check if name is being d and if it already exists
     if (name && name.trim() !== category.name) {
       const existingCategory = await Category.findOne({
         name: name.trim(),
@@ -2647,7 +2650,7 @@ export const updateCategory = async (req, res) => {
   }
 };
 
-// Delete category
+// delete category
 export const deleteCategory = async (req, res) => {
   try {
     const { categoryId } = req.params;
@@ -2674,7 +2677,7 @@ export const deleteCategory = async (req, res) => {
       });
     }
 
-    // Check if category has courses
+    // check if category has courses
     const coursesInCategory = await Course.countDocuments({
       category: categoryId,
     });
@@ -2702,16 +2705,16 @@ export const deleteCategory = async (req, res) => {
 };
 
 /**
- * Download course data as PDF (Admin only)
- * @route GET /api/courses/:courseId/download-pdf
- * @access Private (Admin only)
- * @param {string} courseId - Course ID
- * @returns {Buffer} PDF file containing course data
+ * download course data as pdf (admin only)
+ * @route get /api/courses/:courseid/download-pdf
+ * @access private (admin only)
+ * @param {string} courseid - course id
+ * @returns {buffer} pdf file containing course data
  *
- * Security:
- * - Admin authentication required
- * - No download limits for admins
- * - Includes all course questions and configuration
+ * security:
+ * - admin authentication required
+ * - no download limits for admins
+ * - includes all course questions and configuration
  */
 export const downloadCoursePDF = async (req, res) => {
   try {
@@ -2720,7 +2723,7 @@ export const downloadCoursePDF = async (req, res) => {
     console.log(`=== COURSE PDF DOWNLOAD REQUEST (Admin) ===`);
     console.log(`Course ID: ${courseId}`);
 
-    // Validate courseId format
+    // validate courseid format
     if (!mongoose.Types.ObjectId.isValid(courseId)) {
       return res.status(400).json({
         success: false,
@@ -2728,7 +2731,7 @@ export const downloadCoursePDF = async (req, res) => {
       });
     }
 
-    // Fetch course with populated category
+    // fetch course with populated category
     const course = await Course.findById(courseId)
       .populate("category", "name description")
       .lean();
@@ -2740,14 +2743,14 @@ export const downloadCoursePDF = async (req, res) => {
       });
     }
 
-    // Import PDF service
+    // import pdf service
     const pdfService = (await import("../services/pdfService.js")).default;
 
-    // Generate course PDF (admin version - no test results)
+    // generate course pdf (admin version - no test results)
     console.log(`Generating course PDF for ${courseId}...`);
     const pdfBuffer = await pdfService.generateCoursePDF(course);
 
-    // Set response headers
+    // set response headers
     const filename = `Vidhgrow_Course_${course.name.replace(/[^a-z0-9]/gi, "_")}_${
       new Date().toISOString().split("T")[0]
     }.pdf`;
@@ -2759,7 +2762,7 @@ export const downloadCoursePDF = async (req, res) => {
     res.setHeader("Pragma", "no-cache");
     res.setHeader("Expires", "0");
 
-    // Send PDF
+    // send pdf
     res.send(pdfBuffer);
 
     console.log(`Course PDF sent successfully: ${filename}`);
@@ -2773,7 +2776,7 @@ export const downloadCoursePDF = async (req, res) => {
   }
 };
 
-// Bulk import questions
+// bulk import questions
 export const bulkImportQuestions = async (req, res) => {
   try {
     const { courseId } = req.params;
@@ -2794,10 +2797,10 @@ export const bulkImportQuestions = async (req, res) => {
       });
     }
 
-    // Validate each question
+    // validate each question
     const validatedQuestions = [];
     for (const question of questions) {
-      // Check if difficulty exists in course
+      // check if difficulty exists in course
       const difficultyExists = course.difficulties.find(
         (diff) => diff.name === question.difficulty
       );
@@ -2808,7 +2811,7 @@ export const bulkImportQuestions = async (req, res) => {
         });
       }
 
-      // Validate required fields
+      // validate required fields
       if (
         !question.question ||
         !question.correctAnswer ||
@@ -2832,7 +2835,7 @@ export const bulkImportQuestions = async (req, res) => {
       });
     }
 
-    // Add all questions to course
+    // all questions to course
     course.questions.push(...validatedQuestions);
     course.totalQuestions = course.questions.filter((q) => q.isActive).length;
     await course.save();

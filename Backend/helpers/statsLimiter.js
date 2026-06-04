@@ -1,3 +1,6 @@
+/**
+ * keeps the stats limiter utility focused and readable.
+ */
 import rateLimit from "express-rate-limit";
 
 export const statsLimiter = rateLimit({

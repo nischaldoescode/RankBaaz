@@ -1,8 +1,11 @@
+/**
+ * keeps the blocked page page focused and readable.
+ */
 import React from "react";
 import { ShieldOff } from "lucide-react";
 
 /**
- * shown when backend returns IP_BLOCKED for any request
+ * shown when backend returns ip_blocked for any request
  */
 const BlockedPage = ({ expiresAt }) => {
   const expiry = expiresAt ? new Date(expiresAt) : null;
@@ -36,7 +39,7 @@ const BlockedPage = ({ expiresAt }) => {
             <p className="text-sm text-red-500 font-medium">This block is permanent.</p>
           )}
         </div>
-        
+
           <a href="mailto:support@vidhgrow.online"
           className="inline-block px-6 py-3 bg-primary text-primary-foreground rounded-xl text-sm font-medium hover:opacity-90 transition-opacity"
         >

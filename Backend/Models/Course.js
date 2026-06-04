@@ -1,3 +1,6 @@
+/**
+ * keeps the course model focused and readable.
+ */
 import mongoose from "mongoose";
 
 const courseSchema = new mongoose.Schema(
@@ -19,7 +22,7 @@ const courseSchema = new mongoose.Schema(
     category: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Category",
-      required: false, // Making it optional
+      required: false, // making it optional
     },
     image: {
       public_id: String,
@@ -86,7 +89,7 @@ const courseSchema = new mongoose.Schema(
       default: 0,
       validate: {
         validator: function (value) {
-          // If course is paid, price must be greater than 0
+          // if course is paid, price greater than 0
           if (this.isPaid && value <= 0) {
             return false;
           }
@@ -106,7 +109,7 @@ const courseSchema = new mongoose.Schema(
         enum: ["none", "course", "difficulty"],
         default: "none",
       },
-      // COURSE-LEVEL VIDEOS (max 2 links)
+      // course-level videos (max 2 links)
       courseVideo: {
         links: {
           type: [
@@ -136,7 +139,7 @@ const courseSchema = new mongoose.Schema(
           },
         },
       },
-      // DIFFICULTY-LEVEL VIDEOS (max 2 links per difficulty)
+      // difficulty-level videos (max 2 links per difficulty)
       difficultyVideos: [
         {
           difficulty: {
@@ -223,7 +226,7 @@ const courseSchema = new mongoose.Schema(
           },
         ],
         correctAnswer: {
-          type: mongoose.Schema.Types.Mixed, // It can be Number (index) or String (direct answer)
+          type: mongoose.Schema.Types.Mixed, // it can be number (index) or string (direct answer)
           required: true,
         },
         explanation: {
@@ -243,7 +246,7 @@ const courseSchema = new mongoose.Schema(
       default: true,
     },
 
-    // teacher who created this course — null means admin-created
+    // null means the course was created by admin.
     teacher: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Teacher",
@@ -278,7 +281,7 @@ const courseSchema = new mongoose.Schema(
   },
 );
 
-// courseSchema.js
+// courseschema.js
 courseSchema.index({ category: 1, isActive: 1 });
 courseSchema.index({ "questions.isActive": 1, "questions.difficulty": 1 });
 courseSchema.index({ isActive: 1 });
@@ -296,13 +299,13 @@ courseSchema.index(
   },
 );
 
-// Video validation middleware
+// video validation middleware
 courseSchema.pre("save", function (next) {
-  // Only validate video content for paid courses
+  // only validate video content for paid courses
   if (this.isPaid && this.videoContent) {
     const { type, courseVideo, difficultyVideos } = this.videoContent;
 
-    // Validate course video links
+    // validate course video links
     if (type === "course" && courseVideo?.links) {
       const linkCount = courseVideo.links.length;
 
@@ -321,7 +324,7 @@ courseSchema.pre("save", function (next) {
       }
     }
 
-    // Validate difficulty video links
+    // validate difficulty video links
     if (type === "difficulty" && difficultyVideos) {
       for (const diffVideo of difficultyVideos) {
         const linkCount = diffVideo.links?.length || 0;
@@ -345,10 +348,10 @@ courseSchema.pre("save", function (next) {
     }
   }
 
-  // If changing from paid to free, remove video content
+  // if changing from paid to free, remove video content
   if (!this.isPaid && this.videoContent && this.videoContent.type !== "none") {
     console.log(
-      `[SCHEMA] Course ${this._id} changed to free - removing video content`,
+      `Course ${this._id} changed to free - removing video content`,
     );
     this.videoContent = {
       type: "none",

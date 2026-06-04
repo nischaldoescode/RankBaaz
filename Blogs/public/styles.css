@@ -1,3 +1,6 @@
+/**
+ * keeps the styles stylesheet focused and readable.
+ */
 :root {
   color-scheme: light;
   --ink: #172033;
@@ -1606,5 +1609,115 @@ button:disabled,
     animation-iteration-count: 1 !important;
     scroll-behavior: auto !important;
     transition-duration: 0.01ms !important;
+  }
+}
+
+/* material 3 raw editorial layer */
+:root {
+  --m3-radius-card: 8px;
+  --m3-radius-control: 999px;
+  --m3-state: rgba(37, 99, 235, 0.10);
+  --m3-shadow-1: 0 1px 2px rgba(15, 23, 42, 0.08), 0 10px 30px rgba(37, 99, 235, 0.08);
+  --m3-shadow-2: 0 3px 8px rgba(15, 23, 42, 0.10), 0 18px 48px rgba(37, 99, 235, 0.12);
+}
+
+body {
+  background:
+    linear-gradient(180deg, #f8fbff 0, #ffffff 420px, #f8fbff 100%),
+    #ffffff;
+}
+
+.home-shell::before,
+.article-shell::before,
+.author-shell::before {
+  content: "";
+  position: absolute;
+  z-index: 0;
+  width: min(360px, 70vw);
+  height: 120px;
+  right: -90px;
+  top: 140px;
+  border-radius: 54% 46% 58% 42%;
+  background: linear-gradient(100deg, rgba(37, 99, 235, 0.14), rgba(14, 165, 233, 0.08), transparent);
+  transform: rotate(-4deg);
+  pointer-events: none;
+}
+
+.site-header {
+  border-color: rgba(148, 163, 184, 0.30);
+}
+
+.site-header nav a,
+.footer-links a,
+.topic-links a,
+.browse-links a,
+.reference-links a,
+.footer-nav a,
+.article-topics a,
+.article-ending a,
+.share-panel a,
+.follow-panel a,
+.share-panel button {
+  border-radius: var(--m3-radius-control);
+}
+
+button,
+.search-form button,
+.comment-form button {
+  border-radius: var(--m3-radius-control);
+  box-shadow: 0 8px 22px rgba(37, 99, 235, 0.16);
+}
+
+button:active,
+.search-form button:active,
+.comment-form button:active {
+  transform: scale(0.985);
+}
+
+.search-form,
+.comments,
+.comment-auth,
+.featured-post img,
+.post-card-image img,
+.related-image img,
+.article-cover,
+.article-content img,
+.article-content iframe,
+.article-content video {
+  border-radius: var(--m3-radius-card);
+}
+
+.search-form,
+.comments {
+  box-shadow: var(--m3-shadow-1);
+}
+
+.featured-post a:hover img,
+.post-card-image:hover img,
+.related-image:hover img {
+  box-shadow: var(--m3-shadow-2);
+}
+
+.post-card,
+.featured-post,
+.editorial-note,
+.topic-hero,
+.related-posts,
+.article-context,
+.article-ending,
+.comments {
+  border-color: rgba(148, 163, 184, 0.30);
+}
+
+.article-content blockquote {
+  border-radius: 0 var(--m3-radius-card) var(--m3-radius-card) 0;
+}
+
+@media (max-width: 560px) {
+  .home-shell::before,
+  .article-shell::before,
+  .author-shell::before {
+    right: -170px;
+    opacity: 0.7;
   }
 }

@@ -1,7 +1,10 @@
+/**
+ * keeps the mongodb2 module focused and readable.
+ */
 import mongoose from "mongoose";
 import dotenv from "dotenv";
 
-// Ensure environment variables are loaded
+// ensure environment variables are loaded
 dotenv.config();
 
 const MONGODB_URI_2 = process.env.MONGODB_URI_2;
@@ -12,15 +15,15 @@ if (!MONGODB_URI_2) {
 }
 
 const connection2 = mongoose.createConnection(MONGODB_URI_2, {
-  maxPoolSize: 100, // Increased for production
-  minPoolSize: 10, // Maintain minimum connections
-  serverSelectionTimeoutMS: 10000, // Increased timeout
-  socketTimeoutMS: 60000, // Increased socket timeout
-  connectTimeoutMS: 15000, // Add connection timeout
+  maxPoolSize: 100, // increased for production
+  minPoolSize: 10, // maintain minimum connections
+  serverSelectionTimeoutMS: 10000, // increased timeout
+  socketTimeoutMS: 60000, // increased socket timeout
+  connectTimeoutMS: 15000, // connection timeout
   bufferCommands: false,
   retryWrites: true,
   retryReads: true,
-  // Add these for better connection management
+  // these for better connection management
   maxIdleTimeMS: 60000,
 });
 

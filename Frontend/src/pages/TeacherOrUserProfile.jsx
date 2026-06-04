@@ -1,3 +1,6 @@
+/**
+ * keeps the teacher or user profile page focused and readable.
+ */
 import React, { useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
@@ -6,15 +9,15 @@ import Loading from "../components/common/Loading";
 const API = import.meta.env.VITE_API_URL || "http://localhost:7000/api";
 
 /**
- * Universal username route handler
- * Route: /:username (e.g. /@hunter or /hunter)
+ * universal username route handler
+ * route: /:username (e.g. /@hunter or /hunter)
  *
- * 1. Strip leading @ from the param
- * 2. Check if it's a teacher
- * 3. If yes → render TeacherProfile inline (no redirect loop)
- * 4. If no → render PublicProfile inline (no redirect loop)
+ * 1. strip leading @ from the param
+ * 2. check if it's a teacher
+ * 3. render teacherprofile inline when the username belongs to a teacher
+ * 4. render publicprofile inline for regular user profiles
  *
- * We render inline instead of redirecting to avoid the double-@ bug
+ * we render inline instead of redirecting to avoid the double-@ bug
  * and to avoid extra navigation history entries.
  */
 const TeacherOrUserProfile = () => {
@@ -34,13 +37,13 @@ const TeacherOrUserProfile = () => {
     axios
       .get(`${API}/teachers/public/${username}`)
       .then(() => {
-        // it's a teacher — navigate to teacher profile
+        // route teacher usernames to teacher profiles.
         // use replace so back button works correctly
         navigate(`/teacher/@${username}`, { replace: true });
       })
       .catch((err) => {
         if (err.response?.status === 404) {
-          // not a teacher — navigate to student public profile
+          // otherwise show the student profile.
           navigate(`/profile/@${username}`, { replace: true });
         } else {
           navigate("/404", { replace: true });

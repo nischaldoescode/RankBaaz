@@ -1,4 +1,7 @@
-import React, { useState, useEffect, useCallback } from "react"; // ADD useCallback
+/**
+ * keeps the universal coupons page focused and readable.
+ */
+import React, { useState, useEffect, useCallback } from "react"; // usecallback
 import { useAdmin } from "../contexts/AdminContext";
 import {
   Tag,
@@ -35,7 +38,7 @@ const UniversalCoupons = () => {
   });
   const [errors, setErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
-  const [checkingDuplicate, setCheckingDuplicate] = useState(false); // ADD THIS
+  const [checkingDuplicate, setCheckingDuplicate] = useState(false); // this
 
   const discountOptions = [2, 5, 10, 15, 20];
 
@@ -60,14 +63,14 @@ const UniversalCoupons = () => {
     }
   };
 
-  // ADD THIS DEBOUNCE FUNCTION
+  // this debounce function
   const checkDuplicateCoupon = useCallback(
     (code) => {
       if (!code || code.length < 4) return;
 
       setCheckingDuplicate(true);
 
-      // Check in current coupons list
+      // check in current coupons list
       const isDuplicate = coupons.some(
         (c) => c.code.toUpperCase() === code.toUpperCase()
       );
@@ -90,7 +93,7 @@ const UniversalCoupons = () => {
     [coupons]
   );
 
-  // ADD THIS DEBOUNCED VERSION
+  // this debounced version
   const debouncedDuplicateCheck = useCallback(
     (() => {
       let timeoutId = null;
@@ -288,7 +291,7 @@ const UniversalCoupons = () => {
 
   return (
     <div className="space-y-6 p-6 bg-gray-50 min-h-screen">
-      {/* Header */}
+      {/* header */}
       <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-100">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-4">
@@ -325,7 +328,7 @@ const UniversalCoupons = () => {
         </div>
       </div>
 
-      {/* Coupons List */}
+      {/* coupons list */}
       <div className="bg-white rounded-xl shadow-lg overflow-hidden border border-gray-100">
         <div className="px-6 py-4 border-b border-gray-200 bg-gray-50">
           <h2 className="text-xl font-semibold text-gray-900">
@@ -451,7 +454,7 @@ const UniversalCoupons = () => {
         )}
       </div>
 
-      {/* ADD MODAL */}
+      {/* modal */}
       {showAddModal && (
         <div className="fixed inset-0 bg-gradient-to-br from-muted/30 to-background flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-y-auto">
@@ -481,7 +484,7 @@ const UniversalCoupons = () => {
                         .toUpperCase()
                         .replace(/[^A-Z0-9]/g, "");
                       setFormData({ ...formData, code: value });
-                      debouncedDuplicateCheck(value); // ADD THIS LINE
+                      debouncedDuplicateCheck(value); // this line
                       if (errors.code) {
                         setErrors({ ...errors, code: "" });
                       }
@@ -492,7 +495,7 @@ const UniversalCoupons = () => {
                     placeholder="e.g., SAVE20"
                     maxLength={20}
                   />
-                  {/* ADD CHECKING INDICATOR */}
+                  {/* checking indicator */}
                   {checkingDuplicate && (
                     <p className="text-blue-500 text-xs mt-1 flex items-center">
                       <Loader2 className="h-3 w-3 animate-spin mr-1" />
@@ -599,7 +602,7 @@ const UniversalCoupons = () => {
         </div>
       )}
 
-      {/* EDIT MODAL */}
+      {/* edit modal */}
       {editingCoupon && (
         <div className="fixed inset-0 bg-gradient-to-br from-muted/30 to-background flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-y-auto">

@@ -1,3 +1,6 @@
+/**
+ * keeps the profile page focused and readable.
+ */
 import React, { useState, useEffect, useContext } from "react";
 import { Link, useLocation, UNSAFE_NavigationContext } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
@@ -50,7 +53,7 @@ const GlobalLeaderboard = ({ userId }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Combine both API calls in parallel
+    // combine both api calls in parallel
     const fetchLeaderboardData = async () => {
       try {
         setLoading(true);
@@ -81,7 +84,7 @@ const GlobalLeaderboard = ({ userId }) => {
     };
 
     fetchLeaderboardData();
-  }, []); // Empty dependency array - only run once on mount
+  }, []); // empty dependency array - only run once on mount
 
   if (loading) return <Loading variant="spinner" />;
 
@@ -94,7 +97,7 @@ const GlobalLeaderboard = ({ userId }) => {
 
   return (
     <div className="space-y-4">
-      {/* User's Position Banner - Only show if user has a rank */}
+      {/* user's position banner - only show if user has a rank */}
       {userPosition && userPosition.rank ? (
         <div className="p-4 bg-primary/10 border border-primary/20 rounded-lg">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 min-w-0">
@@ -139,7 +142,7 @@ const GlobalLeaderboard = ({ userId }) => {
           </div>
         </div>
       ) : userPosition ? (
-        // Show message when user has no rank yet
+        // show message when user has no rank yet
         <div className="p-4 bg-muted/20 border border-muted rounded-lg text-center">
           <Trophy className="w-12 h-12 mx-auto mb-2 text-muted-foreground" />
           <p className="text-lg font-medium mb-1">No Rank Yet</p>
@@ -149,7 +152,7 @@ const GlobalLeaderboard = ({ userId }) => {
         </div>
       ) : null}
 
-      {/* Leaderboard List - Only show if there are entries */}
+      {/* leaderboard list - only show if there are entries */}
       {leaderboard.length > 0 ? (
         <div className="space-y-2">
           {leaderboard.map((entry) => {
@@ -168,7 +171,7 @@ const GlobalLeaderboard = ({ userId }) => {
                     : getTopThreeBg(entry.rank)
                 } ${isTopThree && !isCurrentUser ? "text-white" : ""}`}
               >
-                {/* Rank Badge */}
+                {/* rank badge */}
                 <div
                   className={`w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center font-bold text-base sm:text-lg flex-shrink-0 ${
                     isTopThree && !isCurrentUser
@@ -179,7 +182,7 @@ const GlobalLeaderboard = ({ userId }) => {
                   {entry.rank}
                 </div>
 
-                {/* User Info */}
+                {/* user info */}
 
                 <div className="flex-1 min-w-0 overflow-hidden">
                   <div className="flex items-center gap-2 flex-wrap">
@@ -212,7 +215,7 @@ const GlobalLeaderboard = ({ userId }) => {
                   </p>
                 </div>
 
-                {/* Points */}
+                {/* points */}
                 <div className="text-right flex-shrink-0">
                   <p
                     className={`text-xl sm:text-2xl font-bold break-words ${
@@ -238,7 +241,7 @@ const GlobalLeaderboard = ({ userId }) => {
           })}
         </div>
       ) : (
-        // Show message when leaderboard is empty
+        // show message when leaderboard is empty
         <div className="p-8 text-center text-muted-foreground">
           <Trophy className="w-16 h-16 mx-auto mb-3 opacity-30" />
           <p className="text-lg font-medium mb-1">No Rankings Yet</p>
@@ -249,14 +252,14 @@ const GlobalLeaderboard = ({ userId }) => {
   );
 };
 
-// Helper function for badge icons
+// helper function for badge icons
 const getBadgeIcon = (badgeType) => {
   const icons = {
-    leaderboard_legend: "🏆",
-    perfectionist: "💯",
-    speed_demon: "⚡",
+    leaderboard_legend: "",
+    perfectionist: "100",
+    speed_demon: "",
   };
-  return icons[badgeType] || "🎖️";
+  return icons[badgeType] || "";
 };
 
 const Profile = () => {
@@ -299,7 +302,7 @@ const Profile = () => {
     keywords:
       "profile, dashboard, test history, progress tracking, leaderboard, user profile",
     type: "website",
-    noindex: true, // Private profile pages should not be indexed
+    noindex: true, // private profile pages should not be indexed
     structuredData: {
       "@context": "https://schema.org",
       "@type": "ProfilePage",
@@ -316,13 +319,13 @@ const Profile = () => {
 
   useEffect(() => {
     if (user && !userStats) {
-      // Only fetch if we don't have stats yet
+      // only fetch if we don't have stats yet
       const fetchInitialData = async () => {
         await Promise.all([getTestHistory(), getUserStats()]);
       };
       fetchInitialData();
     }
-  }, [user?._id]); // Only depend on user ID, not entire user object
+  }, [user?._id]); // only depend on user id, not entire user object
   useEffect(() => {
     if (showLeaderboardInfo && !leaderboardInfoData) {
       fetchLeaderboardInfo();
@@ -386,7 +389,7 @@ const Profile = () => {
     if (!dateString) return "N/A";
     const date = new Date(dateString);
 
-    // Check if date is valid
+    // check if date is valid
     if (isNaN(date.getTime())) return "N/A";
 
     const day = String(date.getDate()).padStart(2, "0");
@@ -453,7 +456,7 @@ const Profile = () => {
         updatePayload.gender = editData.gender;
       }
 
-      // updateProfile from context (already destructured at top)
+      // updateprofile from context (already destructured at top)
       const result = await updateProfile(updatePayload);
 
       if (result.success) {
@@ -483,16 +486,16 @@ const Profile = () => {
       const result = await getLeaderboard(courseId, difficulty);
 
       if (result.success) {
-        // Check if explicitly empty
+        // check if explicitly empty
         if (result.data?.isEmpty) {
-          toast("ℹ️ No one has completed this course yet. Be the first!");
+          toast("ℹ No one has completed this course yet. Be the first!");
           setLeaderboardData([]);
         } else if (!result.leaderboard || result.leaderboard.length === 0) {
-          // Fallback check
-          toast("ℹ️ No leaderboard data available");
+          // fallback check
+          toast("ℹ No leaderboard data available");
           setLeaderboardData([]);
         } else {
-          // Has data
+          // has data
           setLeaderboardData(result.leaderboard);
         }
       } else {
@@ -509,16 +512,16 @@ const Profile = () => {
 
   if (authLoading) {
     return (
-      <div className="min-h-screen pt-16">
+      <div className="vg-profile-page min-h-screen pt-16">
         <Loading variant="profile" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen pt-16 pb-12">
+    <div className="vg-profile-page min-h-screen pt-16 pb-12">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full overflow-x-hidden">
-        {/* Profile Header */}
+        {/* profile header */}
         <motion.div
           initial={animations && !reducedMotion ? { opacity: 0, y: 20 } : {}}
           animate={animations && !reducedMotion ? { opacity: 1, y: 0 } : {}}
@@ -549,7 +552,7 @@ const Profile = () => {
           </Link>
         </motion.div>
 
-        {/* Stats Cards */}
+        {/* stats cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8 w-full">
           <Card className="min-w-0">
             <CardContent className="pt-6">
@@ -614,7 +617,7 @@ const Profile = () => {
           </Card>
         </div>
 
-        {/* Tabs */}
+        {/* tabs */}
         <div className="flex gap-2 sm:gap-4 mb-6 border-b border-border overflow-x-auto scrollbar-hide">
           <button
             onClick={() => setActiveTab("overview")}
@@ -682,7 +685,7 @@ const Profile = () => {
           </button>
         </div>
 
-        {/* Tab Content */}
+        {/* tab content */}
         <AnimatePresence mode="wait">
           {activeTab === "overview" && (
             <motion.div
@@ -742,7 +745,7 @@ const Profile = () => {
               exit={{ opacity: 0, y: -20 }}
               className="space-y-3"
             >
-              {/* Name Field */}
+              {/* name field */}
               <Card>
                 <CardContent className="p-0">
                   <button
@@ -845,7 +848,7 @@ const Profile = () => {
                 </CardContent>
               </Card>
 
-              {/* Email Field (Read-only) */}
+              {/* email field (read-only) */}
               <Card>
                 <CardContent className="p-4">
                   <div className="flex items-center gap-3 min-w-0 w-full">
@@ -860,7 +863,7 @@ const Profile = () => {
                 </CardContent>
               </Card>
 
-              {/* Date of Birth Field */}
+              {/* date of birth field */}
               <Card>
                 <CardContent className="p-0">
                   <button
@@ -973,7 +976,7 @@ const Profile = () => {
                 </CardContent>
               </Card>
 
-              {/* Gender Field */}
+              {/* gender field */}
               <Card>
                 <CardContent className="p-0">
                   <button
@@ -1079,7 +1082,7 @@ const Profile = () => {
                 </CardContent>
               </Card>
 
-              {/* Name Visibility Toggle */}
+              {/* name visibility toggle */}
               <Card>
                 <CardContent className="p-4">
                   <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 min-w-0">
@@ -1352,7 +1355,7 @@ const Profile = () => {
               exit={{ opacity: 0, y: -20 }}
               className="space-y-6"
             >
-              {/* Global Leaderboard */}
+              {/* global leaderboard */}
               <Card className="mt-6">
                 {" "}
                 <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-6">
@@ -1379,7 +1382,7 @@ const Profile = () => {
                 </CardContent>
               </Card>
 
-              {/* Course-specific leaderboards */}
+              {/* course-specific leaderboards */}
               <Card>
                 <CardHeader>
                   {" "}
@@ -1428,8 +1431,8 @@ const Profile = () => {
                                     const isCurrentUser =
                                       entry.userId === user?._id;
 
-                                    // CORRECT: Use the pre-decoded values from leaderboardService
-                                    // The formatLeaderboardResults already extracts these correctly
+                                    // correct: use the pre-decoded values from leaderboardservice
+                                    // the formatleaderboardresults already extracts these correctly
                                     const percentage =
                                       entry.percentage ||
                                       Math.floor((entry.score || 0) / 1000);

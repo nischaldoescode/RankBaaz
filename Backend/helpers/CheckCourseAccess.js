@@ -1,14 +1,17 @@
+/**
+ * keeps the check course access utility focused and readable.
+ */
 
 import Payment from "../Models/Payment.js";
 import Course from "../Models/Course.js";
 
-// Middleware to check course access
+// middleware to check course access
 export const checkCourseAccess = async (req, res, next) => {
   try {
     const { courseId } = req.params;
     const userId = req.user.userId;
 
-    // Get course
+    // get course
     const course = await Course.findById(courseId);
     if (!course) {
       return res.status(404).json({
@@ -17,12 +20,12 @@ export const checkCourseAccess = async (req, res, next) => {
       });
     }
 
-    // If course is free, allow access
+    // if course is free, allow access
     if (!course.isPaid) {
       return next();
     }
 
-    // Check if user has purchased
+    // check if user has purchased
     const payment = await Payment.findOne({
       user: userId,
       course: courseId,

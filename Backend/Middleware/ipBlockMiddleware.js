@@ -1,3 +1,6 @@
+/**
+ * keeps the ip block middleware middleware focused and readable.
+ */
 import IpBlock from "../Models/IpBlock.js";
 
 /**
@@ -25,14 +28,14 @@ export const checkIpBlock = async (req, res, next) => {
 
     if (allIps.length === 0) return next();
 
-    // check if ANY ip in the chain is blocked
+    // check if any ip in the chain is blocked
     const block = await IpBlock.findOne({ ip: { $in: allIps } }).lean();
     if (!block) return next();
 
     // use the matched ip for the response
     const ip = block.ip;
 
-    // if block has expiresAt and it has passed, treat as unblocked
+    // if block has expiresat and it has passed, treat as unblocked
     // (ttl index handles deletion but there may be a small window)
     if (block.expiresAt && new Date(block.expiresAt) < new Date()) {
       return next();

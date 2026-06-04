@@ -1,3 +1,6 @@
+/**
+ * keeps the blog controller controller focused and readable.
+ */
 import crypto from "crypto";
 import DOMPurify from "isomorphic-dompurify";
 import { v2 as cloudinary } from "cloudinary";

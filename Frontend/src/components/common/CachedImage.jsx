@@ -1,18 +1,21 @@
+/**
+ * keeps the cached image component focused and readable.
+ */
 import React, { useState, useEffect } from 'react';
 import { cacheManager } from '../../utils/cacheManager';
 
 /**
- * Image component that uses IndexedDB cache
- * Falls back to normal img if cache unavailable
+ * image component that uses indexeddb cache
+ * falls back to normal img if cache unavailable
  */
-const CachedImage = ({ 
-  src, 
-  alt, 
-  className = '', 
+const CachedImage = ({
+  src,
+  alt,
+  className = '',
   fallback = null,
   onLoad,
   onError,
-  ...props 
+  ...props
 }) => {
   const [imageSrc, setImageSrc] = useState(null);
   const [error, setError] = useState(false);
@@ -30,11 +33,11 @@ const CachedImage = ({
       }
 
       try {
-        // Try to get from cache first
+        // try to get from cache first
         const cachedBlob = await cacheManager.getImage(src);
-        
+
         if (cachedBlob && mounted) {
-          // Create object URL from cached blob
+          // create object url from cached blob
           objectUrl = URL.createObjectURL(cachedBlob);
           setImageSrc(objectUrl);
           setLoading(false);
@@ -42,13 +45,13 @@ const CachedImage = ({
           return;
         }
 
-        // If not in cache, use original URL (will be cached by SW)
+        // if not in cache, use original url (will be cached by sw)
         if (mounted) {
           setImageSrc(src);
           setLoading(false);
         }
 
-        // Try to cache it for next time
+        // try to cache it for next time
         cacheManager.cacheImage(src).catch(err => {
           console.error('[CachedImage] Failed to cache:', err);
         });
@@ -56,7 +59,7 @@ const CachedImage = ({
       } catch (err) {
         console.error('[CachedImage] Load error:', err);
         if (mounted) {
-          setImageSrc(src); // Fallback to direct URL
+          setImageSrc(src); // fallback to direct url
           setLoading(false);
         }
       }
@@ -64,7 +67,7 @@ const CachedImage = ({
 
     loadImage();
 
-    // Cleanup
+    // cleanup
     return () => {
       mounted = false;
       if (objectUrl) {

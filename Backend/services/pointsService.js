@@ -1,9 +1,12 @@
+/**
+ * keeps the points service service focused and readable.
+ */
 import User from "../Models/User.js";
 import TestResult from "../Models/TestResult.js";
 import redisClient from "../Config/redis.js";
 
 class PointsService {
-  // Point calculation constants
+  // point calculation constants
   POINTS_CONFIG = {
     BASE_COMPLETION: 10,
     PERCENTAGE_MULTIPLIER: 0.5,
@@ -18,16 +21,16 @@ class PointsService {
   calculatePointsForTest(testResult) {
     let points = 0;
 
-    // Base completion points
+    // base completion points
     points += this.POINTS_CONFIG.BASE_COMPLETION;
 
-    // Percentage-based points (0-50 points for 0-100%)
+    // percentage-based points (0-50 points for 0-100%)
     points += testResult.percentage * this.POINTS_CONFIG.PERCENTAGE_MULTIPLIER;
 
-    // Question points (0.2 per question answered)
+    // question points (0.2 per question answered)
     points += testResult.totalQuestions * this.POINTS_CONFIG.QUESTION_POINTS;
 
-    // Time bonus (faster completion = more points, max 5)
+    // time bonus (faster completion = more points, max 5)
     if (testResult.testSettings?.maxTime && testResult.timeTaken) {
       const timeRatio = testResult.timeTaken / testResult.testSettings.maxTime;
       const timeBonus = Math.max(
@@ -37,7 +40,7 @@ class PointsService {
       points += timeBonus;
     }
 
-    // Difficulty multiplier
+    // difficulty multiplier
     const difficultyMultipliers = { Easy: 1, Medium: 1.5, Hard: 2 };
     if (Array.isArray(testResult.difficulty)) {
       const avgMultiplier =
@@ -73,7 +76,7 @@ class PointsService {
         { new: true }
       );
 
-      // Update Redis leaderboard cache
+      // update redis leaderboard cache
       await this.updateGlobalLeaderboard(userId, user.points);
 
       return user.points;
@@ -99,7 +102,7 @@ class PointsService {
       const exists = await redisClient.exists(key);
 
       if (exists) {
-        // Fetch from Redis
+        // fetch from redis
         const results = await redisClient.zrevrange(
           key,
           0,
@@ -108,7 +111,7 @@ class PointsService {
         );
         return this.formatLeaderboardResults(results);
       } else {
-        // Rebuild from MongoDB
+        // rebuild from mongodb
         return await this.rebuildGlobalLeaderboard(limit);
       }
     } catch (error) {
@@ -118,24 +121,24 @@ class PointsService {
   }
 
   async formatLeaderboardResults(redisResults) {
-    // Extract all user IDs
+    // extract all user ids
     const userIds = [];
     for (let i = 0; i < redisResults.length; i += 2) {
       userIds.push(redisResults[i]);
     }
 
-    // SINGLE bulk query
+    // single bulk query
     const users = await User.find({ _id: { $in: userIds } })
       .select("username name points badges stats")
       .lean();
 
-    // Create lookup map
+    // create lookup map
     const userMap = new Map();
     users.forEach((user) => {
       userMap.set(user._id.toString(), user);
     });
 
-    // Build leaderboard using map
+    // build leaderboard using map
     const leaderboard = [];
     for (let i = 0; i < redisResults.length; i += 2) {
       const userId = redisResults[i];
@@ -143,8 +146,8 @@ class PointsService {
       const user = userMap.get(userId);
 
       if (user) {
-        // Decode the composite score
-        // Score format: percentage * 1000 + (1000000 - timeTaken)
+        // decode the composite score
+        // score format: percentage * 1000 + (1000000 - timetaken)
         const percentage = Math.floor(score / 1000);
         const timeTaken = 1000000 - (score % 1000);
 
@@ -156,7 +159,7 @@ class PointsService {
           points: user.points,
           percentage,
           timeTaken,
-          score, // Keep original score for reference
+          score, // keep original score for reference
           badges: user.badges,
           testsCompleted: user.stats.testsCompleted,
           averagePercentile: user.stats.averagePercentile,
@@ -225,7 +228,7 @@ class PointsService {
       const rank = await redisClient.zrevrank(key, userId.toString());
       return rank !== null ? rank + 1 : null;
     } catch (error) {
-      // Fallback to database
+      // fallback to database
       const user = await User.findById(userId).select("points");
       if (!user) return null;
 

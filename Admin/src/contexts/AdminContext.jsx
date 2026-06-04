@@ -1,3 +1,6 @@
+/**
+ * keeps the admin context context focused and readable.
+ */
 import React, { createContext, useContext, useState, useEffect } from "react";
 import axios from "axios";
 import { toast, ToastContainer } from "react-toastify";
@@ -34,7 +37,7 @@ export const AdminProvider = ({ children }) => {
 
   const [pdfGenerating, setPdfGenerating] = useState(false);
 
-  // Get authentication status
+  // get authentication status
   const { isAuthenticated, user } = useAuth();
 
   const fetchCategories = async () => {
@@ -61,10 +64,10 @@ export const AdminProvider = ({ children }) => {
       const response = await axios.post("/courses/categories", categoryData);
 
       if (response.data.success) {
-        await fetchCategories(); // Refresh categories to get updated course counts
+        await fetchCategories(); // refresh categories to get updated course counts
         toast.success("Category created successfully!");
 
-        // Dispatch notification event
+        // dispatch notification event
         window.dispatchEvent(
           new CustomEvent("adminOperation", {
             detail: {
@@ -98,7 +101,7 @@ export const AdminProvider = ({ children }) => {
         await fetchCategories();
         toast.success("Category updated successfully!");
 
-        // Dispatch notification event
+        // dispatch notification event
         window.dispatchEvent(
           new CustomEvent("adminOperation", {
             detail: { operation: "updateCategory", success: true },
@@ -122,10 +125,10 @@ export const AdminProvider = ({ children }) => {
       const response = await axios.delete(`/courses/categories/${categoryId}`);
 
       if (response.data.success) {
-        await fetchCategories(); // Refresh categories to get updated course counts
+        await fetchCategories(); // refresh categories to get updated course counts
         toast.success("Category deleted successfully!");
 
-        // Dispatch notification event
+        // dispatch notification event
         window.dispatchEvent(
           new CustomEvent("adminOperation", {
             detail: { operation: "deleteCategory", success: true },
@@ -150,7 +153,7 @@ export const AdminProvider = ({ children }) => {
       const data = response.data;
 
       if (data.success) {
-        // Update local state immediately
+        // update local state immediately
         setCourses((prev) =>
           prev.map((course) =>
             course._id === courseId
@@ -177,17 +180,17 @@ export const AdminProvider = ({ children }) => {
   };
   const fetchCourses = async (force = false) => {
     try {
-      // Don't show loading for background refreshes
+      // don't show loading for background refreshes
       if (force) setLoading(true);
 
       const response = await axios.get("/courses/admin/all", {
-        // Add cache busting for forced refreshes
+        // cache busting for forced refreshes
         params: force ? { _t: Date.now() } : {},
       });
 
       if (response.data.success) {
         const coursesData = response.data.data?.courses || [];
-        // Transform backend data to match frontend expectations
+        // transform backend data to match frontend expectations
         const transformedCourses = coursesData.map((course) => ({
           ...course,
           name: course.title || course.name,
@@ -195,7 +198,7 @@ export const AdminProvider = ({ children }) => {
             course.isActive !== undefined
               ? course.isActive
               : course.status === "active",
-          // Transform difficulties to difficultyLevels for frontend compatibility
+          // transform difficulties to difficultylevels for frontend compatibility
           difficultyLevels:
             course.difficulties?.map((diff) => ({
               difficulty: diff.name,
@@ -203,9 +206,9 @@ export const AdminProvider = ({ children }) => {
               marksPerQuestion: diff.marksPerQuestion,
               timeLimit: diff.timerSettings?.maxTime || null,
             })) || [],
-          // Transform image structure
+          // transform image structure
           image: course.image?.url || course.image,
-          // Set categoryId from course data or default
+          // set categoryid from course data or default
           categoryId:
             course.category?._id ||
             course.category ||
@@ -213,7 +216,7 @@ export const AdminProvider = ({ children }) => {
             null,
           categoryName: course.category?.name || "Uncategorized",
           videoContent: course.videoContent || null,
-          // Preserve hasPdfExport field from backend
+          // preserve haspdfexport field from backend
           hasPdfExport: course.hasPdfExport || false,
         }));
         setCourses(Array.isArray(transformedCourses) ? transformedCourses : []);
@@ -234,24 +237,24 @@ export const AdminProvider = ({ children }) => {
   };
 
   /**
-   * Download course data as PDF (Admin only)
-   * @param {string} courseId - Course ID
-   * @returns {Promise<{success: boolean, message?: string}>}
+   * download course data as pdf (admin only)
+   * @param {string} courseid - course id
+   * @returns {promise<{success: boolean, message?: string}>}
    */
   const downloadCoursePDF = async (courseId) => {
     try {
       setPdfGenerating(true);
 
       const response = await axios.get(`/courses/${courseId}/download-pdf`, {
-        responseType: "blob", // Important for file download
+        responseType: "blob", // important for file download
       });
 
-      // Create blob link to download
+      // create blob link to download
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement("a");
       link.href = url;
 
-      // Extract filename from Content-Disposition header
+      // extract filename from content-disposition header
       const contentDisposition = response.headers["content-disposition"];
       let filename = `Vidhgrow_Course_${
         new Date().toISOString().split("T")[0]
@@ -268,7 +271,7 @@ export const AdminProvider = ({ children }) => {
       document.body.appendChild(link);
       link.click();
 
-      // Cleanup
+      // cleanup
       link.parentNode.removeChild(link);
       window.URL.revokeObjectURL(url);
 
@@ -286,24 +289,24 @@ export const AdminProvider = ({ children }) => {
   };
 
   /**
-   * Download test result PDF for admin
-   * @param {string} testId - Test result ID
-   * @returns {Promise<{success: boolean, message?: string}>}
+   * download test result pdf for admin
+   * @param {string} testid - test result id
+   * @returns {promise<{success: boolean, message?: string}>}
    */
   const downloadTestPDF = async (testId) => {
     try {
       setPdfGenerating(true);
 
       const response = await axios.get(`/tests/download-pdf/${testId}`, {
-        responseType: "blob", // Important for file download
+        responseType: "blob", // important for file download
       });
 
-      // Create blob link to download
+      // create blob link to download
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement("a");
       link.href = url;
 
-      // Extract filename from Content-Disposition header
+      // extract filename from content-disposition header
       const contentDisposition = response.headers["content-disposition"];
       let filename = `Vidhgrow_Test_Result_${
         new Date().toISOString().split("T")[0]
@@ -320,7 +323,7 @@ export const AdminProvider = ({ children }) => {
       document.body.appendChild(link);
       link.click();
 
-      // Cleanup
+      // cleanup
       link.parentNode.removeChild(link);
       window.URL.revokeObjectURL(url);
 
@@ -374,10 +377,10 @@ export const AdminProvider = ({ children }) => {
       setLoading(true);
       setVideoUploadProgress(0);
 
-      // Create FormData for file upload
+      // create formdata for file upload
       const formData = new FormData();
 
-      // Append basic course data
+      // append basic course data
       formData.append("name", courseData.name);
       if (courseData.description)
         formData.append("description", courseData.description);
@@ -385,11 +388,11 @@ export const AdminProvider = ({ children }) => {
         formData.append("category", courseData.category);
       }
 
-      // Append difficulties
+      // append difficulties
       formData.append("difficulties", JSON.stringify(courseData.difficulties));
       formData.append("maxQuestionsPerTest", courseData.maxQuestionsPerTest);
 
-      // Append payment info
+      // append payment info
       let isPaid = courseData.isPaid;
       if (typeof isPaid === "string") {
         isPaid = isPaid.toLowerCase() === "true";
@@ -397,19 +400,19 @@ export const AdminProvider = ({ children }) => {
       formData.append("isPaid", isPaid);
       formData.append("price", isPaid ? courseData.price || 0 : 0);
 
-      // Append course image
+      // append course image
       if (courseData.image && courseData.image instanceof File) {
         formData.append("image", courseData.image);
       }
 
-      // Handle video content properly
+      // handle video content properly
       if (isPaid && courseData.videoContent) {
         const { type, courseVideo, difficultyVideos } = courseData.videoContent;
 
         formData.append("videoType", type);
 
         if (type === "course" && courseVideo?.links?.length > 0) {
-          // Validate and append course video links
+          // validate and append course video links
           const validLinks = courseVideo.links.filter(
             (link) => link.url && link.url.trim(),
           );
@@ -418,7 +421,7 @@ export const AdminProvider = ({ children }) => {
             formData.append("courseVideoLinks", JSON.stringify(validLinks));
           }
         } else if (type === "difficulty") {
-          // Handle difficulty-level video links
+          // handle difficulty-level video links
           const diffVideosData = {};
 
           if (difficultyVideos && difficultyVideos.length > 0) {
@@ -427,7 +430,7 @@ export const AdminProvider = ({ children }) => {
                 (link) => link.url && link.url.trim(),
               );
 
-              // Only add if there are valid links
+              // only if there are valid links
               if (validLinks && validLinks.length > 0) {
                 diffVideosData[diffVideo.difficulty] = {
                   links: validLinks,
@@ -436,21 +439,21 @@ export const AdminProvider = ({ children }) => {
             });
           }
 
-          // Only append if we have at least one difficulty with links
+          // only append if we have at least one difficulty with links
           if (Object.keys(diffVideosData).length > 0) {
             formData.append(
               "difficultyVideosData",
               JSON.stringify(diffVideosData),
             );
           } else {
-            // If no valid links, don't send difficultyVideosData at all
-            // This prevents backend from requiring links
+            // if no valid links, don't send difficultyvideosdata at all
+            // this prevents backend from requiring links
             formData.append("videoType", "none");
           }
         }
       }
 
-      // Add questions if they exist
+      // questions if they exist
       if (courseData.questions && courseData.questions.length > 0) {
         const questionsForJson = courseData.questions.map((q, index) => {
           const { questionImage, imagePreview, ...cleanQuestion } = q;
@@ -462,7 +465,7 @@ export const AdminProvider = ({ children }) => {
 
         formData.append("questions", JSON.stringify(questionsForJson));
 
-        // Append question images
+        // append question images
         courseData.questions.forEach((question) => {
           if (
             question.questionImage &&
@@ -473,7 +476,7 @@ export const AdminProvider = ({ children }) => {
         });
       }
 
-      // Upload with progress tracking
+      // upload with progress tracking
       const response = await axios.post("/courses", formData, {
         headers: {
           "Content-Type": "multipart/form-data",
@@ -531,10 +534,10 @@ export const AdminProvider = ({ children }) => {
     try {
       setLoading(true);
 
-      // Create FormData for file upload
+      // create formdata for file upload
       const formData = new FormData();
 
-      // Append course data
+      // append course data
       if (courseData.name) formData.append("name", courseData.name);
       if (courseData.description)
         formData.append("description", courseData.description);
@@ -555,23 +558,23 @@ export const AdminProvider = ({ children }) => {
       if (courseData.isActive !== undefined)
         formData.append("isActive", courseData.isActive);
 
-      // CRITICAL FIX: Handle PDF Export toggle
+      // handle pdf export toggle
       if (courseData.hasPdfExport !== undefined) {
-        // Ensure boolean value is sent correctly
+        // ensure boolean value is sent correctly
         const hasPdfExportValue =
           courseData.hasPdfExport === true ||
           courseData.hasPdfExport === "true" ||
           courseData.hasPdfExport === 1;
         formData.append("hasPdfExport", hasPdfExportValue);
 
-        console.log("[UPDATE_COURSE] Sending hasPdfExport:", {
+        console.log("Sending hasPdfExport:", {
           original: courseData.hasPdfExport,
           converted: hasPdfExportValue,
           type: typeof hasPdfExportValue,
         });
       }
 
-      // Handle isPaid and price
+      // handle ispaid and price
       if (courseData.isPaid !== undefined) {
         formData.append("isPaid", courseData.isPaid);
         formData.append("price", courseData.isPaid ? courseData.price || 0 : 0);
@@ -581,7 +584,7 @@ export const AdminProvider = ({ children }) => {
         formData.append("videoType", "remove");
       }
 
-      // Append image if exists
+      // append image if exists
       if (courseData.image && courseData.image instanceof File) {
         formData.append("image", courseData.image);
       }
@@ -597,24 +600,24 @@ export const AdminProvider = ({ children }) => {
       );
 
       if (response.data.success) {
-        // CRITICAL FIX: Extract updated course from response
+        // extract updated course from response
         const updatedCourseData =
           response.data.data?.course || response.data.data;
 
-        console.log("[UPDATE_COURSE] Received response:", {
+        console.log("Received response:", {
           hasPdfExport: updatedCourseData?.hasPdfExport,
           isPaid: updatedCourseData?.isPaid,
           fullData: updatedCourseData,
         });
 
-        // CRITICAL FIX: Update courses array with exact backend data
+        // update courses array with exact backend data
         setCourses((prev) =>
           prev.map((course) =>
             course._id === courseId
               ? {
                   ...course,
                   ...updatedCourseData,
-                  // Ensure these critical fields are properly set
+                  // ensure these fields are properly set
                   hasPdfExport: updatedCourseData.hasPdfExport === true,
                   isPaid: updatedCourseData.isPaid === true,
                   price: updatedCourseData.price || 0,
@@ -625,14 +628,14 @@ export const AdminProvider = ({ children }) => {
           ),
         );
 
-        // Dispatch notification event
+        // dispatch notification event
         window.dispatchEvent(
           new CustomEvent("adminOperation", {
             detail: { operation: "updateCourse", success: true },
           }),
         );
 
-        // Return the updated course data
+        // return the updated course data
         return {
           success: true,
           updatedCourse: updatedCourseData,
@@ -640,13 +643,13 @@ export const AdminProvider = ({ children }) => {
         };
       }
 
-      // Handle non-success response
+      // handle non-success response
       return {
         success: false,
         message: response.data.message || "Update failed",
       };
     } catch (error) {
-      console.error("[UPDATE_COURSE] Error:", error);
+      console.error("Error:", error);
 
       if (error.response?.status !== 401) {
         let message = "Failed to update course";
@@ -681,13 +684,13 @@ export const AdminProvider = ({ children }) => {
       const response = await axios.delete(`/courses/${courseId}`);
 
       if (response.data.success) {
-        // Update local state immediately to prevent flicker
+        // update local state immediately to prevent flicker
         setCourses((prev) => prev.filter((course) => course._id !== courseId));
 
-        // Background refresh without loading state
+        // background refresh without loading state
         Promise.all([fetchCourses(false), fetchCategories()]);
 
-        // Dispatch notification event
+        // dispatch notification event
         window.dispatchEvent(
           new CustomEvent("adminOperation", {
             detail: { operation: "updateCourse", success: true },
@@ -710,7 +713,7 @@ export const AdminProvider = ({ children }) => {
     }
   };
 
-  // Questions Management
+  // questions management
   const fetchQuestions = async (courseId) => {
     try {
       setLoading(true);
@@ -745,14 +748,14 @@ export const AdminProvider = ({ children }) => {
     try {
       setLoading(true);
 
-      // Create FormData if image is present
+      // create formdata if image is present
       let payload = questionData;
       let config = {};
 
       if (questionData.image && questionData.image.file) {
         const formData = new FormData();
 
-        // Add all text fields
+        // all text fields
         Object.keys(questionData).forEach((key) => {
           if (key !== "image") {
             if (typeof questionData[key] === "object") {
@@ -763,7 +766,7 @@ export const AdminProvider = ({ children }) => {
           }
         });
 
-        // Add image file
+        // image file
         formData.append("image", questionData.image.file);
 
         payload = formData;
@@ -805,14 +808,14 @@ export const AdminProvider = ({ children }) => {
     try {
       setLoading(true);
 
-      // Create FormData if image is present
+      // create formdata if image is present
       let payload = questionData;
       let config = {};
 
       if (questionData.image && questionData.image.file) {
         const formData = new FormData();
 
-        // Add all text fields
+        // all text fields
         Object.keys(questionData).forEach((key) => {
           if (key !== "image") {
             if (typeof questionData[key] === "object") {
@@ -823,7 +826,7 @@ export const AdminProvider = ({ children }) => {
           }
         });
 
-        // Add image file
+        // image file
         formData.append("image", questionData.image.file);
 
         payload = formData;
@@ -833,8 +836,8 @@ export const AdminProvider = ({ children }) => {
           },
         };
       } else if (questionData.image === null) {
-        // NEW: Explicitly handle image deletion
-        // Send null as JSON to signal image removal
+        // explicitly handle image deletion
+        // send null as json to signal image removal
         payload = { ...questionData, image: null };
         config = {
           headers: {
@@ -867,7 +870,7 @@ export const AdminProvider = ({ children }) => {
     }
   };
 
-  // Add a silent flag to deleteQuestion
+  // a silent flag to deletequestion
   const deleteQuestion = async (courseId, questionId, silent = false) => {
     try {
       const response = await axios.delete(
@@ -875,7 +878,7 @@ export const AdminProvider = ({ children }) => {
       );
 
       if (response.data.success) {
-        // Only show toast if not silent
+        // only show toast if not silent
         if (!silent) {
           toast.success("Question deleted successfully!");
         }
@@ -899,7 +902,7 @@ export const AdminProvider = ({ children }) => {
       );
 
       if (response.data.success) {
-        // Immediately update courses state to reflect question count changes
+        // immediately update courses state to reflect question count s
         setCourses((prev) =>
           prev.map((course) =>
             course._id === courseId
@@ -932,7 +935,7 @@ export const AdminProvider = ({ children }) => {
     try {
       setLoading(true);
 
-      // First validate that we have questions
+      // first validate that we have questions
       const hasQuestions = Object.values(questions).some(
         (questionList) => questionList && questionList.length > 0,
       );
@@ -945,7 +948,7 @@ export const AdminProvider = ({ children }) => {
         };
       }
 
-      // Prepare questions for bulk import
+      // prepare questions for bulk import
       const allQuestions = [];
       Object.entries(questions).forEach(([difficulty, questionList]) => {
         if (questionList && questionList.length > 0) {
@@ -975,7 +978,7 @@ export const AdminProvider = ({ children }) => {
         }
       });
 
-      // Create course with questions in the payload
+      // create course with questions in the payload
       const courseDataWithQuestions = {
         ...courseData,
         questions: allQuestions,
@@ -1012,9 +1015,9 @@ export const AdminProvider = ({ children }) => {
   };
 
   /**
-   * Toggle PDF export status for a course
-   * @param {string} courseId - Course ID
-   * @returns {Promise<{success: boolean}>}
+   * toggle pdf export status for a course
+   * @param {string} courseid - course id
+   * @returns {promise<{success: boolean}>}
    */
   const togglePdfExport = async (courseId) => {
     try {
@@ -1031,7 +1034,7 @@ export const AdminProvider = ({ children }) => {
       });
 
       if (result.success) {
-        // Update local state immediately
+        // update local state immediately
         setCourses((prev) =>
           prev.map((c) =>
             c._id === courseId ? { ...c, hasPdfExport: newStatus } : c,
@@ -1055,7 +1058,7 @@ export const AdminProvider = ({ children }) => {
     }
   };
 
-  // Stats
+  // stats
   const fetchStats = async () => {
     try {
       const response = await axios.get("/courses/admin/stats");
@@ -1070,7 +1073,7 @@ export const AdminProvider = ({ children }) => {
         );
       }
     } catch (error) {
-      // Don't show error toast for auth errors
+      // don't show error toast for auth errors
       if (error.response?.status !== 401) {
         console.error("Error fetching stats:", error);
       }
@@ -1186,14 +1189,14 @@ export const AdminProvider = ({ children }) => {
     }
   };
   const invalidateCache = (patterns) => {
-    // Clear relevant cache entries
+    // clear relevant cache entries
     patterns.forEach((pattern) => {
-      // This would depend on your cache implementation
-      // For now, we'll handle it through refetch timing
+      // this would depend on your cache implementation
+      // for now, we'll handle it through refetch timing
     });
   };
 
-  // Add these new functions to AdminProvider
+  // these functions to adminprovider
   const fetchUserStats = async (filters = {}) => {
     try {
       setLoading(true);
@@ -1290,10 +1293,10 @@ export const AdminProvider = ({ children }) => {
   const calculateDifficultyAverage = (tests, difficulty) => {
     if (!tests || tests.length === 0) return 0;
 
-    // Separate multi-difficulty and single-difficulty tests
+    // separate multi-difficulty and single-difficulty tests
     const singleDiffTests = tests.filter((test) => {
       if (Array.isArray(test.difficulty)) {
-        // For multi-difficulty, check if there's specific difficulty data
+        // for multi-difficulty, check if there's specific difficulty data
         if (test.testSettings?.difficultyResults) {
           return test.testSettings.difficultyResults.some(
             (dr) => dr.difficulty === difficulty,
@@ -1314,7 +1317,7 @@ export const AdminProvider = ({ children }) => {
         Array.isArray(test.difficulty) &&
         test.testSettings?.difficultyResults
       ) {
-        // For multi-difficulty tests, use the specific difficulty result
+        // for multi-difficulty tests, use the specific difficulty result
         const diffResult = test.testSettings.difficultyResults.find(
           (dr) => dr.difficulty === difficulty,
         );
@@ -1325,7 +1328,7 @@ export const AdminProvider = ({ children }) => {
           count++;
         }
       } else if (test.difficulty === difficulty) {
-        // For single-difficulty tests, use the overall percentage
+        // for single-difficulty tests, use the overall percentage
         totalScore += test.percentage || 0;
         count++;
       }
@@ -1342,7 +1345,7 @@ export const AdminProvider = ({ children }) => {
       if (response.data?.success) {
         const userData = response.data.data;
 
-        // Transform the data structure to match what the modal expects
+        // transform the data structure to match what the modal expects
         const userDetails = {
           name: userData.user?.name || "Unknown User",
           email: userData.user?.email || "Unknown Email",
@@ -1356,7 +1359,7 @@ export const AdminProvider = ({ children }) => {
               : 0,
           performanceByDifficulty: [
             {
-              difficulty: "Easy", // Changed from lowercase
+              difficulty: "Easy", // d from lowercase
               averageScore: calculateDifficultyAverage(
                 userData.recentTests,
                 "Easy",
@@ -1367,7 +1370,7 @@ export const AdminProvider = ({ children }) => {
               ),
             },
             {
-              difficulty: "Medium", // Changed from lowercase
+              difficulty: "Medium", // d from lowercase
               averageScore: calculateDifficultyAverage(
                 userData.recentTests,
                 "Medium",
@@ -1378,7 +1381,7 @@ export const AdminProvider = ({ children }) => {
               ),
             },
             {
-              difficulty: "Hard", // Changed from lowercase
+              difficulty: "Hard", // d from lowercase
               averageScore: calculateDifficultyAverage(
                 userData.recentTests,
                 "Hard",
@@ -1392,12 +1395,12 @@ export const AdminProvider = ({ children }) => {
           recentTests:
             userData.recentTests?.map((test) => ({
               ...test,
-              courseName: test.course?.name || "Unknown Course", // Fix course name
-              percentage: test.percentage || 0, // Ensure percentage exists
+              courseName: test.course?.name || "Unknown Course", // course name
+              percentage: test.percentage || 0, // ensure percentage exists
               difficulty: Array.isArray(test.difficulty)
-                ? test.difficulty.join(", ") // Add spacing between difficulties
+                ? test.difficulty.join(", ") // spacing between difficulties
                 : test.difficulty,
-              completedAt: test.completedAt || test.createdAt, // Use completedAt with fallback
+              completedAt: test.completedAt || test.createdAt, // use completedat with fallback
             })) || [],
         };
 
@@ -1509,7 +1512,7 @@ export const AdminProvider = ({ children }) => {
     try {
       setLoading(true);
 
-      // Use the correct admin endpoint
+      // use the correct admin endpoint
       const response = await axios.get(`/admin/users/${userId}`);
 
       if (response.data?.success) {
@@ -1524,7 +1527,7 @@ export const AdminProvider = ({ children }) => {
     } catch (error) {
       console.error("Error fetching user details:", error);
 
-      // Don't show toast for auth errors as they're handled globally
+      // don't show toast for auth errors as they're handled globally
       if (error.response?.status !== 401) {
         toast.error(
           error.response?.data?.message || "Failed to fetch user details",
@@ -1541,7 +1544,7 @@ export const AdminProvider = ({ children }) => {
     }
   };
 
-  // Only fetch courses and stats when user is authenticated and is admin
+  // only fetch courses and stats when user is authenticated and is admin
   useEffect(() => {
     if (isAuthenticated && user && user.role === "admin") {
       fetchCourses();
@@ -1550,7 +1553,7 @@ export const AdminProvider = ({ children }) => {
     }
   }, [isAuthenticated, user]);
 
-  // Clear data when user logs out
+  // clear data when user logs out
   useEffect(() => {
     if (!isAuthenticated) {
       setCourses([]);
@@ -1582,21 +1585,21 @@ export const AdminProvider = ({ children }) => {
   };
 
   const value = {
-    // Categories
+    // categories
     categories,
     createCategory,
     updateCategory,
     deleteCategory,
     fetchCategories,
 
-    // Courses
+    // courses
     courses,
     createCourse,
     updateCourse,
     deleteCourse,
     fetchCourses,
 
-    // Questions
+    // questions
     questions,
     createQuestion,
     updateQuestion,
@@ -1605,7 +1608,7 @@ export const AdminProvider = ({ children }) => {
     createCourseWithQuestions,
     toggleCourseStatus,
     bulkDeleteQuestions,
-    // Stats
+    // stats
     stats,
     fetchStats,
     fetchUserStats,
@@ -1616,18 +1619,18 @@ export const AdminProvider = ({ children }) => {
     searchUsers,
     getUserDetails,
 
-    // Video states
+    // video states
     videoUploadProgress,
     processingVideo,
 
-    // Coupons
+    // coupons
     createCoupon,
     fetchCoupons,
     fetchCourseCoupons,
     updateCouponStatus,
     deleteCoupon,
     updateCoupon,
-    // Loading
+    // loading
     loading,
 
     downloadTestPDF,

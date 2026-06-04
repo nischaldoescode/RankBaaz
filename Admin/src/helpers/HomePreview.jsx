@@ -1,3 +1,6 @@
+/**
+ * keeps the home preview utility focused and readable.
+ */
 import {
   Brain,
   Target,
@@ -42,7 +45,7 @@ export const HomePreview = ({ data }) => {
         </p>
       </div>
 
-      {/* Hero Section Preview */}
+      {/* hero section preview */}
       <div className="bg-card rounded-xl p-8 border border-border text-center">
         <h4 className="text-sm font-semibold text-muted-foreground mb-6 uppercase">
           Hero Section
@@ -65,7 +68,7 @@ export const HomePreview = ({ data }) => {
         </p>
       </div>
 
-      {/* Stats Section Preview */}
+      {/* stats section preview */}
       <div className="bg-card rounded-xl p-6 border border-border">
         <h4 className="text-sm font-semibold text-muted-foreground mb-6 uppercase">
           Stats Section ({data.stats?.length || 0} stats)
@@ -90,7 +93,7 @@ export const HomePreview = ({ data }) => {
         </div>
       </div>
 
-      {/* Chart Config Preview */}
+      {/* chart config preview */}
       <div className="bg-card rounded-xl p-6 border border-border">
         <h4 className="text-sm font-semibold text-muted-foreground mb-4 uppercase">
           Chart Configuration
@@ -117,7 +120,7 @@ export const HomePreview = ({ data }) => {
         </div>
       </div>
 
-      {/* Features Preview */}
+      {/* features preview */}
       <div className="bg-card rounded-xl p-6 border border-border">
         <h4 className="text-sm font-semibold text-muted-foreground mb-6 uppercase text-center">
           Features Section
@@ -150,7 +153,7 @@ export const HomePreview = ({ data }) => {
         </div>
       </div>
 
-      {/* FAQs Preview */}
+      {/* faqs preview */}
       <div className="bg-card rounded-xl p-6 border border-border">
         <h4 className="text-sm font-semibold text-muted-foreground mb-4 uppercase">
           FAQs Section ({data.faqs?.length || 0} questions shown on home)
@@ -175,7 +178,7 @@ export const HomePreview = ({ data }) => {
         </div>
       </div>
 
-      {/* CTA Preview */}
+      {/* cta preview */}
       <div className="bg-gradient-to-br from-primary/10 to-purple-500/10 rounded-xl p-8 border border-border text-center">
         <h4 className="text-sm font-semibold text-muted-foreground mb-4 uppercase">
           CTA Section

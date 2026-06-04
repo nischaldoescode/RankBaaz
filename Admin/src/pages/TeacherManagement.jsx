@@ -1,9 +1,12 @@
+/**
+ * keeps the teacher management page focused and readable.
+ */
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAdmin } from "../contexts/AdminContext.jsx";
 import toast from "react-hot-toast";
 
-// ── helpers ──
+// helpers
 
 const countryName = (country) => (country === "india" ? "India" : "Nepal");
 
@@ -76,7 +79,7 @@ const Badge = ({ label, color, bg, border }) => (
   </span>
 );
 
-// Email template presets
+// email template presets
 const EMAIL_TEMPLATES = [
   {
     id: "welcome",
@@ -118,7 +121,7 @@ The Vidhgrow Team`,
   },
 ];
 
-// ── components ──
+// components
 
 const EmailEditor = ({ application, onClose, onSent }) => {
   const { adminRequest } = useAdmin();
@@ -128,7 +131,7 @@ const EmailEditor = ({ application, onClose, onSent }) => {
   const [mode, setMode] = useState("text"); // "text" | "html"
   const [preview, setPreview] = useState(false);
   const [sending, setSending] = useState(false);
-  const [logoUrl, setLogoUrl] = useState("https://vidhgrow.online/logo.png");
+  const [logoUrl, setLogoUrl] = useState("");
   const [primaryColor, setPrimaryColor] = useState("#2563eb");
   const [showDesignPanel, setShowDesignPanel] = useState(false);
 
@@ -140,7 +143,7 @@ const EmailEditor = ({ application, onClose, onSent }) => {
     }
   };
 
-  // build HTML email
+  // build html email
   const buildHtmlEmail = () => `<!DOCTYPE html>
 <html>
 <head>
@@ -320,7 +323,7 @@ const EmailEditor = ({ application, onClose, onSent }) => {
                 color: "#374151",
               }}
             >
-              {preview ? "✏️ Edit" : "👁 Preview"}
+              {preview ? "edit Edit" : "preview Preview"}
             </button>
             <button
               onClick={() => setShowDesignPanel((p) => !p)}
@@ -335,7 +338,7 @@ const EmailEditor = ({ application, onClose, onSent }) => {
                 color: showDesignPanel ? "#2563eb" : "#374151",
               }}
             >
-              🎨 Design
+              design Design
             </button>
             <button
               onClick={onClose}
@@ -397,7 +400,7 @@ const EmailEditor = ({ application, onClose, onSent }) => {
             )}
 
             {preview ? (
-              // ── preview panel ──
+              // preview panel
               mode === "html" ? (
                 <div
                   style={{
@@ -486,7 +489,7 @@ const EmailEditor = ({ application, onClose, onSent }) => {
                 </div>
               )
             ) : (
-              // ── editor ──
+              // editor
               <div
                 style={{ display: "flex", flexDirection: "column", gap: 14 }}
               >
@@ -734,8 +737,8 @@ const EmailEditor = ({ application, onClose, onSent }) => {
         >
           <p style={{ fontSize: 12, color: "#94a3b8" }}>
             {mode === "html"
-              ? "📝 HTML mode — full control"
-              : "📄 Text mode — auto-styled"}
+              ? "html mode with full control"
+              : "text mode with auto styling"}
           </p>
           <div style={{ display: "flex", gap: 10 }}>
             <button
@@ -1553,7 +1556,7 @@ const TeacherDetailModal = ({ teacher, onClose, onRefresh }) => {
   );
 };
 
-// ── main component ──
+// main component
 
 const TeacherManagement = () => {
   const { adminRequest } = useAdmin();

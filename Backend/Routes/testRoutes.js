@@ -1,3 +1,6 @@
+/**
+ * keeps the test routes route focused and readable.
+ */
 import express from "express";
 import {
   startTest,
@@ -27,13 +30,13 @@ import { pdfDownloadLimiter } from "../helpers/pdfRatelimiter.js";
 const router = express.Router();
 
 /**
- * All test routes require authentication
+ * all test routes require authentication
  */
 router.use(authenticateUser);
 
 /**
- * GET /start/:courseId/:difficulty - Start a new test
- * Auth: Cookie + Request signature
+ * get /start/:courseid/:difficulty - start a test
+ * auth: cookie + request signature
  */
 router.get(
   "/start/:courseId/:difficulty",
@@ -43,8 +46,8 @@ router.get(
 );
 
 /**
- * POST /submit - Submit test results
- * Auth: Cookie + Request signature
+ * post /submit - submit test results
+ * auth: cookie + request signature
  */
 router.post(
   "/submit",
@@ -54,14 +57,14 @@ router.post(
 );
 
 /**
- * GET /result/:testId - Retrieve test result
- * Auth: Cookie only
+ * get /result/:testid - retrieve test result
+ * auth: cookie only
  */
 router.get("/result/:testId", getTestResult);
 
 /**
- * POST /result/:testId/feedback - Save course feedback after completion
- * Auth: Cookie + Request signature
+ * post /result/:testid/feedback - save course feedback completion
+ * auth: cookie + request signature
  */
 router.post(
   "/result/:testId/feedback",
@@ -70,27 +73,27 @@ router.post(
 );
 
 /**
- * GET /history - Get user's test history
- * Auth: Cookie only
+ * get /history - get user's test history
+ * auth: cookie only
  */
 router.get("/history", getTestHistory);
 
 /**
- * GET /performance - Get performance statistics
- * Auth: Cookie only
+ * get /performance - get performance statistics
+ * auth: cookie only
  */
 router.get("/performance", getPerformanceStats);
 
 /**
- * GET /leaderboard/info - Get leaderboard information
- * Auth: Cookie only
+ * get /leaderboard/info - get leaderboard information
+ * auth: cookie only
  */
 router.get("/leaderboard/info", getLeaderboardInfo);
 
 /**
- * GET /leaderboard/:courseId - Get course leaderboard
- * Auth: Cookie only
- * Cache: 60 seconds
+ * get /leaderboard/:courseid - get course leaderboard
+ * auth: cookie only
+ * cache: 60 seconds
  */
 router.get(
   "/leaderboard/:courseId",
@@ -99,30 +102,30 @@ router.get(
 );
 
 /**
- * POST /check-answer - Validate answer during test
- * Auth: Cookie + Request signature
+ * post /check-answer - validate answer during test
+ * auth: cookie + request signature
  */
 router.post("/check-answer", verifyRequestSignature, checkAnswer);
 
 /**
- * POST /abandon - Record abandoned test
- * Auth: Cookie + Request signature
+ * post /abandon - record abandoned test
+ * auth: cookie + request signature
  */
 router.post("/abandon", verifyRequestSignature, abandonTest);
 
 /**
- * GET /generate-pdf-token/:testId - Generate one-time download token
- * Auth: Cookie required (user only)
- * Returns: One-time use token valid for 5 minutes
+ * get /generate-pdf-token/:testid - generate one-time download token
+ * auth: cookie required (user only)
+ * returns: one-time use token valid for 5 minutes
  */
 router.get("/generate-pdf-token/:testId", generatePDFDownloadToken);
 
 /**
- * GET /download-pdf/:testId - Download test result as PDF
- * Auth: Cookie required
- * Security:
- * - Users: One-time download only
- * - Admins: Unlimited downloads
+ * get /download-pdf/:testid - download test result as pdf
+ * auth: cookie required
+ * security:
+ * - users: one-time download only
+ * - admins: unlimited downloads
  */
 router.get("/download-pdf/:testId", pdfDownloadLimiter, downloadTestPDF);
 

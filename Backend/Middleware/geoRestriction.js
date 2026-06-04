@@ -1,11 +1,14 @@
+/**
+ * keeps the geo restriction middleware focused and readable.
+ */
 import Course from "../Models/Course.js";
 
 /**
- * resolve country from ip address using ip-api.com
+ * resolve country from ip ress using ip-api.com
  */
 const resolveCountry = async (ip) => {
   if (!ip || ip === "::1" || ip === "127.0.0.1" || ip.startsWith("192.168.")) {
-    return null; // local — no restriction
+    return null; // local requests are unrestricted
   }
 
   try {
@@ -14,7 +17,7 @@ const resolveCountry = async (ip) => {
     });
     const data = await res.json();
     if (data.status !== "success") return null;
-    // IN = india, NP = nepal
+    // in = india, np = nepal
     if (data.countryCode === "IN") return "india";
     if (data.countryCode === "NP") return "nepal";
     return "other";
@@ -24,7 +27,7 @@ const resolveCountry = async (ip) => {
 };
 
 /**
- * attach resolved country to req — used by course access handlers
+ * adds the resolved country to req for course access checks.
  */
 export const attachUserCountry = async (req, res, next) => {
   const ip =

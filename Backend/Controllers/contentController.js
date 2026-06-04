@@ -1,3 +1,6 @@
+/**
+ * keeps the content controller controller focused and readable.
+ */
 import ContentSettings from "../Models/ContentSettings.js";
 import FAQ from "../Models/FAQ.js";
 import ContactInfo from "../Models/ContactInfo.js";
@@ -5,7 +8,7 @@ import LegalPage from "../Models/LegalPages.js";
 import { v2 as cloudinary } from "cloudinary";
 import { invalidateCache } from "../Config/redis.js";
 
-// ============ CONTENT SETTINGS ============
+// content settings
 
 export const getContentSettings = async (req, res) => {
   try {
@@ -29,7 +32,7 @@ export const updateContentSettings = async (req, res) => {
     const settings = await ContentSettings.getSettings();
     const updateData = { ...req.body };
 
-    // Parse JSON fields if they come as strings
+    // parse json fields if they come as strings
     if (typeof updateData.stats === "string") {
       updateData.stats = JSON.parse(updateData.stats);
     }
@@ -49,7 +52,7 @@ export const updateContentSettings = async (req, res) => {
       updateData.chartConfig = JSON.parse(updateData.chartConfig);
     }
 
-    // sanitize chartConfig enums so mongoose validation never fails on bad data
+    // sanitize chartconfig enums so mongoose validation never fails on bad data
     if (updateData.chartConfig) {
       const validTypes = ["pie", "bar", "line", "doughnut"];
       const validPositions = ["left", "right"];
@@ -67,9 +70,9 @@ export const updateContentSettings = async (req, res) => {
       updateData.backgroundElements = JSON.parse(updateData.backgroundElements);
     }
 
-    // Handle logo upload (supports both express-fileupload and multer)
+    // handle logo upload (supports both express-fileupload and multer)
     if (req.files?.logo) {
-      // Delete old logo if exists
+      // delete old logo if exists
       if (settings.logo?.publicId) {
         try {
           await cloudinary.uploader.destroy(settings.logo.publicId);
@@ -80,15 +83,15 @@ export const updateContentSettings = async (req, res) => {
 
       let logoResult;
 
-      // Check if it's from multer (has path property) or express-fileupload (has tempFilePath)
+      // check if it's from multer (has path property) or express-fileupload (has tempfilepath)
       if (req.files.logo[0]?.path) {
-        // Multer format
+        // multer format
         logoResult = await cloudinary.uploader.upload(req.files.logo[0].path, {
           folder: "content/logos",
           transformation: [{ width: 200, height: 200, crop: "fit" }],
         });
       } else if (req.files.logo.tempFilePath) {
-        // Express-fileupload format
+        // express-fileupload format
         logoResult = await cloudinary.uploader.upload(
           req.files.logo.tempFilePath,
           {
@@ -125,7 +128,7 @@ export const updateContentSettings = async (req, res) => {
   }
 };
 
-// NEW FUNCTION - Delete logo
+// function - delete logo
 export const deleteLogo = async (req, res) => {
   try {
     const settings = await ContentSettings.getSettings();
@@ -137,14 +140,14 @@ export const deleteLogo = async (req, res) => {
       });
     }
 
-    // Delete from Cloudinary
+    // delete from cloudinary
     try {
       await cloudinary.uploader.destroy(settings.logo.publicId);
     } catch (error) {
       console.error("Error deleting logo from Cloudinary:", error);
     }
 
-    // Clear logo from database
+    // clear logo from database
     settings.logo = {
       url: null,
       publicId: null,
@@ -166,15 +169,15 @@ export const deleteLogo = async (req, res) => {
   }
 };
 
-// ============ FAQ MANAGEMENT ============
+// faq management
 
 export const getAllFAQs = async (req, res) => {
   try {
     const { isActive, limit } = req.query;
-    // No need of category filter anymore
+    // no need of category filter anymore
 
     const filter = {};
-    // REMOVED category filter
+    // category filter
     if (isActive !== undefined) filter.isActive = isActive === "true";
 
     const faqs = await FAQ.find(filter)
@@ -278,10 +281,10 @@ export const deleteFAQ = async (req, res) => {
   }
 };
 
-// Bulk update FAQ order (for drag and drop)
+// bulk update faq order (for drag and drop)
 export const bulkUpdateFAQOrder = async (req, res) => {
   try {
-    const { faqs } = req.body; // Array of { id, order }
+    const { faqs } = req.body; // array of { id, order }
 
     if (!faqs || !Array.isArray(faqs)) {
       return res.status(400).json({
@@ -290,14 +293,14 @@ export const bulkUpdateFAQOrder = async (req, res) => {
       });
     }
 
-    // Update each FAQ's order
+    // update each faq's order
     const updatePromises = faqs.map((faq) =>
       FAQ.findByIdAndUpdate(faq.id, { order: faq.order }, { new: true }),
     );
 
     await Promise.all(updatePromises);
 
-    // Fetch updated FAQs
+    // fetch updated faqs
     const updatedFAQs = await FAQ.find().sort({ order: 1 });
 
     await invalidateCache.content();
@@ -315,7 +318,7 @@ export const bulkUpdateFAQOrder = async (req, res) => {
   }
 };
 
-// ============ CONTACT INFO ============
+// contact info
 
 export const getContactInfo = async (req, res) => {
   try {
@@ -360,7 +363,7 @@ export const updateContactInfo = async (req, res) => {
   }
 };
 
-// ============ LEGAL PAGES ============
+// legal pages
 
 export const getLegalPage = async (req, res) => {
   try {
@@ -382,7 +385,7 @@ export const getLegalPage = async (req, res) => {
       });
     }
 
-    // Ensure sections array exists (even if empty)
+    // ensure sections array exists (even if empty)
     if (!page.sections) {
       page.sections = [];
     }
@@ -422,9 +425,9 @@ export const getAllLegalPages = async (req, res) => {
 export const updateLegalPage = async (req, res) => {
   try {
     const { type } = req.params;
-    const { title, sections, metadata } = req.body; // REMOVED: content, version
+    const { title, sections, metadata } = req.body; // content, version
 
-    // ADDED: Validation for type
+    // ed: validation for type
     if (!["privacy", "terms"].includes(type)) {
       return res.status(400).json({
         success: false,
@@ -454,22 +457,22 @@ export const updateLegalPage = async (req, res) => {
           ...section,
           id: section.id || new mongoose.Types.ObjectId().toString(),
           order: section.order !== undefined ? section.order : sectionIndex,
-          // ← CHANGED: Keep content field
+          // ← d: keep content field
           content: section.content || "",
           subheaders:
             section.subheaders
-              // ← CHANGED: Only filter if BOTH title and points are empty
+              // ← d: only filter if both title and points are empty
               ?.filter((sub) => {
                 const hasTitle = sub.title && sub.title.trim() !== "";
                 const hasPoints =
                   sub.points && sub.points.some((p) => p && p.trim() !== "");
-                return hasTitle || hasPoints; // Keep if has either
+                return hasTitle || hasPoints; // keep if has either
               })
               ?.map((sub, subIndex) => ({
                 ...sub,
                 id: sub.id || new mongoose.Types.ObjectId().toString(),
                 order: sub.order !== undefined ? sub.order : subIndex,
-                title: sub.title || "", // ← CHANGED: Allow empty title
+                title: sub.title || "", // ← d: allow empty title
                 points:
                   sub.points?.filter((point) => point && point.trim() !== "") ||
                   [],
@@ -477,7 +480,7 @@ export const updateLegalPage = async (req, res) => {
         }));
       }
 
-      // CHANGED: Properly merge metadata
+      // d: properly merge metadata
       if (metadata) {
         page.metadata = {
           effectiveDate:
@@ -495,7 +498,7 @@ export const updateLegalPage = async (req, res) => {
     page.lastModifiedBy = req.admin.userId;
     await page.save();
 
-    // Invalidate legal page cache
+    // invalidate legal page cache
     await invalidateCache.legalPage(type);
     await invalidateCache.content();
     res.status(200).json({
@@ -512,7 +515,7 @@ export const updateLegalPage = async (req, res) => {
   }
 };
 
-// NEW FUNCTION - Add after updateLegalPage function
+// function - updatelegalpage function
 export const bulkUpdateSectionOrder = async (req, res) => {
   try {
     const { type } = req.params;
@@ -541,7 +544,7 @@ export const bulkUpdateSectionOrder = async (req, res) => {
       });
     }
 
-    // Update order for all sections and subheaders
+    // update order for all sections and subheaders
     page.sections = sections.map((section) => {
       const existingSection = page.sections.find((s) => s.id === section.id);
       return {
@@ -579,7 +582,7 @@ export const bulkUpdateSectionOrder = async (req, res) => {
   }
 };
 
-// ============ PREVIEW ENDPOINTS ============
+// preview endpoints
 
 export const getHomePreview = async (req, res) => {
   try {
@@ -670,7 +673,7 @@ export const getFooterPreview = async (req, res) => {
   }
 };
 
-// ============ TEMPLATE HINTS ============
+// template hints
 
 export const getLegalTemplateHints = async (req, res) => {
   try {

@@ -1,3 +1,6 @@
+/**
+ * keeps the teacher controller controller focused and readable.
+ */
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import crypto from "crypto";
@@ -124,7 +127,7 @@ const destroyTeacherOwnedAssets = async (teacher, courses = []) => {
   await Promise.allSettled(deletions);
 };
 
-// ── public ──
+// public endpoints
 
 export const submitTeacherApplication = async (req, res) => {
   try {
@@ -252,7 +255,7 @@ export const verifyInviteToken = async (req, res) => {
   }
 };
 
-// ── signup flow ──
+// signup flow
 
 export const sendSignupOtp = async (req, res) => {
   try {
@@ -284,7 +287,7 @@ export const sendSignupOtp = async (req, res) => {
         .json({ success: false, message: "Email does not match invite" });
     }
 
-    // rate limit — max 3 OTPs per 10 min
+    // limit otp sends to three per ten minutes.
     const rateKey = `teacher:otp:rate:${email.toLowerCase()}`;
     const attempts = await redisClient.incr(rateKey);
     if (attempts === 1) await redisClient.expire(rateKey, 600);
@@ -616,7 +619,7 @@ export const teacherSignup = async (req, res) => {
       });
     }
 
-    // check email was verified via OTP
+    // check email was verified by otp.
     const emailVerified = await redisClient.get(
       `teacher:email:verified:${payload.email.toLowerCase()}`,
     );
@@ -649,7 +652,7 @@ export const teacherSignup = async (req, res) => {
     }
 
     if (existingStudent) {
-      // do NOT reveal it's a student account — just say "not available"
+      // do not reveal that this email belongs to a student.
       return res.status(400).json({
         success: false,
         message:
@@ -937,7 +940,7 @@ export const teacherLogout = async (req, res) => {
   }
 };
 
-// ── forgot password ──
+// forgot password
 
 export const teacherForgotPassword = async (req, res) => {
   try {
@@ -1085,7 +1088,7 @@ export const teacherResetPassword = async (req, res) => {
   }
 };
 
-// ── document upload ──
+// document upload
 
 export const uploadDocuments = async (req, res) => {
   try {
@@ -1141,7 +1144,7 @@ export const uploadDocuments = async (req, res) => {
   }
 };
 
-// ── teacher profile ──
+// teacher profile
 
 export const getTeacherProfile = async (req, res) => {
   try {
@@ -1477,7 +1480,7 @@ export const updatePaymentDetails = async (req, res) => {
   }
 };
 
-// ── public teacher profile ──
+// public teacher profile
 
 export const getPublicTeacherProfile = async (req, res) => {
   try {
@@ -1656,7 +1659,7 @@ export const getPublicTeacherProfile = async (req, res) => {
   }
 };
 
-// ── admin: teacher management ──
+// admin teacher management
 
 export const getTeacherApplications = async (req, res) => {
   try {
@@ -1779,7 +1782,7 @@ const buildInviteEmail = (name, content, signupLink, subject, options = {}) => {
     primaryColor = "#2563eb",
   } = options;
 
-  // convert plain text content to HTML paragraphs
+  // convert plain text content to html paragraphs.
   const htmlContent = content
     .split("\n")
     .filter((line) => line.trim() !== "")
@@ -1828,14 +1831,14 @@ const buildInviteEmail = (name, content, signupLink, subject, options = {}) => {
 <body style="margin:0;padding:0;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;background-color:#f0f4f8;-webkit-text-size-adjust:100%;">
   <!-- Preheader text (hidden) -->
   <div style="display:none;font-size:1px;color:#fefefe;line-height:1px;max-height:0;max-width:0;opacity:0;overflow:hidden;">
-    You're invited to teach on Vidhgrow — ${name}
+    Invitation to teach on Vidhgrow for ${name}
   </div>
 
   <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color:#f0f4f8;padding:40px 0;">
     <tr>
       <td align="center" style="padding:0 16px;">
         <table role="presentation" cellpadding="0" cellspacing="0" width="600" style="max-width:600px;width:100%;background-color:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.08);">
-          
+
           <!-- Header -->
           <tr>
             <td style="background:linear-gradient(135deg,${primaryColor},${primaryColor}dd);padding:32px 40px;text-align:center;">
@@ -1860,14 +1863,14 @@ const buildInviteEmail = (name, content, signupLink, subject, options = {}) => {
               <p style="margin:0 0 20px;font-size:16px;font-weight:600;color:#0f172a;">
                 Hi ${name},
               </p>
-              
+
               ${processedContent.join("\n")}
-              
-              <!-- CTA Button — single, authoritative -->
+
+              <!-- primary action button -->
               <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin:32px 0 24px;">
                 <tr>
                   <td align="center">
-                    <a href="${signupLink}" 
+                    <a href="${signupLink}"
                        target="_blank"
                        style="display:inline-block;padding:14px 40px;background-color:${primaryColor};color:#ffffff;text-decoration:none;border-radius:10px;font-size:15px;font-weight:700;letter-spacing:0.3px;mso-padding-alt:14px 40px;">
                       <!--[if mso]><i style="letter-spacing:40px;mso-font-width:-100%;mso-text-raise:30pt">&nbsp;</i><![endif]-->
@@ -2358,7 +2361,7 @@ export const verifyTeacherPaymentDetails = async (req, res) => {
   }
 };
 
-// ── teacher course management ──
+// teacher course management
 
 export const teacherCreateCourse = async (req, res) => {
   try {

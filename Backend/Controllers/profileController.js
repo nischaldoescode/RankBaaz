@@ -1,3 +1,6 @@
+/**
+ * keeps the profile controller controller focused and readable.
+ */
 import User from "../Models/User.js";
 import TestResult from "../Models/TestResult.js";
 import pointsService from "../services/pointsService.js";
@@ -9,7 +12,7 @@ export const getPublicProfile = async (req, res) => {
     const { username } = req.params;
     const requestingUserId = req.user?.userId;
 
-    // Check Redis cache first
+    // check redis cache first
     const cacheKey = `profile:${username}`;
     const cached = await redisClient.get(cacheKey);
 
@@ -20,7 +23,7 @@ export const getPublicProfile = async (req, res) => {
       });
     }
 
-    // Fetch from database
+    // fetch from database
     const user = await User.findOne({
       username: username.toLowerCase(),
       isVerified: true, // only verified users have public profiles
@@ -39,7 +42,7 @@ export const getPublicProfile = async (req, res) => {
       });
     }
 
-    // Get test statistics
+    // get test statistics
     const testStats = await TestResult.aggregate([
       { $match: { user: user._id } },
       {
@@ -62,7 +65,7 @@ export const getPublicProfile = async (req, res) => {
       totalQuestionsAnswered: 0,
     };
 
-    // Get recent tests with course details
+    // get recent tests with course details
     const recentTests = await TestResult.find({ user: user._id })
       .sort({ completedAt: -1 })
       .limit(10)
@@ -70,10 +73,10 @@ export const getPublicProfile = async (req, res) => {
       .select("course difficulty percentage completedAt pointsEarned")
       .lean();
 
-    // Get global rank
+    // get global rank
     const rank = await pointsService.getUserRank(user._id);
 
-    // Format badges with descriptions
+    // format badges with descriptions
     const formattedBadges = user.badges.map((badge) => ({
       ...badge,
       ...badgeService.getBadgeInfo(badge.type),
@@ -84,7 +87,7 @@ export const getPublicProfile = async (req, res) => {
 
     const profileData = {
       username: user.username,
-      // Only show name if it's public OR if viewing own profile
+      // only show name if it's public or if viewing own profile
       name: user.nameVisibility === "public" || isOwnProfile ? user.name : null,
       nameVisibility: user.nameVisibility,
       points: user.points,
@@ -111,7 +114,7 @@ export const getPublicProfile = async (req, res) => {
       isOwnProfile,
     };
 
-    // Cache for 5 minutes (shorter cache for dynamic data)
+    // cache for 5 minutes (shorter cache for dynamic data)
     await redisClient.setex(cacheKey, 300, JSON.stringify(profileData));
 
     res.status(200).json({
@@ -198,7 +201,7 @@ export const getUserLeaderboardPosition = async (req, res) => {
       });
     }
 
-    // Check if user has completed any tests
+    // check if user has completed any tests
     if (!user.stats || user.stats.testsCompleted === 0) {
       return res.status(200).json({
         success: true,
@@ -214,7 +217,7 @@ export const getUserLeaderboardPosition = async (req, res) => {
 
     const rank = await pointsService.getUserRank(userId);
 
-    // Calculate rank change
+    // calculate rank
     let rankChange = null;
     if (user.stats.lastKnownRank && rank) {
       rankChange = user.stats.lastKnownRank - rank;
@@ -250,7 +253,7 @@ export const searchUsernames = async (req, res) => {
       });
     }
 
-    // Check cache first
+    // check cache first
     const cacheKey = `search:${query.toLowerCase()}:${limit}`;
     const cached = await redisClient.get(cacheKey);
 
@@ -261,7 +264,7 @@ export const searchUsernames = async (req, res) => {
       });
     }
 
-    // Search database with regex (case-insensitive prefix match)
+    // search database with regex (case-insensitive prefix match)
     const users = await User.find({
       username: { $regex: `^${query.toLowerCase()}`, $options: "i" },
     })
@@ -276,7 +279,7 @@ export const searchUsernames = async (req, res) => {
       badgeCount: user.badges.length,
     }));
 
-    // Cache for 10 minutes
+    // cache for 10 minutes
     await redisClient.setex(cacheKey, 600, JSON.stringify(results));
 
     res.status(200).json({

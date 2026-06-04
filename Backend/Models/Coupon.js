@@ -1,3 +1,6 @@
+/**
+ * keeps the coupon model focused and readable.
+ */
 import mongoose from "mongoose";
 import crypto from "crypto";
 
@@ -23,7 +26,7 @@ const couponSchema = new mongoose.Schema(
     course: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Course",
-      // Only required if type is "course"
+      // only required if type is "course"
       required: function () {
         return this.type === "course";
       },
@@ -87,7 +90,7 @@ const couponSchema = new mongoose.Schema(
   },
 );
 
-// Method to verify coupon code
+// method to verify coupon code
 couponSchema.methods.verifyCode = function (inputCode) {
   const hashedInput = crypto
     .createHash("sha256")
@@ -96,27 +99,27 @@ couponSchema.methods.verifyCode = function (inputCode) {
   return this.hashedCode === hashedInput;
 };
 
-// Method to check if coupon is valid
+// method to check if coupon is valid
 couponSchema.methods.isValid = function (userId = null) {
-  // Check if active
+  // check if active
   if (!this.isActive) return { valid: false, reason: "Coupon is inactive" };
 
-  // Check if expired
+  // check if expired
   if (this.validUntil && new Date() > this.validUntil) {
     return { valid: false, reason: "Coupon has expired" };
   }
 
-  // Check if not yet valid
+  // check if not yet valid
   if (this.validFrom && new Date() < this.validFrom) {
     return { valid: false, reason: "Coupon is not yet valid" };
   }
 
-  // Check max usage
+  // check max usage
   if (this.maxUsage && this.usageCount >= this.maxUsage) {
     return { valid: false, reason: "Coupon usage limit reached" };
   }
 
-  // Check if user already used this coupon
+  // check if user already used this coupon
   if (userId && this.usedBy.some((u) => u.user.toString() === userId)) {
     return { valid: false, reason: "You have already used this coupon" };
   }
@@ -124,8 +127,8 @@ couponSchema.methods.isValid = function (userId = null) {
   return { valid: true };
 };
 
-// Indexes
-// Indexes
+// indexes
+// indexes
 couponSchema.index({ code: 1 }, { unique: true });
 couponSchema.index({ hashedCode: 1 }, { unique: true });
 couponSchema.index({ type: 1, course: 1 });

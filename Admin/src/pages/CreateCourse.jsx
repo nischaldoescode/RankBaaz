@@ -1,3 +1,6 @@
+/**
+ * keeps the create course page focused and readable.
+ */
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import {
   Save,
@@ -81,7 +84,7 @@ const AIPromptModal = ({
                   }
                 }}
                 onBlur={(e) => {
-                  // console.log("Input lost focus"); // Debug line
+                  // console.log("input lost focus"); // debug line
                 }}
                 placeholder="Enter course name (e.g., JavaScript Fundamentals) and press Enter"
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200 text-base placeholder-gray-400"
@@ -97,7 +100,7 @@ const AIPromptModal = ({
                 value={questionCount}
                 onChange={(e) => {
                   const value = e.target.value;
-                  // Allow empty string for backspace, otherwise parse to number
+                  // allow empty string for backspace, otherwise parse to number
                   const numValue = value === "" ? "" : parseInt(value) || "";
                   setQuestionCount(numValue);
                   setLocalQuestionCount(numValue);
@@ -114,7 +117,7 @@ const AIPromptModal = ({
                 Course Type
               </label>
 
-              {/* Toggle Button */}
+              {/* toggle button */}
               <div className="relative inline-flex items-center bg-gray-200 rounded-full p-1 transition-all duration-200">
                 <button
                   type="button"
@@ -144,7 +147,7 @@ const AIPromptModal = ({
               </div>
             </div>
 
-            {/* Price input - remains exactly the same */}
+            {/* price input - remains exactly the same */}
             {localIsPaid && (
               <div className="mb-6">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -155,7 +158,7 @@ const AIPromptModal = ({
                   value={localPrice}
                   onChange={(e) => {
                     const value = e.target.value;
-                    // Allow empty string for backspace, otherwise parse to float
+                    // allow empty string for backspace, otherwise parse to float
                     setLocalPrice(value === "" ? "" : parseFloat(value) || "");
                   }}
                   placeholder="Enter price in INR"
@@ -191,7 +194,7 @@ const AIPromptModal = ({
                       try {
                         await navigator.clipboard.writeText(generatedPrompt);
                         setCopyStatus("copied");
-                        setTimeout(() => setCopyStatus("copy"), 4000); // Reset after 4 seconds
+                        setTimeout(() => setCopyStatus("copy"), 4000); // reset 4 seconds
                       } catch (err) {
                         setCopyStatus("error");
                         setTimeout(() => setCopyStatus("copy"), 4000);
@@ -281,7 +284,7 @@ const CreateCourse = () => {
   const { createCourseWithQuestions } = useAdmin();
   const [showQuestionPreview, setShowQuestionPreview] = useState(false);
 
-  // Add these after your existing useState declarations (around line 15)
+  // modal and course setup state.
   const [showFormatModal, setShowFormatModal] = useState(false);
   const [fileUploadError, setFileUploadError] = useState("");
   const [isProcessingFile, setIsProcessingFile] = useState(false);
@@ -302,7 +305,7 @@ const CreateCourse = () => {
     hard: [{ url: "", title: "" }],
   });
 
-  // Course Data
+  // course data
   const EXPECTED_FILE_FORMAT = `
 FLEXIBLE FORMAT - Field names can be in any case with or without spaces/underscores:
 
@@ -375,7 +378,7 @@ Notes:
 - Difficulty levels in brackets: [EASY], [MEDIUM], [HARD]
 `;
   const generateAIPrompt = (courseName, QuestionCount) => {
-    // Handle empty string or invalid question count
+    // handle empty string or invalid question count
     const validQuestionCount =
       QuestionCount === "" || !QuestionCount ? 30 : Number(QuestionCount);
 
@@ -413,7 +416,7 @@ easy:
 medium:
   marks per question = [3-5 marks per question]
   max questions = [Calculate between 20-50% of ${QuestionCount}, but ensure marks per question × max questions doesn't exceed 40% of MAX MARKS]
-  min time = [1 seconds] 
+  min time = [1 seconds]
   max time = [90-180 seconds]
 
 hard:
@@ -422,8 +425,8 @@ hard:
   min time = [60-120 seconds]
   max time = [120-300 seconds]
 
-IMPORTANT CALCULATION RULE:
-- Sum of (marks per question × max questions) for ALL difficulties must EXACTLY equal MAX MARKS
+calculation rules:
+- Sum of (marks per question × max questions) for all difficulties should exactly equal MAX MARKS
 - Example: If MAX MARKS = 90, then:
   - Easy: 2 marks × 15 questions = 30 marks
   - Medium: 3 marks × 10 questions = 30 marks
@@ -434,7 +437,7 @@ Please ensure the math adds up correctly before generating questions.
 
 QUESTIONS:
 [EASY]
-Q: [Create EXACTLY the number of questions specified in max questions for easy difficulty about ${courseName}]
+Q: [Create exactly the number of questions specified in max questions for easy difficulty about ${courseName}]
 TYPE: [Choose from: multiple, truefalse, single - mix different types appropriately]
 OPTIONS: [For multiple choice: 4 options separated by commas]
 ANSWER: [ONLY for single answer questions: Direct answer text]
@@ -442,7 +445,7 @@ CORRECT: [For multiple choice: 0-3 based on correct option index] [For true/fals
 EXPLANATION: [Brief explanation of why this is correct]
 
 [MEDIUM]
-Q: [Create EXACTLY the number of questions specified in max questions for medium difficulty about ${courseName}]
+Q: [Create exactly the number of questions specified in max questions for medium difficulty about ${courseName}]
 TYPE: [Choose from: multiple, truefalse, single - mix different types appropriately]
 OPTIONS: [For multiple choice: 4 options separated by commas]
 ANSWER: [ONLY for single answer questions: Direct answer text]
@@ -450,7 +453,7 @@ CORRECT: [For multiple choice: 0-3 based on correct option index] [For true/fals
 EXPLANATION: [Detailed explanation]
 
 [HARD]
-Q: [Create EXACTLY the number of questions specified in max questions for hard difficulty about ${courseName}]
+Q: [Create exactly the number of questions specified in max questions for hard difficulty about ${courseName}]
 TYPE: [Choose from: multiple, truefalse, single - mix different types appropriately]
 OPTIONS: [For multiple choice: 4 options separated by commas]
 ANSWER: [ONLY for single answer questions: Direct answer text]
@@ -465,24 +468,24 @@ Please ensure:
 5. Time limits are realistic for question complexity
 6. Options are plausible and test real understanding
 
-CRITICAL REQUIREMENTS:
-- Total questions across all difficulties should be EXACTLY ${QuestionCount}
+requirements:
+- Total questions across all difficulties should be exactly ${QuestionCount}
 - Distribution limits (you can choose within these ranges):
-  * Easy: Must be between 40-70% of ${QuestionCount} (minimum 40%, maximum 70%)
-  * Medium: Must be between 20-50% of ${QuestionCount} (minimum 20%, maximum 50%)
-  * Hard: Must be between 5-30% of ${QuestionCount} (minimum 5%, maximum 30%)
+  * Easy: between 40-70% of ${QuestionCount} (minimum 40%, maximum 70%)
+  * Medium: between 20-50% of ${QuestionCount} (minimum 20%, maximum 50%)
+  * Hard: between 5-30% of ${QuestionCount} (minimum 5%, maximum 30%)
 - The sum of easy + medium + hard questions must equal exactly ${QuestionCount}
 - You have flexibility to choose the exact distribution within these ranges
-- Number of questions for each difficulty MUST EXACTLY match your calculated 'max questions' setting
+- Number of questions for each difficulty should exactly match your calculated 'max questions' setting
 - Mix question types (multiple choice, true/false, single answer) appropriately within each difficulty level
 - Easy questions can include: multiple choice, true/false, single answer
-- Medium questions can include: multiple choice, true/false, single answer  
+- Medium questions can include: multiple choice, true/false, single answer
 - Hard questions can include: multiple choice, true/false, single answer
 - Choose question types that best fit the content and difficulty level
-- DO NOT create more or fewer questions than the exact number specified in max questions for each difficulty
-- For multiple choice questions: Use OPTIONS and CORRECT fields only, do NOT include ANSWER
-- For true/false questions: Use CORRECT field only (0=True, 1=False), do NOT include ANSWER  
-- For single answer questions: Use ANSWER field only, do NOT include CORRECT
+- Do not create more or fewer questions than the exact number specified in max questions for each difficulty
+- For multiple choice questions: Use OPTIONS and CORRECT fields only, do not include ANSWER
+- For true/false questions: Use CORRECT field only (0=True, 1=False), do not include ANSWER
+- For single answer questions: Use ANSWER field only, do not include CORRECT
 Generate complete .txt file which contains, content for all sections above.`;
   };
 
@@ -508,9 +511,9 @@ Generate complete .txt file which contains, content for all sections above.`;
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i];
 
-      // Handle section headers
+      // handle section headers
       if (line.startsWith("[") && line.endsWith("]")) {
-        // Save previous question before switching difficulty
+        // save previous question switching difficulty
         if (
           currentQuestion.question &&
           currentQuestion.explanation &&
@@ -530,7 +533,7 @@ Generate complete .txt file which contains, content for all sections above.`;
 
         currentSection = "questions";
         currentDifficulty = line.slice(1, -1).toLowerCase();
-        currentQuestion = {}; // Reset current question
+        currentQuestion = {}; // reset current question
         continue;
       }
 
@@ -555,7 +558,7 @@ Generate complete .txt file which contains, content for all sections above.`;
       const normalizeKey = (key) => {
         return key.toLowerCase().replace(/[^a-z]/g, "");
       };
-      // Parse basic course info
+      // parse basic course info
       if (currentSection === "basic") {
         const [key, ...valueParts] = line.split("=");
         const value = valueParts.join("=").trim();
@@ -563,7 +566,7 @@ Generate complete .txt file which contains, content for all sections above.`;
         if (key && value) {
           const cleanKey = key.trim().toUpperCase();
 
-          // Then in the switch statement:
+          // then in the switch statement:
           const normalizedKey = normalizeKey(cleanKey);
           switch (normalizedKey) {
             case normalizeKey("COURSE_NAME"):
@@ -586,9 +589,9 @@ Generate complete .txt file which contains, content for all sections above.`;
               break;
             case normalizeKey("CATEGORY"):
             case normalizeKey("COURSE_CATEGORY"):
-              // Handle category by finding matching category ID
+              // handle category by finding matching category id
               if (value && value.trim() !== "") {
-                // If categories are available, try to find matching category
+                // if categories are available, try to find matching category
                 const matchingCategory = availableCategories?.find(
                   (cat) => cat.name.toLowerCase() === value.toLowerCase()
                 );
@@ -618,7 +621,7 @@ Generate complete .txt file which contains, content for all sections above.`;
         }
       }
 
-      // Parse difficulty settings
+      // parse difficulty settings
       if (currentSection === "difficulty_settings") {
         if (
           (line.endsWith(":") && !line.includes("=")) ||
@@ -635,28 +638,28 @@ Generate complete .txt file which contains, content for all sections above.`;
           const [key, value] = line.split("=").map((s) => s.trim());
           const normalizedKey = normalizeKey(key);
 
-          // Map various key formats to standard keys
+          // map various key formats to standard keys
           let standardKey;
           if (
             normalizedKey.includes("marks") &&
             normalizedKey.includes("question")
           ) {
-            standardKey = "marksPerQuestion"; // Match your state structure
+            standardKey = "marksPerQuestion"; // match your state structure
           } else if (
             normalizedKey.includes("max") &&
             normalizedKey.includes("question")
           ) {
-            standardKey = "maxQuestions"; // Match your state structure
+            standardKey = "maxQuestions"; // match your state structure
           } else if (
             normalizedKey.includes("min") &&
             normalizedKey.includes("time")
           ) {
-            standardKey = "minTime"; // Match your state structure
+            standardKey = "minTime"; // match your state structure
           } else if (
             normalizedKey.includes("max") &&
             normalizedKey.includes("time")
           ) {
-            standardKey = "maxTime"; // Match your state structure
+            standardKey = "maxTime"; // match your state structure
           }
 
           if (standardKey && value) {
@@ -670,10 +673,10 @@ Generate complete .txt file which contains, content for all sections above.`;
         }
       }
 
-      // Parse questions
+      // parse questions
       if (currentSection === "questions" && currentDifficulty) {
         if (line.startsWith("Q:")) {
-          // Save previous question BEFORE starting new one
+          // save previous question starting one
           if (currentQuestion.question && currentQuestion.explanation) {
             if (!result.questions[currentDifficulty]) {
               result.questions[currentDifficulty] = [];
@@ -705,7 +708,7 @@ Generate complete .txt file which contains, content for all sections above.`;
       }
     }
 
-    // Save last question
+    // save last question
     if (
       currentQuestion.question &&
       currentQuestion.explanation &&
@@ -724,7 +727,7 @@ Generate complete .txt file which contains, content for all sections above.`;
     return result;
   };
 
-  // Detect platform from URL
+  // detect platform from url
   const detectPlatform = (url) => {
     if (!url) return "Unknown";
 
@@ -751,7 +754,7 @@ Generate complete .txt file which contains, content for all sections above.`;
     const file = event.target.files[0];
     if (!file) return;
 
-    // Validate file
+    // validate file
     if (file.type !== "text/plain" && !file.name.endsWith(".txt")) {
       setFileUploadError("Please upload a .txt file");
       return;
@@ -768,7 +771,7 @@ Generate complete .txt file which contains, content for all sections above.`;
     }
 
     if (file.size > 10 * 1024 * 1024) {
-      // 10MB limit
+      // 10mb limit
       setFileUploadError("File size must be less than 10MB");
       return;
     }
@@ -780,7 +783,7 @@ Generate complete .txt file which contains, content for all sections above.`;
       const content = await file.text();
       const parsed = parseTextFile(content, contextCategories);
 
-      // Validate parsed data
+      // validate parsed data
       if (!parsed.courseData.title) {
         setFileUploadError("Missing COURSE_NAME in the file");
         setCurrentStep(1);
@@ -806,7 +809,7 @@ Generate complete .txt file which contains, content for all sections above.`;
         return;
       }
 
-      // Apply parsed data
+      // apply parsed data
       setCourseData((prev) => ({
         ...prev,
         title: parsed.courseData.title,
@@ -820,7 +823,7 @@ Generate complete .txt file which contains, content for all sections above.`;
 
       setSelectedDifficulties(parsed.difficulties);
 
-      // Convert difficulty settings format
+      // convert difficulty settings format
       const convertedSettings = {};
       Object.entries(parsed.difficultySettings).forEach(([diff, settings]) => {
         convertedSettings[diff] = {
@@ -830,18 +833,18 @@ Generate complete .txt file which contains, content for all sections above.`;
           maxTime: parseInt(settings.maxTime) || 60,
         };
       });
-      // console.log("Parsed difficulty settings:", parsed.difficultySettings);
-      // console.log("Converted Settings:", convertedSettings);
+      // console.log("parsed difficulty settings:", parsed.difficultysettings);
+      // console.log("converted settings:", convertedsettings);
       setDifficultySettings(convertedSettings);
 
-      // Add validation before jumping to step 5
+      // validation jumping to step 5
       if (Object.keys(convertedSettings).length === 0) {
         setFileUploadError("No difficulty settings found in the file");
         setShowFormatModal(true);
         return;
       }
 
-      // Convert questions format
+      // convert questions format
       const convertedQuestions = {};
       Object.entries(parsed.questions).forEach(([diff, questions]) => {
         convertedQuestions[diff] = questions.map((q) => ({
@@ -859,10 +862,10 @@ Generate complete .txt file which contains, content for all sections above.`;
 
       showToast("File uploaded and parsed successfully!");
       const navigateToAppropriateStep = () => {
-        // Check each step for validation errors
+        // check each step for validation errors
         const tempErrors = {};
 
-        // Step 1 validation
+        // step 1 validation
         if (!parsed.courseData.title?.trim()) {
           tempErrors.step1 = "Course title is required";
         }
@@ -876,12 +879,12 @@ Generate complete .txt file which contains, content for all sections above.`;
           tempErrors.step1 = "Valid maximum marks is required";
         }
 
-        // Step 2 validation
+        // step 2 validation
         if (parsed.difficulties.length === 0) {
           tempErrors.step2 = "At least one difficulty level is required";
         }
 
-        // Step 3 validation
+        // step 3 validation
         let step3HasErrors = false;
         const maxMarks = parseInt(parsed.courseData.maxMarks);
         let totalMarks = 0;
@@ -907,7 +910,7 @@ Generate complete .txt file which contains, content for all sections above.`;
           step3HasErrors = true;
         }
 
-        // Step 4 validation
+        // step 4 validation
         let step4HasErrors = false;
         parsed.difficulties.forEach((difficulty) => {
           const questions = parsed.questions[difficulty] || [];
@@ -919,7 +922,7 @@ Generate complete .txt file which contains, content for all sections above.`;
           }
         });
 
-        // Navigate to appropriate step
+        // navigate to appropriate step
         if (tempErrors.step1) {
           setCurrentStep(1);
           setErrors({ title: tempErrors.step1 });
@@ -937,13 +940,13 @@ Generate complete .txt file which contains, content for all sections above.`;
           setErrors({ questions: tempErrors.step4 });
           showToast("Please add missing questions");
         } else {
-          // All validations passed, go to preview
-          // Smart step navigation - go to the first step with errors or to preview if all valid
+          // all validations passed, go to preview
+          // smart step navigation - go to the first step with errors or to preview if all valid
           const navigateToAppropriateStep = () => {
-            // Check each step for validation errors
+            // check each step for validation errors
             const tempErrors = {};
 
-            // Step 1 validation
+            // step 1 validation
             if (!parsed.courseData.title?.trim()) {
               tempErrors.step1 = "Course title is required";
             }
@@ -957,12 +960,12 @@ Generate complete .txt file which contains, content for all sections above.`;
               tempErrors.step1 = "Valid maximum marks is required";
             }
 
-            // Step 2 validation
+            // step 2 validation
             if (parsed.difficulties.length === 0) {
               tempErrors.step2 = "At least one difficulty level is required";
             }
 
-            // Step 3 validation
+            // step 3 validation
             let step3HasErrors = false;
             const maxMarks = parseInt(parsed.courseData.maxMarks);
             let totalMarks = 0;
@@ -988,7 +991,7 @@ Generate complete .txt file which contains, content for all sections above.`;
               step3HasErrors = true;
             }
 
-            // Step 4 validation
+            // step 4 validation
             let step4HasErrors = false;
             parsed.difficulties.forEach((difficulty) => {
               const questions = parsed.questions[difficulty] || [];
@@ -1000,7 +1003,7 @@ Generate complete .txt file which contains, content for all sections above.`;
               }
             });
 
-            // Navigate to appropriate step
+            // navigate to appropriate step
             if (tempErrors.step1) {
               setCurrentStep(1);
               setErrors({ title: tempErrors.step1 });
@@ -1018,39 +1021,39 @@ Generate complete .txt file which contains, content for all sections above.`;
               setErrors({ questions: tempErrors.step4 });
               showToast("Please add missing questions");
             } else {
-              // All validations passed, go to preview
+              // all validations passed, go to preview
               setCurrentStep(5);
               setErrors({});
               showToast("File parsed successfully! Review your course.");
             }
           };
 
-          // Call the navigation function
+          // call the navigation function
           navigateToAppropriateStep();
           setErrors({});
           showToast("File parsed successfully! Review your course.");
         }
       };
-      // console.log("Parsed difficulty settings:", parsed.difficultySettings);
-      // Call the navigation function
+      // console.log("parsed difficulty settings:", parsed.difficultysettings);
+      // call the navigation function
       navigateToAppropriateStep();
     } catch (error) {
       setFileUploadError("Error reading file: " + error.message);
       setShowFormatModal(true);
     } finally {
       setIsProcessingFile(false);
-      event.target.value = ""; // Reset input
+      event.target.value = ""; // reset input
     }
-    // console.log("Applied courseData:", courseData);
-    // console.log("Applied selectedDifficulties:", selectedDifficulties);
-    // console.log("Applied difficultySettings:", difficultySettings);
+    // console.log("applied coursedata:", coursedata);
+    // console.log("applied selecteddifficulties:", selecteddifficulties);
+    // console.log("applied difficultysettings:", difficultysettings);
   };
 
-  // Difficulty Levels
+  // difficulty levels
   const [selectedDifficulties, setSelectedDifficulties] = useState([]);
   const [difficultySettings, setDifficultySettings] = useState({});
 
-  // Questions
+  // questions
   const [currentDifficultyForQuestions, setCurrentDifficultyForQuestions] =
     useState("");
   const [courseData, setCourseData] = useState({
@@ -1121,7 +1124,7 @@ Generate complete .txt file which contains, content for all sections above.`;
       id: 5,
       title: "Video Content",
       description: "Add videos or links (Optional)",
-    }, // NEW STEP
+    }, // step
     { id: 6, title: "Preview & Save", description: "Review and save course" },
   ];
 
@@ -1140,7 +1143,7 @@ Generate complete .txt file which contains, content for all sections above.`;
     setToast(null);
   };
 
-  // Initialize currentDifficultyForQuestions when selectedDifficulties change
+  // initialize currentdifficultyforquestions when selecteddifficulties
   useEffect(() => {
     if (
       currentStep === 4 &&
@@ -1153,7 +1156,7 @@ Generate complete .txt file which contains, content for all sections above.`;
 
   const fetchCategory = async () => {
     try {
-      await fetchCategories(); // This will update the categories in context-
+      await fetchCategories(); // this will update the categories in context-
     } catch (error) {
       showToast("Error fetching categories");
     }
@@ -1177,7 +1180,7 @@ Generate complete .txt file which contains, content for all sections above.`;
         ? prev.filter((d) => d !== difficulty)
         : [...prev, difficulty];
 
-      // Clean up settings for removed difficulties
+      // clean up settings for difficulties
       if (!newSelection.includes(difficulty)) {
         const newSettings = { ...difficultySettings };
         delete newSettings[difficulty];
@@ -1200,7 +1203,7 @@ Generate complete .txt file which contains, content for all sections above.`;
 
       if (field === "marksPerQuestion" || field === "maxQuestions") {
         const setting = newSettings[difficulty];
-        // Only calculate if both are valid numbers (not empty strings)
+        // only calculate if both are valid numbers (not empty strings)
         if (
           setting.marksPerQuestion &&
           setting.maxQuestions &&
@@ -1215,7 +1218,7 @@ Generate complete .txt file which contains, content for all sections above.`;
       return newSettings;
     });
 
-    // Clear related errors when user starts typing
+    // clear related errors when user starts typing
     if (errors[difficulty] || errors.marksTotal) {
       setErrors((prevErrors) => {
         const newErrors = { ...prevErrors };
@@ -1239,17 +1242,17 @@ Generate complete .txt file which contains, content for all sections above.`;
     }, 0);
   };
 
-  // Add this function after your existing handlers
+  // this function your existing handlers
   const handleQuestionImageChange = (e) => {
     const file = e.target.files[0];
     if (file) {
-      // Check file size (2MB limit)
+      // check file size (2mb limit)
       if (file.size > 2 * 1024 * 1024) {
         setErrors({ questionImage: "Image size must be less than 2MB" });
         return;
       }
 
-      // Check file type
+      // check file type
       const allowedTypes = [
         "image/jpeg",
         "image/jpg",
@@ -1273,7 +1276,7 @@ Generate complete .txt file which contains, content for all sections above.`;
       };
       reader.readAsDataURL(file);
 
-      // Clear any previous errors
+      // clear any previous errors
       setErrors((prev) => {
         const newErrors = { ...prev };
         delete newErrors.questionImage;
@@ -1299,7 +1302,7 @@ Generate complete .txt file which contains, content for all sections above.`;
     }));
   };
   useEffect(() => {
-    fetchCategory(); // Call your local function
+    fetchCategory(); // call your local function
   }, []);
 
   const validateStep = (step) => {
@@ -1337,7 +1340,7 @@ Generate complete .txt file which contains, content for all sections above.`;
         }
 
         if (courseData.isPaid === true) {
-          // Check if price is empty string, zero, or invalid
+          // check if price is empty string, zero, or invalid
           if (
             courseData.price === "" ||
             courseData.price === null ||
@@ -1349,7 +1352,7 @@ Generate complete .txt file which contains, content for all sections above.`;
             newErrors.price = "Price cannot exceed ₹50,000";
           }
         }
-        // Validate image upload is required
+        // validate image upload is required
         if (!courseData.thumbnail && !imagePreview) {
           newErrors.thumbnail = "Course thumbnail is required";
         }
@@ -1379,25 +1382,25 @@ Generate complete .txt file which contains, content for all sections above.`;
               setting.marksPerQuestion * setting.maxQuestions;
             runningTotal += difficultyTotal;
 
-            // Validate marksPerQuestion (1-10)
+            // validate marksperquestion (1-10)
             if (setting.marksPerQuestion < 1) {
               newErrors[
                 difficulty
               ] = `Marks per question must be at least 1 for ${difficulty}`;
             }
-            // Validate minTime (at least 10)
+            // validate mintime (at least 10)
             else if (setting.minTime < 1) {
               newErrors[
                 difficulty
               ] = `Min time must be at least 1 seconds for ${difficulty}`;
             }
-            // Validate maxTime >= minTime
+            // validate maxtime >= mintime
             else if (setting.maxTime <= setting.minTime) {
               newErrors[
                 difficulty
               ] = `Max time must be greater than min time for ${difficulty}`;
             }
-            // Validate difficulty total doesn't exceed course max
+            // validate difficulty total doesn't exceed course max
             else if (difficultyTotal > maxMarks) {
               newErrors[
                 difficulty
@@ -1406,7 +1409,7 @@ Generate complete .txt file which contains, content for all sections above.`;
           }
         });
 
-        // Check if total marks match exactly
+        // check if total marks match exactly
         if (runningTotal !== maxMarks && Object.keys(newErrors).length === 0) {
           if (runningTotal > maxMarks) {
             newErrors.marksTotal = `Total marks (${runningTotal}) exceeds course maximum marks (${maxMarks}). Please reduce marks for some difficulties.`;
@@ -1422,14 +1425,14 @@ Generate complete .txt file which contains, content for all sections above.`;
           const requiredQuestions =
             difficultySettings[difficulty]?.maxQuestions || 0;
 
-          // Check if we have enough questions
+          // check if we have enough questions
           if (questions.length < requiredQuestions) {
             newErrors[difficulty] = `Need ${
               requiredQuestions - questions.length
             } more questions for ${difficulty}`;
           }
 
-          // Validate each question's content
+          // validate each question's content
           questions.forEach((question, index) => {
             if (!question.question || question.question.trim().length < 10) {
               newErrors[`${difficulty}_question_${index}`] = `Question ${
@@ -1448,7 +1451,7 @@ Generate complete .txt file which contains, content for all sections above.`;
               } in ${difficulty} must be at least 10 characters`;
             }
 
-            // Validate based on question type
+            // validate based on question type
             if (question.questionType === "multiple") {
               if (
                 !question.options ||
@@ -1477,14 +1480,14 @@ Generate complete .txt file which contains, content for all sections above.`;
         break;
 
       case 5:
-        // Video content validation (COMPLETELY OPTIONAL for paid courses)
+        // video content validation (completely optional for paid courses)
         if (courseData.isPaid && videoType !== "none") {
           if (videoType === "course") {
-            // Only validate if user entered ANY link
+            // only validate if user entered any link
             const hasAnyLink = courseVideoLinks.some((link) => link.url.trim());
 
             if (hasAnyLink) {
-              // Validate URLs only if they exist
+              // validate urls only if they exist
               courseVideoLinks.forEach((link, index) => {
                 if (link.url.trim()) {
                   try {
@@ -1495,9 +1498,9 @@ Generate complete .txt file which contains, content for all sections above.`;
                 }
               });
             }
-            // No error if no links provided - videos are optional
+            // no error if no links provided - videos are optional
           } else if (videoType === "difficulty") {
-            // Validate difficulty-level video links only if provided
+            // validate difficulty-level video links only if provided
             const difficulties =
               selectedDifficulties ||
               courseData.difficulties?.map((d) => d.name) ||
@@ -1508,7 +1511,7 @@ Generate complete .txt file which contains, content for all sections above.`;
               const hasAnyLink = links.some((link) => link.url.trim());
 
               if (hasAnyLink) {
-                // Validate URLs only if they exist
+                // validate urls only if they exist
                 links.forEach((link, index) => {
                   if (link.url.trim()) {
                     try {
@@ -1521,11 +1524,11 @@ Generate complete .txt file which contains, content for all sections above.`;
                   }
                 });
               }
-              // No error if no links provided - videos are optional
+              // no error if no links provided - videos are optional
             });
           }
         }
-        // If course is free OR videoType is "none", step 5 passes automatically
+        // if course is free or videotype is "none", step 5 passes automatically
         break;
     }
 
@@ -1536,19 +1539,19 @@ Generate complete .txt file which contains, content for all sections above.`;
   const nextStep = () => {
     if (validateStep(currentStep)) {
       if (currentStep === 3) {
-        // Initialize first difficulty for questions when entering step 4
+        // initialize first difficulty for questions when entering step 4
         const firstDifficulty = selectedDifficulties[0];
         setCurrentDifficultyForQuestions(firstDifficulty);
       }
 
-      // Skip Step 5 (Video Content) if course is free
+      // skip step 5 (video content) if course is free
       if (currentStep === 4 && !courseData.isPaid) {
-        setCurrentStep(6); // Jump directly to Preview & Save
+        setCurrentStep(6); // jump directly to preview & save
       } else {
         setCurrentStep((prev) => Math.min(prev + 1, 6));
       }
     } else {
-      // Show specific error messages
+      // show specific error messages
       const errorMessages = Object.entries(errors).map(([field, message]) => {
         if (field === "marksTotal") return message;
         return `${field}: ${message}`;
@@ -1563,13 +1566,13 @@ Generate complete .txt file which contains, content for all sections above.`;
 
   const prevStep = () => {
     if (currentStep === 4) {
-      // Clear current difficulty when leaving step 4
+      // clear current difficulty when leaving step 4
       setCurrentDifficultyForQuestions("");
     }
 
-    // Skip Step 5 (Video Content) when going back from Step 6 if course is free
+    // skip step 5 (video content) when going back from step 6 if course is free
     if (currentStep === 6 && !courseData.isPaid) {
-      setCurrentStep(4); // Jump back to Step 4 (Questions)
+      setCurrentStep(4); // jump back to step 4 (questions)
     } else {
       setCurrentStep((prev) => Math.max(prev - 1, 1));
     }
@@ -1597,7 +1600,7 @@ Generate complete .txt file which contains, content for all sections above.`;
   };
 
   const handleMaxOptionsChange = (max) => {
-    const newMax = Math.min(Math.max(2, max), 8); // Between 2-8 options
+    const newMax = Math.min(Math.max(2, max), 8); // between 2-8 options
     setQuestionForm((prev) => {
       const newOptions = [...prev.options];
       if (newOptions.length > newMax) {
@@ -1620,7 +1623,7 @@ Generate complete .txt file which contains, content for all sections above.`;
     const indices = questionForm.options.map((_, i) => i);
     const correctOption = questionForm.options[questionForm.correctAnswer];
 
-    // Fisher-Yates shuffle
+    // fisher-yates shuffle
     for (let i = indices.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
       [indices[i], indices[j]] = [indices[j], indices[i]];
@@ -1658,7 +1661,7 @@ Generate complete .txt file which contains, content for all sections above.`;
     }));
   };
   const addQuestion = () => {
-    // Validate question text
+    // validate question text
     if (!questionForm.question.trim()) {
       setErrors({ question: "Question text is required" });
       return;
@@ -1670,7 +1673,7 @@ Generate complete .txt file which contains, content for all sections above.`;
       return;
     }
 
-    // Validate explanation (required in model)
+    // validate explanation (required in model)
     if (!questionForm.explanation.trim()) {
       setErrors({ explanation: "Explanation is required" });
       return;
@@ -1679,7 +1682,7 @@ Generate complete .txt file which contains, content for all sections above.`;
       return;
     }
 
-    // Validation for different question types
+    // validation for different question types
     if (questionForm.questionType === "multiple") {
       if (questionForm.options.some((opt) => !opt.trim())) {
         setErrors({ options: "All options must be filled" });
@@ -1739,7 +1742,7 @@ Generate complete .txt file which contains, content for all sections above.`;
       ],
     }));
 
-    // Reset form
+    // reset form
     setQuestionForm({
       question: "",
       options: ["", ""],
@@ -1749,7 +1752,7 @@ Generate complete .txt file which contains, content for all sections above.`;
       questionType: "multiple",
       singleAnswer: "",
       maxOptions: 2,
-      // ADD THESE RESET VALUES
+      // these reset values
       hasImage: false,
       questionImage: null,
       imagePreview: null,
@@ -1800,7 +1803,7 @@ Generate complete .txt file which contains, content for all sections above.`;
     try {
       setLoading(true);
 
-      // First, prepare questions in the correct format
+      // first, prepare questions in the correct format
       const allQuestions = [];
       Object.entries(courseQuestions).forEach(([difficulty, questionList]) => {
         if (questionList && questionList.length > 0) {
@@ -1869,7 +1872,7 @@ Generate complete .txt file which contains, content for all sections above.`;
         apiCourseData.price =
           courseData.price === "" ? 0 : parseFloat(courseData.price) || 0;
 
-        // Add video content to API data
+        // video content to api data
         if (videoType !== "none") {
           const videoContentData = {
             type: videoType,
@@ -1878,15 +1881,15 @@ Generate complete .txt file which contains, content for all sections above.`;
           };
 
           if (videoType === "course") {
-            // Filter out empty links
+            // filter out empty links
             const validLinks = courseVideoLinks.filter(
               (link) => link.url && link.url.trim()
             );
             videoContentData.courseVideo.links = validLinks;
           } else if (videoType === "difficulty") {
-            // Process difficulty videos
+            // process difficulty videos
             selectedDifficulties.forEach((diff) => {
-              // Use lowercase to access state (diff is already lowercase like "easy")
+              // use lowercase to access state (diff is already lowercase like "easy")
               const links = difficultyVideoLinks[diff] || [];
 
               const validLinks = links.filter(
@@ -1894,7 +1897,7 @@ Generate complete .txt file which contains, content for all sections above.`;
               );
 
               if (validLinks.length > 0) {
-                // Capitalize only when sending to backend
+                // capitalize only when sending to backend
                 const capitalizedDiff =
                   diff.charAt(0).toUpperCase() + diff.slice(1).toLowerCase();
 
@@ -1910,7 +1913,7 @@ Generate complete .txt file which contains, content for all sections above.`;
         }
       }
 
-      // Call your actual API through context with questions
+      // call your actual api through context with questions
       const result = await createCourseWithQuestions(
         apiCourseData,
         courseQuestions
@@ -1995,7 +1998,7 @@ Generate complete .txt file which contains, content for all sections above.`;
       case 1:
         return (
           <div className="space-y-6">
-            {/* File Upload Section */}
+            {/* file upload section */}
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
               <div className="flex items-center justify-between mb-3">
                 <h3 className="text-lg font-medium text-blue-900">
@@ -2053,13 +2056,13 @@ Generate complete .txt file which contains, content for all sections above.`;
 
                 {!courseData.thumbnail && !imagePreview && (
                   <p className="text-gray-500 text-sm">
-                    📋 Upload course image first to enable text file upload
+                     Upload course image first to enable text file upload
                   </p>
                 )}
               </div>
             </div>
 
-            {/* Divider */}
+            {/* divider */}
             <div className="relative">
               <div className="absolute inset-0 flex items-center">
                 <div className="w-full border-t border-gray-300" />
@@ -2169,7 +2172,7 @@ Generate complete .txt file which contains, content for all sections above.`;
                           onChange={(e) =>
                             setCourseData((prev) => ({
                               ...prev,
-                              isPaid: e.target.value === "true", // Convert string to boolean
+                              isPaid: e.target.value === "true", // convert string to boolean
                               price:
                                 e.target.value === "true"
                                   ? prev.price || 100
@@ -2192,7 +2195,7 @@ Generate complete .txt file which contains, content for all sections above.`;
                           onChange={(e) =>
                             setCourseData((prev) => ({
                               ...prev,
-                              isPaid: e.target.value === "true", // Convert string to boolean
+                              isPaid: e.target.value === "true", // convert string to boolean
                               price:
                                 e.target.value === "true"
                                   ? prev.price || 100
@@ -2221,7 +2224,7 @@ Generate complete .txt file which contains, content for all sections above.`;
                             value={courseData.price}
                             onChange={(e) => {
                               const value = e.target.value;
-                              // Allow empty string for backspace, otherwise parse to float
+                              // allow empty string for backspace, otherwise parse to float
                               setCourseData((prev) => ({
                                 ...prev,
                                 price:
@@ -2429,7 +2432,7 @@ Generate complete .txt file which contains, content for all sections above.`;
                         }
                         onChange={(e) => {
                           const value = e.target.value;
-                          // Allow empty string for backspace, otherwise parse to number
+                          // allow empty string for backspace, otherwise parse to number
                           updateDifficultySetting(
                             difficulty,
                             "maxQuestions",
@@ -2462,7 +2465,7 @@ Generate complete .txt file which contains, content for all sections above.`;
                         }
                         onChange={(e) => {
                           const value = e.target.value;
-                          // Allow empty string for backspace, otherwise parse to number
+                          // allow empty string for backspace, otherwise parse to number
                           updateDifficultySetting(
                             difficulty,
                             "marksPerQuestion",
@@ -2492,7 +2495,7 @@ Generate complete .txt file which contains, content for all sections above.`;
                         value={difficultySettings[difficulty]?.minTime || ""}
                         onChange={(e) => {
                           const value = e.target.value;
-                          // Allow empty string for backspace, otherwise parse to number
+                          // allow empty string for backspace, otherwise parse to number
                           updateDifficultySetting(
                             difficulty,
                             "minTime",
@@ -2522,12 +2525,12 @@ Generate complete .txt file which contains, content for all sections above.`;
                         value={difficultySettings[difficulty]?.maxTime || ""}
                         onChange={(e) => {
                           const value = e.target.value;
-                          // Allow empty string for backspace, otherwise parse to number
+                          // allow empty string for backspace, otherwise parse to number
                           updateDifficultySetting(
                             difficulty,
                             "maxTime",
                             value === "" ? "" : parseInt(value) || ""
-                            // parseInt(e.target.value)
+                            // parseint(e.target.value)
                           );
                         }}
                         className={`w-full px-3 py-2 border ${
@@ -2618,7 +2621,7 @@ Generate complete .txt file which contains, content for all sections above.`;
 
             {currentDifficultyForQuestions && (
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {/* Question Form */}
+                {/* question form */}
                 <div className="space-y-4">
                   <div className="bg-gradient-to-br from-blue-50 to-indigo-50 p-6 rounded-xl border border-blue-100 shadow-sm">
                     <div className="flex items-center justify-between mb-4">
@@ -2636,7 +2639,7 @@ Generate complete .txt file which contains, content for all sections above.`;
                     </div>
 
                     <div className="space-y-5">
-                      {/* Question Type Selection */}
+                      {/* question type selection */}
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-3">
                           Question Type *
@@ -2709,7 +2712,7 @@ Generate complete .txt file which contains, content for all sections above.`;
                           What is the output of \`print(4 + 3 % 5)\` in Python?`}
                         />
 
-                        {/* Formatting Help */}
+                        {/* formatting help */}
                         <div className="mt-2 bg-blue-50 border border-blue-200 rounded-lg p-3">
                           <div className="text-xs space-y-1">
                             <p className="font-semibold text-blue-900">
@@ -2748,7 +2751,7 @@ Generate complete .txt file which contains, content for all sections above.`;
                           </div>
                         </div>
 
-                        {/* Live Preview */}
+                        {/* live preview */}
                         {showQuestionPreview && questionForm.question && (
                           <div className="mt-3 border border-gray-300 rounded-lg p-4 bg-gray-50">
                             <p className="text-xs text-gray-600 mb-2 font-semibold">
@@ -2785,7 +2788,7 @@ Generate complete .txt file which contains, content for all sections above.`;
                         </div>
                       </div>
 
-                      {/* Image Upload Section */}
+                      {/* image upload section */}
                       <div className="space-y-3">
                         <div className="flex items-center justify-between">
                           <label className="text-sm font-medium text-gray-800 cursor-pointer">
@@ -2875,7 +2878,7 @@ Generate complete .txt file which contains, content for all sections above.`;
 
                             {errors.questionImage && (
                               <div className="mt-2 text-sm text-red-600 flex items-center">
-                                <span className="mr-1">⚠️</span>
+                                <span className="mr-1"></span>
                                 {errors.questionImage}
                               </div>
                             )}
@@ -2883,7 +2886,7 @@ Generate complete .txt file which contains, content for all sections above.`;
                         )}
                       </div>
 
-                      {/* Single Answer Input */}
+                      {/* single answer input */}
                       {questionForm.questionType === "single" && (
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -2907,14 +2910,14 @@ Generate complete .txt file which contains, content for all sections above.`;
                           />
                           {errors.singleAnswer && (
                             <p className="mt-2 text-sm text-red-600 flex items-center">
-                              <span className="mr-1">⚠️</span>
+                              <span className="mr-1"></span>
                               {errors.singleAnswer}
                             </p>
                           )}
                         </div>
                       )}
 
-                      {/* Multiple Choice Options */}
+                      {/* multiple choice options */}
                       {questionForm.questionType === "multiple" && (
                         <div>
                           <div className="flex items-center justify-between mb-3">
@@ -3002,7 +3005,7 @@ Generate complete .txt file which contains, content for all sections above.`;
                                 />
                                 {questionForm.correctAnswer === index && (
                                   <span className="text-green-600 text-sm font-medium">
-                                    ✓ Correct
+                                    correct
                                   </span>
                                 )}
                               </div>
@@ -3010,14 +3013,14 @@ Generate complete .txt file which contains, content for all sections above.`;
                           </div>
                           {errors.options && (
                             <p className="mt-2 text-sm text-red-600 flex items-center">
-                              <span className="mr-1">⚠️</span>
+                              <span className="mr-1"></span>
                               {errors.options}
                             </p>
                           )}
                         </div>
                       )}
 
-                      {/* True/False Options */}
+                      {/* true/false options */}
                       {questionForm.questionType === "truefalse" && (
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-3">
@@ -3042,7 +3045,7 @@ Generate complete .txt file which contains, content for all sections above.`;
                               >
                                 <div className="text-center">
                                   <div className="text-2xl mb-2">
-                                    {index === 0 ? "✅" : "❌"}
+                                    {index === 0 ? "true" : "false"}
                                   </div>
                                   <div>{option}</div>
                                 </div>
@@ -3093,7 +3096,7 @@ Generate complete .txt file which contains, content for all sections above.`;
                         </div>
                       </div>
 
-                      {/* Add Question Button */}
+                      {/* question button */}
                       <button
                         type="button"
                         onClick={addQuestion}
@@ -3127,7 +3130,7 @@ Generate complete .txt file which contains, content for all sections above.`;
                   </div>
                 </div>
 
-                {/* Questions List */}
+                {/* questions list */}
                 <div className="space-y-4">
                   <div className="bg-white border rounded-lg">
                     <div className="px-4 py-3 border-b bg-gray-50">
@@ -3219,7 +3222,7 @@ Generate complete .txt file which contains, content for all sections above.`;
                                       <span>{option}</span>
                                       {question.correctAnswer === index && (
                                         <span className="text-green-600">
-                                          ✓
+                                          correct
                                         </span>
                                       )}
                                     </div>
@@ -3227,7 +3230,7 @@ Generate complete .txt file which contains, content for all sections above.`;
                                 </div>
                               ) : (
                                 <div className="text-xs text-gray-600">
-                                  ✓ {question.singleAnswer}
+                                  answer: {question.singleAnswer}
                                 </div>
                               )}
                             </div>
@@ -3269,7 +3272,7 @@ Generate complete .txt file which contains, content for all sections above.`;
                     </div>
                   </div>
 
-                  {/* Progress for current difficulty */}
+                  {/* progress for current difficulty */}
                   <div className="mt-4">
                     <div className="flex items-center justify-between text-sm">
                       <span className="text-gray-600">Progress</span>
@@ -3302,7 +3305,7 @@ Generate complete .txt file which contains, content for all sections above.`;
                     </div>
                   </div>
 
-                  {/* Show validation errors for questions */}
+                  {/* show validation errors for questions */}
                   {selectedDifficulties.map((difficulty) => {
                     const questions = courseQuestions[difficulty] || [];
                     const requiredQuestions =
@@ -3340,7 +3343,7 @@ Generate complete .txt file which contains, content for all sections above.`;
       case 5:
         return (
           <div className="space-y-6">
-            {/* Only show if course is paid */}
+            {/* only show if course is paid */}
             {!courseData.isPaid ? (
               <div className="text-center py-12">
                 <p className="text-gray-600">
@@ -3361,7 +3364,7 @@ Generate complete .txt file which contains, content for all sections above.`;
                   </span>
                 </div>
 
-                {/* Video Type Selection */}
+                {/* video type selection */}
                 <div className="space-y-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">
@@ -3382,7 +3385,7 @@ Generate complete .txt file which contains, content for all sections above.`;
                     </select>
                   </div>
 
-                  {/* Course-Level Video Links */}
+                  {/* course-level video links */}
                   {videoType === "course" && (
                     <div className="space-y-3 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
                       <h4 className="font-medium text-gray-900 dark:text-slate-100">
@@ -3417,7 +3420,7 @@ Generate complete .txt file which contains, content for all sections above.`;
                               />
                             </div>
 
-                            {/* Remove button */}
+                            {/* remove button */}
                             {courseVideoLinks.length > 1 && (
                               <button
                                 type="button"
@@ -3430,23 +3433,23 @@ Generate complete .txt file which contains, content for all sections above.`;
                                 }}
                                 className="px-3 py-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
                               >
-                                ✕
+                                x
                               </button>
                             )}
                           </div>
 
-                          {/* Platform badge */}
+                          {/* platform badge */}
                           {link.url && (
                             <div className="text-xs">
                               <span className="inline-flex items-center px-2 py-1 rounded-full bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300">
-                                ✓ {detectPlatform(link.url)}
+                                platform: {detectPlatform(link.url)}
                               </span>
                             </div>
                           )}
                         </div>
                       ))}
 
-                      {/* Add Link Button */}
+                      {/* link button */}
                       {courseVideoLinks.length < 2 && (
                         <button
                           type="button"
@@ -3464,11 +3467,11 @@ Generate complete .txt file which contains, content for all sections above.`;
                     </div>
                   )}
 
-                  {/* Difficulty-Specific Video Links */}
+                  {/* difficulty-specific video links */}
                   {videoType === "difficulty" && (
                     <div className="space-y-4">
                       {selectedDifficulties.length === 0 ? (
-                        // Handle case where no difficulties selected yet
+                        // handle case where no difficulties selected yet
                         <div className="text-center py-8 bg-yellow-50 border border-yellow-200 rounded-lg">
                           <AlertCircle className="h-8 w-8 text-yellow-600 mx-auto mb-2" />
                           <p className="text-yellow-800 font-medium">
@@ -3485,13 +3488,13 @@ Generate complete .txt file which contains, content for all sections above.`;
                           </button>
                         </div>
                       ) : (
-                        // Use selectedDifficulties instead of courseData.difficulties
+                        // use selecteddifficulties instead of coursedata.difficulties
                         selectedDifficulties.map((difficultyName) => {
-                          // Get difficulty settings for marks display
+                          // get difficulty settings for marks display
                           const diffSettings =
                             difficultySettings[difficultyName];
 
-                          // Initialize video links if not exists
+                          // initialize video links if not exists
                           if (!difficultyVideoLinks[difficultyName]) {
                             setDifficultyVideoLinks((prev) => ({
                               ...prev,
@@ -3567,7 +3570,7 @@ Generate complete .txt file which contains, content for all sections above.`;
                                         />
                                       </div>
 
-                                      {/* Remove button */}
+                                      {/* remove button */}
                                       {(
                                         difficultyVideoLinks[difficultyName] ||
                                         []
@@ -3585,16 +3588,16 @@ Generate complete .txt file which contains, content for all sections above.`;
                                           }}
                                           className="px-3 py-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
                                         >
-                                          ✕
+                                          x
                                         </button>
                                       )}
                                     </div>
 
-                                    {/* Platform badge */}
+                                    {/* platform badge */}
                                     {link.url && (
                                       <div className="text-xs">
                                         <span className="inline-flex items-center px-2 py-1 rounded-full bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300">
-                                          ✓ {detectPlatform(link.url)}
+                                          platform: {detectPlatform(link.url)}
                                         </span>
                                       </div>
                                     )}
@@ -3602,7 +3605,7 @@ Generate complete .txt file which contains, content for all sections above.`;
                                 )
                               )}
 
-                              {/* Add Link Button */}
+                              {/* link button */}
                               {(!difficultyVideoLinks[difficultyName] ||
                                 difficultyVideoLinks[difficultyName].length <
                                   2) && (
@@ -3638,7 +3641,7 @@ Generate complete .txt file which contains, content for all sections above.`;
                   )}
                 </div>
 
-                {/* Supported Platforms Info */}
+                {/* supported platforms info */}
                 <div className="mt-4 p-3 bg-gray-50 dark:bg-slate-800 rounded-lg">
                   <p className="text-xs text-gray-600 dark:text-slate-400">
                     <strong>Supported platforms:</strong> YouTube, Vimeo,
@@ -3667,7 +3670,7 @@ Generate complete .txt file which contains, content for all sections above.`;
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Course Overview */}
+              {/* course overview */}
               <div className="space-y-6">
                 <div className="bg-white border rounded-lg p-6">
                   <h4 className="font-medium text-gray-900 mb-4">
@@ -3764,8 +3767,8 @@ Generate complete .txt file which contains, content for all sections above.`;
                       {courseData.hasPdfExport && (
                         <div className="mt-2 p-3 bg-purple-50 rounded-lg">
                           <p className="text-xs text-purple-800">
-                            ✓ Students will be able to download their test
-                            results once
+                            enabled: students will be able to download their
+                            test results once
                           </p>
                         </div>
                       )}
@@ -3773,7 +3776,7 @@ Generate complete .txt file which contains, content for all sections above.`;
                   </div>
                 </div>
 
-                {/* Difficulty Summary */}
+                {/* difficulty summary */}
                 <div className="bg-white border rounded-lg p-6">
                   <h4 className="font-medium text-gray-900 mb-4">
                     Difficulty Levels
@@ -3825,7 +3828,7 @@ Generate complete .txt file which contains, content for all sections above.`;
                 </div>
               </div>
 
-              {/* ADD THIS COUPON PREVIEW SECTION */}
+              {/* this coupon preview section */}
               {courseData.isPaid && (
                 <div className="bg-white border rounded-lg p-6">
                   <h4 className="font-medium text-gray-900 mb-4 flex items-center">
@@ -3838,7 +3841,7 @@ Generate complete .txt file which contains, content for all sections above.`;
                   </p>
                 </div>
               )}
-              {/* Questions Preview */}
+              {/* questions preview */}
               <div className="space-y-4">
                 <div className="bg-white border rounded-lg">
                   <div className="px-4 py-3 border-b bg-gray-50">
@@ -3895,7 +3898,7 @@ Generate complete .txt file which contains, content for all sections above.`;
                   </div>
                 </div>
 
-                {/* Save Actions */}
+                {/* save actions */}
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                   <div className="flex items-center justify-between mb-4">
                     <div>
@@ -3947,7 +3950,7 @@ Generate complete .txt file which contains, content for all sections above.`;
     <>
       <div className="min-h-screen bg-gray-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8">
-          {/* Header */}
+          {/* header */}
           <div className="flex items-center justify-between mb-8">
             <div>
               <h1 className="text-2xl font-bold text-gray-900">
@@ -3966,9 +3969,9 @@ Generate complete .txt file which contains, content for all sections above.`;
             </button>
           </div>
 
-          {/* Progress Steps */}
+          {/* progress steps */}
           <div className="mb-8">
-            {/* Desktop View */}
+            {/* desktop view */}
             <div className="hidden md:flex items-center justify-between">
               {steps.map((step, index) => (
                 <div key={step.id} className="flex items-center">
@@ -4028,7 +4031,7 @@ Generate complete .txt file which contains, content for all sections above.`;
               ))}
             </div>
 
-            {/* Mobile View */}
+            {/* mobile view */}
             <div className="md:hidden">
               <div className="flex items-center justify-center mb-4">
                 <div
@@ -4069,7 +4072,7 @@ Generate complete .txt file which contains, content for all sections above.`;
                 </div>
               </div>
 
-              {/* Mobile Progress Bar */}
+              {/* mobile progress bar */}
               <div className="mt-4">
                 <div className="flex justify-between text-xs text-gray-500 mb-1">
                   <span>Progress</span>
@@ -4085,12 +4088,12 @@ Generate complete .txt file which contains, content for all sections above.`;
             </div>
           </div>
 
-          {/* Step Content */}
+          {/* step content */}
           <div className="bg-white rounded-lg shadow-sm border p-4 sm:p-6 mb-6 sm:mb-8">
             {renderStepContent()}
           </div>
 
-          {/* Navigation */}
+          {/* navigation */}
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4 sm:gap-0">
             <button
               onClick={prevStep}
@@ -4116,7 +4119,7 @@ Generate complete .txt file which contains, content for all sections above.`;
           </div>
         </div>
 
-        {/* Question Preview Modal */}
+        {/* question preview modal */}
         {previewQuestion && (
           <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
             <div className="bg-white rounded-lg p-4 sm:p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-xl">
@@ -4179,7 +4182,7 @@ Generate complete .txt file which contains, content for all sections above.`;
                   </p>
                 </div>
 
-                {/* Question Image */}
+                {/* question image */}
                 {previewQuestion.hasImage && previewQuestion.imagePreview && (
                   <div>
                     <h4 className="font-medium text-gray-900 mb-2">Image:</h4>
@@ -4191,7 +4194,7 @@ Generate complete .txt file which contains, content for all sections above.`;
                   </div>
                 )}
 
-                {/* Show options for multiple choice and true/false */}
+                {/* show options for multiple choice and true/false */}
                 {(previewQuestion.questionType === "multiple" ||
                   previewQuestion.questionType === "truefalse") &&
                   previewQuestion.options && (
@@ -4237,7 +4240,7 @@ Generate complete .txt file which contains, content for all sections above.`;
                     </div>
                   )}
 
-                {/* Show single answer */}
+                {/* show single answer */}
                 {previewQuestion.questionType === "single" &&
                   previewQuestion.singleAnswer && (
                     <div>
@@ -4270,7 +4273,7 @@ Generate complete .txt file which contains, content for all sections above.`;
           </div>
         )}
 
-        {/* Exit Confirmation Modal */}
+        {/* exit confirmation modal */}
         {showExitModal && (
           <div className="fixed inset-0 bg-black/10 backdrop-blur-md border border-white/20 shadow-lg flex items-center justify-center p-4 z-50">
             <div className="bg-white rounded-lg p-6 w-full max-w-md">

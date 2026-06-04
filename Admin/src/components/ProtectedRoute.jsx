@@ -1,10 +1,13 @@
+/**
+ * keeps the protected route component focused and readable.
+ */
 import React from "react";
-import { useAuth } from "../contexts/AuthContext"; // Add this import
+import { useAuth } from "../contexts/AuthContext"; // this import
 
 const ProtectedRoute = ({ children }) => {
   const { user, loading, isAuthenticated } = useAuth();
 
-  // Show loading spinner while checking authentication
+  // show loading spinner while checking authentication
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -21,7 +24,7 @@ const ProtectedRoute = ({ children }) => {
     return null;
   }
 
-  // Check if user is admin
+  // check if user is admin
   if (user?.role !== "admin") {
     return (
       <div className="flex items-center justify-center min-h-screen">

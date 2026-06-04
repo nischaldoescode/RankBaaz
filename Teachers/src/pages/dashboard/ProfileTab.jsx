@@ -1,3 +1,6 @@
+/**
+ * keeps the profile tab page focused and readable.
+ */
 import React, { useState, useRef } from "react";
 import { motion } from "framer-motion";
 import { useTeacher } from "../../context/TeacherContext.jsx";

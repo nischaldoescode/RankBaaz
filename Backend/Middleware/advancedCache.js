@@ -1,124 +1,127 @@
+/**
+ * keeps the advanced cache middleware focused and readable.
+ */
 import redisClient, { cacheUtils, CacheKeys } from "../Config/redis.js";
 
 /**
- * Advanced caching middleware with smart invalidation
- * 
- * Features:
- * - Automatic cache key generation based on route + query params
- * - Configurable TTL per route
- * - Cache bypass for authenticated admin users
- * - Conditional caching based on request method
- * - Automatic cache warming on miss
- * 
- * Usage:
- * router.get('/api/courses', advancedCache({ ttl: 300, key: 'all-courses' }), getAllCourses);
+ * advanced caching middleware with smart invalidation
+ *
+ * features:
+ * - automatic cache key generation based on route + query params
+ * - configurable ttl per route
+ * - cache bypass for authenticated admin users
+ * - conditional caching based on request method
+ * - automatic cache warming on miss
+ *
+ * usage:
+ * router.get('/api/courses', advancedcache({ ttl: 300, key: 'all-courses' }), getallcourses);
  */
 
 export const advancedCache = (options = {}) => {
   const {
-    ttl = 300, // Default 5 minutes
-    key = null, // Custom cache key (optional)
-    bypassAdmin = true, // Skip cache for admin users
-    methods = ['GET'], // Only cache these HTTP methods
-    condition = null, // Optional condition function: (req) => boolean
+    ttl = 300, // default 5 minutes
+    key = null, // custom cache key (optional)
+    bypassAdmin = true, // skip cache for admin users
+    methods = ['GET'], // only cache these http methods
+    condition = null, // optional condition function: (req) => boolean
   } = options;
-  
+
   return async (req, res, next) => {
-    // Only cache specified HTTP methods
+    // only cache specified http methods
     if (!methods.includes(req.method)) {
       return next();
     }
-    
-    // Bypass cache for admin users if configured
+
+    // bypass cache for admin users if configured
     if (bypassAdmin && req.admin) {
       return next();
     }
-    
-    // Custom condition check
+
+    // custom condition check
     if (condition && !condition(req)) {
       return next();
     }
-    
-    // Generate cache key
+
+    // generate cache key
     const cacheKey = key || generateCacheKey(req);
-    
+
     try {
-      // Check if data exists in cache
+      // check if data exists in cache
       const cachedData = await cacheUtils.get(cacheKey);
-      
+
       if (cachedData) {
-        // Cache hit
+        // cache hit
         console.log(`Cache HIT: ${cacheKey}`);
         return res.status(200).json(cachedData);
       }
-      
-      // Cache miss - intercept response to cache it
+
+      // cache miss - intercept response to cache it
       console.log(`Cache MISS: ${cacheKey}`);
-      
-      // Store original res.json function
+
+      // store original res.json function
       const originalJson = res.json.bind(res);
-      
-      // Override res.json to cache the response
+
+      // override res.json to cache the response
       res.json = function(data) {
-        // Only cache successful responses
+        // only cache successful responses
         if (res.statusCode >= 200 && res.statusCode < 300) {
           cacheUtils.set(cacheKey, data, ttl).catch(err => {
             console.error(`Failed to cache ${cacheKey}:`, err.message);
           });
         }
-        
-        // Call original json method
+
+        // call original json method
         return originalJson(data);
       };
-      
+
       next();
     } catch (error) {
       console.error(`Cache middleware error for ${cacheKey}:`, error.message);
-      // On cache error, proceed without caching
+      // on cache error, proceed without caching
       next();
     }
   };
 };
 
 /**
- * Generate unique cache key based on request
- * Format: route:method:query_params
- * Example: /api/courses:GET:category=math&page=1
+ * generate unique cache key based on request
+ * format: route:method:query_params
+ * example: /api/courses:get:category=math&page=1
  */
 function generateCacheKey(req) {
   const route = req.route?.path || req.path;
   const method = req.method;
-  const query = Object.keys(req.query).length > 0 
-    ? `:${JSON.stringify(req.query)}` 
+  const query = Object.keys(req.query).length > 0
+    ? `:${JSON.stringify(req.query)}`
     : '';
-  
+
   return `${route}:${method}${query}`;
 }
 
 /**
- * Cache warming utility
- * Pre-populate cache with frequently accessed data
- * Call this on server startup or after data updates
+ * cache warming utility
+ * pre-populate cache with frequently accessed data
+ * call this on server startup or data updates
  */
 export const warmCache = async () => {
   console.log("Starting cache warming...");
-  
+
   try {
-    // Import controllers (only import what's needed)
+    // import controllers (only import what's needed)
     const { getAllCourses } = await import("../Controllers/CourseController.js");
     const { getAllCategories } = await import("../Controllers/CourseController.js");
     const { getContentSettings } = await import("../Controllers/contentController.js");
     const { getAllFAQs } = await import("../Controllers/contentController.js");
-    
-    // Create mock request/response objects
+
+    // create mock request/response objects
     const mockReq = { query: {}, params: {}, body: {} };
     const mockRes = {
       status: () => mockRes,
       json: (data) => data,
     };
-    
-    // Warm frequently accessed endpoints
-    // Note: This is a simplified example. In production, you'd query the database directly.
+
+    // warm frequently accessed endpoints
+    // note: this is a example. in production, you'd query the database directly.
     console.log("Cache warming completed");
   } catch (error) {
     console.error("Cache warming failed:", error.message);
@@ -126,20 +129,20 @@ export const warmCache = async () => {
 };
 
 /**
- * Cache invalidation middleware
- * Automatically invalidate related caches after mutations
- * 
- * Usage:
- * router.post('/api/courses', authenticate, invalidateOnMutation(['courses', 'stats']), createCourse);
+ * cache invalidation middleware
+ * automatically invalidate related caches mutations
+ *
+ * usage:
+ * router.post('/api/courses', authenticate, invalidateonmutation(['courses', 'stats']), createcourse);
  */
 export const invalidateOnMutation = (cacheGroups = []) => {
   return async (req, res, next) => {
-    // Store original json method
+    // store original json method
     const originalJson = res.json.bind(res);
-    
-    // Override res.json to invalidate cache after successful mutation
+
+    // override res.json to invalidate cache successful mutation
     res.json = async function(data) {
-      // Only invalidate on successful mutations
+      // only invalidate on successful mutations
       if (res.statusCode >= 200 && res.statusCode < 300) {
         for (const group of cacheGroups) {
           try {
@@ -171,10 +174,10 @@ export const invalidateOnMutation = (cacheGroups = []) => {
           }
         }
       }
-      
+
       return originalJson(data);
     };
-    
+
     next();
   };
 };

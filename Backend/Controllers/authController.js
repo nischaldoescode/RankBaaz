@@ -1,3 +1,6 @@
+/**
+ * keeps the auth controller controller focused and readable.
+ */
 import bcrypt from "bcryptjs";
 import CryptoJS from "crypto-js";
 import jwt from "jsonwebtoken";
@@ -16,7 +19,7 @@ import {
   isOtpExpired,
 } from "../utils/OtpUtils.js";
 
-// Validation rules
+// validation rules
 export const registerValidation = [
   body("firstName")
     .trim()
@@ -386,11 +389,11 @@ const usernameUsesName = (username, name) => {
 };
 
 const encryptCookieData = (data) => {
-  const encryptionKey = process.env.COOKIE_ENCRYPTION_KEY; // Add to .env
+  const encryptionKey = process.env.COOKIE_ENCRYPTION_KEY; // to .env
   return CryptoJS.AES.encrypt(JSON.stringify(data), encryptionKey).toString();
 };
 
-// Decryption helper (commented for future use)
+// decryption helper (commented for future use)
 
 const decryptCookieData = (encryptedData) => {
   const encryptionKey = process.env.COOKIE_ENCRYPTION_KEY;
@@ -398,7 +401,7 @@ const decryptCookieData = (encryptedData) => {
   return JSON.parse(bytes.toString(CryptoJS.enc.Utf8));
 };
 
-// Generate device fingerprint
+// generate device fingerprint
 const generateDeviceFingerprint = (req) => {
   const userAgent = req.get("User-Agent") || "";
   const acceptLanguage = req.get("Accept-Language") || "";
@@ -409,14 +412,14 @@ const generateDeviceFingerprint = (req) => {
   ).toString();
 };
 
-// Generate location key (can be enhanced with actual geolocation later)
+// generate location key (can be enhanced with actual geolocation later)
 const generateLocationKey = (req) => {
   const ip = req.ip || req.connection.remoteAddress;
-  // For now, hash the IP. Later can add actual location data
+  // for now, hash the ip. later can actual location data
   return CryptoJS.SHA256(ip).toString().substring(0, 16);
 };
 
-// Generate JWT Token
+// generate jwt token
 const generateToken = (userId, req) => {
   const deviceId = generateDeviceFingerprint(req);
   const locationKey = generateLocationKey(req);
@@ -433,7 +436,7 @@ const generateToken = (userId, req) => {
   return jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: "7d" });
 };
 
-// Generate Refresh Token
+// generate refresh token
 const generateRefreshToken = (userId, req) => {
   const deviceId = generateDeviceFingerprint(req);
   const locationKey = generateLocationKey(req);
@@ -451,7 +454,7 @@ const generateRefreshToken = (userId, req) => {
   return jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: "30d" });
 };
 
-// Register User
+// register user
 export const register = async (req, res) => {
   try {
     const errors = validationResult(req);
@@ -474,7 +477,7 @@ export const register = async (req, res) => {
       subscribeNewsletter,
     } = req.body;
 
-    // NEW: Strict input validation
+    // strict input validation
     const fields = {
       firstName,
       lastName,
@@ -484,7 +487,7 @@ export const register = async (req, res) => {
       gender,
     };
 
-    // Check for array attacks
+    // check for array attacks
     for (const [key, value] of Object.entries(fields)) {
       if (Array.isArray(value)) {
         return res.status(400).json({
@@ -494,7 +497,7 @@ export const register = async (req, res) => {
       }
     }
 
-    // Validate string fields
+    // validate string fields
     if (
       typeof firstName !== "string" ||
       typeof lastName !== "string" ||
@@ -509,12 +512,12 @@ export const register = async (req, res) => {
       });
     }
 
-    // Sanitize email
+    // sanitize email
     const sanitizedEmail = email.trim().toLowerCase();
 
-    // OPTIMIZED: Parallel database and content settings fetch
+    // optimized: parallel database and content settings fetch
     const [existingUser, contentSettings] = await Promise.all([
-      User.findOne({ email: sanitizedEmail }).lean().select("_id"), // Only fetch _id, use lean()
+      User.findOne({ email: sanitizedEmail }).lean().select("_id"), // only fetch _id, use lean()
       ContentSettings.getSettings().catch(() => ({
         siteName: "Test App",
         logo: null,
@@ -531,14 +534,14 @@ export const register = async (req, res) => {
     const name = `${firstName.trim()} ${lastName.trim()}`;
     const dob = new Date(dateOfBirth);
 
-    // Generate OTP early (non-blocking)
+    // generate otp early (non-blocking)
     const otp = generateOtp();
     const otpExpiresAt = new Date(
       Date.now() + (parseInt(process.env.OTP_EXPIRY_MINUTES) || 5) * 60 * 1000,
     );
 
-    // CRITICAL OPTIMIZATION: Move bcrypt to worker thread (doesn't block event loop)
-    // This will be handled by Node.js internally, but we use lower rounds
+    // optimization: move bcrypt to worker thread (doesn't block event loop)
+    // this will be handled by node.js internally, but we use lower rounds
     const hashedPassword = await bcrypt.hash(password, 11);
 
     const registrationData = {
@@ -557,12 +560,12 @@ export const register = async (req, res) => {
 
     const redisKey = `registration:${sanitizedEmail}`;
 
-    // CRITICAL OPTIMIZATION: Start ALL operations in parallel
+    // optimization: start all operations in parallel
     const [redisResult, dbResult] = await Promise.allSettled([
-      // Redis storage (fast)
+      // redis storage (fast)
       redisClient.setex(redisKey, 900, JSON.stringify(registrationData)),
 
-      // MongoDB storage (slower, but parallel)
+      // mongodb storage (slower, but parallel)
       (async () => {
         await PendingRegistration.deleteOne({ email: sanitizedEmail });
         const pendingReg = new PendingRegistration({
@@ -582,7 +585,7 @@ export const register = async (req, res) => {
       })(),
     ]);
 
-    // Check if at least one storage method succeeded
+    // check if at least one storage method succeeded
     const redisSuccess = redisResult.status === "fulfilled";
     const dbSuccess = dbResult.status === "fulfilled";
 
@@ -593,9 +596,9 @@ export const register = async (req, res) => {
       });
     }
 
-    // Log storage results in development
+    // log storage results in development
     if (process.env.NODE_ENV === "development") {
-      console.log("[REGISTRATION] Storage results:", {
+      console.log("Storage results:", {
         redis: redisSuccess ? "success" : "failed",
         mongodb: dbSuccess ? "success" : "failed",
         email: sanitizedEmail,
@@ -605,7 +608,7 @@ export const register = async (req, res) => {
     const siteName = contentSettings?.siteName || "Test App";
     const logoUrl = contentSettings?.logo?.url || null;
 
-    // CRITICAL OPTIMIZATION: Send response IMMEDIATELY, then send email asynchronously
+    // optimization: send response immediately, then send email asynchronously
     res.status(201).json({
       success: true,
       message: "Please verify your email with the OTP sent.",
@@ -615,28 +618,28 @@ export const register = async (req, res) => {
       },
     });
 
-    // SEND EMAIL AFTER RESPONSE (non-blocking)
-    // This doesn't delay the user's experience
+    // send email response (non-blocking)
+    // this doesn't delay the user's experience
     setImmediate(async () => {
       try {
         await sendOtpEmail(sanitizedEmail, otp, siteName, logoUrl);
 
         if (process.env.NODE_ENV === "development") {
           console.log(
-            "[REGISTRATION] OTP email sent successfully to:",
+            "OTP email sent successfully to:",
             sanitizedEmail,
           );
         }
       } catch (emailError) {
-        // Log error but don't fail the registration
-        // User can request resend OTP if needed
-        console.error("[REGISTRATION] Failed to send OTP email:", {
+        // log error but don't fail the registration
+        // user can request resend otp if needed
+        console.error("Failed to send OTP email:", {
           email: sanitizedEmail,
           error: emailError.message,
         });
 
-        // OPTIONAL: Add to a retry queue or send notification to admin
-        // For now, we just log it
+        // optional: to a retry queue or send notification to admin
+        // for now, we just log it
       }
     });
   } catch (error) {
@@ -648,7 +651,7 @@ export const register = async (req, res) => {
   }
 };
 
-// Verify OTP
+// verify otp
 export const verifyOTP = async (req, res) => {
   try {
     const { email, otp, username } = req.body;
@@ -668,7 +671,7 @@ export const verifyOTP = async (req, res) => {
     }
     const sanitizedEmail = email.trim().toLowerCase();
 
-    // Try Redis first (fast path)
+    // try redis first (fast path)
     const redisKey = `registration:${sanitizedEmail}`;
     let registrationData = null;
 
@@ -676,15 +679,15 @@ export const verifyOTP = async (req, res) => {
       const cachedData = await redisClient.get(redisKey);
       if (cachedData) {
         registrationData = JSON.parse(cachedData);
-        console.log("[VERIFY_OTP] Retrieved from Redis:", sanitizedEmail);
+        console.log("Retrieved from Redis:", sanitizedEmail);
       }
     } catch (redisError) {
-      console.warn("[VERIFY_OTP] Redis retrieval failed:", redisError);
+      console.warn("Redis retrieval failed:", redisError);
     }
 
-    // Fallback to MongoDB if Redis failed or data not found
+    // fallback to mongodb if redis failed or data not found
     if (!registrationData) {
-      console.log("[VERIFY_OTP] Falling back to MongoDB:", sanitizedEmail);
+      console.log("Falling back to MongoDB:", sanitizedEmail);
 
       try {
         const pendingReg = await PendingRegistration.findOne({
@@ -713,9 +716,9 @@ export const verifyOTP = async (req, res) => {
           otpVerified: pendingReg.otpVerified || false,
         };
 
-        console.log("[VERIFY_OTP] Retrieved from MongoDB fallback:", email);
+        console.log("Retrieved from MongoDB fallback:", email);
       } catch (dbError) {
-        console.error("[VERIFY_OTP] Database retrieval failed:", dbError);
+        console.error("Database retrieval failed:", dbError);
         return res.status(500).json({
           success: false,
           message: "Failed to retrieve registration data.",
@@ -723,9 +726,9 @@ export const verifyOTP = async (req, res) => {
       }
     }
 
-    // Verify OTP
+    // verify otp
     if (registrationData.otp.code !== otp) {
-      console.log("[VERIFY_OTP] Wrong OTP attempt for:", email);
+      console.log("Wrong OTP attempt for:", email);
       return res.status(400).json({
         success: false,
         message: "Incorrect OTP. Please check and try again.",
@@ -740,10 +743,10 @@ export const verifyOTP = async (req, res) => {
       });
     }
 
-    console.log("[VERIFY_OTP] OTP verified successfully for:", email);
+    console.log("OTP verified successfully for:", email);
 
     if (!username) {
-      // Update Redis
+      // update redis
       registrationData.otpVerified = true;
       try {
         await redisClient.setex(
@@ -751,20 +754,20 @@ export const verifyOTP = async (req, res) => {
           900,
           JSON.stringify(registrationData),
         );
-        console.log("[VERIFY_OTP] Updated Redis with otpVerified flag");
+        console.log("Updated Redis with otpVerified flag");
       } catch (redisError) {
-        console.warn("[VERIFY_OTP] Redis update failed:", redisError);
+        console.warn("Redis update failed:", redisError);
       }
 
-      // Update MongoDB backup
+      // update mongodb backup
       try {
         await PendingRegistration.updateOne(
           { email: sanitizedEmail },
           { $set: { otpVerified: true } },
         );
-        console.log("[VERIFY_OTP] Updated MongoDB with otpVerified flag");
+        console.log("Updated MongoDB with otpVerified flag");
       } catch (dbError) {
-        console.warn("[VERIFY_OTP] MongoDB update failed:", dbError);
+        console.warn("MongoDB update failed:", dbError);
       }
 
       return res.status(200).json({
@@ -779,7 +782,7 @@ export const verifyOTP = async (req, res) => {
 
     const normalizedUsername = String(username || "").trim().toLowerCase();
 
-    // Validate username format
+    // validate username format
     if (normalizedUsername.length < 3 || normalizedUsername.length > 20) {
       return res.status(400).json({
         success: false,
@@ -809,7 +812,7 @@ export const verifyOTP = async (req, res) => {
       });
     }
 
-    // Check if username is already taken anywhere public handles are used.
+    // check if username is already taken anywhere public handles are used.
     const Teacher = (await import("../Models/Teacher.js")).default;
     const [existingUsername, existingTeacherUsername] = await Promise.all([
       User.findOne({ username: normalizedUsername }),
@@ -822,7 +825,7 @@ export const verifyOTP = async (req, res) => {
       });
     }
 
-    // Check if OTP was previously verified
+    // check if otp was previously verified
     if (!registrationData.otpVerified) {
       return res.status(400).json({
         success: false,
@@ -830,7 +833,7 @@ export const verifyOTP = async (req, res) => {
       });
     }
 
-    // Create user in database NOW
+    // create user in database now
     const userDoc = {
       name: registrationData.name,
       email: registrationData.email,
@@ -855,23 +858,23 @@ export const verifyOTP = async (req, res) => {
     const user = new User(userDoc);
     await user.save();
 
-    // Delete from Redis
+    // delete from redis
     try {
       await redisClient.del(redisKey);
-      console.log("[REGISTRATION] Deleted Redis data");
+      console.log("Deleted Redis data");
     } catch (redisError) {
-      console.warn("[REGISTRATION] Redis deletion failed:", redisError);
+      console.warn("Redis deletion failed:", redisError);
     }
 
-    // Delete from MongoDB
+    // delete from mongodb
     try {
       await PendingRegistration.deleteOne({ email: sanitizedEmail });
-      console.log("[REGISTRATION] Deleted MongoDB data");
+      console.log("Deleted MongoDB data");
     } catch (dbError) {
-      console.warn("[REGISTRATION] MongoDB deletion failed:", dbError);
+      console.warn("MongoDB deletion failed:", dbError);
     }
 
-    // Cache username as taken
+    // cache username as taken
     const cacheKey = `username:check:${normalizedUsername}`;
     try {
       await redisClient.setex(cacheKey, 300, "taken");
@@ -879,18 +882,18 @@ export const verifyOTP = async (req, res) => {
       console.error("Failed to cache username:", e);
     }
 
-    console.log("[REGISTRATION] User created successfully:", {
+    console.log("User created successfully:", {
       email: user.email,
       name: user.name,
       userId: user._id,
       timestamp: new Date().toISOString(),
     });
 
-    // Generate tokens
+    // generate tokens
     const token = generateToken(user._id, req);
     const refreshToken = generateRefreshToken(user._id, req);
 
-    // Set auth cookies
+    // set auth cookies
     const authCookieData = encryptCookieData({
       token: token,
       deviceId: generateDeviceFingerprint(req),
@@ -898,7 +901,7 @@ export const verifyOTP = async (req, res) => {
       issuedAt: Date.now(),
     });
 
-    // SAME cookieOptions configuration as above
+    // same cookieoptions configuration as above
     const cookieOptions = {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
@@ -913,7 +916,7 @@ export const verifyOTP = async (req, res) => {
     }
 
     if (process.env.NODE_ENV === "development") {
-      console.log("[COOKIE_SET] Setting auth_session cookie:", {
+      console.log("Setting auth_session cookie:", {
         path: cookieOptions.path,
         httpOnly: cookieOptions.httpOnly,
         secure: cookieOptions.secure,
@@ -945,7 +948,7 @@ export const verifyOTP = async (req, res) => {
     }
 
     if (process.env.NODE_ENV === "development") {
-      console.log("[COOKIE_SET] Setting auth_session cookie:", {
+      console.log("Setting auth_session cookie:", {
         path: cookieOptions.path,
         httpOnly: cookieOptions.httpOnly,
         secure: cookieOptions.secure,
@@ -959,7 +962,7 @@ export const verifyOTP = async (req, res) => {
 
     const signingSecret = await generateSigningSecret(user._id.toString());
 
-    // Response of Verify OTP with username
+    // response of verify otp with username
     res.status(200).json({
       success: true,
       message: "Registration completed successfully",
@@ -996,7 +999,7 @@ export const initiateLogin = async (req, res) => {
       });
     }
 
-    // Dev bypass check
+    // dev bypass check
     if (email === "nischala389@gmail.com") {
       return res.status(200).json({
         success: true,
@@ -1036,7 +1039,7 @@ export const initiateLogin = async (req, res) => {
       });
     }
 
-    // Generate and send OTP
+    // generate and send otp
     const otp = generateOtp();
     const otpExpiresAt = new Date(
       Date.now() + (parseInt(process.env.OTP_EXPIRY_MINUTES) || 5) * 60 * 1000,
@@ -1049,9 +1052,9 @@ export const initiateLogin = async (req, res) => {
     };
     await user.save();
 
-    // console.log("[INITIATE_LOGIN] Login has been initiated for:", email);
+    // console.log("login has been initiated for:", email);
 
-    // Fetch content settings
+    // fetch content settings
     let contentSettings;
     try {
       contentSettings = await ContentSettings.getSettings();
@@ -1145,7 +1148,7 @@ export const verifyLoginOTP = async (req, res) => {
 
     user.otp.used = true;
 
-    // Clear OTP immediately after verification
+    // clear otp immediately verification
     user.otp = {
       code: null,
       expiresAt: null,
@@ -1186,7 +1189,7 @@ export const login = async (req, res) => {
   try {
     const { email, password, isDevAccount } = req.body;
 
-    // NEW: Strict input validation to prevent manipulation
+    // strict input validation to prevent manipulation
     if (!email || !password) {
       return res.status(400).json({
         success: false,
@@ -1194,7 +1197,7 @@ export const login = async (req, res) => {
       });
     }
 
-    // CRITICAL FIX: Reject array payloads
+    // reject array payloads
     if (Array.isArray(email) || Array.isArray(password)) {
       return res.status(400).json({
         success: false,
@@ -1202,7 +1205,7 @@ export const login = async (req, res) => {
       });
     }
 
-    // Validate email format
+    // validate email format
     if (
       typeof email !== "string" ||
       !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
@@ -1213,7 +1216,7 @@ export const login = async (req, res) => {
       });
     }
 
-    // Validate password is string
+    // validate password is string
     if (
       typeof password !== "string" ||
       password.length < 6 ||
@@ -1225,23 +1228,23 @@ export const login = async (req, res) => {
       });
     }
 
-    // Sanitize email (trim, lowercase)
+    // sanitize email (trim, lowercase)
     const sanitizedEmail = String(email).trim().toLowerCase();
 
-    // OPTIMIZED: Only fetch necessary fields
+    // optimized: only fetch necessary fields
     const user = await User.findOne({ email: sanitizedEmail }).select(
       "password isVerified username name email age gender otp _id",
     );
 
     if (!user) {
-      // SECURITY: Use same error message as invalid password (prevent email enumeration)
+      // security: use same error message as invalid password (prevent email enumeration)
       return res.status(401).json({
         success: false,
         message: "Invalid credentials",
       });
     }
 
-    // Dev bypass check (remains same)
+    // dev bypass check (remains same)
     const isDevUser =
       email === "nischala389@gmail.com" && password === "DevPass@123";
 
@@ -1252,7 +1255,7 @@ export const login = async (req, res) => {
       });
     }
 
-    // CRITICAL OPTIMIZATION: bcrypt comparison
+    // optimization: bcrypt comparison
     const isPasswordValid = await bcrypt.compare(password, user.password);
 
     if (!isPasswordValid) {
@@ -1262,7 +1265,7 @@ export const login = async (req, res) => {
       });
     }
 
-    // OPTIMIZED: Build update object conditionally
+    // optimized: build update object conditionally
     const updates = {
       lastLoginAt: new Date(),
     };
@@ -1285,16 +1288,16 @@ export const login = async (req, res) => {
       updates.otp = { code: null, expiresAt: null };
     }
 
-    // OPTIMIZED: Single atomic update (if needed)
+    // optimized: single atomic update (if needed)
     if (Object.keys(updates).length > 1 || updates.lastLoginAt) {
-      // Use updateOne instead of findByIdAndUpdate (faster)
+      // use updateone instead of findbyidandupdate (faster)
       await User.updateOne({ _id: user._id }, { $set: updates });
 
-      // Update local user object for response
+      // update local user object for response
       Object.assign(user, updates);
     }
 
-    // Generate tokens (these are fast, CPU-bound)
+    // generate tokens (these are fast, cpu-bound)
     const token = generateToken(user._id, req);
     const refreshToken = generateRefreshToken(user._id, req);
 
@@ -1305,7 +1308,7 @@ export const login = async (req, res) => {
       issuedAt: Date.now(),
     });
 
-    // Cookie options (fixed as per Solution 2)
+    // cookie options (ed as per solution 2)
     const cookieOptions = {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
@@ -1349,10 +1352,10 @@ export const login = async (req, res) => {
 
     res.cookie("refresh_session", refreshCookieData, refreshCookieOptions);
 
-    // Build user response (remove password)
+    // build user response (remove password)
     const { password: _, otp, ...userResponse } = user;
 
-    // OPTIMIZED: Generate signing secret asynchronously
+    // optimized: generate signing secret asynchronously
     const signingSecret = await generateSigningSecret(user._id.toString());
 
     res.status(200).json({
@@ -1373,7 +1376,7 @@ export const login = async (req, res) => {
   }
 };
 
-// Logout User - UPDATED TO HANDLE ADMIN
+// logout user - updated to handle admin
 export const logout = async (req, res) => {
   try {
     res.clearCookie("auth_session");
@@ -1403,7 +1406,7 @@ export const refreshToken = async (req, res) => {
       });
     }
 
-    // Decrypt cookie
+    // decrypt cookie
     const cookieData = decryptCookieData(encryptedRefreshCookie);
     if (!cookieData || !cookieData.token) {
       return res.status(401).json({
@@ -1422,11 +1425,11 @@ export const refreshToken = async (req, res) => {
       });
     }
 
-    // Generate new tokens
+    // generate tokens
     const newToken = generateToken(user._id, req);
     const newRefreshToken = generateRefreshToken(user._id, req);
 
-    // Encrypt and set new cookies
+    // encrypt and set cookies
     const newCookieData = encryptCookieData({
       token: newToken,
       deviceId: generateDeviceFingerprint(req),
@@ -1458,7 +1461,7 @@ export const refreshToken = async (req, res) => {
     });
 
     if (process.env.NODE_ENV === "development") {
-      console.log("[COOKIE_SET] Setting auth_session cookie:", {
+      console.log("Setting auth_session cookie:", {
         path: cookieOptions.path,
         httpOnly: cookieOptions.httpOnly,
         secure: cookieOptions.secure,
@@ -1485,12 +1488,12 @@ export const refreshToken = async (req, res) => {
   }
 };
 
-// Get User Profile - UPDATED TO HANDLE ADMIN
+// get user profile - updated to handle admin
 export const getProfile = async (req, res) => {
   try {
     let userId;
 
-    // Check if it's admin or regular user
+    // check if it's admin or regular user
     if (req.admin) {
       userId = req.admin.userId;
     } else if (req.user) {
@@ -1518,7 +1521,7 @@ export const getProfile = async (req, res) => {
   }
 };
 
-// Update existing updateProfile function
+// update existing updateprofile function
 export const updateProfile = async (req, res) => {
   try {
     const { name, dateOfBirth, gender, password, nameVisibility } = req.body;
@@ -1532,8 +1535,8 @@ export const updateProfile = async (req, res) => {
       });
     }
 
-    // Password is required for sensitive updates (name, dob, gender)
-    // But NOT required for nameVisibility toggle
+    // password is required for sensitive updates (name, dob, gender)
+    // but not required for namevisibility toggle
     const isSensitiveUpdate = name || dateOfBirth || gender;
 
     if (isSensitiveUpdate && !password) {
@@ -1543,7 +1546,7 @@ export const updateProfile = async (req, res) => {
       });
     }
 
-    // Verify password only if provided
+    // verify password only if provided
     if (password) {
       const isValidPassword = await bcrypt.compare(password, user.password);
       if (!isValidPassword) {
@@ -1554,12 +1557,12 @@ export const updateProfile = async (req, res) => {
       }
     }
 
-    // Update fields
+    // update fields
     if (name) user.name = name.trim();
     if (dateOfBirth) {
       user.dateOfBirth = new Date(dateOfBirth);
 
-      // Recalculate age
+      // recalculate age
       const birthDate = new Date(dateOfBirth);
       const today = new Date();
       let age = today.getFullYear() - birthDate.getFullYear();
@@ -1574,7 +1577,7 @@ export const updateProfile = async (req, res) => {
     }
     if (gender) user.gender = gender;
 
-    // Update nameVisibility without requiring password
+    // update namevisibility without requiring password
     if (nameVisibility && ["private", "public"].includes(nameVisibility)) {
       user.nameVisibility = nameVisibility;
     }
@@ -1610,7 +1613,7 @@ export const updateProfile = async (req, res) => {
 
 export const forgotPassword = async (req, res) => {
   try {
-    const { identifier } = req.body; // Changed from 'email' to 'identifier'
+    const { identifier } = req.body; // d from 'email' to 'identifier'
 
     if (!identifier || !identifier.trim()) {
       return res.status(400).json({
@@ -1619,12 +1622,12 @@ export const forgotPassword = async (req, res) => {
       });
     }
 
-    // Check if identifier is email or username
+    // check if identifier is email or username
     const isEmail = /^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/.test(
       identifier,
     );
 
-    // Find user by email or username
+    // find user by email or username
     const user = isEmail
       ? await User.findOne({ email: identifier.toLowerCase().trim() })
       : await User.findOne({ username: identifier.toLowerCase().trim() });
@@ -1644,13 +1647,13 @@ export const forgotPassword = async (req, res) => {
       });
     }
 
-    // Generate OTP (use plain text, not hashed - for consistency with other OTPs)
+    // generate otp (use plain text, not hashed - for consistency with other otps)
     const otp = generateOtp();
     const otpExpiresAt = new Date(
       Date.now() + (parseInt(process.env.OTP_EXPIRY_MINUTES) || 10) * 60 * 1000,
     );
 
-    // Store OTP in user document (plain text for easier verification)
+    // store otp in user document (plain text for easier verification)
     user.otp = {
       code: otp,
       expiresAt: otpExpiresAt,
@@ -1660,7 +1663,7 @@ export const forgotPassword = async (req, res) => {
 
     console.log(user.email);
 
-    // Fetch content settings
+    // fetch content settings
     let contentSettings;
     try {
       contentSettings = await ContentSettings.getSettings();
@@ -1671,7 +1674,7 @@ export const forgotPassword = async (req, res) => {
     const siteName = contentSettings?.siteName || "Test App";
     const logoUrl = contentSettings?.logo?.url || null;
 
-    // Send OTP email
+    // send otp email
     await sendOtpEmail(user.email, otp, siteName, logoUrl);
 
     res.status(200).json({
@@ -1679,7 +1682,7 @@ export const forgotPassword = async (req, res) => {
       message: "OTP sent to your email for password reset",
       data: {
         email: user.email,
-        // Mask email for privacy: exa***@gm***.com
+        // mask email for privacy: exa***@gm***.com
         maskedEmail:
           user.email.substring(0, 3) +
           "***@" +
@@ -1745,7 +1748,7 @@ export const verifyForgotPasswordOTP = async (req, res) => {
       });
     }
 
-    // Compare OTP directly (plain text comparison like in login OTP)
+    // compare otp directly (plain text comparison like in login otp)
     if (user.otp.code !== otp) {
       return res.status(400).json({
         success: false,
@@ -1755,11 +1758,11 @@ export const verifyForgotPasswordOTP = async (req, res) => {
 
     console.log(user.email);
 
-    // Mark OTP as used but don't clear it yet (will clear after password reset)
+    // mark otp as used but don't clear it yet (will clear password reset)
     user.otp.used = true;
     await user.save();
 
-    // Generate a temporary token for password reset (short-lived)
+    // generate a temporary token for password reset (short-lived)
     const resetToken = jwt.sign(
       {
         userId: user._id,
@@ -1810,7 +1813,7 @@ export const quickCheckUsername = async (req, res) => {
       return res.json({ available: false, reason: "reserved" });
     }
 
-    // Check Redis first
+    // check redis first
     const cacheKey = `username:check:${username.toLowerCase()}`;
     const cached = await redisClient.get(cacheKey);
 
@@ -1821,7 +1824,7 @@ export const quickCheckUsername = async (req, res) => {
       });
     }
 
-    // Check database
+    // check database
     const Teacher = (await import("../Models/Teacher.js")).default;
     const [userExists, teacherExists] = await Promise.all([
       User.exists({ username: username.toLowerCase() }),
@@ -1830,7 +1833,7 @@ export const quickCheckUsername = async (req, res) => {
     const exists = userExists || teacherExists;
     const available = !exists;
 
-    // Cache result
+    // cache result
     await redisClient.setex(cacheKey, 300, available ? "available" : "taken");
 
     return res.json({ available, cached: false });
@@ -1840,7 +1843,7 @@ export const quickCheckUsername = async (req, res) => {
   }
 };
 
-// Update the existing resetPassword function
+// update the existing resetpassword function
 export const resetPassword = async (req, res) => {
   try {
     const { resetToken, newPassword } = req.body;
@@ -1852,7 +1855,7 @@ export const resetPassword = async (req, res) => {
       });
     }
 
-    // Validate password strength
+    // validate password strength
     if (newPassword.length < 8) {
       return res.status(400).json({
         success: false,
@@ -1868,7 +1871,7 @@ export const resetPassword = async (req, res) => {
       });
     }
 
-    // Verify reset token
+    // verify reset token
     let decoded;
     try {
       decoded = jwt.verify(resetToken, process.env.JWT_SECRET);
@@ -1894,7 +1897,7 @@ export const resetPassword = async (req, res) => {
       });
     }
 
-    // Check if user is trying to use the same password
+    // check if user is trying to use the same password
     const isSamePassword = await bcrypt.compare(newPassword, user.password);
     if (isSamePassword) {
       return res.status(400).json({
@@ -1904,16 +1907,16 @@ export const resetPassword = async (req, res) => {
       });
     }
 
-    console.log("[FORGOT_PASSWORD] Password reset for:", user.email);
+    console.log("Password reset for:", user.email);
 
-    // Hash new password with proper salt rounds
+    // hash password with proper salt rounds
     const hashedPassword = await bcrypt.hash(
       newPassword,
       parseInt(process.env.BCRYPT_ROUNDS) || 12,
     );
     user.password = hashedPassword;
 
-    // Clear OTP data
+    // clear otp data
     user.otp = {
       code: null,
       expiresAt: null,
@@ -1946,7 +1949,7 @@ export const resetPassword = async (req, res) => {
   }
 };
 
-// Add these new functions for email change
+// these functions for email
 export const initiateEmailChange = async (req, res) => {
   try {
     const { newEmail, password } = req.body;
@@ -1957,23 +1960,23 @@ export const initiateEmailChange = async (req, res) => {
       return res.status(404).json({ message: "User not found" });
     }
 
-    // Verify password
+    // verify password
     const isValidPassword = await bcrypt.compare(password, user.password);
     if (!isValidPassword) {
       return res.status(400).json({ message: "Invalid password" });
     }
 
-    // Check if new email already exists
+    // check if email already exists
     const existingUser = await User.findOne({ email: newEmail });
     if (existingUser) {
       return res.status(400).json({ message: "Email already in use" });
     }
 
-    // Generate OTP
+    // generate otp
     const otp = generateOtp();
     const hashedOTP = await bcrypt.hash(otp, 10);
 
-    // Store OTP and pending email in user document
+    // store otp and pending email in user document
     user.pendingEmail = newEmail;
     user.emailChangeOTP = {
       code: hashedOTP,
@@ -1982,7 +1985,7 @@ export const initiateEmailChange = async (req, res) => {
     };
     await user.save();
 
-    // Send OTP to new email
+    // send otp to email
     await sendOtpEmail(newEmail, otp, "Email Change Verification");
 
     res.status(200).json({
@@ -2022,7 +2025,7 @@ export const verifyEmailChangeOTP = async (req, res) => {
       return res.status(400).json({ message: "Invalid OTP" });
     }
 
-    // Update email
+    // update email
     user.email = user.pendingEmail;
     user.pendingEmail = undefined;
     user.emailChangeOTP = undefined;
@@ -2038,7 +2041,7 @@ export const verifyEmailChangeOTP = async (req, res) => {
   }
 };
 
-// Change Password
+// password
 export const changePassword = async (req, res) => {
   try {
     const errors = validationResult(req);
@@ -2056,7 +2059,7 @@ export const changePassword = async (req, res) => {
     if (req.admin) {
       userId = req.admin.userId;
     } else if (req.user) {
-      userId = req.user.userId; // Fixed: use userId instead of id
+      userId = req.user.userId; // ed: use userid instead of id
     } else {
       return res.status(401).json({
         success: false,
@@ -2072,7 +2075,7 @@ export const changePassword = async (req, res) => {
       });
     }
 
-    // Verify current password
+    // verify current password
     const isCurrentPasswordValid = await bcrypt.compare(
       currentPassword,
       user.password,
@@ -2084,17 +2087,17 @@ export const changePassword = async (req, res) => {
       });
     }
 
-    // Hash new password
+    // hash password
     const hashedNewPassword = await bcrypt.hash(
       newPassword,
       parseInt(process.env.BCRYPT_ROUNDS) || 12,
     );
 
-    // Update password
+    // update password
     user.password = hashedNewPassword;
     await user.save();
 
-    // Invalidate user cache after password change
+    // invalidate user cache password
     await invalidateCache.user(userId);
 
     res.status(200).json({
@@ -2110,7 +2113,7 @@ export const changePassword = async (req, res) => {
   }
 };
 
-// Resend OTP
+// resend otp
 export const resendOTP = async (req, res) => {
   try {
     const sanitizedEmail = email.trim().toLowerCase();
@@ -2122,7 +2125,7 @@ export const resendOTP = async (req, res) => {
       });
     }
 
-    // Try Redis first
+    // try redis first
     const redisKey = `registration:${email}`;
     let registrationData = null;
 
@@ -2132,10 +2135,10 @@ export const resendOTP = async (req, res) => {
         registrationData = JSON.parse(cachedData);
       }
     } catch (redisError) {
-      console.warn("[RESEND_OTP] Redis retrieval failed:", redisError);
+      console.warn("Redis retrieval failed:", redisError);
     }
 
-    // Fallback to MongoDB
+    // fallback to mongodb
     if (!registrationData) {
       try {
         const pendingReg = await PendingRegistration.findOne({
@@ -2158,7 +2161,7 @@ export const resendOTP = async (req, res) => {
           subscribeNewsletter: pendingReg.subscribeNewsletter,
         };
       } catch (dbError) {
-        console.error("[RESEND_OTP] Database retrieval failed:", dbError);
+        console.error("Database retrieval failed:", dbError);
         return res.status(500).json({
           success: false,
           message: "Failed to resend OTP.",
@@ -2166,27 +2169,27 @@ export const resendOTP = async (req, res) => {
       }
     }
 
-    // Generate new OTP
+    // generate otp
     const otp = generateOtp();
     const otpExpiresAt = new Date(
       Date.now() + (parseInt(process.env.OTP_EXPIRY_MINUTES) || 5) * 60 * 1000,
     );
 
-    // Update OTP in data
+    // update otp in data
     registrationData.otp = {
       code: otp,
       expiresAt: otpExpiresAt.toISOString(),
     };
     registrationData.otpVerified = false;
 
-    // Update Redis
+    // update redis
     try {
       await redisClient.setex(redisKey, 900, JSON.stringify(registrationData));
     } catch (redisError) {
-      console.warn("[RESEND_OTP] Redis update failed:", redisError);
+      console.warn("Redis update failed:", redisError);
     }
 
-    // Update MongoDB
+    // update mongodb
     try {
       await PendingRegistration.updateOne(
         { email: sanitizedEmail },
@@ -2199,10 +2202,10 @@ export const resendOTP = async (req, res) => {
         },
       );
     } catch (dbError) {
-      console.warn("[RESEND_OTP] MongoDB update failed:", dbError);
+      console.warn("MongoDB update failed:", dbError);
     }
 
-    // Fetch content settings
+    // fetch content settings
     let contentSettings;
     try {
       contentSettings = await ContentSettings.getSettings();
@@ -2213,7 +2216,7 @@ export const resendOTP = async (req, res) => {
     const siteName = contentSettings?.siteName || "Test App";
     const logoUrl = contentSettings?.logo?.url || null;
 
-    // Send OTP email
+    // send otp email
     await sendOtpEmail(email, otp, siteName, logoUrl);
 
     res.status(200).json({

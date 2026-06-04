@@ -1,3 +1,6 @@
+/**
+ * keeps the tabs component focused and readable.
+ */
 import * as React from "react"
 import * as TabsPrimitive from "@radix-ui/react-tabs"
 

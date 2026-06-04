@@ -1,3 +1,6 @@
+/**
+ * keeps the main module focused and readable.
+ */
 import React, { useEffect } from "react";
 import ReactDOM from "react-dom/client";
 import { BrowserRouter, useLocation } from "react-router-dom";
@@ -16,33 +19,33 @@ const ScrollToTop = () => {
   return null;
 };
 
-// Register Service Worker for image caching
+// register service worker for image caching
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
     navigator.serviceWorker
       .register("/sw.js")
       .then((registration) => {
-        // console.log('[SW] Service Worker registered:', registration.scope);
+        // console.log('service worker registered:', registration.scope);
       })
       .catch((error) => {
-        // console.error('[SW] Service Worker registration failed:', error);
+        // console.error('service worker registration failed:', error);
       });
   });
 }
 
-// Initialize cache cleanup on app start
+// initialize cache cleanup on app start
 import { cacheManager } from "./utils/cacheManager";
 
-// // Clear expired cache entries on startup
-// cacheManager.clearExpired().then((cleared) => {
+// // clear expired cache entries on startup
+// cachemanager.clearexpired().then((cleared) => {
 //   if (cleared > 0) {
-//     console.log(`[Cache] Cleaned up ${cleared} expired entries on startu`);
+//     console.log(`[cache] cleaned up ${cleared} expired entries on startu`);
 //   }
 // });
 
-// // Optional: Log cache stats
-// cacheManager.getStats().then((stats) => {
-//   console.log('[Cache] Statistics:', stats);
+// // optional: log cache stats
+// cachemanager.getstats().then((stats) => {
+//   console.log('[cache] statistics:', stats);
 // })
 
 ReactDOM.createRoot(document.getElementById("root")).render(

@@ -1,3 +1,6 @@
+/**
+ * keeps the footer preview utility focused and readable.
+ */
 import {
   Mail,
   Phone,
@@ -27,7 +30,7 @@ export const FooterPreview = ({ data }) => {
 
       <div className="bg-card rounded-xl p-6 border border-border">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {/* Brand Section */}
+          {/* brand section */}
           <div>
             <h4 className="text-sm font-semibold text-muted-foreground mb-3">
               Brand
@@ -47,8 +50,8 @@ export const FooterPreview = ({ data }) => {
             </p>
           </div>
 
-          {/* Contact Section */}
-          {/* Contact Section */}
+          {/* contact section */}
+          {/* contact section */}
           <div>
             <h4 className="text-sm font-semibold text-muted-foreground mb-3">
               Contact
@@ -75,8 +78,8 @@ export const FooterPreview = ({ data }) => {
             </div>
           </div>
 
-          {/* Social Media Section */}
-          {/* Social Media Section */}
+          {/* social media section */}
+          {/* social media section */}
           <div>
             <h4 className="text-sm font-semibold text-muted-foreground mb-3">
               Follow Us
@@ -158,7 +161,7 @@ export const FooterPreview = ({ data }) => {
           </div>
         </div>
 
-        {/* Copyright */}
+        {/* copyright */}
         <div className="mt-6 pt-6 border-t border-border text-center">
           <p className="text-sm text-muted-foreground">{copyrightText}</p>
         </div>

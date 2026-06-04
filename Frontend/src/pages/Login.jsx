@@ -1,3 +1,6 @@
+/**
+ * keeps the login page focused and readable.
+ */
 import React, { useState, useEffect, useMemo } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
@@ -177,7 +180,7 @@ const Login = () => {
         const { isDevAccount, isRegistered, isVerified } = response.data.data;
 
         if (isDevAccount) {
-          setLoginStep(3); // Skip OTP for dev account
+          setLoginStep(3); // skip otp for dev account
           toast.success("Dev account detected");
         } else if (isRegistered && isVerified) {
           setLoginStep(2);
@@ -221,12 +224,12 @@ const Login = () => {
       );
 
       if (response.data.success) {
-        // Clear OTP from state before moving to password step
+        // clear otp from state moving to password step
         setFormData((prev) => ({ ...prev, otp: "" }));
         setLoginStep(3);
         toast.success("OTP verified");
       } else {
-        // Handle unexpected response
+        // handle unexpected response
         setErrors({ otp: "OTP verification failed. Please try again." });
       }
     } catch (error) {
@@ -254,7 +257,7 @@ const Login = () => {
 
   const handleChangeEmail = () => {
     setLoginStep(1);
-    // Clear OTP and password, preserve email
+    // clear otp and password, preserve email
     setFormData((prev) => ({
       ...prev,
       otp: "",
@@ -319,7 +322,7 @@ const Login = () => {
   };
   if (!mounted || authLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center pt-16">
+      <div className="vg-auth-page min-h-screen flex items-center justify-center pt-16">
         <Loading variant="auth" />
       </div>
     );
@@ -347,7 +350,7 @@ const Login = () => {
 
   return (
     <div className="h-[95vh] relative overflow-hidden mt-[-50px]">
-      <div className="flex items-center justify-center min-h-screen relative z-10 px-4 sm:px-6 lg:px-8 py-3 sm:py-8">
+      <div className="vg-auth-page flex items-center justify-center min-h-screen relative z-10 px-4 sm:px-6 lg:px-8 py-3 sm:py-8">
         <AnimatePresence mode="wait">
           {showForgotPassword ? (
             <ForgotPassword onBackToLogin={handleCloseForgotPassword} />
@@ -358,7 +361,7 @@ const Login = () => {
               initial={animations && !reducedMotion ? "hidden" : "visible"}
               animate="visible"
             >
-              {/* Back Button */}
+              {/* back button */}
               <motion.div variants={itemVariants}>
                 {loginStep === 1 ? (
                   <Link
@@ -390,7 +393,7 @@ const Login = () => {
                 )}
               </motion.div>
 
-              {/* Header */}
+              {/* header */}
               <motion.div variants={itemVariants} className="text-center">
                 <h2 className="text-2xl sm:text-3xl font-bold text-foreground mb-1 sm:mb-2">
                   Welcome back!
@@ -400,7 +403,7 @@ const Login = () => {
                 </p>
               </motion.div>
 
-              {/* Login Form */}
+              {/* login form */}
               <motion.div variants={itemVariants}>
                 <Card className="border-0 bg-card/60 backdrop-blur-sm shadow-sm sm:shadow-md md:shadow-lg">
                   <CardContent className="p-7 sm:p-8 md:p-9">
@@ -408,7 +411,7 @@ const Login = () => {
                       className="space-y-5 sm:space-y-5 md:space-y-6"
                       onSubmit={handleSubmit}
                     >
-                      {/* Submit Error */}
+                      {/* submit error */}
                       {errors.submit && (
                         <motion.div
                           initial={
@@ -428,7 +431,7 @@ const Login = () => {
                         </motion.div>
                       )}
 
-                      {/* Step 1: Email */}
+                      {/* step 1: email */}
                       {loginStep === 1 && (
                         <motion.div
                           initial={{ opacity: 0, x: -20 }}

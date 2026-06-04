@@ -1,19 +1,22 @@
+/**
+ * keeps the video player component focused and readable.
+ */
 import React, { useMemo } from "react";
 import { AlertCircle } from "lucide-react";
 
 const VideoPlayer = ({ videoData, className = "" }) => {
-  // Extract video ID from URL
+  // extract video id from url
   const extractVideoId = (url) => {
     if (!url) return null;
 
-    // YouTube formats:
-    // https://www.youtube.com/watch?v=VIDEO_ID
-    // https://youtu.be/VIDEO_ID
-    // https://www.youtube.com/embed/VIDEO_ID
+    // youtube formats:
+    // https://www.youtube.com/watch?v=video_id
+    // https://youtu.be/video_id
+    // https://www.youtube.com/embed/video_id
 
     let videoId = null;
 
-    // Match youtube.com/watch?v=VIDEO_ID format
+    // match youtube.com/watch?v=video_id format
     const youtubeMatch = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([a-zA-Z0-9_-]{11})/);
     if (youtubeMatch) {
       videoId = youtubeMatch[1];
@@ -22,7 +25,7 @@ const VideoPlayer = ({ videoData, className = "" }) => {
     return videoId;
   };
 
-  // Get embed URL based on platform
+  // get embed url based on platform
   const embedUrl = useMemo(() => {
     if (!videoData || !videoData.url) return null;
 
@@ -34,24 +37,24 @@ const VideoPlayer = ({ videoData, className = "" }) => {
         return `https://www.youtube.com/embed/${videoId}?modestbranding=1&rel=0&fs=1&cc_load_policy=0&iv_load_policy=3`;
       }
     } else if (platform === "vimeo") {
-      // Extract Vimeo video ID
+      // extract vimeo video id
       const vimeoMatch = videoData.url.match(/vimeo\.com\/(\d+)/);
       if (vimeoMatch) {
         return `https://player.vimeo.com/video/${vimeoMatch[1]}`;
       }
     } else if (platform === "dailymotion") {
-      // Extract Dailymotion video ID
+      // extract dailymotion video id
       const dmMatch = videoData.url.match(/(?:dailymotion\.com\/video\/|dai\.ly\/)([a-zA-Z0-9_-]+)/);
       if (dmMatch) {
         return `https://www.dailymotion.com/embed/video/${dmMatch[1]}`;
       }
     }
 
-    // Fallback to original URL for other platforms
+    // fallback to original url for other platforms
     return videoData.url;
   }, [videoData]);
 
-  // Validation
+  // validation
   if (!videoData || !videoData.url) {
     return (
       <div className="flex items-center justify-center h-64 bg-gray-100 dark:bg-gray-900 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-700">
@@ -76,7 +79,7 @@ const VideoPlayer = ({ videoData, className = "" }) => {
 
   return (
     <div className={`relative w-full ${className}`}>
-      {/* Video title and platform badge */}
+      {/* video title and platform badge */}
       <div className="mb-3">
         <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100">
           {videoData.title || "Video Lesson"}
@@ -88,9 +91,9 @@ const VideoPlayer = ({ videoData, className = "" }) => {
         )}
       </div>
 
-      {/* Responsive iframe wrapper */}
+      {/* responsive iframe wrapper */}
       <div className="relative w-full" style={{ paddingBottom: "56.25%" }}>
-        {/* paddingBottom: "56.25%" = 16:9 aspect ratio */}
+        {/* paddingbottom: "56.25%" = 16:9 aspect ratio */}
         <iframe
           className="absolute inset-0 w-full h-full rounded-lg border border-gray-200 dark:border-gray-700 shadow-lg"
           src={embedUrl}
@@ -101,7 +104,7 @@ const VideoPlayer = ({ videoData, className = "" }) => {
         />
       </div>
 
-      {/* Video description if available */}
+      {/* video description if available */}
       {videoData.description && (
         <p className="text-sm text-gray-600 dark:text-gray-400 mt-3">
           {videoData.description}

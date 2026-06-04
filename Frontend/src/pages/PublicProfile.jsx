@@ -1,3 +1,6 @@
+/**
+ * keeps the public profile page focused and readable.
+ */
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
@@ -153,11 +156,11 @@ const PublicProfile = () => {
 
   const getBadgeIcon = (badgeType) => {
     const icons = {
-      leaderboard_legend: "🏆",
-      perfectionist: "💯",
-      speed_demon: "⚡",
+      leaderboard_legend: "",
+      perfectionist: "100",
+      speed_demon: "",
     };
-    return icons[badgeType] || "🎖️";
+    return icons[badgeType] || "";
   };
 
   if (loading) {
@@ -181,7 +184,7 @@ const PublicProfile = () => {
   return (
     <div className="min-h-screen pt-16 pb-8 sm:pb-12 bg-background">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 md:px-8 py-4 sm:py-6 md:py-8">
-        {/* Header */}
+        {/* header */}
         <div className="flex items-center justify-between mb-4 sm:mb-6">
           <Button
             variant="ghost"
@@ -205,7 +208,7 @@ const PublicProfile = () => {
           )}
         </div>
 
-        {/* Profile Header */}
+        {/* profile header */}
         <Card className="mb-4 sm:mb-6 overflow-hidden">
           <CardContent className="pt-4 sm:pt-6 px-4 sm:px-6">
             <div className="flex flex-col md:flex-row items-center md:items-start gap-4 sm:gap-6">
@@ -238,7 +241,7 @@ const PublicProfile = () => {
                     </p>
                   )}
 
-                {/* Rank Badge */}
+                {/* rank badge */}
                 {profileData.rank && (
                   <div className="inline-flex items-center gap-2 px-3 py-1.5 sm:px-4 sm:py-2 bg-primary/10 rounded-full mb-3 sm:mb-4 mt-2">
                     <Trophy className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
@@ -270,7 +273,7 @@ const PublicProfile = () => {
           </CardContent>
         </Card>
 
-        {/* Badges Section */}
+        {/* badges section */}
         {profileData.badges.length > 0 && (
           <Card className="mb-4 sm:mb-6 overflow-hidden">
             <CardHeader className="px-4 sm:px-6">
@@ -307,7 +310,7 @@ const PublicProfile = () => {
           </Card>
         )}
 
-        {/* Statistics Grid */}
+        {/* statistics grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 mb-4 sm:mb-6 w-full">
           <Card className="overflow-hidden min-w-0">
             <CardContent className="pt-4 sm:pt-6 px-4 sm:px-6">
@@ -358,7 +361,7 @@ const PublicProfile = () => {
           </Card>
         </div>
 
-        {/* Recent Activity */}
+        {/* recent activity */}
         <Card className="overflow-hidden">
           <CardHeader className="px-4 sm:px-6">
             <CardTitle className="text-lg sm:text-xl">

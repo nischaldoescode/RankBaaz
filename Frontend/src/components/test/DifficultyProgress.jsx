@@ -1,12 +1,15 @@
+/**
+ * keeps the difficulty progress component focused and readable.
+ */
 import React from 'react';
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { CheckCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-const DifficultyProgress = ({ 
-  difficulties = [], 
-  currentDifficulty, 
+const DifficultyProgress = ({
+  difficulties = [],
+  currentDifficulty,
   completedDifficulties = [],
   overallProgress = 0
 }) => {
@@ -38,10 +41,10 @@ const DifficultyProgress = ({
         </span>
       </div>
 
-      {/* Overall Progress Bar */}
+      {/* overall progress bar */}
       <Progress value={overallProgress} className="mb-4 h-2" />
 
-      {/* Difficulty Pills */}
+      {/* difficulty pills */}
       <div className="flex flex-wrap gap-2">
         {difficulties.map((diff) => {
           const status = getDifficultyStatus(diff.name);

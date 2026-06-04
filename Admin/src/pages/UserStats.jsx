@@ -1,3 +1,6 @@
+/**
+ * keeps the user stats page focused and readable.
+ */
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { toast, ToastContainer } from "react-toastify";
@@ -43,7 +46,7 @@ const UserStats = () => {
   const [showUserModal, setShowUserModal] = useState(false);
   const [userDetails, setUserDetails] = useState(null);
 
-  // Use AdminContext instead of local state and functions
+  // use admincontext instead of local state and functions
   const {
     fetchUserStats,
     fetchUserDetails,
@@ -65,16 +68,16 @@ const UserStats = () => {
 
   const fetchUserStatsData = async () => {
     try {
-      // Add image optimization params
+      // image optimization params
       const optimizedFilters = {
         ...filters,
-        imageTransform: "w_100,h_100,c_fill,q_auto,f_auto", // Cloudinary transforms
+        imageTransform: "w_100,h_100,c_fill,q_auto,f_auto", // cloudinary transforms
       };
       const result = await fetchUserStats(optimizedFilters);
       if (result.success) {
         setUserStats(result.data);
       } else {
-        // Set fallback data
+        // set fallback data
         setUserStats({
           totalUsers: 0,
           activeUsers: 0,
@@ -173,7 +176,7 @@ const UserStats = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
       <div className="p-4 sm:p-6 lg:p-8">
-        {/* Header */}
+        {/* header */}
         <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-8 gap-6">
           <div className="space-y-2">
             <h1 className="text-3xl lg:text-4xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">
@@ -206,7 +209,7 @@ const UserStats = () => {
           </div>
         </div>
 
-        {/* Filters */}
+        {/* filters */}
         <div className="bg-white/70 backdrop-blur-sm rounded-2xl shadow-lg border border-white/50 p-6 mb-8 hover:shadow-xl transition-all duration-300">
           <div className="flex items-center gap-3 mb-4">
             <div className="p-2 bg-blue-100 rounded-lg">
@@ -242,7 +245,7 @@ const UserStats = () => {
                       [field]: value,
                     }));
 
-                    // Show/hide warning for difficulty filter
+                    // show/hide warning for difficulty filter
                     if (field === "difficulty") {
                       setShowDifficultyWarning(value === "");
                     }
@@ -281,7 +284,7 @@ const UserStats = () => {
 
           {showDifficultyWarning && (
             <div className="flex items-start gap-2 p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm">
-              <span className="text-amber-600 font-semibold">ℹ️</span>
+              <span className="text-amber-600 font-semibold">ℹ</span>
               <p className="text-amber-700">
                 Showing combined stats. Multi-difficulty tests count towards
                 each difficulty level. Select a specific difficulty for more
@@ -291,7 +294,7 @@ const UserStats = () => {
           )}
         </div>
 
-        {/* Overview Cards */}
+        {/* overview cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           {[
             {
@@ -347,9 +350,9 @@ const UserStats = () => {
           ))}
         </div>
 
-        {/* Main Content Grid */}
+        {/* main content grid */}
         <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
-          {/* Top Performers */}
+          {/* top performers */}
           <div className="xl:col-span-2">
             <div className="bg-white/70 backdrop-blur-sm rounded-2xl shadow-lg border border-white/50 hover:shadow-xl transition-all duration-300">
               <div className="p-6 border-b border-gray-100">
@@ -426,7 +429,7 @@ const UserStats = () => {
             </div>
           </div>
 
-          {/* Difficulty Performance */}
+          {/* difficulty performance */}
           <div>
             <div className="bg-white/70 backdrop-blur-sm rounded-2xl shadow-lg border border-white/50 hover:shadow-xl transition-all duration-300">
               <div className="p-6 border-b border-gray-100">
@@ -440,7 +443,7 @@ const UserStats = () => {
                 </div>
               </div>
               <div className="p-6">
-                {/* Add explanation banner */}
+                {/* explanation banner */}
                 <div className="mb-6 p-4 bg-purple-50 border border-purple-100 rounded-xl">
                   <div className="flex items-start gap-3">
                     <FiPieChart className="w-5 h-5 text-purple-600 mt-0.5 flex-shrink-0" />
@@ -524,7 +527,7 @@ const UserStats = () => {
           </div>
         </div>
 
-        {/* Course Performance */}
+        {/* course performance */}
         <div className="mt-8">
           <div className="bg-white/70 backdrop-blur-sm rounded-2xl shadow-lg border border-white/50 hover:shadow-xl transition-all duration-300">
             <div className="p-6 border-b border-gray-100">
@@ -624,7 +627,7 @@ const UserStats = () => {
           </div>
         </div>
 
-        {/* Recent Activity */}
+        {/* recent activity */}
         <div className="mt-8">
           <div className="bg-white/70 backdrop-blur-sm rounded-2xl shadow-lg border border-white/50 hover:shadow-xl transition-all duration-300">
             <div className="p-6 border-b border-gray-100">
@@ -712,7 +715,7 @@ const UserStats = () => {
           </div>
         </div>
 
-        {/* User Details Modal */}
+        {/* user details modal */}
         {showUserModal && userDetails && (
           <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-2xl max-w-6xl w-full max-h-[90vh] overflow-y-auto shadow-2xl">
@@ -770,14 +773,14 @@ const UserStats = () => {
                   </div>
                 </div>
 
-                {/* Performance by Difficulty */}
+                {/* performance by difficulty */}
                 <div className="mb-8">
                   <h3 className="text-xl font-bold text-gray-900 mb-4">
                     Performance by Difficulty
                   </h3>
                   <div className="space-y-4">
                     {userDetails.performanceByDifficulty
-                      .filter((perf) => perf.totalAttempts > 0) // Only show difficulties with attempts
+                      .filter((perf) => perf.totalAttempts > 0) // only show difficulties with attempts
                       .map((perf, index) => (
                         <div
                           key={index}
@@ -827,7 +830,7 @@ const UserStats = () => {
                   )}
                 </div>
 
-                {/* Recent Tests */}
+                {/* recent tests */}
                 <div>
                   <h3 className="text-xl font-bold text-gray-900 mb-4">
                     Recent Tests
@@ -848,7 +851,7 @@ const UserStats = () => {
                                 {test.courseName}
                               </p>
                               <div className="flex items-center gap-2 flex-wrap">
-                                {/* Handle multiple difficulties with proper spacing */}
+                                {/* handle multiple difficulties with proper spacing */}
                                 {test.difficulty && (
                                   <div className="flex gap-1">
                                     {test.difficulty

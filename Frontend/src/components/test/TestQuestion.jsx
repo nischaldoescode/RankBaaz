@@ -1,3 +1,6 @@
+/**
+ * keeps the test question component focused and readable.
+ */
 import React, { useState, useEffect } from "react";
 import { Card } from "@/components/ui/Card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -22,11 +25,11 @@ const TestQuestion = ({
   const [isValidating, setIsValidating] = useState(false);
 
   const handleAnswerSelect = async (answer) => {
-    // CHANGE: Prevent multiple submissions
+    // prevent multiple submissions
     if (isLocked || isValidating) return;
 
     setIsLocked(true);
-    setIsValidating(true); // NEW: Show loading state
+    setIsValidating(true); // show loading state
     setLocalSelectedAnswer(answer);
 
     try {
@@ -34,17 +37,17 @@ const TestQuestion = ({
 
       if (result?.feedback) {
         setFeedback(result.feedback);
-        setFeedbackShown(true); // NEW: Track feedback display
+        setFeedbackShown(true); // track feedback display
 
-        // CHANGE: Notify parent that validation is complete
+        // notify parent that validation is complete
         if (result.feedback.isCorrect) {
-          // Auto-advance after 1.5 seconds for correct answers
+          // auto-advance 1.5 seconds for correct answers
           setTimeout(() => {
             setIsLocked(false);
             setIsValidating(false);
           }, 1500);
         } else {
-          // Keep locked longer for wrong answers (show explanation)
+          // keep locked longer for wrong answers (show explanation)
           setTimeout(() => {
             setIsLocked(false);
             setIsValidating(false);
@@ -53,19 +56,19 @@ const TestQuestion = ({
       }
     } catch (error) {
       console.error("Answer validation failed:", error);
-      // CHANGE: Unlock on error to allow retry
+      // unlock on error to allow retry
       setIsLocked(false);
       setIsValidating(false);
     }
   };
 
-  // Reset when question changes
+  // reset when question s
   useEffect(() => {
     setLocalSelectedAnswer(selectedAnswer);
     setFeedback(null);
     setFeedbackShown(false);
     setIsLocked(false);
-    setIsValidating(false); // NEW: Reset validation state
+    setIsValidating(false); // reset validation state
   }, [question._id, selectedAnswer]);
 
   if (!question) {
@@ -81,7 +84,7 @@ const TestQuestion = ({
   const getOptionStyle = (optionIndex) => {
     const isSelected = localSelectedAnswer === optionIndex;
 
-    // Show immediate feedback after answer selection
+    // show immediate feedback answer selection
     if (feedback && isSelected) {
       const isCorrect = feedback.isCorrect;
       if (isCorrect) {
@@ -91,7 +94,7 @@ const TestQuestion = ({
       }
     }
 
-    // Show correct answer after feedback (if provided)
+    // show correct answer feedback (if provided)
     if (feedback && feedback.correctAnswer !== undefined) {
       const isCorrect = optionIndex === feedback.correctAnswer;
       if (isCorrect && !isSelected) {
@@ -100,7 +103,7 @@ const TestQuestion = ({
     }
 
     if (!feedback) {
-      // During test - show selection state
+      // during test - show selection state
       return cn(
         "p-4 border rounded-lg cursor-pointer transition-all duration-200 text-left w-full",
         "hover:bg-gray-50 dark:hover:bg-gray-800",
@@ -110,7 +113,7 @@ const TestQuestion = ({
       );
     }
 
-    // Default style for non-selected options with feedback
+    // default style for non-selected options with feedback
     return "p-4 border rounded-lg text-left w-full border-gray-200 dark:border-gray-700";
   };
 
@@ -173,7 +176,7 @@ const TestQuestion = ({
       }
     }, [isDragging, dragStart, zoom]);
 
-    // CHANGE: Don't show modal if image is invalid
+    // don't show modal if image is invalid
     const hasValidImage =
       question.image &&
       (question.image.url ||
@@ -187,7 +190,7 @@ const TestQuestion = ({
           handleReset();
         }}
       >
-        {/* Close Button */}
+        {/* close button */}
         <button
           onClick={() => {
             setShowImageModal(false);
@@ -212,7 +215,7 @@ const TestQuestion = ({
           </svg>
         </button>
 
-        {/* Zoom Controls */}
+        {/* zoom controls */}
         <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2 z-[100000] flex items-center gap-2 bg-black/70 backdrop-blur-md rounded-full px-4 py-2">
           <button
             onClick={(e) => {
@@ -280,7 +283,7 @@ const TestQuestion = ({
           </button>
         </div>
 
-        {/* Image Container */}
+        {/* image container */}
         <div
           className="relative w-full h-full flex items-center justify-center p-4 overflow-hidden"
           onClick={(e) => e.stopPropagation()}
@@ -302,7 +305,7 @@ const TestQuestion = ({
           />
         </div>
 
-        {/* Hint Text */}
+        {/* hint text */}
         {zoom === 1 && (
           <div className="absolute top-6 left-1/2 transform -translate-x-1/2 z-[100000] bg-black/70 backdrop-blur-md rounded-full px-4 py-2 text-white text-sm">
             Scroll to zoom • Drag to pan
@@ -335,7 +338,7 @@ const TestQuestion = ({
                 <button
                   onClick={() => handleAnswerSelect(index)}
                   className={getOptionStyle(index)}
-                  disabled={!!feedback} // Disable after feedback
+                  disabled={!!feedback} // disable feedback
                 >
                   <div className="flex items-center justify-between">
                     <span className="flex-1 text-left">{option}</span>
@@ -376,7 +379,7 @@ const TestQuestion = ({
                   feedback
                     ? feedback.isCorrect
                       ? "border-green-500 bg-green-50 dark:bg-green-950 focus:ring-green-500"
-                      : "border-gray-300 dark:border-gray-600 focus:ring-blue-500" // Don't highlight wrong answers
+                      : "border-gray-300 dark:border-gray-600 focus:ring-blue-500" // don't highlight wrong answers
                     : "border-gray-300 dark:border-gray-600 focus:ring-blue-500"
                 )}
                 disabled={!!feedback}
@@ -455,14 +458,14 @@ const TestQuestion = ({
     <div className="w-full max-w-4xl mx-auto">
       <Card className="mx-4 md:mx-auto overflow-hidden bg-white dark:bg-gray-900 border-2 border-gray-200 dark:border-gray-700 shadow-xl">
         <div className="p-4 sm:p-6 md:p-8">
-          {/* Question Number Badge */}
+          {/* question number badge */}
           <div className="mb-3 inline-flex items-center px-3 py-1 rounded-full bg-blue-100 dark:bg-blue-900/30 border border-blue-300 dark:border-blue-700">
             <span className="text-sm font-medium text-blue-700 dark:text-blue-300">
               Question
             </span>
           </div>
 
-          {/* Question Title */}
+          {/* question title */}
           <div className="mb-6">
             <RichTextRenderer
               content={question.question || "Question text not available"}
@@ -470,7 +473,7 @@ const TestQuestion = ({
             />
           </div>
 
-          {/* Question Image - CHANGE: Better validation */}
+          {/* question image - better validation */}
           {question.image &&
             (question.image.url ||
               (typeof question.image === "string" &&
@@ -486,7 +489,7 @@ const TestQuestion = ({
                       alt="Question illustration"
                       className="w-full h-auto max-h-96 sm:max-h-[500px] object-contain bg-gray-50 dark:bg-gray-900 group-hover:opacity-90 transition-opacity duration-200"
                       onError={(e) => {
-                        // CHANGE: Hide image if it fails to load
+                        // hide image if it fails to load
                         e.target.parentElement.parentElement.style.display =
                           "none";
                       }}
@@ -499,10 +502,10 @@ const TestQuestion = ({
               </div>
             )}
 
-          {/* Answer Options */}
+          {/* answer options */}
           <div className="mb-6">{renderQuestionContent()}</div>
 
-          {/* Answer Status */}
+          {/* answer status */}
           <div className="text-center">
             {feedback ? (
               <span

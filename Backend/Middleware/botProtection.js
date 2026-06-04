@@ -1,3 +1,6 @@
+/**
+ * keeps the bot protection middleware focused and readable.
+ */
 import redisClient, {
   isRedisConnectionError,
   summarizeRedisError,
@@ -5,13 +8,13 @@ import redisClient, {
 import crypto from "crypto";
 import { botBlockedPage } from "./ErrorsPages/errorPages.js";
 
-// Security thresholds for bot detection
+// security thresholds for bot detection
 const BOT_SCORE_THRESHOLD = 60;
 const CHALLENGE_TTL = 300;
 const BOT_BAN_TTL = 3600;
 const CHALLENGE_DIFFICULTY = 4;
 
-// Whitelist of allowed origins for CORS validation
+// whitelist of allowed origins for cors validation
 const DEFAULT_ALLOWED_ORIGINS = [
   "http://localhost:3000",
   "http://localhost:3001",
@@ -65,9 +68,9 @@ const isPublicBlogReadRequest = (req) => {
 };
 
 /**
- * PRODUCTION SECURITY: Simple 403 Forbidden HTML page
- * Displayed when requests have no valid origin/referer headers
- * Prevents information leakage about backend infrastructure
+ * production security: simple 403 forbidden html page
+ * displayed when requests have no valid origin/referer headers
+ * prevents information leakage about backend infrastructure
  */
 const SIMPLE_403_HTML = `
 <!DOCTYPE html>
@@ -123,33 +126,33 @@ const SIMPLE_403_HTML = `
 `;
 
 /**
- * SECURITY: Validate if origin header is legitimate
- * Detects CORS proxy attempts and spoofed origins
- * @param {string} origin - Origin header value
- * @param {string} referer - Referer header value
- * @returns {boolean} - True if origin appears legitimate
+ * security: validate if origin header is legitimate
+ * detects cors proxy attempts and spoofed origins
+ * @param {string} origin - origin header value
+ * @param {string} referer - referer header value
+ * @returns {boolean} - true if origin appears legitimate
  */
 const isLegitimateOrigin = (origin, referer) => {
-  // No origin/referer at all - suspicious for API calls
+  // no origin/referer at all - suspicious for api calls
   if (!origin && !referer) {
     return false;
   }
 
-  // Check if origin matches allowed list
+  // check if origin matches allowed list
   if (origin) {
     try {
       const originUrl = new URL(origin);
       const originHostname = originUrl.hostname.toLowerCase();
 
-      // Check for exact match in allowed origins
+      // check for exact match in allowed origins
       const isAllowed = ALLOWED_ORIGINS.some((allowed) => {
         const allowedUrl = new URL(allowed);
         return originHostname === allowedUrl.hostname.toLowerCase();
       });
 
       if (!isAllowed) {
-        // SECURITY: Detect CORS proxy patterns
-        // Common patterns: cors-anywhere, allorigins, etc.
+        // security: detect cors proxy patterns
+        // common patterns: cors-anywhere, allorigins, etc.
         const corsProxyPatterns = [
           /cors-anywhere/i,
           /corsproxy/i,
@@ -167,8 +170,8 @@ const isLegitimateOrigin = (origin, referer) => {
           return false;
         }
 
-        // SECURITY: Check for subdomain mimicking
-        // Example: vidhgrow.attacker.com trying to impersonate vidhgrow.online
+        // security: check for subdomain mimicking
+        // example: vidhgrow.attacker.com trying to impersonate vidhgrow.online
         const isMimicking = ALLOWED_ORIGINS.some((allowed) => {
           const allowedUrl = new URL(allowed);
           const allowedHostname = allowedUrl.hostname.toLowerCase();
@@ -185,12 +188,12 @@ const isLegitimateOrigin = (origin, referer) => {
 
       return isAllowed;
     } catch (e) {
-      // Invalid origin URL format
+      // invalid origin url format
       return false;
     }
   }
 
-  // If no origin but has referer, validate referer
+  // if no origin but has referer, validate referer
   if (referer) {
     try {
       const refererUrl = new URL(referer);
@@ -211,9 +214,9 @@ const isLegitimateOrigin = (origin, referer) => {
 };
 
 /**
- * SECURITY: Calculate bot probability score
- * Higher score = more likely to be automated traffic
- * Scores 60+ trigger challenges, 80+ trigger instant bans
+ * security: calculate bot probability score
+ * higher score = more likely to be automated traffic
+ * scores 60+ trigger challenges, 80+ trigger instant bans
  */
 const calculateBotScore = (req) => {
   let score = 0;
@@ -221,68 +224,68 @@ const calculateBotScore = (req) => {
   const origin = req.get("Origin") || req.get("Referer") || "";
   const acceptHeader = req.get("Accept") || "";
 
-  // User-Agent validation
+  // user-agent validation
   if (!ua) {
-    score += 40; // No UA = very suspicious
+    score += 40; // no ua = very suspicious
   } else if (/curl|wget|python-requests|go-http-client/i.test(ua)) {
-    score += 60; // Known CLI tools
+    score += 60; // known cli tools
   } else if (/postman|insomnia|httpie|paw|restclient/i.test(ua)) {
-    score += 65; // API testing tools
+    score += 65; // api testing tools
   } else if (/bot|crawler|scraper|spider/i.test(ua)) {
-    // Legitimate search engine bots get a pass
+    // legitimate search engine bots get a pass
     if (/googlebot|bingbot|slurp|duckduckbot/i.test(ua)) {
       score += 0;
     } else {
-      score += 50; // Unknown bots
+      score += 50; // unknown bots
     }
   }
 
-  // Browser header validation
+  // browser header validation
   const browserHeaders = ["Accept", "Accept-Language", "Accept-Encoding"];
   const missing = browserHeaders.filter((h) => !req.get(h));
-  score += missing.length * 15; // Real browsers send all these headers
+  score += missing.length * 15; // real browsers send all these headers
 
-  // Accept header validation
+  // accept header validation
   if (acceptHeader) {
     if (acceptHeader === "*/*" || acceptHeader === "application/json") {
-      score += 30; // Non-browser accept headers
+      score += 30; // non-browser accept headers
     }
     if (!acceptHeader.includes("text/html")) {
-      score += 20; // Browsers always accept HTML
+      score += 20; // browsers always accept html
     }
   }
 
-  // Modern browser security headers (Sec-Fetch-*)
+  // modern browser security headers (sec-fetch-*)
   const secFetchSite = req.get("Sec-Fetch-Site");
   const secFetchMode = req.get("Sec-Fetch-Mode");
   const secFetchDest = req.get("Sec-Fetch-Dest");
 
   if (!secFetchSite && !secFetchMode && !secFetchDest) {
-    score += 25; // Modern browsers send these
+    score += 25; // modern browsers send these
   }
 
-  // Origin/Referer validation
+  // origin/referer validation
   if (origin) {
     if (!isLegitimateOrigin(origin, null)) {
-      score += 40; // Invalid or suspicious origin
+      score += 40; // invalid or suspicious origin
     }
   } else {
-    // No origin on non-GET requests is suspicious
+    // no origin on non-get requests is suspicious
     if (req.method !== "GET") {
       score += 20;
     }
   }
 
-  // Connection header validation
+  // connection header validation
   const connection = req.get("Connection");
   if (connection && connection.toLowerCase() === "close") {
-    score += 10; // Bots often use Connection: close
+    score += 10; // bots often use connection: close
   }
 
-  return Math.min(score, 100); // Cap at 100
+  return Math.min(score, 100); // cap at 100
 };
 
-// Helper function to check if IP is banned
+// helper function to check if ip is banned
 const isBannedWithUA = async (ip, userAgent) => {
   const ipOnlyKey = `bot:ban:${ip}`;
   const ipOnlyBan = await redisClient.get(ipOnlyKey);
@@ -297,7 +300,7 @@ const isBannedWithUA = async (ip, userAgent) => {
   return !!(await redisClient.get(key));
 };
 
-// Helper function to ban IP with user agent fingerprint
+// helper function to ban ip with user agent fingerprint
 const banIPWithUA = async (ip, userAgent, reason) => {
   const uaHash = crypto
     .createHash("md5")
@@ -318,7 +321,7 @@ const banIPWithUA = async (ip, userAgent, reason) => {
   );
 };
 
-// Helper function to generate proof-of-work challenge
+// helper function to generate proof-of-work challenge
 const generateChallenge = async (ip) => {
   const seed = crypto.randomBytes(16).toString("hex");
   const timestamp = Date.now();
@@ -343,7 +346,7 @@ const generateChallenge = async (ip) => {
   };
 };
 
-// Helper function to verify challenge solution
+// helper function to verify challenge solution
 const verifyChallengeSolution = async (ip, seed, nonce) => {
   const challengeKey = `bot:challenge:${ip}`;
   const stored = await redisClient.get(challengeKey);
@@ -382,20 +385,20 @@ const verifyChallengeSolution = async (ip, seed, nonce) => {
 };
 
 /**
- * Main bot protection middleware
- * Implements multi-layer security checks for all non-health API routes
+ * main bot protection middleware
+ * implements multi-layer security checks for all non-health api routes
  *
- * @param {Object} req - Express request object
- * @param {Object} res - Express response object
- * @param {Function} next - Express next middleware function
+ * @param {object} req - express request object
+ * @param {object} res - express response object
+ * @param {function} next - express next middleware function
  *
- * Security Layers:
- * 1. Health endpoint bypass
- * 2. Authenticated request bypass (has valid auth cookie + signature)
- * 3. Origin/Referer validation
- * 4. Ban list check
- * 5. Bot score calculation
- * 6. Challenge/Ban enforcement
+ * security layers:
+ * 1. health endpoint bypass
+ * 2. authenticated request bypass (has valid auth cookie + signature)
+ * 3. origin/referer validation
+ * 4. ban list check
+ * 5. bot score calculation
+ * 6. challenge/ban enforcement
  */
 export const botProtection = async (req, res, next) => {
   try {
@@ -404,7 +407,7 @@ export const botProtection = async (req, res, next) => {
     const origin = req.get("Origin") || "";
     const referer = req.get("Referer") || "";
 
-    // LAYER 1: Allow health and harmless browser/host probes.
+    // layer 1: allow health and harmless browser/host probes.
     if (req.path === "/health" || req.path === "/" || req.path === "/favicon.ico") {
       return next();
     }
@@ -439,24 +442,24 @@ export const botProtection = async (req, res, next) => {
       }
     }
 
-    // LAYER 2: Bypass protection for authenticated requests with valid signatures
-    // These are legitimate frontend requests from logged-in users
+    // layer 2: bypass protection for authenticated requests with valid signatures
+    // these are legitimate frontend requests from logged-in users
     const hasAuthCookie = !!req.signedCookies.auth_session;
     const hasValidSignature = !!req.headers["x-request-signature"];
 
     if (hasAuthCookie && hasValidSignature) {
-      // This is a legitimate authenticated request from our frontend
+      // this is a legitimate authenticated request from our frontend
       return next();
     }
 
-    // LAYER 3: For unauthenticated API routes, validate origin/referer
+    // layer 3: for unauthenticated api routes, validate origin/referer
     const hasNoOrigin = !origin && !referer;
     const hasInvalidOrigin = !isLegitimateOrigin(origin, referer);
 
-    // PRODUCTION SECURITY: Block requests with no valid origin
-    // This catches Postman, Insomnia, curl, and direct browser visits
+    // production security: block requests with no valid origin
+    // this catches postman, insomnia, curl, and direct browser visits
     if (hasNoOrigin || hasInvalidOrigin) {
-      console.warn("[BOT_PROTECTION] Blocked request - Invalid origin:", {
+      console.warn("Blocked request - Invalid origin:", {
         ip,
         ua: ua.substring(0, 50),
         origin: origin || "none",
@@ -464,7 +467,7 @@ export const botProtection = async (req, res, next) => {
         path: req.path,
       });
 
-      // Return simple 403 HTML for browsers, JSON for API clients
+      // return simple 403 html for browsers, json for api clients
       if (req.path.startsWith("/api/")) {
         return res.status(403).send(SIMPLE_403_HTML);
       } else {
@@ -472,7 +475,7 @@ export const botProtection = async (req, res, next) => {
       }
     }
 
-    // LAYER 4: Check if IP is banned
+    // layer 4: check if ip is banned
     if (await isBannedWithUA(ip, ua)) {
       if (req.path.startsWith("/api/")) {
         return res.status(403).send(SIMPLE_403_HTML);
@@ -482,7 +485,7 @@ export const botProtection = async (req, res, next) => {
         .send(botBlockedPage("Access temporarily restricted."));
     }
 
-    // LAYER 5: Check if challenge already passed
+    // layer 5: check if challenge already passed
     const passedKey = `bot:challenge:passed:${ip}`;
     const hasPassed = await redisClient.get(passedKey);
 
@@ -490,19 +493,19 @@ export const botProtection = async (req, res, next) => {
       return next();
     }
 
-    // LAYER 6: Calculate bot probability score
+    // layer 6: calculate bot probability score
     const score = calculateBotScore(req);
 
-    // Low score (< 30) = likely human, allow through
+    // low score (< 30) = likely human, allow through
     if (score < 30) {
       return next();
     }
 
-    // LAYER 7: Medium score (30-59) = challenge required
+    // layer 7: medium score (30-59) = challenge required
     if (score < BOT_SCORE_THRESHOLD) {
       const challenge = await generateChallenge(ip);
 
-      console.warn("[BOT_PROTECTION] Challenge required:", {
+      console.warn("Challenge required:", {
         ip,
         score,
         path: req.path,
@@ -521,10 +524,10 @@ export const botProtection = async (req, res, next) => {
         );
     }
 
-    // LAYER 8: High score (60+) = instant ban
+    // layer 8: high score (60+) = instant ban
     await banIPWithUA(ip, ua, `High bot score: ${score}`);
 
-    console.warn("[BOT_PROTECTION] Auto-banned:", {
+    console.warn("Auto-banned:", {
       ip,
       score,
       path: req.path,
@@ -538,20 +541,20 @@ export const botProtection = async (req, res, next) => {
   } catch (err) {
     if (isRedisConnectionError(err)) {
       console.warn(
-        "[BOT_PROTECTION] Redis unavailable; allowing request:",
+        "Redis unavailable; allowing request:",
         summarizeRedisError(err),
       );
     } else {
-      console.error("[BOT_PROTECTION] Error:", err);
+      console.error("Error:", err);
     }
-    // Allow request on error to prevent blocking legitimate traffic
+    // allow request on error to prevent blocking legitimate traffic
     next();
   }
 };
 
 /**
- * Challenge verification endpoint
- * Validates proof-of-work solutions submitted by clients
+ * challenge verification endpoint
+ * validates proof-of-work solutions submitted by clients
  */
 export const verifyChallenge = async (req, res) => {
   try {
@@ -581,11 +584,11 @@ export const verifyChallenge = async (req, res) => {
   } catch (err) {
     if (isRedisConnectionError(err)) {
       console.warn(
-        "[BOT_PROTECTION] Challenge Redis unavailable:",
+        "Challenge Redis unavailable:",
         summarizeRedisError(err),
       );
     } else {
-      console.error("[BOT_PROTECTION] Challenge verify error:", err);
+      console.error("Challenge verify error:", err);
     }
     res.status(500).json({
       success: false,
@@ -595,10 +598,10 @@ export const verifyChallenge = async (req, res) => {
 };
 
 /**
- * PRODUCTION: Advanced rate limiting middleware
- * Implements per-IP request limits with automatic banning
- * @param {number} maxReq - Maximum requests allowed
- * @param {number} windowMs - Time window in milliseconds
+ * production: advanced rate limiting middleware
+ * implements per-ip request limits with automatic banning
+ * @param {number} maxreq - maximum requests allowed
+ * @param {number} windowms - time window in milliseconds
  */
 export const advancedRateLimit = (maxReq = 100, windowMs = 60000) => {
   return async (req, res, next) => {
@@ -652,7 +655,7 @@ export const advancedRateLimit = (maxReq = 100, windowMs = 60000) => {
         }
       }
 
-      // Increment counter and set expiration
+      // increment counter and set expiration
       const multi = redisClient.multi();
       multi.incr(key);
 
@@ -666,13 +669,13 @@ export const advancedRateLimit = (maxReq = 100, windowMs = 60000) => {
     } catch (err) {
       if (isRedisConnectionError(err)) {
         console.warn(
-          "[RATE_LIMIT] Redis unavailable; allowing request:",
+          "Redis unavailable; allowing request:",
           summarizeRedisError(err),
         );
       } else {
-        console.error("[RATE_LIMIT] Error:", err);
+        console.error("Error:", err);
       }
-      // Allow request on error to prevent blocking legitimate traffic
+      // allow request on error to prevent blocking legitimate traffic
       next();
     }
   };

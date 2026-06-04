@@ -1,6 +1,9 @@
+/**
+ * keeps the theme context context focused and readable.
+ */
 import React, { createContext, useContext, useReducer, useEffect } from 'react';
 
-// Initial state
+// initial state
 const initialState = {
   theme: 'dark', // default to dark theme
   primaryColor: 'blue',
@@ -10,7 +13,7 @@ const initialState = {
   language: 'en',
 };
 
-// Action types
+// action types
 const THEME_ACTIONS = {
   SET_THEME: 'SET_THEME',
   SET_PRIMARY_COLOR: 'SET_PRIMARY_COLOR',
@@ -21,7 +24,7 @@ const THEME_ACTIONS = {
   RESET_THEME: 'RESET_THEME',
 };
 
-// Reducer function
+// reducer function
 const themeReducer = (state, action) => {
   switch (action.type) {
     case THEME_ACTIONS.SET_THEME:
@@ -68,14 +71,14 @@ const themeReducer = (state, action) => {
   }
 };
 
-// Create context
+// create context
 const ThemeContext = createContext();
 
-// Provider component
+// provider component
 export const ThemeProvider = ({ children }) => {
   const [state, dispatch] = useReducer(themeReducer, initialState);
 
-  // Load theme from localStorage on mount
+  // load theme from localstorage on mount
   useEffect(() => {
     const savedTheme = localStorage.getItem('theme-preferences');
     if (savedTheme) {
@@ -108,13 +111,13 @@ export const ThemeProvider = ({ children }) => {
       }
     }
 
-    // Check for system preference for reduced motion
+    // check for system preference for reduced motion
     const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
     if (mediaQuery.matches) {
       dispatch({ type: THEME_ACTIONS.SET_REDUCED_MOTION, payload: true });
     }
 
-    // Listen for changes to reduced motion preference
+    // listen for s to reduced motion preference
     const handleMotionChange = (e) => {
       dispatch({ type: THEME_ACTIONS.SET_REDUCED_MOTION, payload: e.matches });
     };
@@ -123,14 +126,14 @@ export const ThemeProvider = ({ children }) => {
     return () => mediaQuery.removeEventListener('change', handleMotionChange);
   }, []);
 
-  // Save theme to localStorage when it changes
+  // save theme to localstorage when it s
   useEffect(() => {
     localStorage.setItem('theme-preferences', JSON.stringify(state));
-    
-    // Apply theme to document
+
+    // apply theme to document
     document.documentElement.className = `theme-${state.theme} color-${state.primaryColor} font-${state.fontSize}`;
-    
-    // Apply reduced motion
+
+    // apply reduced motion
     if (state.reducedMotion || !state.animations) {
       document.documentElement.style.setProperty('--animation-duration', '0s');
       document.documentElement.style.setProperty('--transition-duration', '0s');
@@ -164,7 +167,7 @@ export const ThemeProvider = ({ children }) => {
     dispatch({ type: THEME_ACTIONS.RESET_THEME });
   };
 
-  // Theme utilities
+  // theme utilities
   const isDark = state.theme === 'dark';
   const isLight = state.theme === 'light';
 
@@ -263,7 +266,7 @@ export const ThemeProvider = ({ children }) => {
   );
 };
 
-// Hook to use theme context
+// hook to use theme context
 export const useTheme = () => {
   const context = useContext(ThemeContext);
   if (!context) {

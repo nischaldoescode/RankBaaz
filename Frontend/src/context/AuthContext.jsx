@@ -1,9 +1,12 @@
+/**
+ * keeps the auth context context focused and readable.
+ */
 import React, { createContext, useContext, useReducer, useEffect } from "react";
 import { apiMethods, handleApiError } from "../services/api";
 import toast from "react-hot-toast";
 import { requestSigner } from "../utils/requestSigning.js";
 
-// Initial state
+// initial state
 const initialState = {
   user: null,
   token: null,
@@ -12,7 +15,7 @@ const initialState = {
   error: null,
 };
 
-// Action types
+// action types
 const AUTH_ACTIONS = {
   SET_LOADING: "SET_LOADING",
   LOGIN_SUCCESS: "LOGIN_SUCCESS",
@@ -23,7 +26,7 @@ const AUTH_ACTIONS = {
   UPDATE_PROFILE: "UPDATE_PROFILE",
 };
 
-// Reducer function
+// reducer function
 const authReducer = (state, action) => {
   switch (action.type) {
     case AUTH_ACTIONS.SET_LOADING:
@@ -80,25 +83,25 @@ const authReducer = (state, action) => {
   }
 };
 
-// Create context
+// create context
 const AuthContext = createContext();
 
-// Provider component
+// provider component
 export const AuthProvider = ({ children }) => {
   const [state, dispatch] = useReducer(authReducer, initialState);
 
-  // Initialize auth state
+  // initialize auth state
   useEffect(() => {
     initializeAuth();
   }, []);
 
   /**
-   * Initialize authentication state on app load
-   * Flow:
-   * 1. Load signing secret from localStorage
-   * 2. Verify session with backend (GET /profile)
-   * 3. If secret missing, fetch new one
-   * 4. Update Redux state with user data
+   * initialize authentication state on app load
+   * flow:
+   * 1. load signing secret from localstorage
+   * 2. verify session with backend (get /profile)
+   * 3. if secret missing, fetch one
+   * 4. update redux state with user data
    */
   const initializeAuth = async () => {
     try {
@@ -179,7 +182,7 @@ export const AuthProvider = ({ children }) => {
         throw new Error("User data not received from server");
       }
 
-      // Store signing secret
+      // store signing secret
       if (signingSecret && signingSecretExpiresIn) {
         requestSigner.setSigningSecret(signingSecret, signingSecretExpiresIn);
       }
@@ -200,10 +203,10 @@ export const AuthProvider = ({ children }) => {
       const errorMessage = handleApiError(error, "Login failed");
       dispatch({ type: AUTH_ACTIONS.SET_ERROR, payload: errorMessage });
 
-      // Only show toast if it's not a network error (component will handle network errors)
+      // only show toast if it's not a network error (component will handle network errors)
       if (!error.isNetworkError) {
         toast.error(errorMessage, {
-          id: "login-error", // Unique ID prevents duplicates
+          id: "login-error", // unique id prevents duplicates
         });
       }
 
@@ -216,7 +219,7 @@ export const AuthProvider = ({ children }) => {
   const validateRegistration = (userData) => {
     const errors = {};
 
-    // First name validation
+    // first name validation
     if (!userData.firstName?.trim()) {
       errors.firstName = "First name is required";
     } else if (
@@ -226,7 +229,7 @@ export const AuthProvider = ({ children }) => {
       errors.firstName = "First name must be between 2-50 characters";
     }
 
-    // Last name validation
+    // last name validation
     if (!userData.lastName?.trim()) {
       errors.lastName = "Last name is required";
     } else if (
@@ -236,8 +239,8 @@ export const AuthProvider = ({ children }) => {
       errors.lastName = "Last name must be between 2-50 characters";
     }
 
-    // Email validation
-    // Email validation
+    // email validation
+    // email validation
     if (!userData.email?.trim()) {
       errors.email = "Email is required";
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(userData.email.trim())) {
@@ -260,7 +263,7 @@ export const AuthProvider = ({ children }) => {
       }
     }
 
-    // Password validation
+    // password validation
     if (!userData.password) {
       errors.password = "Password is required";
     } else if (userData.password.length < 8) {
@@ -270,11 +273,11 @@ export const AuthProvider = ({ children }) => {
         "Password must contain uppercase, lowercase, and number";
     }
 
-    // Date of Birth validation (DD/MM/YYYY format)
+    // date of birth validation (dd/mm/yyyy format)
     if (!userData.dateOfBirth) {
       errors.dateOfBirth = "Date of birth is required";
     } else {
-      // Validate format DD/MM/YYYY
+      // validate format dd/mm/yyyy
       const datePattern = /^(\d{2})\/(\d{2})\/(\d{4})$/;
       const match = userData.dateOfBirth.match(datePattern);
 
@@ -286,7 +289,7 @@ export const AuthProvider = ({ children }) => {
         const monthNum = parseInt(month, 10);
         const yearNum = parseInt(year, 10);
 
-        // Validate day, month ranges
+        // validate day, month ranges
         if (dayNum < 1 || dayNum > 31) {
           errors.dateOfBirth = "Day must be between 01 and 31";
         } else if (monthNum < 1 || monthNum > 12) {
@@ -294,11 +297,11 @@ export const AuthProvider = ({ children }) => {
         } else if (yearNum < 1900) {
           errors.dateOfBirth = "Please enter a valid year";
         } else {
-          // Create date object (month is 0-indexed in JS)
+          // create date object (month is 0-indexed in js)
           const dob = new Date(yearNum, monthNum - 1, dayNum);
           const today = new Date();
 
-          // Check if date is valid (handles invalid dates like 31/02/2000)
+          // check if date is valid (handles invalid dates like 31/02/2000)
           if (
             dob.getDate() !== dayNum ||
             dob.getMonth() !== monthNum - 1 ||
@@ -308,7 +311,7 @@ export const AuthProvider = ({ children }) => {
           } else if (dob > today) {
             errors.dateOfBirth = "Date of birth cannot be in the future";
           } else {
-            // Calculate age
+            // calculate age
             const age = today.getFullYear() - dob.getFullYear();
             const monthDiff = today.getMonth() - dob.getMonth();
             const actualAge =
@@ -328,7 +331,7 @@ export const AuthProvider = ({ children }) => {
       }
     }
 
-    // Gender validation
+    // gender validation
     if (!userData.gender) {
       errors.gender = "Gender is required";
     } else if (!["Male", "Female", "Other"].includes(userData.gender)) {
@@ -345,14 +348,14 @@ export const AuthProvider = ({ children }) => {
       dispatch({ type: AUTH_ACTIONS.SET_LOADING, payload: true });
       dispatch({ type: AUTH_ACTIONS.CLEAR_ERROR });
 
-      // Validate on frontend first
+      // validate on frontend first
       const validation = validateRegistration(userData);
       if (!validation.isValid) {
         dispatch({ type: AUTH_ACTIONS.SET_ERROR, payload: validation.errors });
         dispatch({ type: AUTH_ACTIONS.SET_LOADING, payload: false });
         return { success: false, errors: validation.errors };
       }
-      // Parse DD/MM/YYYY to Date object and calculate age
+      // parse dd/mm/yyyy to date object and calculate age
       const [day, month, year] = userData.dateOfBirth.split("/");
       const dob = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
       const today = new Date();
@@ -363,10 +366,10 @@ export const AuthProvider = ({ children }) => {
           ? age - 1
           : age;
 
-      // Convert to ISO format for backend
+      // convert to iso format for backend
       const isoDateOfBirth = dob.toISOString();
 
-      // Add calculated age and ISO date to userData
+      // calculated age and iso date to userdata
       const registrationData = {
         ...userData,
         age: calculatedAge,
@@ -375,9 +378,9 @@ export const AuthProvider = ({ children }) => {
 
       const response = await apiMethods.auth.register(registrationData);
 
-      // Check if OTP verification is needed
+      // check if otp verification is needed
       if (response.data.success && response.data.data.otpSent) {
-        // Don't log in yet, just return success with email
+        // don't log in yet, just return success with email
         dispatch({ type: AUTH_ACTIONS.SET_LOADING, payload: false });
         return {
           success: true,
@@ -386,7 +389,7 @@ export const AuthProvider = ({ children }) => {
         };
       }
 
-      // If no OTP required (shouldn't happen normally)
+      // if no otp required (shouldn't happen normally)
       const { user } = response.data.data;
       localStorage.setItem("user", JSON.stringify(user));
 
@@ -417,14 +420,14 @@ export const AuthProvider = ({ children }) => {
       );
 
       if (response.data.success) {
-        // If username was provided, user is created - log them in
+        // if username was provided, user is created - log them in
         if (username && response.data.data.user) {
           const { user } = response.data.data;
           const signingSecret = response.data.data.signingSecret;
           const signingSecretExpiresIn =
             response.data.data.signingSecretExpiresIn;
 
-          // Store signing secret
+          // store signing secret
           if (signingSecret && signingSecretExpiresIn) {
             requestSigner.setSigningSecret(
               signingSecret,
@@ -443,7 +446,7 @@ export const AuthProvider = ({ children }) => {
           return { success: true, user };
         }
 
-        // Otherwise, just OTP verification success
+        // otherwise, just otp verification success
         return { success: true, otpVerified: true };
       }
     } catch (error) {
@@ -477,9 +480,9 @@ export const AuthProvider = ({ children }) => {
       dispatch({ type: AUTH_ACTIONS.SET_LOADING, payload: true });
 
       const response = await apiMethods.auth.updateProfile(profileData);
-      const updatedUser = response.data.data.user; // Fixed: added .data
+      const updatedUser = response.data.data.user; // ed: ed .data
 
-      // Update localStorage
+      // update localstorage
       localStorage.setItem("user", JSON.stringify(updatedUser));
 
       dispatch({
@@ -487,7 +490,7 @@ export const AuthProvider = ({ children }) => {
         payload: updatedUser,
       });
 
-      // Only show success toast for non-visibility changes
+      // only show success toast for non-visibility s
       if (!profileData.nameVisibility) {
         toast.success("Profile updated successfully");
       }
@@ -537,7 +540,7 @@ export const AuthProvider = ({ children }) => {
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
 
-// Hook to use auth context
+// hook to use auth context
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (!context) {

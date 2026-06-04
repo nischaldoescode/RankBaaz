@@ -1,3 +1,6 @@
+/**
+ * keeps the chart component focused and readable.
+ */
 import React, { useMemo } from 'react';
 import {
   LineChart,
@@ -20,7 +23,7 @@ import {
 } from 'recharts';
 import { useTheme } from '../../context/ThemeContext';
 
-// Advanced Chart Component
+// advanced chart component
 const Chart = ({
   data = [],
   type = 'line',
@@ -46,16 +49,16 @@ const Chart = ({
   const primaryColors = getPrimaryColorClasses();
   const isDark = theme === 'dark';
 
-  // Default color palette
+  // default color palette
   const defaultColors = useMemo(() => {
     if (colors) return colors;
-    
-    return isDark 
+
+    return isDark
       ? ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#06B6D4', '#F97316', '#84CC16']
       : ['#2563EB', '#059669', '#D97706', '#DC2626', '#7C3AED', '#0891B2', '#EA580C', '#65A30D'];
   }, [colors, isDark]);
 
-  // Chart theme configuration
+  // chart theme configuration
   const chartTheme = useMemo(() => ({
     background: 'transparent',
     text: isDark ? '#E2E8F0' : '#374151',
@@ -63,14 +66,14 @@ const Chart = ({
     axis: isDark ? '#6B7280' : '#9CA3AF',
   }), [isDark]);
 
-  // Custom tooltip component
+  // custom tooltip component
   const CustomTooltip = ({ active, payload, label }) => {
     if (!active || !payload?.length) return null;
 
     return (
       <div className={`
-        bg-white dark:bg-slate-800 
-        border border-gray-200 dark:border-slate-700 
+        bg-white dark:bg-slate-800
+        border border-gray-200 dark:border-slate-700
         rounded-lg shadow-lg p-3
       `}>
         <p className="text-sm font-medium text-gray-900 dark:text-slate-100 mb-2">
@@ -78,7 +81,7 @@ const Chart = ({
         </p>
         {payload.map((entry, index) => (
           <div key={index} className="flex items-center gap-2 text-sm">
-            <div 
+            <div
               className="w-3 h-3 rounded-full"
               style={{ backgroundColor: entry.color }}
             />
@@ -91,7 +94,7 @@ const Chart = ({
     );
   };
 
-  // Gradient definitions
+  // gradient definitions
   const renderGradients = () => {
     if (!gradient) return null;
 
@@ -107,20 +110,20 @@ const Chart = ({
     );
   };
 
-  // Line Chart
+  // line chart
   const renderLineChart = () => (
     <ResponsiveContainer width={width} height={height}>
       <LineChart data={data} margin={margin} {...rest}>
         {renderGradients()}
         {showGrid && (
-          <CartesianGrid 
-            strokeDasharray="3 3" 
+          <CartesianGrid
+            strokeDasharray="3 3"
             stroke={chartTheme.grid}
             opacity={0.5}
           />
         )}
         {showXAxis && (
-          <XAxis 
+          <XAxis
             dataKey={xKey}
             stroke={chartTheme.axis}
             fontSize={12}
@@ -128,7 +131,7 @@ const Chart = ({
           />
         )}
         {showYAxis && (
-          <YAxis 
+          <YAxis
             stroke={chartTheme.axis}
             fontSize={12}
             tick={{ fill: chartTheme.text }}
@@ -136,7 +139,7 @@ const Chart = ({
         )}
         {showTooltip && <Tooltip content={<CustomTooltip />} />}
         {showLegend && <Legend />}
-        
+
         {Array.isArray(dataKey) ? (
           dataKey.map((key, index) => (
             <Line
@@ -165,20 +168,20 @@ const Chart = ({
     </ResponsiveContainer>
   );
 
-  // Area Chart
+  // area chart
   const renderAreaChart = () => (
     <ResponsiveContainer width={width} height={height}>
       <AreaChart data={data} margin={margin} {...rest}>
         {renderGradients()}
         {showGrid && (
-          <CartesianGrid 
-            strokeDasharray="3 3" 
+          <CartesianGrid
+            strokeDasharray="3 3"
             stroke={chartTheme.grid}
             opacity={0.5}
           />
         )}
         {showXAxis && (
-          <XAxis 
+          <XAxis
             dataKey={xKey}
             stroke={chartTheme.axis}
             fontSize={12}
@@ -186,7 +189,7 @@ const Chart = ({
           />
         )}
         {showYAxis && (
-          <YAxis 
+          <YAxis
             stroke={chartTheme.axis}
             fontSize={12}
             tick={{ fill: chartTheme.text }}
@@ -194,7 +197,7 @@ const Chart = ({
         )}
         {showTooltip && <Tooltip content={<CustomTooltip />} />}
         {showLegend && <Legend />}
-        
+
         {Array.isArray(dataKey) ? (
           dataKey.map((key, index) => (
             <Area
@@ -222,20 +225,20 @@ const Chart = ({
     </ResponsiveContainer>
   );
 
-  // Bar Chart
+  // bar chart
   const renderBarChart = () => (
     <ResponsiveContainer width={width} height={height}>
       <BarChart data={data} margin={margin} {...rest}>
         {renderGradients()}
         {showGrid && (
-          <CartesianGrid 
-            strokeDasharray="3 3" 
+          <CartesianGrid
+            strokeDasharray="3 3"
             stroke={chartTheme.grid}
             opacity={0.5}
           />
         )}
         {showXAxis && (
-          <XAxis 
+          <XAxis
             dataKey={xKey}
             stroke={chartTheme.axis}
             fontSize={12}
@@ -243,7 +246,7 @@ const Chart = ({
           />
         )}
         {showYAxis && (
-          <YAxis 
+          <YAxis
             stroke={chartTheme.axis}
             fontSize={12}
             tick={{ fill: chartTheme.text }}
@@ -251,7 +254,7 @@ const Chart = ({
         )}
         {showTooltip && <Tooltip content={<CustomTooltip />} />}
         {showLegend && <Legend />}
-        
+
         {Array.isArray(dataKey) ? (
           dataKey.map((key, index) => (
             <Bar
@@ -274,7 +277,7 @@ const Chart = ({
     </ResponsiveContainer>
   );
 
-  // Pie Chart
+  // pie chart
   const renderPieChart = () => (
     <ResponsiveContainer width={width} height={height}>
       <PieChart {...rest}>
@@ -290,9 +293,9 @@ const Chart = ({
           animationDuration={animate ? 1000 : 0}
         >
           {data.map((entry, index) => (
-            <Cell 
-              key={`cell-${index}`} 
-              fill={defaultColors[index % defaultColors.length]} 
+            <Cell
+              key={`cell-${index}`}
+              fill={defaultColors[index % defaultColors.length]}
             />
           ))}
         </Pie>
@@ -302,7 +305,7 @@ const Chart = ({
     </ResponsiveContainer>
   );
 
-  // Radial Bar Chart
+  // radial bar chart
   const renderRadialBarChart = () => (
     <ResponsiveContainer width={width} height={height}>
       <RadialBarChart
@@ -327,7 +330,7 @@ const Chart = ({
     </ResponsiveContainer>
   );
 
-  // Render chart based on type
+  // render chart based on type
   const renderChart = () => {
     switch (type) {
       case 'line':
@@ -352,26 +355,26 @@ const Chart = ({
   );
 };
 
-// Chart variants as separate components
+// chart variants as separate components
 export const LineChart = (props) => <Chart {...props} type="line" />;
 export const AreaChart = (props) => <Chart {...props} type="area" />;
 export const BarChart = (props) => <Chart {...props} type="bar" />;
 export const PieChart = (props) => <Chart {...props} type="pie" />;
 export const RadialChart = (props) => <Chart {...props} type="radial" />;
 
-// Statistics Chart Component
-export const StatsChart = ({ 
-  title, 
-  value, 
-  trend, 
-  trendValue, 
-  data = [], 
+// statistics chart component
+export const StatsChart = ({
+  title,
+  value,
+  trend,
+  trendValue,
+  data = [],
   color = '#3B82F6',
   className = '',
-  ...props 
+  ...props
 }) => {
   const isPositiveTrend = trend === 'up' || trendValue > 0;
-  
+
   return (
     <div className={`bg-white dark:bg-slate-800 rounded-lg p-6 border border-gray-200 dark:border-slate-700 ${className}`}>
       <div className="flex items-start justify-between mb-4">
@@ -385,8 +388,8 @@ export const StatsChart = ({
         </div>
         {(trend || trendValue !== undefined) && (
           <div className={`flex items-center text-sm ${
-            isPositiveTrend 
-              ? 'text-green-600 dark:text-green-400' 
+            isPositiveTrend
+              ? 'text-green-600 dark:text-green-400'
               : 'text-red-600 dark:text-red-400'
           }`}>
             <span className="mr-1">
@@ -396,7 +399,7 @@ export const StatsChart = ({
           </div>
         )}
       </div>
-      
+
       {data.length > 0 && (
         <Chart
           data={data}

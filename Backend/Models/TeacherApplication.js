@@ -1,3 +1,6 @@
+/**
+ * keeps the teacher application model focused and readable.
+ */
 import mongoose from "mongoose";
 
 /**

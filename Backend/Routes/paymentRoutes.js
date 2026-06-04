@@ -1,3 +1,6 @@
+/**
+ * keeps the payment routes route focused and readable.
+ */
 import express from "express";
 import {
   createOrder,
@@ -12,7 +15,7 @@ import {
 } from "../Middleware/requestSignature.js";
 const router = express.Router();
 
-// All routes require authentication
+// all routes require authentication
 router.use(authenticateUser);
 
 router.post("/create-order", verifyRequestSignature, createOrder);

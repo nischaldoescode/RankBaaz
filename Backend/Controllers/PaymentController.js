@@ -1,3 +1,6 @@
+/**
+ * keeps the payment controller controller focused and readable.
+ */
 import Razorpay from "razorpay";
 import crypto from "crypto";
 import Course from "../Models/Course.js";
@@ -14,29 +17,29 @@ const razorpay = new Razorpay({
 
 export const createOrder = async (req, res) => {
   try {
-    const { courseId, couponId } = req.body; // ADD couponId here
+    const { courseId, couponId } = req.body; // couponid here
     const userId = req.user.userId;
 
-    // Verify Razorpay credentials are loaded
+    // verify razorpay credentials are loaded
     if (!process.env.RAZORPAY_KEY_ID || !process.env.RAZORPAY_SECRET) {
-      console.error("[RAZORPAY] Credentials missing!");
+      console.error("Credentials missing!");
       return res.status(500).json({
         success: false,
         message: "Payment system configuration error",
       });
     }
 
-    // Trim any whitespace from credentials
+    // trim any whitespace from credentials
     const razorpayKeyId = process.env.RAZORPAY_KEY_ID.trim();
     const razorpaySecret = process.env.RAZORPAY_SECRET.trim();
 
-    console.log("[RAZORPAY] Credential verification:", {
+    console.log("Credential verification:", {
       keyLength: razorpayKeyId.length,
       secretLength: razorpaySecret.length,
       keyFormat: razorpayKeyId.startsWith("rzp_") ? "Valid" : "Invalid",
     });
 
-    // Validate course
+    // validate course
     const course = await Course.findById(courseId);
     if (!course) {
       return res.status(404).json({
@@ -52,7 +55,7 @@ export const createOrder = async (req, res) => {
       });
     }
 
-    // Check if user already purchased
+    // check if user already purchased
     const existingPayment = await Payment.findOne({
       user: userId,
       course: courseId,
@@ -66,10 +69,10 @@ export const createOrder = async (req, res) => {
       });
     }
 
-    // Get user details
+    // get user details
     const user = await User.findById(userId).select("name email");
 
-    // COUPON HANDLING - NEW CODE STARTS HERE
+    // coupon handling - code starts here
     let finalAmount = course.price;
     let discountAmount = 0;
     let discountPercentage = 0;
@@ -86,7 +89,7 @@ export const createOrder = async (req, res) => {
         });
       }
 
-      // Validate coupon
+      // validate coupon
       const validationResult = coupon.isValid(userId);
       if (!validationResult.valid) {
         return res.status(400).json({
@@ -95,7 +98,7 @@ export const createOrder = async (req, res) => {
         });
       }
 
-      // Check if coupon applies to this course
+      // check if coupon applies to this course
       if (coupon.type === "course") {
         if (coupon.course.toString() !== courseId) {
           return res.status(400).json({
@@ -105,13 +108,13 @@ export const createOrder = async (req, res) => {
         }
       }
 
-      // Calculate discount
+      // calculate discount
       discountPercentage = coupon.discount;
       discountAmount = Math.round((course.price * discountPercentage) / 100);
       finalAmount = course.price - discountAmount;
       appliedCoupon = coupon;
 
-      console.log("[PAYMENT] Coupon applied:", {
+      console.log("Coupon applied:", {
         code: "HIDDEN",
         discount: `${discountPercentage}%`,
         originalPrice: course.price,
@@ -119,30 +122,30 @@ export const createOrder = async (req, res) => {
         finalAmount,
       });
     }
-    // COUPON HANDLING - NEW CODE ENDS HERE
+    // coupon handling - code ends here
 
-    // Create Razorpay order with FINAL AMOUNT (after discount)
+    // create razorpay order with final amount (discount)
     const options = {
-      amount: finalAmount * 100, // Amount in paise (CHANGED from course.price to finalAmount)
+      amount: finalAmount * 100, // amount in paise (d from course.price to finalamount)
       currency: course.currency,
       receipt: `ord_${Date.now()}_${crypto.randomBytes(3).toString("hex")}`,
       notes: {
         courseId: courseId.toString(),
         userId: userId.toString(),
         courseName: course.name,
-        originalAmount: course.price.toString(), // ADD original amount
-        discountAmount: discountAmount.toString(), // ADD discount amount
-        couponApplied: appliedCoupon ? "yes" : "no", // ADD coupon flag
+        originalAmount: course.price.toString(), // original amount
+        discountAmount: discountAmount.toString(), // discount amount
+        couponApplied: appliedCoupon ? "yes" : "no", // coupon flag
       },
     };
 
-    console.log("[RAZORPAY] Creating order with options:", {
+    console.log("Creating order with options:", {
       amount: options.amount,
       currency: options.currency,
       receipt: options.receipt,
     });
 
-    console.log("[RAZORPAY] Using credentials:", {
+    console.log("Using credentials:", {
       keyId: process.env.RAZORPAY_KEY_ID?.substring(0, 15) + "...",
       hasSecret: !!process.env.RAZORPAY_SECRET,
     });
@@ -150,15 +153,15 @@ export const createOrder = async (req, res) => {
     let order;
     try {
       order = await razorpay.orders.create(options);
-      console.log("[RAZORPAY] FULL KEY CHECK:", {
+      console.log("FULL KEY CHECK:", {
         keyId: razorpayKeyId,
         secretFirstChars: razorpaySecret.substring(0, 4),
         secretLastChars: razorpaySecret.substring(razorpaySecret.length - 4),
       });
 
-      console.log("[RAZORPAY] Order created successfully:", order.id);
+      console.log("Order created successfully:", order.id);
     } catch (razorpayError) {
-      console.error("[RAZORPAY] Order creation failed:", {
+      console.error("Order creation failed:", {
         error: razorpayError.error,
         statusCode: razorpayError.statusCode,
         message: razorpayError.message,
@@ -172,7 +175,7 @@ export const createOrder = async (req, res) => {
       });
     }
 
-    // UPDATED RESPONSE - ADD DISCOUNT INFO
+    // updated response - discount info
     res.status(200).json({
       success: true,
       data: {
@@ -184,13 +187,13 @@ export const createOrder = async (req, res) => {
         userEmail: user.email,
         courseName: course.name,
         courseImage: course.image?.url,
-        // ADD THESE NEW FIELDS
+        // these fields
         originalAmount: course.price,
         discountAmount,
         discountPercentage,
         finalAmount,
         couponApplied: !!appliedCoupon,
-        // DO NOT send coupon code or hash
+        // do not send coupon code or hash
       },
     });
   } catch (error) {
@@ -202,7 +205,7 @@ export const createOrder = async (req, res) => {
   }
 };
 
-// Verify payment
+// verify payment
 export const verifyPayment = async (req, res) => {
   try {
     const {
@@ -210,12 +213,12 @@ export const verifyPayment = async (req, res) => {
       razorpay_payment_id,
       razorpay_signature,
       courseId,
-      couponId, // ADD THIS
+      couponId, // this
     } = req.body;
 
     const userId = req.user.userId;
 
-    // Verify signature
+    // verify signature
     const body = razorpay_order_id + "|" + razorpay_payment_id;
     const expectedSignature = crypto
       .createHmac("sha256", process.env.RAZORPAY_SECRET.trim())
@@ -225,7 +228,7 @@ export const verifyPayment = async (req, res) => {
     const isAuthentic = expectedSignature === razorpay_signature;
 
     if (!isAuthentic) {
-      console.error("[PAYMENT_VERIFY] Invalid signature:", {
+      console.error("Invalid signature:", {
         orderId: razorpay_order_id,
         paymentId: razorpay_payment_id,
         userId,
@@ -237,13 +240,13 @@ export const verifyPayment = async (req, res) => {
       });
     }
 
-    // Check if payment already exists (prevent duplicates)
+    // check if payment already exists (prevent duplicates)
     const existingPayment = await Payment.findOne({
       orderId: razorpay_order_id,
     });
 
     if (existingPayment) {
-      console.warn("[PAYMENT_VERIFY] Duplicate verification attempt:", {
+      console.warn("Duplicate verification attempt:", {
         orderId: razorpay_order_id,
         existingStatus: existingPayment.status,
       });
@@ -260,7 +263,7 @@ export const verifyPayment = async (req, res) => {
       }
     }
 
-    // Get course details
+    // get course details
     const course = await Course.findById(courseId);
     if (!course) {
       return res.status(404).json({
@@ -269,7 +272,7 @@ export const verifyPayment = async (req, res) => {
       });
     }
 
-    // COUPON HANDLING - NEW CODE STARTS HERE
+    // coupon handling - code starts here
     let finalAmount = course.price;
     let discountAmount = 0;
     let discountPercentage = 0;
@@ -280,10 +283,10 @@ export const verifyPayment = async (req, res) => {
       const coupon = await Coupon.findById(couponId);
 
       if (coupon) {
-        // Re-validate coupon
+        // re-validate coupon
         const validationResult = coupon.isValid(userId);
         if (validationResult.valid) {
-          // Check course match for course-level coupons
+          // check course match for course-level coupons
           if (
             coupon.type === "universal" ||
             (coupon.type === "course" && coupon.course.toString() === courseId)
@@ -295,7 +298,7 @@ export const verifyPayment = async (req, res) => {
             finalAmount = course.price - discountAmount;
             appliedCoupon = coupon;
 
-            // Update coupon usage
+            // update coupon usage
             coupon.usageCount += 1;
             coupon.usedBy.push({
               user: userId,
@@ -303,7 +306,7 @@ export const verifyPayment = async (req, res) => {
             });
             await coupon.save();
 
-            console.log("[PAYMENT_VERIFY] Coupon applied and updated:", {
+            console.log("Coupon applied and updated:", {
               couponId: coupon._id,
               usageCount: coupon.usageCount,
               discount: `${discountPercentage}%`,
@@ -312,9 +315,9 @@ export const verifyPayment = async (req, res) => {
         }
       }
     }
-    // COUPON HANDLING - NEW CODE ENDS HERE
+    // coupon handling - code ends here
 
-    // CREATE new payment record with COUPON INFO
+    // create payment record with coupon info
     const payment = new Payment({
       user: userId,
       course: courseId,
@@ -333,7 +336,7 @@ export const verifyPayment = async (req, res) => {
     });
     await payment.save();
 
-    console.log("[PAYMENT_VERIFY] Payment verified and saved:", {
+    console.log("Payment verified and saved:", {
       orderId: razorpay_order_id,
       paymentId: razorpay_payment_id,
       userId,
@@ -355,7 +358,7 @@ export const verifyPayment = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("[PAYMENT_VERIFY] Verification error:", error);
+    console.error("Verification error:", error);
     res.status(500).json({
       success: false,
       message: "Payment verification failed. Please contact support.",
@@ -363,7 +366,7 @@ export const verifyPayment = async (req, res) => {
   }
 };
 
-// Check if user has purchased course
+// check if user has purchased course
 export const checkPurchaseStatus = async (req, res) => {
   try {
     const { courseId } = req.params;
@@ -391,7 +394,7 @@ export const checkPurchaseStatus = async (req, res) => {
   }
 };
 
-// Get user's purchase history
+// get user's purchase history
 export const getPurchaseHistory = async (req, res) => {
   try {
     const userId = req.user.userId;

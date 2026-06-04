@@ -1,9 +1,12 @@
+/**
+ * keeps the course context context focused and readable.
+ */
 import React, { createContext, useContext, useReducer, useEffect } from "react";
 import { apiMethods, handleApiError } from "../services/api";
 import toast from "react-hot-toast";
 import { cachedAPICall } from "../utils/cacheManager";
 
-// Initial state
+// initial state
 const initialState = {
   courses: [],
   categories: [],
@@ -25,7 +28,7 @@ const initialState = {
   },
 };
 
-// Action types
+// action types
 const COURSE_ACTIONS = {
   SET_LOADING: "SET_LOADING",
   SET_COURSES: "SET_COURSES",
@@ -41,7 +44,7 @@ const COURSE_ACTIONS = {
   DELETE_COURSE: "DELETE_COURSE",
 };
 
-// Reducer function
+// reducer function
 const courseReducer = (state, action) => {
   switch (action.type) {
     case COURSE_ACTIONS.SET_LOADING:
@@ -99,7 +102,7 @@ const courseReducer = (state, action) => {
         },
         pagination: {
           ...state.pagination,
-          currentPage: 1, // Reset to first page when filters change
+          currentPage: 1, // reset to first page when filters
         },
       };
 
@@ -157,35 +160,35 @@ const courseReducer = (state, action) => {
   }
 };
 
-// Create context
+// create context
 const CourseContext = createContext();
 
-// Provider component
+// provider component
 export const CourseProvider = ({ children }) => {
   const [state, dispatch] = useReducer(courseReducer, initialState);
 
-  // Load categories and initial courses on mount
+  // load categories and initial courses on mount
   useEffect(() => {
     loadCategories();
     loadCourses();
   }, []);
 
   useEffect(() => {
-    // Immediately trigger loadCourses on filter/page change
-    loadCourses(true); // Always show loading spinner
+    // immediately trigger loadcourses on filter/page
+    loadCourses(true); // always show loading spinner
   }, [JSON.stringify(state.filters), state.pagination.currentPage]);
 
-  // Helper function to calculate estimated time
+  // helper function to calculate estimated time
   const calculateEstimatedTime = (course) => {
     if (!course.difficulties || course.difficulties.length === 0) {
       return "30 minutes"; // default fallback
     }
 
-    // Calculate total time from all difficulties
+    // calculate total time from all difficulties
     let totalSeconds = 0;
     course.difficulties.forEach((difficulty) => {
       if (difficulty.timerSettings) {
-        // Use average of min and max time for each difficulty
+        // use average of min and max time for each difficulty
         const avgTime =
           (difficulty.timerSettings.minTime +
             difficulty.timerSettings.maxTime) /
@@ -194,9 +197,9 @@ export const CourseProvider = ({ children }) => {
       }
     });
 
-    // Add 2 minutes buffer (120 seconds)
+    // 2 minutes buffer (120 seconds)
     totalSeconds += 240;
-    // Convert to minutes and format
+    // convert to minutes and format
     const totalMinutes = Math.ceil(totalSeconds / 60);
 
     if (totalMinutes < 60) {
@@ -226,7 +229,7 @@ export const CourseProvider = ({ children }) => {
         sortBy: state.filters.sortBy,
       };
 
-      // Only add filters if they have actual values (not "all" or empty)
+      // only filters if they have actual values (not "all" or empty)
       if (state.filters.category && state.filters.category !== "all") {
         params.category = state.filters.category;
       }
@@ -239,7 +242,7 @@ export const CourseProvider = ({ children }) => {
         params.search = state.filters.searchTerm;
       }
 
-      // Handle price filter conversion
+      // handle price filter conversion
       if (state.filters.price) {
         if (state.filters.price === "free") {
           params.isPaid = false;
@@ -248,11 +251,11 @@ export const CourseProvider = ({ children }) => {
         }
       }
 
-      // IMPORTANT: Never send isActive parameter from frontend
-      // Backend enforces active courses for non-admin users
+      // important: never send isactive parameter from frontend
+      // backend enforces active courses for non-admin users
       delete params.isActive;
 
-      // Use cached API call
+      // use cached api call
       const data = await cachedAPICall(
         "/api/courses",
         params,
@@ -266,7 +269,7 @@ export const CourseProvider = ({ children }) => {
 
       const { courses = [], pagination = {} } = data;
 
-      // ALWAYS dispatch success, even with empty results
+      // always dispatch success, even with empty results
       dispatch({
         type: COURSE_ACTIONS.SET_COURSES,
         payload: {
@@ -278,10 +281,10 @@ export const CourseProvider = ({ children }) => {
         },
       });
 
-      // Clear any previous errors
+      // clear any previous errors
       dispatch({ type: COURSE_ACTIONS.CLEAR_ERROR });
     } catch (error) {
-      // Only show error for actual network/server errors
+      // only show error for actual network/server errors
       if (error.response?.status !== 401) {
         const errorMessage = handleApiError(error, "Failed to load courses");
         dispatch({ type: COURSE_ACTIONS.SET_ERROR, payload: errorMessage });
@@ -417,7 +420,7 @@ export const CourseProvider = ({ children }) => {
     });
   };
 
-  // Computed values
+  // computed values
   const filteredCoursesCount = state.courses?.length;
   const hasFiltersApplied = Object.entries(state.filters).some(
     ([key, value]) => key !== "sortBy" && value !== ""
@@ -445,7 +448,7 @@ export const CourseProvider = ({ children }) => {
   );
 };
 
-// Hook to use course context
+// hook to use course context
 export const useCourses = () => {
   const context = useContext(CourseContext);
   if (!context) {

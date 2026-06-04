@@ -1,3 +1,6 @@
+/**
+ * keeps the test result model focused and readable.
+ */
 import mongoose from "mongoose";
 
 const testResultSchema = new mongoose.Schema(
@@ -177,7 +180,7 @@ const testResultSchema = new mongoose.Schema(
   }
 );
 
-// Indexes for efficient and fast databse queries
+// indexes for efficient and fast databse queries
 testResultSchema.index({ user: 1, createdAt: -1 });
 testResultSchema.index({ course: 1, createdAt: -1 });
 testResultSchema.index({ user: 1, course: 1 });
@@ -203,7 +206,7 @@ testResultSchema.index(
   { name: "user_performance" }
 );
 
-// Compound index for leaderboard queries
+// compound index for leaderboard queries
 testResultSchema.index(
   {
     course: 1,

@@ -1,6 +1,9 @@
+/**
+ * keeps the request signing utility focused and readable.
+ */
 import crypto from "crypto-js";
 
-// Utility for signing API requests
+// utility for signing api requests
 class RequestSigner {
   constructor() {
     this.signingSecret = null;
@@ -40,11 +43,11 @@ class RequestSigner {
   }
 
   generateNonce() {
-    // Use Web Crypto API for cryptographically strong randomness
+    // use web crypto api for cryptographically strong randomness
     const array = new Uint8Array(16);
     window.crypto.getRandomValues(array);
 
-    // Convert to hex string (32 characters)
+    // convert to hex string (32 characters)
     return Array.from(array, (byte) => byte.toString(16).padStart(2, "0")).join(
       ""
     );
@@ -65,7 +68,7 @@ class RequestSigner {
 
   signRequest(config) {
     if (!this.isSecretValid()) {
-      console.warn("[REQUEST_SIGNER] Signing secret expired or missing");
+      console.warn("Signing secret expired or missing");
       return config;
     }
 
@@ -90,7 +93,7 @@ class RequestSigner {
       config.headers["X-Request-Nonce"] = nonce;
 
       if (import.meta.env.VITE_MODE === "development") {
-        console.log("[REQUEST_SIGNER] Request signed:", {
+        console.log("Request signed:", {
           method,
           path,
           timestamp,

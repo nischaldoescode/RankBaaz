@@ -1,4 +1,7 @@
-import React, { useState } from "react";
+/**
+ * keeps the login page focused and readable.
+ */
+import React, { useEffect, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { useTeacher } from "../context/TeacherContext.jsx";
@@ -12,6 +15,10 @@ const Login = () => {
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [notRegistered, setNotRegistered] = useState(false);
+  const [contentSettings, setContentSettings] = useState(null);
+  const [logoBroken, setLogoBroken] = useState(false);
+  const siteName = contentSettings?.siteName || "Vidhgrow";
+  const logoUrl = contentSettings?.logo?.url;
 
   const inputStyle = {
     width: "100%",
@@ -26,6 +33,17 @@ const Login = () => {
     transition: "border-color 0.2s",
     boxSizing: "border-box",
   };
+
+  useEffect(() => {
+    teacherApi.content
+      .settings()
+      .then((res) => setContentSettings(res.data.data.settings))
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    setLogoBroken(false);
+  }, [logoUrl]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -45,8 +63,8 @@ const Login = () => {
         (msg.toLowerCase().includes("not found") ||
           msg.toLowerCase().includes("invalid credentials"))
       ) {
-        // check if email exists at all — we can do this by looking at the error
-        // since the backend returns "Invalid credentials" for both wrong password
+        // infer whether the email exists from the login error.
+        // since the backend returns "invalid credentials" for both wrong password
         // and non-existent email (security best practice), we show a helpful message
         // only if the email field looks valid but login fails
         const emailExists = await teacherApi.auth
@@ -71,15 +89,18 @@ const Login = () => {
 
   return (
     <div
+      className="teacher-auth-page"
       style={{
         minHeight: "100vh",
         background:
-          "linear-gradient(135deg, #f0f4ff 0%, #e8f0fe 50%, #f0f9ff 100%)",
+          "linear-gradient(180deg, #f8fbff 0%, #ffffff 48%, #f8fafc 100%)",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
         padding: 24,
         fontFamily: "'Inter Variable', sans-serif",
+        position: "relative",
+        overflow: "hidden",
       }}
     >
       <motion.div
@@ -92,26 +113,41 @@ const Login = () => {
         <div style={{ textAlign: "center", marginBottom: 36 }}>
           <div
             style={{
-              width: 52,
-              height: 52,
-              background: "linear-gradient(135deg, #2563eb, #1d4ed8)",
-              borderRadius: 14,
+              minHeight: 58,
+              maxWidth: 220,
+              margin: "0 auto 16px",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              margin: "0 auto 16px",
-              boxShadow: "0 4px 20px rgba(37,99,235,0.3)",
             }}
           >
-            <svg width="26" height="26" viewBox="0 0 24 24" fill="none">
-              <path
-                d="M12 3L1 9l11 6 11-6-11-6zM1 9v6m22-6v6M5.33 11.5L1 15l11 6 11-6-5.33-3.5"
-                stroke="white"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
+            {logoUrl && !logoBroken ? (
+              <img
+                src={logoUrl}
+                alt={siteName}
+                onError={() => setLogoBroken(true)}
+                style={{
+                  maxWidth: "100%",
+                  maxHeight: 58,
+                  objectFit: "contain",
+                  display: "block",
+                }}
               />
-            </svg>
+            ) : (
+              <div
+                style={{
+                  borderRadius: 8,
+                  background: "rgba(37,99,235,0.09)",
+                  color: "#2563eb",
+                  padding: "10px 14px",
+                  fontSize: 14,
+                  fontWeight: 800,
+                  letterSpacing: "0.02em",
+                }}
+              >
+                {siteName}
+              </div>
+            )}
           </div>
           <h1
             style={{
@@ -173,12 +209,13 @@ const Login = () => {
         {/* card */}
         <div
           style={{
-            background: "#fff",
-            borderRadius: 20,
+            background: "rgba(255,255,255,0.9)",
+            borderRadius: 8,
             padding: "36px 32px",
             boxShadow:
-              "0 1px 3px rgba(0,0,0,0.06), 0 8px 32px rgba(0,0,0,0.06)",
-            border: "1px solid rgba(226,232,240,0.8)",
+              "0 1px 2px rgba(15,23,42,0.08), 0 16px 44px rgba(37,99,235,0.08)",
+            border: "1px solid rgba(148,163,184,0.30)",
+            backdropFilter: "blur(18px)",
           }}
         >
           <form

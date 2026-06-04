@@ -1,3 +1,6 @@
+/**
+ * keeps the indexnow module focused and readable.
+ */
 const key = "4eeccfa93b5449c58a8a6cd15e76d9fc";
 const host = "vidhgrow.online";
 const keyLocation = "https://vidhgrow.online/4eeccfa93b5449c58a8a6cd15e76d9fc.txt";

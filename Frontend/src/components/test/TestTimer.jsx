@@ -1,12 +1,15 @@
+/**
+ * keeps the test timer component focused and readable.
+ */
 import React, { useState, useEffect, useRef } from 'react';
 import { Card, CardContent } from "@/components/ui/Card";
 import { Progress } from "@/components/ui/progress";
 import { Clock, AlertTriangle, Zap } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-const TestTimer = ({ 
-  timeRemaining, 
-  totalTime, 
+const TestTimer = ({
+  timeRemaining,
+  totalTime,
   isRunning = true,
   onTimeUp,
   onWarning,
@@ -21,36 +24,36 @@ const TestTimer = ({
 
   useEffect(() => {
     setDisplayTime(timeRemaining);
-    
-    // Show milliseconds when under 10 seconds
+
+    // show milliseconds when under 10 seconds
     setShowMilliseconds(timeRemaining <= 10);
-    
-    // Set warning states
+
+    // set warning states
     const warningThreshold = Math.max(30, totalTime * 0.1); // 30s or 10% of total time
     const criticalThreshold = 10;
-    
+
     setIsWarning(timeRemaining <= warningThreshold && timeRemaining > criticalThreshold);
     setIsCritical(timeRemaining <= criticalThreshold);
-    
-    // Trigger callbacks
+
+    // trigger callbacks
     if (timeRemaining <= criticalThreshold && timeRemaining > 0) {
       onWarning?.('critical');
     } else if (timeRemaining <= warningThreshold && timeRemaining > criticalThreshold) {
       onWarning?.('warning');
     }
-    
+
     if (timeRemaining === 0) {
       onTimeUp?.();
     }
   }, [timeRemaining, totalTime, onTimeUp, onWarning]);
 
-  // Handle milliseconds display for last 10 seconds
+  // handle milliseconds display for last 10 seconds
   useEffect(() => {
     if (showMilliseconds && isRunning && timeRemaining > 0) {
       intervalRef.current = setInterval(() => {
         millisecondsRef.current = (millisecondsRef.current + 100) % 1000;
         if (millisecondsRef.current === 0) {
-          // This will be handled by parent component's timer
+          // this will be handled by parent component's timer
         }
       }, 100);
     } else {
@@ -72,7 +75,7 @@ const TestTimer = ({
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
     const ms = millisecondsRef.current;
-    
+
     if (includeMs && showMilliseconds) {
       return `${mins}:${secs.toString().padStart(2, '0')}.${Math.floor(ms / 100)}`;
     }
@@ -91,7 +94,7 @@ const TestTimer = ({
 
   const getTimerStyles = () => {
     const baseStyles = "transition-all duration-300";
-    
+
     switch (getTimerVariant()) {
       case 'critical':
         return cn(baseStyles, "text-red-600 dark:text-red-400");
@@ -104,7 +107,7 @@ const TestTimer = ({
 
   const getCardStyles = () => {
     const baseStyles = "transition-all duration-300";
-    
+
     switch (getTimerVariant()) {
       case 'critical':
         return cn(baseStyles, "border-red-500 bg-red-50 dark:bg-red-950/20 shadow-lg shadow-red-100 dark:shadow-red-900/20");
@@ -136,14 +139,14 @@ const TestTimer = ({
               {isCritical ? 'Time Critical!' : isWarning ? 'Time Warning' : 'Time Remaining'}
             </span>
           </div>
-          
-          {/* Pulse indicator for critical time */}
+
+          {/* pulse indicator for time */}
           {isCritical && (
             <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse"></div>
           )}
         </div>
 
-        {/* Timer Display */}
+        {/* timer display */}
         <div className="text-center mb-3">
           <div className={cn("text-2xl font-mono font-bold", getTimerStyles())}>
             {formatTime(displayTime, showMilliseconds)}
@@ -153,8 +156,8 @@ const TestTimer = ({
               </span>
             )}
           </div>
-          
-          {/* Time status text */}
+
+          {/* time status text */}
           <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
             {isCritical && "Hurry up! Time is almost over!"}
             {isWarning && !isCritical && "Please manage your time wisely"}
@@ -162,15 +165,15 @@ const TestTimer = ({
           </div>
         </div>
 
-        {/* Progress Bar */}
+        {/* progress bar */}
         <div className="space-y-2">
           <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400">
             <span>Progress</span>
             <span>{Math.round(getProgressPercentage())}%</span>
           </div>
-          
-          <Progress 
-            value={getProgressPercentage()} 
+
+          <Progress
+            value={getProgressPercentage()}
             className={cn(
               "h-2 transition-all duration-300",
               isCritical && "bg-red-100 dark:bg-red-900/30",
@@ -179,7 +182,7 @@ const TestTimer = ({
           />
         </div>
 
-        {/* Additional info for critical state */}
+        {/* itional info for state */}
         {isCritical && (
           <div className="mt-3 p-2 bg-red-100 dark:bg-red-900/30 rounded text-xs text-red-800 dark:text-red-200 text-center">
             Test will auto-submit when time expires

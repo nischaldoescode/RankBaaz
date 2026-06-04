@@ -1,3 +1,6 @@
+/**
+ * keeps the blog indexing submission model focused and readable.
+ */
 import mongoose from "mongoose";
 
 const blogIndexingSubmissionSchema = new mongoose.Schema(

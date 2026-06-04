@@ -1,3 +1,6 @@
+/**
+ * keeps the signup page focused and readable.
+ */
 import React, { useState, useEffect, useMemo } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
@@ -126,11 +129,26 @@ const Signup = () => {
   const [otpTimer, setOtpTimer] = useState(0);
   const [showPass, setShowPass] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [contentSettings, setContentSettings] = useState(null);
+  const [logoBroken, setLogoBroken] = useState(false);
+  const siteName = contentSettings?.siteName || "Vidhgrow";
+  const logoUrl = contentSettings?.logo?.url;
 
   const usernameSuggestions = useMemo(
     () => buildUsernameSuggestions(inviteData?.name || ""),
     [inviteData?.name],
   );
+
+  useEffect(() => {
+    teacherApi.content
+      .settings()
+      .then((res) => setContentSettings(res.data.data.settings))
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    setLogoBroken(false);
+  }, [logoUrl]);
 
   // verify invite token
   useEffect(() => {
@@ -176,7 +194,7 @@ const Signup = () => {
     }
   }, [form.username, usernameSuggestions]);
 
-  // OTP countdown timer
+  // otp countdown timer
   useEffect(() => {
     if (otpTimer <= 0) return;
     const t = setInterval(() => setOtpTimer((p) => p - 1), 1000);
@@ -267,7 +285,7 @@ const Signup = () => {
       return;
     }
     setStep(2);
-    // auto-send OTP when entering step 2
+    // auto-send otp when entering step 2
     if (!otpSent) {
       setTimeout(handleSendOtp, 300);
     }
@@ -362,26 +380,41 @@ const Signup = () => {
         <div style={{ textAlign: "center", marginBottom: 28 }}>
           <div
             style={{
-              width: 52,
-              height: 52,
-              background: "linear-gradient(135deg, #059669, #047857)",
-              borderRadius: 14,
+              minHeight: 58,
+              maxWidth: 220,
+              margin: "0 auto 16px",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              margin: "0 auto 16px",
-              boxShadow: "0 4px 20px rgba(5,150,105,0.3)",
             }}
           >
-            <svg width="26" height="26" viewBox="0 0 24 24" fill="none">
-              <path
-                d="M20 6L9 17l-5-5"
-                stroke="white"
-                strokeWidth="2.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
+            {logoUrl && !logoBroken ? (
+              <img
+                src={logoUrl}
+                alt={siteName}
+                onError={() => setLogoBroken(true)}
+                style={{
+                  maxWidth: "100%",
+                  maxHeight: 58,
+                  objectFit: "contain",
+                  display: "block",
+                }}
               />
-            </svg>
+            ) : (
+              <div
+                style={{
+                  borderRadius: 8,
+                  background: "rgba(37,99,235,0.09)",
+                  color: "#2563eb",
+                  padding: "10px 14px",
+                  fontSize: 14,
+                  fontWeight: 800,
+                  letterSpacing: "0.02em",
+                }}
+              >
+                {siteName}
+              </div>
+            )}
           </div>
           <h1
             style={{
@@ -418,7 +451,7 @@ const Signup = () => {
             ))}
           </div>
           <p style={{ fontSize: 12, color: "#94a3b8", textAlign: "center" }}>
-            Step {step} of {totalSteps} — {stepLabels[step - 1]}
+            Step {step} of {totalSteps}: {stepLabels[step - 1]}
           </p>
         </div>
 
@@ -453,7 +486,7 @@ const Signup = () => {
           )}
 
           <AnimatePresence mode="wait">
-            {/* step 1 — credentials + age/gender */}
+            {/* credentials and basic details */}
             {step === 1 && (
               <motion.div
                 key="s1"
@@ -660,7 +693,7 @@ const Signup = () => {
               </motion.div>
             )}
 
-            {/* step 2 — OTP */}
+            {/* email verification */}
             {step === 2 && (
               <motion.div
                 key="s2"
@@ -823,7 +856,7 @@ const Signup = () => {
               </motion.div>
             )}
 
-            {/* step 3 — profile */}
+            {/* profile details */}
             {step === 3 && (
               <motion.form
                 key="s3"

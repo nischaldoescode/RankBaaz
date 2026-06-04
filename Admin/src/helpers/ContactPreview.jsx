@@ -1,3 +1,6 @@
+/**
+ * keeps the contact preview utility focused and readable.
+ */
 import {
   Brain,
   Target,
@@ -43,9 +46,9 @@ export const ContactPreview = ({ data }) => {
         </p>
       </div>
 
-      {/* Contact Cards Grid */}
+      {/* contact cards grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Email Card */}
+        {/* email card */}
         {data.email?.support && (
           <div className="bg-card border border-border rounded-xl p-4">
             <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center mb-3">
@@ -64,7 +67,7 @@ export const ContactPreview = ({ data }) => {
           </div>
         )}
 
-        {/* Telegram Card */}
+        {/* telegram card */}
         {data.telegram?.support && (
           <div className="bg-card border border-border rounded-xl p-4">
             <div className="w-10 h-10 bg-blue-500/10 rounded-lg flex items-center justify-center mb-3">
@@ -91,7 +94,7 @@ export const ContactPreview = ({ data }) => {
           </div>
         )}
 
-        {/* Address Card */}
+        {/* ress card */}
         {hasAddress && (
           <div className="bg-card border border-border rounded-xl p-4">
             <div className="w-10 h-10 bg-orange-500/10 rounded-lg flex items-center justify-center mb-3">
@@ -114,7 +117,7 @@ export const ContactPreview = ({ data }) => {
           </div>
         )}
 
-        {/* Business Hours */}
+        {/* business hours */}
         {data.businessHours && (
           <div className="bg-card border border-border rounded-xl p-4">
             <div className="w-10 h-10 bg-purple-500/10 rounded-lg flex items-center justify-center mb-3">
@@ -130,7 +133,7 @@ export const ContactPreview = ({ data }) => {
         )}
       </div>
 
-      {/* Social Media */}
+      {/* social media */}
       {data.socialMedia &&
         Object.values(data.socialMedia).some((val) => val) && (
           <div className="bg-card rounded-xl p-6 border border-border">

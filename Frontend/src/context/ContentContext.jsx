@@ -1,3 +1,6 @@
+/**
+ * keeps the content context context focused and readable.
+ */
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { apiMethods } from "../services/api";
 import { cachedAPICall } from "../utils/cacheManager";
@@ -19,7 +22,7 @@ export const ContentProvider = ({ children }) => {
   const [loading, setLoading] = useState(false);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
 
-  // Fetch Content Settings
+  // fetch content settings
   const fetchContentSettings = async (forceRefresh = false) => {
     try {
       const data = await cachedAPICall(
@@ -37,9 +40,9 @@ export const ContentProvider = ({ children }) => {
 
       setContentSettings(data);
 
-      // Preload logo image if it exists
+      // preload logo image if it exists
       if (data?.logo?.url) {
-        // Dynamic import to avoid circular dependency
+        // dynamic import to avoid circular dependency
         import("../utils/cacheManager").then(({ cacheManager }) => {
           cacheManager.cacheImage(data.logo.url).catch((err) => {
             console.error("[Content] Failed to preload logo:", err);
@@ -54,7 +57,7 @@ export const ContentProvider = ({ children }) => {
     }
   };
 
-  // Fetch FAQs
+  // fetch faqs
   const fetchFAQs = async (category = null) => {
     try {
       const params = category ? `?category=${category}` : "";
@@ -69,7 +72,7 @@ export const ContentProvider = ({ children }) => {
     }
   };
 
-  // Fetch Contact Info
+  // fetch contact info
   const fetchContactInfo = async (forceRefresh = false) => {
     try {
       const data = await cachedAPICall(
@@ -93,7 +96,7 @@ export const ContentProvider = ({ children }) => {
     }
   };
 
-  // Fetch Legal Page
+  // fetch legal page
   const fetchLegalPage = async (type) => {
     try {
       const response = await apiMethods.get(`/api/content/legal/${type}`);
@@ -110,7 +113,7 @@ export const ContentProvider = ({ children }) => {
     }
   };
 
-  // Fetch all legal pages
+  // fetch all legal pages
   const fetchAllLegalPages = async (forceRefresh = false) => {
     try {
       const data = await cachedAPICall(
@@ -137,7 +140,7 @@ export const ContentProvider = ({ children }) => {
     }
   };
 
-  // Initialize - fetch content on mount
+  // initialize - fetch content on mount
   useEffect(() => {
     const initializeContent = async () => {
       setLoading(true);
@@ -153,7 +156,7 @@ export const ContentProvider = ({ children }) => {
     initializeContent();
   }, []);
 
-  // NEW: Listen for updates from admin panel
+  // listen for updates from admin panel
   useEffect(() => {
     const handleSettingsUpdate = () => {
       fetchContentSettings();
