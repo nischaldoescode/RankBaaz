@@ -67,6 +67,7 @@
 
 html {
   scroll-behavior: smooth;
+  scroll-padding-top: 5rem;
 }
 
 body {
@@ -96,6 +97,7 @@ a,
 .vg-home-shell {
   isolation: isolate;
   min-height: 100vh;
+  backface-visibility: hidden;
 }
 
 .vg-home-shell > section,
@@ -1048,6 +1050,21 @@ a,
 }
 
 @media (max-width: 820px) {
+  html,
+  body {
+    overscroll-behavior-y: contain;
+  }
+
+  .vg-home-shell {
+    -webkit-overflow-scrolling: touch;
+    transform: translateZ(0);
+  }
+
+  .vg-home-shell section,
+  .vg-story-horizontal {
+    scroll-margin-top: 5rem;
+  }
+
   .vg-home-story-lines {
     width: 180%;
     left: -48%;

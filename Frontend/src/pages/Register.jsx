@@ -2,7 +2,7 @@
  * keeps the register page focused and readable.
  */
 import React, { useState, useEffect, useCallback, useMemo, memo } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
   Eye,
@@ -30,6 +30,7 @@ import toast from "react-hot-toast";
 import { useContent } from "../context/ContentContext";
 import { useSEO } from "../hooks/useSEO";
 import { checkReservedUsername } from "../utils/reservedUsernames";
+import { validateStudentEmail } from "../utils/emailValidation";
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -96,10 +97,18 @@ const buildUsernameSuggestions = (name, maxLength = 20) => {
 };
 
 const Register = () => {
+  const location = useLocation();
+  const prefilledEmail = useMemo(() => {
+    const queryEmail = new URLSearchParams(location.search).get("email");
+    return String(location.state?.email || queryEmail || "")
+      .trim()
+      .toLowerCase();
+  }, [location.search, location.state]);
+
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
-    email: "",
+    email: prefilledEmail,
     password: "",
     confirmPassword: "",
     dateOfBirth: "",
@@ -174,6 +183,15 @@ const Register = () => {
       navigate("/", { replace: true });
     }
   }, [isAuthenticated, authLoading, navigate]);
+
+  useEffect(() => {
+    if (!prefilledEmail) return;
+
+    setFormData((prev) => ({
+      ...prev,
+      email: prev.email || prefilledEmail,
+    }));
+  }, [prefilledEmail]);
 
   // auto-focus first otp input when otp step loads
   useEffect(() => {
@@ -325,6 +343,12 @@ const Register = () => {
 
     if (isLoading) return;
 
+    const emailCheck = validateStudentEmail(formData.email);
+    if (!emailCheck.valid) {
+      setErrors({ email: emailCheck.message });
+      return;
+    }
+
     // check terms agreement locally
     if (!formData.agreeToTerms) {
       setErrors({ agreeToTerms: "You must agree to the terms and conditions" });
@@ -344,7 +368,7 @@ const Register = () => {
       const result = await register({
         firstName: formData.firstName.trim(),
         lastName: formData.lastName.trim(),
-        email: formData.email.trim().toLowerCase(),
+        email: emailCheck.email,
         password: formData.password,
         dateOfBirth: formData.dateOfBirth,
         gender: formData.gender,

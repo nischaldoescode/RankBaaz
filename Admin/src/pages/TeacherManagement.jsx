@@ -219,6 +219,7 @@ const EmailEditor = ({ application, onClose, onSent }) => {
 
   return (
     <div
+      className="teacher-admin-modal-backdrop"
       style={{
         position: "fixed",
         inset: 0,
@@ -226,12 +227,13 @@ const EmailEditor = ({ application, onClose, onSent }) => {
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        zIndex: 100,
+        zIndex: 2147483000,
         padding: 16,
       }}
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
       <motion.div
+        className="teacher-admin-email-modal teacher-admin-modal-panel"
         initial={{ opacity: 0, scale: 0.95, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0 }}
@@ -250,6 +252,7 @@ const EmailEditor = ({ application, onClose, onSent }) => {
       >
         {/* sticky header */}
         <div
+          className="teacher-admin-modal-header"
           style={{
             padding: "18px 24px",
             borderBottom: "1px solid #e5e7eb",
@@ -278,7 +281,10 @@ const EmailEditor = ({ application, onClose, onSent }) => {
               {countryName(application.country)}
             </p>
           </div>
-          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          <div
+            className="teacher-admin-modal-controls"
+            style={{ display: "flex", gap: 8, alignItems: "center" }}
+          >
             {/* mode toggle */}
             <div
               style={{
@@ -323,7 +329,7 @@ const EmailEditor = ({ application, onClose, onSent }) => {
                 color: "#374151",
               }}
             >
-              {preview ? "edit Edit" : "preview Preview"}
+              {preview ? "Edit" : "Preview"}
             </button>
             <button
               onClick={() => setShowDesignPanel((p) => !p)}
@@ -338,7 +344,7 @@ const EmailEditor = ({ application, onClose, onSent }) => {
                 color: showDesignPanel ? "#2563eb" : "#374151",
               }}
             >
-              design Design
+              Design
             </button>
             <button
               onClick={onClose}
@@ -358,9 +364,9 @@ const EmailEditor = ({ application, onClose, onSent }) => {
           </div>
         </div>
 
-        <div style={{ display: "flex", flex: 1 }}>
+        <div className="teacher-admin-email-body" style={{ display: "flex", flex: 1 }}>
           {/* main editor */}
-          <div style={{ flex: 1, padding: 24, minWidth: 0 }}>
+          <div className="teacher-admin-email-editor" style={{ flex: 1, padding: 24, minWidth: 0 }}>
             {/* template selector */}
             {!preview && (
               <div style={{ marginBottom: 18 }}>
@@ -595,6 +601,7 @@ const EmailEditor = ({ application, onClose, onSent }) => {
           {/* design panel */}
           {showDesignPanel && !preview && (
             <div
+              className="teacher-admin-design-panel"
               style={{
                 width: 220,
                 borderLeft: "1px solid #f1f5f9",
@@ -724,6 +731,7 @@ const EmailEditor = ({ application, onClose, onSent }) => {
 
         {/* sticky footer */}
         <div
+          className="teacher-admin-modal-footer"
           style={{
             padding: "14px 24px",
             borderTop: "1px solid #e5e7eb",
@@ -874,6 +882,7 @@ const TeacherDetailModal = ({ teacher, onClose, onRefresh }) => {
 
   return (
     <div
+      className="teacher-admin-modal-backdrop"
       style={{
         position: "fixed",
         inset: 0,
@@ -881,12 +890,13 @@ const TeacherDetailModal = ({ teacher, onClose, onRefresh }) => {
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        zIndex: 90,
+        zIndex: 2147483000,
         padding: 16,
       }}
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
       <motion.div
+        className="teacher-admin-modal-panel"
         initial={{ opacity: 0, scale: 0.95, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0 }}
@@ -903,6 +913,7 @@ const TeacherDetailModal = ({ teacher, onClose, onRefresh }) => {
       >
         {/* header */}
         <div
+          className="teacher-admin-modal-header"
           style={{
             padding: "20px 24px",
             borderBottom: "1px solid #e5e7eb",
@@ -911,7 +922,10 @@ const TeacherDetailModal = ({ teacher, onClose, onRefresh }) => {
             justifyContent: "space-between",
           }}
         >
-          <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+          <div
+            className="teacher-detail-identity"
+            style={{ display: "flex", alignItems: "center", gap: 14 }}
+          >
             {teacher.profileImage?.url ? (
               <img
                 src={teacher.profileImage.url}
@@ -971,6 +985,7 @@ const TeacherDetailModal = ({ teacher, onClose, onRefresh }) => {
 
         {/* tabs */}
         <div
+          className="teacher-detail-tabs"
           style={{
             display: "flex",
             borderBottom: "1px solid #e5e7eb",
@@ -998,10 +1013,11 @@ const TeacherDetailModal = ({ teacher, onClose, onRefresh }) => {
           ))}
         </div>
 
-        <div style={{ padding: 24 }}>
+        <div className="teacher-detail-body" style={{ padding: 24 }}>
           {/* overview tab */}
           {tab === "overview" && (
             <div
+              className="teacher-detail-overview-grid"
               style={{
                 display: "grid",
                 gridTemplateColumns: "1fr 1fr",
@@ -1233,7 +1249,10 @@ const TeacherDetailModal = ({ teacher, onClose, onRefresh }) => {
               )}
 
               {teacher.documentStatus === "pending" && (
-                <div style={{ display: "flex", gap: 10, marginTop: 8 }}>
+                <div
+                  className="teacher-detail-doc-actions"
+                  style={{ display: "flex", gap: 10, marginTop: 8 }}
+                >
                   <button
                     onClick={() => handleVerifyDocs(true)}
                     disabled={loading}
@@ -1387,6 +1406,7 @@ const TeacherDetailModal = ({ teacher, onClose, onRefresh }) => {
           {tab === "courses" && (
             <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
               <div
+                className="teacher-detail-stats-grid"
                 style={{
                   display: "grid",
                   gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
@@ -1435,6 +1455,7 @@ const TeacherDetailModal = ({ teacher, onClose, onRefresh }) => {
                       }}
                     >
                       <div
+                        className="teacher-detail-course-row"
                         style={{
                           display: "flex",
                           justifyContent: "space-between",
@@ -1581,10 +1602,8 @@ const TeacherManagement = () => {
         "GET",
         `/teachers/applications?status=${appStatusFilter}&limit=50`,
       );
-      console.log("Applications response:", res.data); // debug
       setApplications(res.data.data.applications || []);
-    } catch (err) {
-      console.error("Applications error:", err.response?.data || err.message); // debug
+    } catch {
       toast.error("Failed to load applications");
     } finally {
       setLoading(false);
@@ -1649,10 +1668,13 @@ const TeacherManagement = () => {
 
   return (
     <div
+      className="teacher-admin-page"
       style={{
         padding: 24,
         fontFamily: "'Inter Variable', sans-serif",
         maxWidth: 1100,
+        width: "100%",
+        boxSizing: "border-box",
       }}
     >
       <div style={{ marginBottom: 24 }}>
@@ -1666,6 +1688,7 @@ const TeacherManagement = () => {
 
       {/* tab switcher */}
       <div
+        className="teacher-admin-tabs"
         style={{
           display: "flex",
           gap: 0,
@@ -1752,6 +1775,7 @@ const TeacherManagement = () => {
             <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
               {applications.map((app) => (
                 <motion.div
+                  className="teacher-application-card"
                   key={app._id}
                   initial={{ opacity: 0, y: 8 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -1882,6 +1906,7 @@ const TeacherManagement = () => {
 
                   {app.status === "pending" && (
                     <div
+                      className="teacher-application-actions"
                       style={{
                         display: "flex",
                         flexDirection: "column",
@@ -1934,6 +1959,7 @@ const TeacherManagement = () => {
 
                       return linkExpired ? (
                         <div
+                          className="teacher-application-actions"
                           style={{
                             display: "flex",
                             flexDirection: "column",
@@ -2011,6 +2037,7 @@ const TeacherManagement = () => {
                         </div>
                       ) : (
                         <div
+                          className="teacher-application-actions"
                           style={{
                             display: "flex",
                             flexDirection: "column",
@@ -2115,6 +2142,7 @@ const TeacherManagement = () => {
               >
                 {teachers.map((t) => (
                   <motion.div
+                    className="teacher-list-row"
                     key={t._id}
                     initial={{ opacity: 0, y: 8 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -2277,6 +2305,164 @@ const TeacherManagement = () => {
           />
         )}
       </AnimatePresence>
+      <style>{`
+        @media (max-width: 640px) {
+          .teacher-admin-page {
+            max-width: 100% !important;
+            padding: 12px !important;
+          }
+
+          .teacher-admin-tabs {
+            overflow-x: auto !important;
+            margin-bottom: 16px !important;
+            -webkit-overflow-scrolling: touch;
+          }
+
+          .teacher-admin-tabs button {
+            flex: 1 0 auto !important;
+            padding: 10px 12px !important;
+            white-space: nowrap !important;
+          }
+
+          .teacher-application-card {
+            flex-direction: column !important;
+            padding: 14px !important;
+          }
+
+          .teacher-application-actions {
+            width: 100% !important;
+            flex-direction: row !important;
+            flex-wrap: wrap !important;
+            align-items: stretch !important;
+          }
+
+          .teacher-application-actions button {
+            flex: 1 1 140px !important;
+            min-height: 40px !important;
+          }
+
+          .teacher-list-row {
+            align-items: flex-start !important;
+            padding: 14px !important;
+          }
+
+          .teacher-list-row > svg {
+            margin-top: 12px !important;
+            flex-shrink: 0 !important;
+          }
+
+          .teacher-admin-modal-backdrop {
+            align-items: flex-start !important;
+            padding: 12px !important;
+            overflow-y: auto !important;
+          }
+
+          .teacher-admin-modal-panel {
+            max-width: calc(100vw - 24px) !important;
+            max-height: calc(100dvh - 24px) !important;
+            border-radius: 14px !important;
+          }
+
+          .teacher-admin-modal-header {
+            align-items: flex-start !important;
+            flex-direction: column !important;
+            gap: 12px !important;
+            padding: 16px !important;
+            position: sticky !important;
+          }
+
+          .teacher-admin-modal-header > button {
+            position: absolute !important;
+            right: 12px !important;
+            top: 12px !important;
+          }
+
+          .teacher-admin-modal-controls {
+            width: 100% !important;
+            flex-wrap: wrap !important;
+            padding-right: 38px !important;
+          }
+
+          .teacher-admin-modal-controls button {
+            flex: 1 1 auto !important;
+          }
+
+          .teacher-admin-email-body {
+            flex-direction: column !important;
+          }
+
+          .teacher-admin-email-editor,
+          .teacher-detail-body {
+            padding: 16px !important;
+          }
+
+          .teacher-admin-design-panel {
+            width: 100% !important;
+            border-left: 0 !important;
+            border-top: 1px solid #f1f5f9 !important;
+          }
+
+          .teacher-admin-modal-footer {
+            align-items: stretch !important;
+            flex-direction: column !important;
+            gap: 12px !important;
+            padding: 14px 16px !important;
+          }
+
+          .teacher-admin-modal-footer > div {
+            display: flex !important;
+            gap: 8px !important;
+            width: 100% !important;
+          }
+
+          .teacher-admin-modal-footer button {
+            flex: 1 !important;
+          }
+
+          .teacher-detail-identity {
+            align-items: flex-start !important;
+            padding-right: 36px !important;
+          }
+
+          .teacher-detail-tabs {
+            overflow-x: auto !important;
+            padding: 0 12px !important;
+            -webkit-overflow-scrolling: touch;
+          }
+
+          .teacher-detail-tabs button {
+            flex: 1 0 auto !important;
+            padding: 12px !important;
+          }
+
+          .teacher-detail-overview-grid {
+            grid-template-columns: 1fr !important;
+          }
+
+          .teacher-detail-doc-actions {
+            flex-direction: column !important;
+          }
+
+          .teacher-detail-stats-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+          }
+
+          .teacher-detail-course-row > div {
+            flex-direction: column !important;
+            align-items: flex-start !important;
+          }
+        }
+
+        @media (max-width: 420px) {
+          .teacher-detail-stats-grid {
+            grid-template-columns: 1fr !important;
+          }
+
+          .teacher-admin-modal-footer > div {
+            flex-direction: column !important;
+          }
+        }
+      `}</style>
     </div>
   );
 };

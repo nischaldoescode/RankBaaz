@@ -4,6 +4,81 @@
 import mongoose from 'mongoose';
 import connection2 from '../Config/mongodb2.js';
 
+const defaultHomeStoryChapters = [
+  {
+    kicker: 'Read',
+    title: 'Course notes that stay usable',
+    description:
+      "Open a lesson, keep the teacher's context nearby, and revise from material that still feels usable after the first read.",
+    image: {
+      url: null,
+      publicId: null,
+      fallbackSrc: '/images/home-course-notes.webp',
+      alt: 'Course notes and teacher context in the Vidhgrow study flow',
+    },
+    imageName: 'home-course-notes.webp',
+  },
+  {
+    kicker: 'Practice',
+    title: 'Tests with real feedback',
+    description:
+      'Take a timed attempt, review the weak spots, and understand what changed before moving to the next round.',
+    image: {
+      url: null,
+      publicId: null,
+      fallbackSrc: '/images/home-practice-test.webp',
+      alt: 'Timed practice test with useful feedback',
+    },
+    imageName: 'home-practice-test.webp',
+  },
+  {
+    kicker: 'Review',
+    title: 'Progress you can read',
+    description:
+      'See scores, rank movement, attempts, and course progress in a way that helps you decide what to do next.',
+    image: {
+      url: null,
+      publicId: null,
+      fallbackSrc: '/images/home-progress-review.webp',
+      alt: 'Readable score and progress review after practice',
+    },
+    imageName: 'home-progress-review.webp',
+  },
+];
+
+const defaultAboutStoryPoints = [
+  {
+    icon: 'Target',
+    title: 'Mission',
+    description:
+      'Make serious practice easier to begin, easier to repeat, and easier to understand after every attempt.',
+    color: 'text-blue-500',
+    bgColor: 'bg-blue-500/10',
+  },
+  {
+    icon: 'Heart',
+    title: 'Values',
+    description:
+      'Keep the product accessible, readable, and useful for students and teachers doing real work.',
+    color: 'text-red-500',
+    bgColor: 'bg-red-500/10',
+  },
+  {
+    icon: 'Users',
+    title: 'Community',
+    description:
+      'Support learners who want structured courses, calm testing, and feedback they can act on.',
+    color: 'text-green-500',
+    bgColor: 'bg-green-500/10',
+  },
+];
+
+const defaultAboutStats = [
+  { value: 'Teacher-led', label: 'Courses and notes' },
+  { value: 'Timed', label: 'Practice tests' },
+  { value: 'Clear', label: 'Progress reports' },
+];
+
 const contentSettingsSchema = new mongoose.Schema({
   // site identity
   siteName: {
@@ -36,16 +111,71 @@ const contentSettingsSchema = new mongoose.Schema({
   // hero section
   heroTitle: {
     type: String,
-    default: 'Practice smarter with',
+    default: 'Learn clearly. Practice with purpose.',
   },
   heroHighlight: {
     type: String,
-    default: 'courses, tests, and clear feedback',
+    default: 'Keep progress visible',
   },
   heroDescription: {
     type: String,
-    default: 'Vidhgrow brings course learning, timed practice tests, score reports, and leaderboards into one simple place, so students can see what to study next.',
+    default: 'Vidhgrow brings teacher-led courses, exam-style tests, and progress reports into one calm workspace, so every attempt points to the next useful step.',
   },
+
+  // home page story section
+  homeStoryEyebrow: {
+    type: String,
+    default: 'How the work moves',
+  },
+  homeStoryTitle: {
+    type: String,
+    default: 'A study rhythm that feels easy to return to.',
+  },
+  homeStoryHighlightedText: {
+    type: String,
+    default: 'A study rhythm',
+  },
+  homeStoryDescription: {
+    type: String,
+    default:
+      'Learn from the course, test the idea, then use the result to choose the next revision. The page stays quiet, but the work keeps moving.',
+  },
+  homeStoryChapters: [{
+    kicker: {
+      type: String,
+      default: '',
+    },
+    title: {
+      type: String,
+      default: '',
+    },
+    description: {
+      type: String,
+      default: '',
+    },
+    image: {
+      url: {
+        type: String,
+        default: null,
+      },
+      publicId: {
+        type: String,
+        default: null,
+      },
+      fallbackSrc: {
+        type: String,
+        default: null,
+      },
+      alt: {
+        type: String,
+        default: '',
+      },
+    },
+    imageName: {
+      type: String,
+      default: '',
+    },
+  }],
 
   // stats section for home page
   stats: [{
@@ -85,11 +215,11 @@ const contentSettingsSchema = new mongoose.Schema({
   // features section for home page
   featuresTitle: {
     type: String,
-    default: 'Built for focused practice',
+    default: 'A quieter way to keep moving',
   },
   featuresDescription: {
     type: String,
-    default: 'Choose a course, attempt a test, review your result, and keep improving with progress that is easy to understand.',
+    default: 'Study material, test attempts, and progress signals sit close together without turning the page into noise.',
   },
   features: [{
     icon: {
@@ -108,6 +238,45 @@ const contentSettingsSchema = new mongoose.Schema({
   }],
 
   // about page values section
+  aboutHeroEyebrow: {
+    type: String,
+    default: '',
+  },
+  aboutHeroTitle: {
+    type: String,
+    default: 'A calmer place for courses, tests, and the next revision.',
+  },
+  aboutHeroDescription: {
+    type: String,
+    default:
+      'Vidhgrow is built for learners who want structure without noise: course material, timed practice, teacher context, and progress signals in one focused workspace.',
+  },
+  aboutHeroImage: {
+    url: {
+      type: String,
+      default: null,
+    },
+    publicId: {
+      type: String,
+      default: null,
+    },
+    fallbackSrc: {
+      type: String,
+      default: '/images/about-learning-workspace.webp',
+    },
+    alt: {
+      type: String,
+      default: 'Students and teachers reviewing course progress together',
+    },
+  },
+  aboutValuesEyebrow: {
+    type: String,
+    default: 'What drives us',
+  },
+  aboutValuesTitle: {
+    type: String,
+    default: 'Useful tools for real study habits.',
+  },
   aboutValues: [{
     icon: {
       type: String,
@@ -164,11 +333,20 @@ const contentSettingsSchema = new mongoose.Schema({
   // cta section
   ctaTitle: {
     type: String,
-    default: 'Start with a course, then test yourself',
+    default: 'Start small. Keep the work visible.',
   },
   ctaDescription: {
     type: String,
-    default: 'Create your free account and keep your practice history, results, badges, and course progress together.',
+    default: 'Create your free account and keep course progress, attempts, score reports, and next steps in one place.',
+  },
+  aboutCtaTitle: {
+    type: String,
+    default: 'Start with one course. Keep the work visible.',
+  },
+  aboutCtaDescription: {
+    type: String,
+    default:
+      'Browse available courses or create an account to keep attempts, reports, and revision steps together.',
   },
 
   // colors & theme
@@ -227,11 +405,8 @@ contentSettingsSchema.statics.getSettings = async function() {
         { icon: 'Target', title: 'Focused practice tests', description: 'Attempt timed tests and review where your answers were strong or weak.' },
         { icon: 'Trophy', title: 'Progress that stays visible', description: 'Track results, badges, and leaderboard movement as you keep practicing.' },
       ],
-      aboutValues: [
-        { icon: 'Target', title: 'Our Mission', description: 'To democratize quality education through innovative testing and personalized learning experiences that empower every student to reach their full potential.', color: 'text-blue-500', bgColor: 'bg-blue-500/10' },
-        { icon: 'Heart', title: 'Our Values', description: 'We believe in accessibility, excellence, and continuous improvement. Every feature we build is designed with the learner\'s success in mind.', color: 'text-red-500', bgColor: 'bg-red-500/10' },
-        { icon: 'Users', title: 'Our Community', description: 'Join thousands of learners worldwide who are transforming their educational journey with data-driven insights and adaptive learning paths.', color: 'text-green-500', bgColor: 'bg-green-500/10' },
-      ],
+      homeStoryChapters: defaultHomeStoryChapters,
+      aboutValues: defaultAboutStoryPoints,
       aboutFeatures: [
         { icon: 'BookOpen', title: 'Comprehensive Content', description: 'Extensive question banks across multiple subjects and difficulty levels' },
         { icon: 'Zap', title: 'Instant Feedback', description: 'Real-time performance analytics and detailed explanations' },
@@ -240,13 +415,46 @@ contentSettingsSchema.statics.getSettings = async function() {
         { icon: 'Award', title: 'Gamification', description: 'Earn badges and compete on leaderboards to stay motivated' },
         { icon: 'Users', title: 'Community Support', description: 'Connect with peers and learn together' },
       ],
-      aboutStats: [
-        { value: '50,000+', label: 'Active Learners' },
-        { value: '1M+', label: 'Questions Answered' },
-        { value: '95%', label: 'Success Rate' },
-        { value: '24/7', label: 'Platform Access' },
-      ],
+      aboutStats: defaultAboutStats,
     });
+  } else {
+    let needsSave = false;
+
+    if (!settings.homeStoryChapters?.length) {
+      settings.homeStoryChapters = defaultHomeStoryChapters;
+      needsSave = true;
+    }
+
+    if (!settings.aboutHeroImage?.fallbackSrc) {
+      settings.aboutHeroImage = {
+        ...(settings.aboutHeroImage || {}),
+        fallbackSrc: '/images/about-learning-workspace.webp',
+        alt:
+          settings.aboutHeroImage?.alt ||
+          'Students and teachers reviewing course progress together',
+      };
+      needsSave = true;
+    }
+
+    if (
+      !settings.aboutValues?.length ||
+      settings.aboutValues.some((value) => /^Our\s/i.test(value.title || ''))
+    ) {
+      settings.aboutValues = defaultAboutStoryPoints;
+      needsSave = true;
+    }
+
+    if (
+      !settings.aboutStats?.length ||
+      settings.aboutStats.some((stat) => /50,?000|1m\+|95%/i.test(stat.value || ''))
+    ) {
+      settings.aboutStats = defaultAboutStats;
+      needsSave = true;
+    }
+
+    if (needsSave) {
+      await settings.save();
+    }
   }
   return settings;
 };

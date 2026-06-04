@@ -46,23 +46,30 @@ export const AboutPreview = ({ data }) => {
       </div>
 
       {/* header preview */}
-      <div className="bg-card rounded-xl p-8 border border-border text-center">
+      <div className="bg-card rounded-xl p-8 border border-border">
         <h4 className="text-sm font-semibold text-muted-foreground mb-6 uppercase">
           Page Header
         </h4>
-        {data.logo?.url && (
-          <img
-            src={data.logo.url}
-            alt="Logo"
-            className="h-16 mb-6 object-contain mx-auto"
-          />
-        )}
-        <h1 className="text-4xl md:text-5xl font-bold text-foreground mb-4">
-          About {data.siteName}
-        </h1>
-        <p className="text-lg text-muted-foreground max-w-3xl mx-auto">
-          {data.siteDescription}
-        </p>
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-[1fr_260px] md:items-center">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-widest text-primary">
+              {data.hero?.eyebrow || `About ${data.siteName}`}
+            </p>
+            <h1 className="mt-2 text-4xl md:text-5xl font-bold text-foreground mb-4">
+              {data.hero?.title || `About ${data.siteName}`}
+            </h1>
+            <p className="text-lg text-muted-foreground">
+              {data.hero?.description || data.siteDescription}
+            </p>
+          </div>
+          {(data.hero?.image?.url || data.hero?.image?.fallbackSrc) && (
+            <img
+              src={data.hero.image.url || data.hero.image.fallbackSrc}
+              alt={data.hero.image.alt || "About page image"}
+              className="h-44 w-full rounded-xl object-cover"
+            />
+          )}
+        </div>
       </div>
 
       {/* stats preview */}
@@ -93,6 +100,16 @@ export const AboutPreview = ({ data }) => {
           <h4 className="text-sm font-semibold text-muted-foreground mb-6 uppercase text-center">
             Core Values ({data.values.length} values)
           </h4>
+          {data.valuesMeta && (
+            <div className="mb-6 text-center">
+              <p className="text-xs font-semibold uppercase tracking-widest text-primary">
+                {data.valuesMeta.eyebrow}
+              </p>
+              <h5 className="mt-2 text-2xl font-bold text-foreground">
+                {data.valuesMeta.title}
+              </h5>
+            </div>
+          )}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {data.values.map((value, idx) => {
               const IconComponent = iconMap[value.icon] || Target;
@@ -144,6 +161,18 @@ export const AboutPreview = ({ data }) => {
               );
             })}
           </div>
+        </div>
+      )}
+
+      {data.cta && (
+        <div className="rounded-xl border border-border bg-primary/10 p-6">
+          <h4 className="text-sm font-semibold text-muted-foreground mb-4 uppercase">
+            CTA Section
+          </h4>
+          <h5 className="text-2xl font-bold text-foreground">
+            {data.cta.title}
+          </h5>
+          <p className="mt-2 text-muted-foreground">{data.cta.description}</p>
         </div>
       )}
     </div>

@@ -290,22 +290,22 @@ const UniversalCoupons = () => {
   };
 
   return (
-    <div className="space-y-6 p-6 bg-gray-50 min-h-screen">
+    <div className="space-y-4 sm:space-y-6 p-3 sm:p-6 bg-gray-50 min-h-screen">
       {/* header */}
-      <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-100">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-4">
-            <div className="p-3 bg-white border border-slate-200 rounded-xl shadow-lg">
-              <Tag className="h-8 w-8 text-slate-700 hover:text-sky-500 cursor-pointer" />
+      <div className="bg-white rounded-xl shadow-sm p-4 sm:p-6 border border-gray-100">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-start gap-3 sm:items-center sm:gap-4 min-w-0">
+            <div className="p-3 bg-white border border-slate-200 rounded-xl shadow-sm shrink-0">
+              <Tag className="h-7 w-7 sm:h-8 sm:w-8 text-slate-700 hover:text-sky-500 cursor-pointer" />
             </div>
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">
+            <div className="min-w-0">
+              <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">
                 Universal Coupons
               </h1>
               <p className="text-gray-600 mt-1">
                 Manage coupons that work across all paid courses
               </p>
-              <div className="flex items-center gap-4 mt-2 text-sm text-gray-500">
+              <div className="flex flex-wrap items-center gap-2 sm:gap-4 mt-2 text-sm text-gray-500">
                 <span className="flex items-center space-x-1">
                   <Tag className="h-4 w-4" />
                   <span>{coupons.length} total coupons</span>
@@ -320,7 +320,7 @@ const UniversalCoupons = () => {
 
           <button
             onClick={() => setShowAddModal(true)}
-            className=" bg-white text-slate-700 border border-slate-200 hover:text-sky-500 p-1 rounded-xl transition-all duration-200 flex items-center space-x-2 shadow-lg hover:shadow-xl cursor-pointer"
+            className="w-full sm:w-auto justify-center bg-white text-slate-700 border border-slate-200 hover:text-sky-500 px-4 py-2 rounded-xl transition-all duration-200 flex items-center space-x-2 shadow-sm hover:shadow-md cursor-pointer"
           >
             <Plus className="h-5 w-5" />
             <span>Create Coupon</span>
@@ -329,8 +329,8 @@ const UniversalCoupons = () => {
       </div>
 
       {/* coupons list */}
-      <div className="bg-white rounded-xl shadow-lg overflow-hidden border border-gray-100">
-        <div className="px-6 py-4 border-b border-gray-200 bg-gray-50">
+      <div className="bg-white rounded-xl shadow-sm overflow-hidden border border-gray-100">
+        <div className="px-4 sm:px-6 py-4 border-b border-gray-200 bg-gray-50">
           <h2 className="text-xl font-semibold text-gray-900">
             All Universal Coupons
           </h2>
@@ -363,12 +363,12 @@ const UniversalCoupons = () => {
             {coupons.map((coupon) => (
               <div
                 key={coupon._id}
-                className="p-6 hover:bg-gray-50 transition-colors"
+                className="p-4 sm:p-6 hover:bg-gray-50 transition-colors"
               >
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center space-x-3 mb-3">
-                      <code className="px-4 py-2 bg-gradient-to-r from-purple-100 to-pink-100 text-purple-700 rounded-lg font-mono text-lg font-bold">
+                <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex flex-wrap items-center gap-2 sm:gap-3 mb-3">
+                      <code className="max-w-full truncate px-3 sm:px-4 py-2 bg-gradient-to-r from-purple-100 to-pink-100 text-purple-700 rounded-lg font-mono text-base sm:text-lg font-bold">
                         {coupon.code}
                       </code>
                       <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full font-semibold flex items-center space-x-1">
@@ -384,7 +384,7 @@ const UniversalCoupons = () => {
                       </span>
                     </div>
 
-                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mt-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mt-4">
                       <div className="flex items-center space-x-2">
                         <Users className="h-4 w-4 text-gray-400" />
                         <span className="text-sm text-gray-600">
@@ -413,7 +413,7 @@ const UniversalCoupons = () => {
                     </div>
                   </div>
 
-                  <div className="flex items-center space-x-2 ml-4">
+                  <div className="flex items-center justify-end gap-2 lg:ml-4">
                     <button
                       onClick={() =>
                         handleToggleStatus(coupon._id, coupon.isActive)
@@ -456,9 +456,9 @@ const UniversalCoupons = () => {
 
       {/* modal */}
       {showAddModal && (
-        <div className="fixed inset-0 bg-gradient-to-br from-muted/30 to-background flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-y-auto">
-            <div className="p-6">
+        <div className="fixed inset-0 bg-slate-950/45 backdrop-blur-md flex items-start justify-center overflow-y-auto px-3 py-4 sm:p-4 z-[2147483000]">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md max-h-[92vh] overflow-y-auto">
+            <div className="p-4 sm:p-6">
               <div className="flex items-center justify-between mb-6">
                 <h3 className="text-xl font-semibold text-gray-900">
                   Create Universal Coupon
@@ -580,7 +580,7 @@ const UniversalCoupons = () => {
                   )}
                 </div>
 
-                <div className="flex space-x-3 pt-4">
+                <div className="flex flex-col sm:flex-row gap-3 pt-4">
                   <button
                     type="button"
                     onClick={() => setShowAddModal(false)}
@@ -604,9 +604,9 @@ const UniversalCoupons = () => {
 
       {/* edit modal */}
       {editingCoupon && (
-        <div className="fixed inset-0 bg-gradient-to-br from-muted/30 to-background flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-y-auto">
-            <div className="p-6">
+        <div className="fixed inset-0 bg-slate-950/45 backdrop-blur-md flex items-start justify-center overflow-y-auto px-3 py-4 sm:p-4 z-[2147483000]">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md max-h-[92vh] overflow-y-auto">
+            <div className="p-4 sm:p-6">
               <div className="flex items-center justify-between mb-6">
                 <h3 className="text-xl font-semibold text-gray-900">
                   Edit Coupon
@@ -736,7 +736,7 @@ const UniversalCoupons = () => {
                   )}
                 </div>
 
-                <div className="flex space-x-3 pt-4">
+                <div className="flex flex-col sm:flex-row gap-3 pt-4">
                   <button
                     type="button"
                     onClick={handleCancelEdit}

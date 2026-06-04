@@ -10,6 +10,60 @@ import { invalidateCache } from "../Config/redis.js";
 
 // content settings
 
+const getUploadedFile = (files, field) => {
+  const value = files?.[field];
+  if (!value) return null;
+  return Array.isArray(value) ? value[0] : value;
+};
+
+const getUploadPath = (file) => file?.path || file?.tempFilePath;
+
+const assertImageUpload = (file) => {
+  if (!file) return;
+
+  const mime = file.mimetype || file.type || "";
+  if (!mime.startsWith("image/")) {
+    throw new Error("Only image uploads are allowed for page content");
+  }
+
+  if (file.size && file.size > 5 * 1024 * 1024) {
+    throw new Error("Content images must be 5MB or smaller");
+  }
+
+  if (!getUploadPath(file)) {
+    throw new Error("Invalid file upload format");
+  }
+};
+
+const destroyCloudinaryAsset = async (publicId) => {
+  if (!publicId) return;
+
+  try {
+    await cloudinary.uploader.destroy(publicId);
+  } catch (error) {
+    console.error("Cloudinary asset delete failed:", error);
+  }
+};
+
+const uploadContentImage = async (file, folder, transformation) => {
+  assertImageUpload(file);
+  const result = await cloudinary.uploader.upload(getUploadPath(file), {
+    folder,
+    transformation,
+  });
+
+  return {
+    url: result.secure_url,
+    publicId: result.public_id,
+  };
+};
+
+const parseJsonField = (updateData, field) => {
+  if (typeof updateData[field] === "string") {
+    updateData[field] = JSON.parse(updateData[field]);
+  }
+};
+
 export const getContentSettings = async (req, res) => {
   try {
     const settings = await ContentSettings.getSettings();
@@ -33,24 +87,17 @@ export const updateContentSettings = async (req, res) => {
     const updateData = { ...req.body };
 
     // parse json fields if they come as strings
-    if (typeof updateData.stats === "string") {
-      updateData.stats = JSON.parse(updateData.stats);
-    }
-    if (typeof updateData.features === "string") {
-      updateData.features = JSON.parse(updateData.features);
-    }
-    if (typeof updateData.aboutValues === "string") {
-      updateData.aboutValues = JSON.parse(updateData.aboutValues);
-    }
-    if (typeof updateData.aboutFeatures === "string") {
-      updateData.aboutFeatures = JSON.parse(updateData.aboutFeatures);
-    }
-    if (typeof updateData.aboutStats === "string") {
-      updateData.aboutStats = JSON.parse(updateData.aboutStats);
-    }
-    if (typeof updateData.chartConfig === "string") {
-      updateData.chartConfig = JSON.parse(updateData.chartConfig);
-    }
+    [
+      "stats",
+      "features",
+      "aboutValues",
+      "aboutFeatures",
+      "aboutStats",
+      "chartConfig",
+      "backgroundElements",
+      "homeStoryChapters",
+      "aboutHeroImage",
+    ].forEach((field) => parseJsonField(updateData, field));
 
     // sanitize chartconfig enums so mongoose validation never fails on bad data
     if (updateData.chartConfig) {
@@ -66,47 +113,91 @@ export const updateContentSettings = async (req, res) => {
         updateData.chartConfig.enabled = true;
       }
     }
-    if (typeof updateData.backgroundElements === "string") {
-      updateData.backgroundElements = JSON.parse(updateData.backgroundElements);
+    // handle logo upload (supports both express-fileupload and multer)
+    const logoFile = getUploadedFile(req.files, "logo");
+    if (logoFile) {
+      await destroyCloudinaryAsset(settings.logo?.publicId);
+      const logoResult = await uploadContentImage(
+        logoFile,
+        "content/logos",
+        [{ width: 200, height: 200, crop: "fit" }],
+      );
+      updateData.logo = {
+        url: logoResult.url,
+        publicId: logoResult.publicId,
+      };
     }
 
-    // handle logo upload (supports both express-fileupload and multer)
-    if (req.files?.logo) {
-      // delete old logo if exists
-      if (settings.logo?.publicId) {
-        try {
-          await cloudinary.uploader.destroy(settings.logo.publicId);
-        } catch (error) {
-          console.error("Error deleting old logo:", error);
+    const aboutHeroImageFile = getUploadedFile(req.files, "aboutHeroImageFile");
+    if (aboutHeroImageFile) {
+      await destroyCloudinaryAsset(settings.aboutHeroImage?.publicId);
+      const uploaded = await uploadContentImage(
+        aboutHeroImageFile,
+        "content/page-images",
+        [{ width: 1400, height: 1000, crop: "limit", quality: "auto" }],
+      );
+
+      updateData.aboutHeroImage = {
+        ...(updateData.aboutHeroImage || settings.aboutHeroImage?.toObject?.() || {}),
+        ...uploaded,
+        fallbackSrc:
+          updateData.aboutHeroImage?.fallbackSrc ||
+          settings.aboutHeroImage?.fallbackSrc ||
+          "/images/about-learning-workspace.webp",
+        alt:
+          updateData.aboutHeroImage?.alt ||
+          settings.aboutHeroImage?.alt ||
+          "Students and teachers reviewing course progress together",
+      };
+    }
+
+    if (Array.isArray(updateData.homeStoryChapters)) {
+      const existingChapters = settings.homeStoryChapters || [];
+      const chapters = [...updateData.homeStoryChapters];
+
+      for (let index = 0; index < chapters.length; index += 1) {
+        const file = getUploadedFile(req.files, `homeStoryImageFile_${index}`);
+        const existingImage = existingChapters[index]?.image || {};
+        const nextImage = chapters[index]?.image || existingImage || {};
+
+        if (file) {
+          await destroyCloudinaryAsset(existingImage.publicId);
+          const uploaded = await uploadContentImage(
+            file,
+            "content/page-images",
+            [{ width: 1400, height: 900, crop: "limit", quality: "auto" }],
+          );
+
+          chapters[index] = {
+            ...chapters[index],
+            image: {
+              ...nextImage,
+              ...uploaded,
+              fallbackSrc: nextImage.fallbackSrc || existingImage.fallbackSrc,
+              alt:
+                nextImage.alt ||
+                chapters[index]?.title ||
+                existingImage.alt ||
+                "Vidhgrow study flow image",
+            },
+          };
+        } else {
+          chapters[index] = {
+            ...chapters[index],
+            image: {
+              ...nextImage,
+              fallbackSrc: nextImage.fallbackSrc || existingImage.fallbackSrc,
+              alt:
+                nextImage.alt ||
+                chapters[index]?.title ||
+                existingImage.alt ||
+                "Vidhgrow study flow image",
+            },
+          };
         }
       }
 
-      let logoResult;
-
-      // check if it's from multer (has path property) or express-fileupload (has tempfilepath)
-      if (req.files.logo[0]?.path) {
-        // multer format
-        logoResult = await cloudinary.uploader.upload(req.files.logo[0].path, {
-          folder: "content/logos",
-          transformation: [{ width: 200, height: 200, crop: "fit" }],
-        });
-      } else if (req.files.logo.tempFilePath) {
-        // express-fileupload format
-        logoResult = await cloudinary.uploader.upload(
-          req.files.logo.tempFilePath,
-          {
-            folder: "content/logos",
-            transformation: [{ width: 200, height: 200, crop: "fit" }],
-          },
-        );
-      } else {
-        throw new Error("Invalid file upload format");
-      }
-
-      updateData.logo = {
-        url: logoResult.secure_url,
-        publicId: logoResult.public_id,
-      };
+      updateData.homeStoryChapters = chapters;
     }
 
     updateData.lastModifiedBy = req.admin.userId;
@@ -601,6 +692,13 @@ export const getHomePreview = async (req, res) => {
           description: settings.heroDescription,
         },
         stats: settings.stats,
+        story: {
+          eyebrow: settings.homeStoryEyebrow,
+          title: settings.homeStoryTitle,
+          highlightedText: settings.homeStoryHighlightedText,
+          description: settings.homeStoryDescription,
+          chapters: settings.homeStoryChapters || [],
+        },
         features: settings.features,
         chartConfig: settings.chartConfig,
         cta: {
@@ -631,6 +729,20 @@ export const getAboutPreview = async (req, res) => {
       data: {
         siteName: settings.siteName,
         siteDescription: settings.siteDescription,
+        hero: {
+          eyebrow: settings.aboutHeroEyebrow,
+          title: settings.aboutHeroTitle,
+          description: settings.aboutHeroDescription,
+          image: settings.aboutHeroImage,
+        },
+        valuesMeta: {
+          eyebrow: settings.aboutValuesEyebrow,
+          title: settings.aboutValuesTitle,
+        },
+        cta: {
+          title: settings.aboutCtaTitle,
+          description: settings.aboutCtaDescription,
+        },
         values: settings.aboutValues || [],
         features: settings.aboutFeatures || [],
         stats: settings.aboutStats || [],

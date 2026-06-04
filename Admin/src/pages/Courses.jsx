@@ -1141,21 +1141,9 @@ const Courses = () => {
     // preserve expansion state
     const currentExpandedCourse = expandedCourse;
 
-    console.log("Sending data:", {
-      courseId: editingCourse._id,
-      hasPdfExport: editFormData.hasPdfExport,
-      isPaid: editFormData.isPaid,
-      isActive: editFormData.isActive,
-    });
-
     const result = await updateCourse(editingCourse._id, editFormData);
 
     if (result.success) {
-      console.log("Received response:", {
-        hasPdfExport: result.updatedCourse?.hasPdfExport,
-        isPaid: result.updatedCourse?.isPaid,
-      });
-
       // close edit modal first
       setEditingCourse(null);
       setEditFormData({});
@@ -2099,9 +2087,9 @@ const Courses = () => {
       </div>
 
       {/* courses list */}
-      <div className="bg-white rounded-xl shadow-lg overflow-hidden border border-gray-100">
-        <div className="px-6 py-4 border-b border-gray-200 bg-gray-50">
-          <div className="flex items-center justify-between">
+      <div className="bg-white rounded-xl shadow-lg overflow-visible border border-gray-100">
+        <div className="px-4 sm:px-6 py-4 border-b border-gray-200 bg-gray-50 rounded-t-xl">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <h2 className="text-xl font-semibold text-gray-900">
               Courses ({filteredAndSortedCourses.length})
             </h2>
@@ -2176,7 +2164,7 @@ const Courses = () => {
             )}
           </div>
         ) : (
-          <div className="divide-y divide-gray-100">
+          <div className="relative divide-y divide-gray-100">
             {filteredAndSortedCourses.map((course) => {
               const courseName = getCourseName(course);
               const courseStats = getCourseStats(course);
@@ -2220,10 +2208,10 @@ const Courses = () => {
 
                     {/* course details */}
                     <div className="flex-1 min-w-0">
-                      <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between">
+                      <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
                         <div className="flex-1 lg:pr-4">
-                          <div className="flex items-center space-x-3 mb-3">
-                            <h3 className="text-xl font-bold text-gray-900 truncate">
+                          <div className="flex flex-wrap items-center gap-2 sm:gap-3 mb-3">
+                            <h3 className="min-w-0 max-w-full text-lg sm:text-xl font-bold text-gray-900 break-words">
                               {courseName}
                             </h3>
                             <span
@@ -2242,15 +2230,17 @@ const Courses = () => {
                           )}
 
                           {/* course metadata */}
-                          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4 text-sm">
-                            <div className="flex items-center space-x-2 text-gray-500">
+                          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-2 sm:gap-4 text-sm">
+                            <div className="flex min-w-0 items-center space-x-2 text-gray-500">
                               <Calendar className="h-4 w-4 text-blue-500" />
                               <span className="font-medium">Category:</span>
-                              <span>{getCategoryName(course.categoryId)}</span>
+                              <span className="min-w-0 break-words">
+                                {getCategoryName(course.categoryId)}
+                              </span>
                             </div>
 
                             {/* created by badge */}
-                            <div className="flex items-center space-x-2 text-gray-500">
+                            <div className="flex min-w-0 items-center space-x-2 text-gray-500">
                               <svg
                                 className="h-4 w-4 text-indigo-500"
                                 fill="none"
@@ -2263,15 +2253,17 @@ const Courses = () => {
                               </svg>
                               <span className="font-medium">By:</span>
                               {course.teacher ? (
-                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-indigo-100 text-indigo-700">
+                                <span className="inline-flex min-w-0 max-w-full items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-indigo-100 text-indigo-700">
                                   <img
                                     src={`https://api.dicebear.com/9.x/croodles-neutral/svg?seed=${course.teacher.username || course.teacher}`}
                                     className="w-4 h-4 rounded-full"
                                     alt=""
                                   />
-                                  {course.teacher.name ||
-                                    `@${course.teacher.username}` ||
-                                    "Teacher"}
+                                  <span className="truncate">
+                                    {course.teacher.name ||
+                                      `@${course.teacher.username}` ||
+                                      "Teacher"}
+                                  </span>
                                 </span>
                               ) : (
                                 <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-gray-100 text-gray-600">
@@ -2279,7 +2271,7 @@ const Courses = () => {
                                 </span>
                               )}
                             </div>
-                            <div className="flex items-center space-x-2 text-gray-500">
+                            <div className="flex min-w-0 items-center space-x-2 text-gray-500">
                               <Clock className="h-4 w-4 text-green-500" />
                               <span className="font-medium">Created:</span>
                               <span>
@@ -2288,12 +2280,12 @@ const Courses = () => {
                                 ).toLocaleDateString()}
                               </span>
                             </div>
-                            <div className="flex items-center space-x-2 text-gray-500">
+                            <div className="flex min-w-0 items-center space-x-2 text-gray-500">
                               <BarChart3 className="h-4 w-4 text-purple-500" />
                               <span className="font-medium">Questions:</span>
                               <span>{courseStats.totalQuestions}</span>
                             </div>
-                            <div className="flex items-center space-x-2 text-gray-500">
+                            <div className="flex min-w-0 items-center space-x-2 text-gray-500">
                               <Target className="h-4 w-4 text-orange-500" />
                               <span className="font-medium">Difficulties:</span>
                               <span>{courseStats.difficulties}</span>
@@ -2302,7 +2294,7 @@ const Courses = () => {
                         </div>
 
                         {/* action menu */}
-                        <div className="flex flex-row items-start justify-start lg:justify-end gap-1 sm:gap-2 mt-4 lg:mt-0 lg:ml-2 w-full lg:w-auto lg:flex-shrink-0">
+                        <div className="flex flex-row items-start justify-end gap-1 sm:gap-2 mt-1 lg:mt-0 lg:ml-2 w-full lg:w-auto lg:flex-shrink-0">
                           <button
                             onClick={() => handleExpandCourse(course._id)}
                             className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all duration-200 group cursor-pointer flex-shrink-0"
@@ -2333,7 +2325,7 @@ const Courses = () => {
                             {openActionMenu === course._id && (
                               <div
                                 role="menu"
-                                className="absolute right-0 top-11 z-40 w-56 overflow-hidden rounded-lg border border-gray-200 bg-white py-1 shadow-lg"
+                                className="absolute right-0 top-11 z-50 w-[min(14rem,calc(100vw-2rem))] overflow-hidden rounded-lg border border-gray-200 bg-white py-1 shadow-lg"
                               >
                                 <button
                                   type="button"
@@ -2489,7 +2481,7 @@ const Courses = () => {
                         )}
                       {/* test results / pdf download section */}
                       <div className="mt-8 pt-8 border-t border-gray-200">
-                        <div className="flex items-center justify-between mb-4">
+                        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-4">
                           <h4 className="text-lg font-semibold text-gray-900 flex items-center space-x-2">
                             <svg
                               className="h-5 w-5 text-blue-500"
@@ -2562,11 +2554,11 @@ const Courses = () => {
                             </p>
 
                             {/* admin download button */}
-                            <div className="flex items-center space-x-4">
+                            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:space-x-4">
                               <button
                                 onClick={() => downloadCoursePDF(course._id)}
                                 disabled={pdfGenerating}
-                                className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                                className="inline-flex w-full sm:w-auto items-center justify-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                               >
                                 {pdfGenerating ? (
                                   <>
@@ -2618,7 +2610,7 @@ const Courses = () => {
 
                       {/* questions section */}
                       <div>
-                        <div className="flex items-center justify-between mb-6">
+                        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-6">
                           <h4 className="text-lg font-semibold text-gray-900 flex items-center space-x-2">
                             <BookOpen className="h-5 w-5 text-purple-500" />
                             <span>Questions by Difficulty</span>
@@ -2642,9 +2634,9 @@ const Courses = () => {
                                     key={difficulty}
                                     className="border border-gray-200 rounded-xl overflow-hidden hover:shadow-md transition-shadow duration-200"
                                   >
-                                    <div className="bg-gradient-to-r from-gray-50 to-gray-100 px-6 py-4 border-b border-gray-200">
-                                      <div className="flex items-center justify-between">
-                                        <div className="flex items-center space-x-3">
+                                    <div className="bg-gradient-to-r from-gray-50 to-gray-100 px-4 sm:px-6 py-4 border-b border-gray-200">
+                                      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                                        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
                                           <span
                                             className={`px-3 py-1 text-sm font-semibold rounded-full ${getDifficultyColor(
                                               difficulty,
@@ -2657,7 +2649,7 @@ const Courses = () => {
                                             {questions.length !== 1 ? "s" : ""}
                                           </span>
                                         </div>
-                                        <div className="flex items-center space-x-2">
+                                        <div className="flex flex-wrap items-center gap-2">
                                           {questions.length > 3 && (
                                             <button
                                               onClick={() =>
@@ -2768,7 +2760,7 @@ const Courses = () => {
                                       </div>
                                     </div>
 
-                                    <div className="p-6">
+                                    <div className="p-4 sm:p-6">
                                       <div className="space-y-4">
                                         {(expandedQuestions[
                                           `${course._id}-${difficulty}`
@@ -2780,7 +2772,7 @@ const Courses = () => {
                                             key={question._id || index}
                                             className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-sm transition-shadow duration-200"
                                           >
-                                            <div className="flex items-start justify-between space-x-4">
+                                            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:space-x-4">
                                               <div className="flex items-start space-x-3 flex-1 min-w-0">
                                                 <input
                                                   type="checkbox"
@@ -2813,7 +2805,7 @@ const Courses = () => {
                                                   )}
                                                 </div>
                                               </div>
-                                              <div className="flex items-center space-x-1 flex-shrink-0">
+                                              <div className="flex items-center justify-end space-x-1 flex-shrink-0">
                                                 <button
                                                   onClick={() =>
                                                     handleEditQuestion(
@@ -2927,7 +2919,7 @@ const Courses = () => {
 
                       {course.isPaid && (
                         <div className="mt-8 pt-8 border-t border-gray-200">
-                          <div className="flex items-center justify-between mb-4">
+                          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-4">
                             <h4 className="text-lg font-semibold text-gray-900 flex items-center space-x-2">
                               <Tag className="h-5 w-5 text-purple-500" />
                               <span>Course Coupons</span>
@@ -2951,12 +2943,12 @@ const Courses = () => {
                         course.videoContent.type &&
                         course.videoContent.type !== "none" && (
                           <div className="mt-8 pt-8 border-t border-gray-200">
-                            <div className="flex items-center justify-between mb-4">
+                            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-4">
                               <h4 className="text-lg font-semibold text-gray-900 flex items-center space-x-2">
                                 <Play className="h-5 w-5 text-purple-500" />
                                 <span>Video Content</span>
                               </h4>
-                              <div className="flex items-center space-x-2">
+                              <div className="flex flex-wrap items-center gap-2">
                                 <button
                                   onClick={() => handleEditVideoContent(course)}
                                   className="px-3 py-1 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors flex items-center space-x-1 text-sm"
@@ -2998,7 +2990,7 @@ const Courses = () => {
                                         key={idx}
                                         className="bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-200 p-4 rounded-lg hover:shadow-md transition-shadow"
                                       >
-                                        <div className="flex items-start justify-between">
+                                        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                                           <div className="flex-1">
                                             <div className="flex items-center space-x-2 mb-2">
                                               <Play className="h-4 w-4 text-blue-600" />
@@ -3006,7 +2998,7 @@ const Courses = () => {
                                                 {link.title || "Video Lesson"}
                                               </p>
                                             </div>
-                                            <div className="flex items-center space-x-3">
+                                            <div className="flex flex-wrap items-center gap-3">
                                               <span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-green-100 text-green-800">
                                                 {link.platform ||
                                                   detectPlatform(link.url)}
@@ -3082,8 +3074,8 @@ const Courses = () => {
                                                   key={idx}
                                                   className="bg-white p-3 rounded border border-gray-200"
                                                 >
-                                                  <div className="flex items-center justify-between">
-                                                    <div>
+                                                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                                                    <div className="min-w-0">
                                                       <p className="text-sm font-medium text-gray-900">
                                                         {link.title ||
                                                           `${diffVideo.difficulty} Video`}
@@ -3740,8 +3732,6 @@ const Courses = () => {
                       type="checkbox"
                       checked={editFormData.hasPdfExport || false}
                       onChange={(e) => {
-                        console.log("PDF Export Toggle:", e.target.checked);
-
                         setEditFormData({
                           ...editFormData,
                           hasPdfExport: e.target.checked,

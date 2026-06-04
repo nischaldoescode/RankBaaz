@@ -33,6 +33,12 @@ const storyPoints = [
 
 const looksInflated = (value = "") => /50,?000|1m\+|95%/i.test(value);
 
+const legacyAboutValue = (value) =>
+  /^Our\s/i.test(value?.title || "") ||
+  /democratize quality education|data-driven insights|full potential/i.test(
+    value?.description || "",
+  );
+
 const getDisplayStats = (stats = []) => {
   if (!stats.length || stats.some((stat) => looksInflated(stat.value))) {
     return fallbackStats;
@@ -40,8 +46,20 @@ const getDisplayStats = (stats = []) => {
   return stats.slice(0, 3);
 };
 
-const AboutImageSlot = () => {
+const getDisplayStoryPoints = (values = []) => {
+  if (!values.length || values.some(legacyAboutValue)) return storyPoints;
+
+  return values.slice(0, 3).map((value) => ({
+    title: String(value.title || "").replace(/^Our\s+/i, "") || "Story",
+    text: value.description || "",
+  }));
+};
+
+const AboutImageSlot = ({ image }) => {
   const [hasImage, setHasImage] = useState(true);
+  const imageSrc = image?.url || image?.fallbackSrc || "/images/about-learning-workspace.webp";
+  const imageAlt =
+    image?.alt || "Students and teachers reviewing course progress together";
 
   if (!hasImage) {
     return (
@@ -53,8 +71,8 @@ const AboutImageSlot = () => {
 
   return (
     <img
-      src="/images/about-learning-workspace.webp"
-      alt="Students and teachers reviewing course progress together"
+      src={imageSrc}
+      alt={imageAlt}
       className="vg-about-image"
       loading="lazy"
       onError={() => setHasImage(false)}
@@ -84,12 +102,33 @@ const About = () => {
     canonicalUrl: `${contentSettings?.siteUrl || window.location.origin}/about`,
   });
 
-  if (loading || !contentSettings) {
+  if (loading && !contentSettings) {
     return <Loading variant="page" />;
   }
 
   const siteName = contentSettings?.siteName || "Vidhgrow";
   const stats = getDisplayStats(contentSettings?.aboutStats || []);
+  const aboutHero = {
+    eyebrow: contentSettings?.aboutHeroEyebrow || `About ${siteName}`,
+    title:
+      contentSettings?.aboutHeroTitle ||
+      "A calmer place for courses, tests, and the next revision.",
+    description:
+      contentSettings?.aboutHeroDescription ||
+      "Vidhgrow is built for learners who want structure without noise: course material, timed practice, teacher context, and progress signals in one focused workspace.",
+    image: contentSettings?.aboutHeroImage,
+  };
+  const aboutValuesEyebrow =
+    contentSettings?.aboutValuesEyebrow || "What drives us";
+  const aboutValuesTitle =
+    contentSettings?.aboutValuesTitle || "Useful tools for real study habits.";
+  const aboutStoryPoints = getDisplayStoryPoints(contentSettings?.aboutValues);
+  const aboutCtaTitle =
+    contentSettings?.aboutCtaTitle ||
+    "Start with one course. Keep the work visible.";
+  const aboutCtaDescription =
+    contentSettings?.aboutCtaDescription ||
+    "Browse available courses or create an account to keep attempts, reports, and revision steps together.";
   const motionProps =
     animations && !reducedMotion
       ? {
@@ -106,16 +145,10 @@ const About = () => {
         <section ref={heroRef} className="vg-about-hero">
           <motion.div {...motionProps} className="vg-about-copy">
             <p className="text-xs font-semibold uppercase tracking-[0.22em] text-primary/70">
-              About {siteName}
+              {aboutHero.eyebrow}
             </p>
-            <h1>
-              A calmer place for courses, tests, and the next revision.
-            </h1>
-            <p>
-              Vidhgrow is built for learners who want structure without noise:
-              course material, timed practice, teacher context, and progress
-              signals in one focused workspace.
-            </p>
+            <h1>{aboutHero.title}</h1>
+            <p>{aboutHero.description}</p>
 
             <div className="vg-about-stats" aria-label="Vidhgrow platform focus">
               {stats.map((stat) => (
@@ -137,20 +170,20 @@ const About = () => {
             }
             className="vg-about-image-frame"
           >
-            <AboutImageSlot />
+            <AboutImageSlot image={aboutHero.image} />
           </motion.div>
         </section>
 
         <motion.section {...motionProps} className="vg-about-values">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.22em] text-primary/70">
-              What drives us
+              {aboutValuesEyebrow}
             </p>
-            <h2>Useful tools for real study habits.</h2>
+            <h2>{aboutValuesTitle}</h2>
           </div>
 
           <div className="vg-about-value-list">
-            {storyPoints.map((point) => (
+            {aboutStoryPoints.map((point) => (
               <article key={point.title}>
                 <span>{point.title}</span>
                 <p>{point.text}</p>
@@ -161,11 +194,8 @@ const About = () => {
 
         <motion.section {...motionProps} className="vg-about-cta">
           <div>
-            <h2>Start with one course. Keep the work visible.</h2>
-            <p>
-              Browse available courses or create an account to keep attempts,
-              reports, and revision steps together.
-            </p>
+            <h2>{aboutCtaTitle}</h2>
+            <p>{aboutCtaDescription}</p>
           </div>
           <div className="flex flex-wrap gap-3">
             <Link to="/register" className="vg-about-link-primary">
