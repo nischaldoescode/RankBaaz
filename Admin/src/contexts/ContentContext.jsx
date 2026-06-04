@@ -190,12 +190,15 @@ export const ContentProvider = ({ children }) => {
       setLoading(true);
       const formData = new FormData();
       Object.keys(data).forEach((key) => {
-        if (key === "logo" || key === "favicon") {
-          // only append actual files.
-          if (data[key] instanceof File) {
-            formData.append(key, data[key]);
-          }
-          // do not send logo object as json; backend manages it via req.files
+        if (key.endsWith("PreviewUrl")) {
+          return;
+        }
+
+        if (data[key] instanceof File) {
+          formData.append(key, data[key]);
+        } else if (key === "logo" || key === "favicon") {
+          // backend keeps the saved asset object unless a new file is provided.
+          return;
         } else if (typeof data[key] === "object" && data[key] !== null) {
           formData.append(key, JSON.stringify(data[key]));
         } else if (data[key] !== null && data[key] !== undefined) {

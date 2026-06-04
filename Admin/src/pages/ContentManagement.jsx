@@ -2,6 +2,7 @@
  * keeps the content management page focused and readable.
  */
 import React, { useState, useEffect, useCallback } from "react";
+import { toast } from "react-toastify";
 import { useContent } from "../contexts/ContentContext";
 import {
   FileText,
@@ -40,6 +41,8 @@ import {
   Award,
   Users,
   Heart,
+  Image as ImageIcon,
+  Upload,
   PanelBottom,
 } from "lucide-react";
 
@@ -79,6 +82,78 @@ const iconMap = {
   Users,
   Heart,
 };
+
+const defaultHomeStoryChapters = [
+  {
+    kicker: "Read",
+    title: "Course notes that stay usable",
+    description:
+      "Open a lesson, keep the teacher's context nearby, and revise from material that still feels usable after the first read.",
+    image: {
+      url: null,
+      publicId: null,
+      fallbackSrc: "/images/home-course-notes.webp",
+      alt: "Course notes and teacher context in the Vidhgrow study flow",
+    },
+    imageName: "home-course-notes.webp",
+  },
+  {
+    kicker: "Practice",
+    title: "Tests with real feedback",
+    description:
+      "Take a timed attempt, review the weak spots, and understand what changed before moving to the next round.",
+    image: {
+      url: null,
+      publicId: null,
+      fallbackSrc: "/images/home-practice-test.webp",
+      alt: "Timed practice test with useful feedback",
+    },
+    imageName: "home-practice-test.webp",
+  },
+  {
+    kicker: "Review",
+    title: "Progress you can read",
+    description:
+      "See scores, rank movement, attempts, and course progress in a way that helps you decide what to do next.",
+    image: {
+      url: null,
+      publicId: null,
+      fallbackSrc: "/images/home-progress-review.webp",
+      alt: "Readable score and progress review after practice",
+    },
+    imageName: "home-progress-review.webp",
+  },
+];
+
+const defaultAboutValues = [
+  {
+    icon: "Target",
+    title: "Mission",
+    description:
+      "Make serious practice easier to begin, easier to repeat, and easier to understand after every attempt.",
+    color: "text-blue-500",
+    bgColor: "bg-blue-500/10",
+  },
+  {
+    icon: "Heart",
+    title: "Values",
+    description:
+      "Keep the product accessible, readable, and useful for students and teachers doing real work.",
+    color: "text-red-500",
+    bgColor: "bg-red-500/10",
+  },
+  {
+    icon: "Users",
+    title: "Community",
+    description:
+      "Support learners who want structured courses, calm testing, and feedback they can act on.",
+    color: "text-green-500",
+    bgColor: "bg-green-500/10",
+  },
+];
+
+const getImagePreviewSrc = (image, fallbackSrc = "") =>
+  image?.url || image?.fallbackSrc || fallbackSrc;
 
 // sortable legal section component
 const SortableLegalSection = ({
@@ -619,9 +694,49 @@ const ContentManagement = () => {
         ...contentSettings,
         stats: contentSettings.stats || [],
         features: contentSettings.features || [],
-        aboutValues: contentSettings.aboutValues || [],
+        homeStoryEyebrow:
+          contentSettings.homeStoryEyebrow || "How the work moves",
+        homeStoryTitle:
+          contentSettings.homeStoryTitle ||
+          "A study rhythm that feels easy to return to.",
+        homeStoryHighlightedText:
+          contentSettings.homeStoryHighlightedText || "A study rhythm",
+        homeStoryDescription:
+          contentSettings.homeStoryDescription ||
+          "Learn from the course, test the idea, then use the result to choose the next revision. The page stays quiet, but the work keeps moving.",
+        homeStoryChapters:
+          contentSettings.homeStoryChapters?.length > 0
+            ? contentSettings.homeStoryChapters
+            : defaultHomeStoryChapters,
+        aboutHeroEyebrow: contentSettings.aboutHeroEyebrow || "",
+        aboutHeroTitle:
+          contentSettings.aboutHeroTitle ||
+          "A calmer place for courses, tests, and the next revision.",
+        aboutHeroDescription:
+          contentSettings.aboutHeroDescription ||
+          "Vidhgrow is built for learners who want structure without noise: course material, timed practice, teacher context, and progress signals in one focused workspace.",
+        aboutHeroImage: {
+          fallbackSrc: "/images/about-learning-workspace.webp",
+          alt: "Students and teachers reviewing course progress together",
+          ...(contentSettings.aboutHeroImage || {}),
+        },
+        aboutValuesEyebrow:
+          contentSettings.aboutValuesEyebrow || "What drives us",
+        aboutValuesTitle:
+          contentSettings.aboutValuesTitle ||
+          "Useful tools for real study habits.",
+        aboutValues:
+          contentSettings.aboutValues?.length > 0
+            ? contentSettings.aboutValues
+            : defaultAboutValues,
         aboutFeatures: contentSettings.aboutFeatures || [],
         aboutStats: contentSettings.aboutStats || [],
+        aboutCtaTitle:
+          contentSettings.aboutCtaTitle ||
+          "Start with one course. Keep the work visible.",
+        aboutCtaDescription:
+          contentSettings.aboutCtaDescription ||
+          "Browse available courses or create an account to keep attempts, reports, and revision steps together.",
         chartConfig: {
           type: existingChart.type || "pie",
           position: existingChart.position || "right",
@@ -795,6 +910,18 @@ const ContentManagement = () => {
   const handleFileChange = (e, field) => {
     const file = e.target.files[0];
     if (file) {
+      if (!file.type.startsWith("image/")) {
+        toast.error("Please choose an image file");
+        e.target.value = "";
+        return;
+      }
+
+      if (file.size > 5 * 1024 * 1024) {
+        toast.error("Images must be 5MB or smaller");
+        e.target.value = "";
+        return;
+      }
+
       updateSettingsForm((prev) => ({
         ...prev,
         [field]: file,
@@ -1124,6 +1251,256 @@ const ContentManagement = () => {
                       />
                     </div>
                   </div>
+                </div>
+
+                {/* home page story section */}
+                <div className="space-y-6">
+                  <div className="border-b pb-2">
+                    <h3 className="text-lg font-semibold text-gray-900">
+                      Home Page - Story Section
+                    </h3>
+                    <p className="mt-1 text-sm text-gray-500">
+                      Edit the horizontal study-flow section and its images.
+                    </p>
+                  </div>
+
+                  <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Section Label
+                      </label>
+                      <input
+                        type="text"
+                        value={settingsForm.homeStoryEyebrow || ""}
+                        onChange={(e) =>
+                          updateSettingsForm((prev) => ({
+                            ...prev,
+                            homeStoryEyebrow: e.target.value,
+                          }))
+                        }
+                        className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Brushed Text
+                      </label>
+                      <input
+                        type="text"
+                        value={settingsForm.homeStoryHighlightedText || ""}
+                        onChange={(e) =>
+                          updateSettingsForm((prev) => ({
+                            ...prev,
+                            homeStoryHighlightedText: e.target.value,
+                          }))
+                        }
+                        className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+
+                    <div className="md:col-span-2">
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Section Title
+                      </label>
+                      <input
+                        type="text"
+                        value={settingsForm.homeStoryTitle || ""}
+                        onChange={(e) =>
+                          updateSettingsForm((prev) => ({
+                            ...prev,
+                            homeStoryTitle: e.target.value,
+                          }))
+                        }
+                        className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+
+                    <div className="md:col-span-2">
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Section Description
+                      </label>
+                      <textarea
+                        value={settingsForm.homeStoryDescription || ""}
+                        onChange={(e) =>
+                          updateSettingsForm((prev) => ({
+                            ...prev,
+                            homeStoryDescription: e.target.value,
+                          }))
+                        }
+                        rows="3"
+                        className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-4">
+                    {settingsForm.homeStoryChapters?.map((chapter, index) => {
+                      const previewSrc = getImagePreviewSrc(
+                        chapter.image,
+                        defaultHomeStoryChapters[index]?.image?.fallbackSrc,
+                      );
+                      const selectedFile =
+                        settingsForm[`homeStoryImageFile_${index}`];
+
+                      return (
+                        <div
+                          key={index}
+                          className="rounded-lg border border-gray-200 bg-gray-50 p-4"
+                        >
+                          <div className="mb-4 flex items-start justify-between gap-3">
+                            <div>
+                              <span className="text-sm font-medium text-gray-700">
+                                Story Step #{index + 1}
+                              </span>
+                              <p className="text-xs text-gray-500">
+                                Text and image for this scroll section.
+                              </p>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                removeFromArray("homeStoryChapters", index)
+                              }
+                              className="text-red-600 hover:text-red-700"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+
+                          <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_220px]">
+                            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                              <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                  Small Label
+                                </label>
+                                <input
+                                  type="text"
+                                  value={chapter.kicker || ""}
+                                  onChange={(e) =>
+                                    updateArrayItem(
+                                      "homeStoryChapters",
+                                      index,
+                                      { kicker: e.target.value },
+                                    )
+                                  }
+                                  className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:ring-2 focus:ring-blue-500"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                  Title
+                                </label>
+                                <input
+                                  type="text"
+                                  value={chapter.title || ""}
+                                  onChange={(e) =>
+                                    updateArrayItem(
+                                      "homeStoryChapters",
+                                      index,
+                                      { title: e.target.value },
+                                    )
+                                  }
+                                  className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:ring-2 focus:ring-blue-500"
+                                />
+                              </div>
+                              <div className="md:col-span-2">
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                  Description
+                                </label>
+                                <textarea
+                                  value={chapter.description || ""}
+                                  onChange={(e) =>
+                                    updateArrayItem(
+                                      "homeStoryChapters",
+                                      index,
+                                      { description: e.target.value },
+                                    )
+                                  }
+                                  rows="3"
+                                  className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:ring-2 focus:ring-blue-500"
+                                />
+                              </div>
+                              <div className="md:col-span-2">
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                  Image Alt Text
+                                </label>
+                                <input
+                                  type="text"
+                                  value={chapter.image?.alt || ""}
+                                  onChange={(e) =>
+                                    updateArrayItem(
+                                      "homeStoryChapters",
+                                      index,
+                                      {
+                                        image: {
+                                          ...(chapter.image || {}),
+                                          alt: e.target.value,
+                                        },
+                                      },
+                                    )
+                                  }
+                                  className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:ring-2 focus:ring-blue-500"
+                                />
+                              </div>
+                            </div>
+
+                            <div className="space-y-3 rounded-lg border border-gray-200 bg-white p-3">
+                              <div className="flex items-center gap-2 text-sm font-medium text-gray-700">
+                                <ImageIcon className="h-4 w-4" />
+                                Image
+                              </div>
+                              {previewSrc && (
+                                <img
+                                  src={previewSrc}
+                                  alt={chapter.image?.alt || chapter.title}
+                                  className="h-28 w-full rounded-lg border border-gray-200 object-cover"
+                                />
+                              )}
+                              <input
+                                type="file"
+                                accept="image/*"
+                                onChange={(e) =>
+                                  handleFileChange(
+                                    e,
+                                    `homeStoryImageFile_${index}`,
+                                  )
+                                }
+                                className="w-full cursor-pointer rounded-lg border border-gray-300 px-3 py-2 text-sm file:mr-3 file:rounded-md file:border-0 file:bg-blue-50 file:px-3 file:py-1.5 file:text-blue-700"
+                              />
+                              {selectedFile instanceof File && (
+                                <p className="text-xs text-blue-700">
+                                  New image selected: {selectedFile.name}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() =>
+                      addToArray("homeStoryChapters", {
+                        kicker: "",
+                        title: "",
+                        description: "",
+                        image: {
+                          url: null,
+                          publicId: null,
+                          fallbackSrc: null,
+                          alt: "",
+                        },
+                        imageName: "",
+                      })
+                    }
+                    className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-white hover:bg-blue-700"
+                  >
+                    <Plus className="h-4 w-4" />
+                    Add Story Step
+                  </button>
                 </div>
 
                 {/* home page stats */}
@@ -1687,6 +2064,189 @@ const ContentManagement = () => {
                         }
                         rows="3"
                         className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* about page hero */}
+                <div className="space-y-6">
+                  <div className="border-b pb-2">
+                    <h3 className="text-lg font-semibold text-gray-900">
+                      About Page - Hero Section
+                    </h3>
+                    <p className="mt-1 text-sm text-gray-500">
+                      Edit the about page headline, image, and final call to action.
+                    </p>
+                  </div>
+
+                  <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_280px]">
+                    <div className="grid grid-cols-1 gap-6">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Eyebrow Text
+                        </label>
+                        <input
+                          type="text"
+                          value={settingsForm.aboutHeroEyebrow || ""}
+                          placeholder="About Vidhgrow"
+                          onChange={(e) =>
+                            updateSettingsForm((prev) => ({
+                              ...prev,
+                              aboutHeroEyebrow: e.target.value,
+                            }))
+                          }
+                          className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:ring-2 focus:ring-blue-500"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Hero Title
+                        </label>
+                        <input
+                          type="text"
+                          value={settingsForm.aboutHeroTitle || ""}
+                          onChange={(e) =>
+                            updateSettingsForm((prev) => ({
+                              ...prev,
+                              aboutHeroTitle: e.target.value,
+                            }))
+                          }
+                          className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:ring-2 focus:ring-blue-500"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Hero Description
+                        </label>
+                        <textarea
+                          value={settingsForm.aboutHeroDescription || ""}
+                          onChange={(e) =>
+                            updateSettingsForm((prev) => ({
+                              ...prev,
+                              aboutHeroDescription: e.target.value,
+                            }))
+                          }
+                          rows="3"
+                          className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:ring-2 focus:ring-blue-500"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-3 rounded-lg border border-gray-200 bg-gray-50 p-4">
+                      <div className="flex items-center gap-2 text-sm font-medium text-gray-700">
+                        <Upload className="h-4 w-4" />
+                        About Image
+                      </div>
+                      {getImagePreviewSrc(
+                        settingsForm.aboutHeroImage,
+                        "/images/about-learning-workspace.webp",
+                      ) && (
+                        <img
+                          src={getImagePreviewSrc(
+                            settingsForm.aboutHeroImage,
+                            "/images/about-learning-workspace.webp",
+                          )}
+                          alt={settingsForm.aboutHeroImage?.alt || "About page image"}
+                          className="h-36 w-full rounded-lg border border-gray-200 object-cover"
+                        />
+                      )}
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => handleFileChange(e, "aboutHeroImageFile")}
+                        className="w-full cursor-pointer rounded-lg border border-gray-300 px-3 py-2 text-sm file:mr-3 file:rounded-md file:border-0 file:bg-blue-50 file:px-3 file:py-1.5 file:text-blue-700"
+                      />
+                      {settingsForm.aboutHeroImageFile instanceof File && (
+                        <p className="text-xs text-blue-700">
+                          New image selected: {settingsForm.aboutHeroImageFile.name}
+                        </p>
+                      )}
+                      <label className="block text-sm font-medium text-gray-700">
+                        Image Alt Text
+                      </label>
+                      <input
+                        type="text"
+                        value={settingsForm.aboutHeroImage?.alt || ""}
+                        onChange={(e) =>
+                          updateSettingsForm((prev) => ({
+                            ...prev,
+                            aboutHeroImage: {
+                              ...(prev.aboutHeroImage || {}),
+                              alt: e.target.value,
+                            },
+                          }))
+                        }
+                        className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Values Label
+                      </label>
+                      <input
+                        type="text"
+                        value={settingsForm.aboutValuesEyebrow || ""}
+                        onChange={(e) =>
+                          updateSettingsForm((prev) => ({
+                            ...prev,
+                            aboutValuesEyebrow: e.target.value,
+                          }))
+                        }
+                        className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Values Title
+                      </label>
+                      <input
+                        type="text"
+                        value={settingsForm.aboutValuesTitle || ""}
+                        onChange={(e) =>
+                          updateSettingsForm((prev) => ({
+                            ...prev,
+                            aboutValuesTitle: e.target.value,
+                          }))
+                        }
+                        className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        About CTA Title
+                      </label>
+                      <input
+                        type="text"
+                        value={settingsForm.aboutCtaTitle || ""}
+                        onChange={(e) =>
+                          updateSettingsForm((prev) => ({
+                            ...prev,
+                            aboutCtaTitle: e.target.value,
+                          }))
+                        }
+                        className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        About CTA Description
+                      </label>
+                      <textarea
+                        value={settingsForm.aboutCtaDescription || ""}
+                        onChange={(e) =>
+                          updateSettingsForm((prev) => ({
+                            ...prev,
+                            aboutCtaDescription: e.target.value,
+                          }))
+                        }
+                        rows="2"
+                        className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:ring-2 focus:ring-blue-500"
                       />
                     </div>
                   </div>

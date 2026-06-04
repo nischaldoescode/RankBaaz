@@ -68,6 +68,47 @@ export const HomePreview = ({ data }) => {
         </p>
       </div>
 
+      {data.story && (
+        <div className="bg-card rounded-xl p-6 border border-border">
+          <h4 className="text-sm font-semibold text-muted-foreground mb-6 uppercase text-center">
+            Story Section
+          </h4>
+          <div className="mb-6 text-center">
+            <p className="text-xs font-semibold uppercase tracking-widest text-primary">
+              {data.story.eyebrow}
+            </p>
+            <h5 className="mt-2 text-2xl font-bold text-foreground">
+              {data.story.title}
+            </h5>
+            <p className="mx-auto mt-2 max-w-3xl text-sm text-muted-foreground">
+              {data.story.description}
+            </p>
+          </div>
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+            {data.story.chapters?.map((chapter, idx) => (
+              <div key={idx} className="rounded-xl bg-muted/30 p-4">
+                {(chapter.image?.url || chapter.image?.fallbackSrc) && (
+                  <img
+                    src={chapter.image?.url || chapter.image?.fallbackSrc}
+                    alt={chapter.image?.alt || chapter.title}
+                    className="mb-4 h-28 w-full rounded-lg object-cover"
+                  />
+                )}
+                <p className="text-xs font-semibold uppercase tracking-widest text-primary">
+                  {chapter.kicker}
+                </p>
+                <h6 className="mt-1 text-lg font-semibold text-foreground">
+                  {chapter.title}
+                </h6>
+                <p className="mt-2 text-sm text-muted-foreground">
+                  {chapter.description}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* stats section preview */}
       <div className="bg-card rounded-xl p-6 border border-border">
         <h4 className="text-sm font-semibold text-muted-foreground mb-6 uppercase">

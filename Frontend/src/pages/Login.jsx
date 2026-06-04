@@ -446,13 +446,6 @@ const Login = () => {
                             >
                               Email Address
                             </label>
-                            <button
-                              type="button"
-                              onClick={() => setShowForgotPassword(true)}
-                              className="text-xs sm:text-sm font-medium text-primary hover:text-primary/80 transition-colors whitespace-nowrap flex-shrink-0"
-                            >
-                              Forgot password?
-                            </button>
                           </div>
                           <div className="relative w-full">
                             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -714,12 +707,21 @@ const Login = () => {
                           className="space-y-4"
                         >
                           <div className="space-y-2">
-                            <label
-                              htmlFor="password"
-                              className="text-sm font-medium text-foreground"
-                            >
-                              Password
-                            </label>
+                            <div className="flex items-center justify-between gap-3">
+                              <label
+                                htmlFor="password"
+                                className="text-sm font-medium text-foreground"
+                              >
+                                Password
+                              </label>
+                              <button
+                                type="button"
+                                onClick={() => setShowForgotPassword(true)}
+                                className="flex-shrink-0 whitespace-nowrap text-xs font-medium text-primary transition-colors hover:text-primary/80 sm:text-sm"
+                              >
+                                Forgot password?
+                              </button>
+                            </div>
                             <div className="relative">
                               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                                 <Lock className="h-4 w-4 text-muted-foreground" />

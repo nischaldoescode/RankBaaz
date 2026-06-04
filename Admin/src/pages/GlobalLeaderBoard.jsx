@@ -99,16 +99,16 @@ const GlobalLeaderboard = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 p-6">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 p-3 sm:p-6">
       {/* header */}
-      <div className="mb-8">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="p-3 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg shadow-lg">
-              <FiTrendingUp className="w-8 h-8 text-white" />
+      <div className="mb-6 sm:mb-8">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex items-start sm:items-center gap-3">
+            <div className="p-3 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg shadow-lg shrink-0">
+              <FiTrendingUp className="w-7 h-7 sm:w-8 sm:h-8 text-white" />
             </div>
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">
+            <div className="min-w-0">
+              <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">
                 Global Leaderboard
               </h1>
               <p className="text-gray-600">
@@ -117,11 +117,11 @@ const GlobalLeaderboard = () => {
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3">
             <button
               onClick={handleRefresh}
               disabled={refreshing}
-              className="px-6 py-3 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50"
+              className="w-full sm:w-auto justify-center px-6 py-3 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50"
             >
               <FiRefreshCw
                 className={`w-4 h-4 ${refreshing ? "animate-spin" : ""}`}
@@ -131,7 +131,7 @@ const GlobalLeaderboard = () => {
 
             <button
               onClick={handleExport}
-              className="px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl hover:from-blue-700 hover:to-indigo-700 transition-all flex items-center gap-2 cursor-pointer shadow-lg"
+              className="w-full sm:w-auto justify-center px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl hover:from-blue-700 hover:to-indigo-700 transition-all flex items-center gap-2 cursor-pointer shadow-lg"
             >
               <FiDownload className="w-4 h-4" />
               Export CSV
@@ -141,7 +141,7 @@ const GlobalLeaderboard = () => {
       </div>
 
       {/* filters */}
-      <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-6 mb-8">
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6 mb-6 sm:mb-8">
         <div className="flex items-center gap-3 mb-4">
           <FiFilter className="w-5 h-5 text-gray-600" />
           <span className="font-semibold text-gray-900">Filters</span>
@@ -169,7 +169,7 @@ const GlobalLeaderboard = () => {
       </div>
 
       {/* top 3 podium */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-8">
         {leaderboard.slice(0, 3).map((user, idx) => (
           <motion.div
             key={user.userId}
@@ -178,7 +178,7 @@ const GlobalLeaderboard = () => {
             transition={{ delay: idx * 0.1 }}
             className={`bg-gradient-to-br ${getRankColor(
               user.rank
-            )} rounded-2xl shadow-2xl p-6 text-white ${
+            )} rounded-2xl shadow-xl p-5 sm:p-6 text-white ${
               user.rank === 1 ? "md:col-span-1 md:order-2 transform md:scale-110" : ""
             }`}
           >
@@ -209,13 +209,64 @@ const GlobalLeaderboard = () => {
       </div>
 
       {/* full leaderboard table */}
-      <div className="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
-        <div className="p-6 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50">
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+        <div className="p-4 sm:p-6 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50">
           <h2 className="text-xl font-bold text-gray-900">Complete Rankings</h2>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full">
+        <div className="md:hidden divide-y divide-gray-100">
+          {leaderboard.map((user) => (
+            <div key={user.userId} className="p-4">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="font-bold text-gray-900">
+                      #{user.rank}
+                    </span>
+                    <p className="font-semibold text-gray-900 truncate">
+                      {user.name || "Anonymous"}
+                    </p>
+                  </div>
+                  <p className="text-sm text-gray-600 truncate">
+                    @{user.username}
+                  </p>
+                </div>
+                <span className="shrink-0 rounded-full bg-blue-50 px-3 py-1 text-sm font-bold text-blue-600">
+                  {user.points?.toLocaleString()} pts
+                </span>
+              </div>
+              <div className="mt-4 grid grid-cols-3 gap-2 text-center">
+                <div className="rounded-lg bg-gray-50 p-2">
+                  <p className="text-[11px] uppercase tracking-wide text-gray-500">
+                    Tests
+                  </p>
+                  <p className="text-sm font-bold text-gray-900">
+                    {user.testsCompleted}
+                  </p>
+                </div>
+                <div className="rounded-lg bg-gray-50 p-2">
+                  <p className="text-[11px] uppercase tracking-wide text-gray-500">
+                    Avg
+                  </p>
+                  <p className="text-sm font-bold text-green-600">
+                    {user.averagePercentile?.toFixed(1) || "0"}%
+                  </p>
+                </div>
+                <div className="rounded-lg bg-gray-50 p-2">
+                  <p className="text-[11px] uppercase tracking-wide text-gray-500">
+                    Badges
+                  </p>
+                  <p className="text-sm font-bold text-purple-600">
+                    {user.badges?.length || 0}
+                  </p>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div className="hidden overflow-x-auto md:block">
+          <table className="w-full min-w-[760px]">
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
                 <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase">
@@ -239,7 +290,7 @@ const GlobalLeaderboard = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
-              {leaderboard.map((user, idx) => (
+              {leaderboard.map((user) => (
                 <tr
                   key={user.userId}
                   className="hover:bg-gray-50 transition-colors"

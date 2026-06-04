@@ -2,7 +2,7 @@
  * keeps the home page focused and readable.
  */
 import React, { useState, useEffect, useRef } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { motion, useScroll, useTransform } from "framer-motion";
 import {
   BookOpen,
@@ -38,6 +38,7 @@ import { useAuth } from "../context/AuthContext";
 import { useTheme } from "../context/ThemeContext";
 import { useContent } from "../context/ContentContext";
 import Loading from "../components/common/Loading";
+import { validateStudentEmail } from "../utils/emailValidation";
 
 import TeacherCTASection from "../components/Teachers/TeacherCTA";
 
@@ -134,8 +135,12 @@ const isOldHeroCopy = (value, oldDefault, fallback) => {
 
 const StoryImageSlot = ({ item }) => {
   const [hasImage, setHasImage] = useState(true);
+  const imageSrc =
+    item.image?.url || item.imageSrc || item.image?.fallbackSrc || "";
+  const imageAlt =
+    item.image?.alt || `${item.title || "Vidhgrow study flow"} illustration`;
 
-  if (!hasImage) {
+  if (!imageSrc || !hasImage) {
     return (
       <div className="vg-story-image-fallback">
         <span>{item.imageName}</span>
@@ -146,8 +151,8 @@ const StoryImageSlot = ({ item }) => {
 
   return (
     <img
-      src={item.imageSrc}
-      alt={`${item.title} illustration`}
+      src={imageSrc}
+      alt={imageAlt}
       className="vg-story-image"
       loading="lazy"
       onError={() => setHasImage(false)}
@@ -281,7 +286,12 @@ const StoryChapter = ({ item, index, animations, reducedMotion }) => {
   );
 };
 
-const LearningStorySection = ({ animations, reducedMotion, isAuthenticated }) => {
+const LearningStorySection = ({
+  animations,
+  reducedMotion,
+  isAuthenticated,
+  story,
+}) => {
   const sectionRef = useRef(null);
   const { scrollYProgress } = useScroll({
     target: sectionRef,
@@ -330,19 +340,17 @@ const LearningStorySection = ({ animations, reducedMotion, isAuthenticated }) =>
           viewport={{ once: true, margin: "-80px" }}
           className="mx-auto max-w-3xl space-y-5 text-center"
         >
-          <SectionLabel>How the work moves</SectionLabel>
+          <SectionLabel>{story.eyebrow}</SectionLabel>
           <h2 className="text-3xl font-bold leading-tight text-foreground sm:text-4xl">
-            <span className="vg-story-brushed-word">A study rhythm</span>{" "}
-            that feels easy to return to.
+            {renderBrushedTitle(story.title, story.highlightedText)}
           </h2>
           <p className="text-base leading-8 text-muted-foreground sm:text-lg">
-            Learn from the course, test the idea, then use the result to choose
-            the next revision. The page stays quiet, but the work keeps moving.
+            {story.description}
           </p>
         </motion.div>
 
         <div className="mt-12 space-y-10" aria-label="Vidhgrow learning flow">
-          {platformHighlights.map((item, index) => (
+          {story.chapters.map((item, index) => (
             <StoryChapter
               key={item.title}
               item={item}
@@ -356,7 +364,7 @@ const LearningStorySection = ({ animations, reducedMotion, isAuthenticated }) =>
         <div className="mt-10 flex justify-center">
           <Button asChild size="lg" className="gap-2 px-6">
             <Link to={isAuthenticated ? "/courses" : "/register"}>
-              {isAuthenticated ? "Open courses" : "Start practicing"}
+              {isAuthenticated ? "Test Yourself" : "Start Practicing"}
               <ArrowRight className="h-4 w-4" />
             </Link>
           </Button>
@@ -389,12 +397,64 @@ const refineFeature = (feature) => ({
   ...(refinedFeatureCopy[feature.title] || {}),
 });
 
+const normalizeStoryChapters = (chapters) => {
+  if (!Array.isArray(chapters) || chapters.length === 0) {
+    return platformHighlights;
+  }
+
+  return chapters.map((chapter, index) => ({
+    ...platformHighlights[index],
+    ...chapter,
+    image: {
+      ...(platformHighlights[index]?.image || {}),
+      ...(chapter.image || {}),
+    },
+    imageSrc:
+      chapter.image?.url ||
+      chapter.image?.fallbackSrc ||
+      platformHighlights[index]?.imageSrc,
+    imageName:
+      chapter.imageName ||
+      platformHighlights[index]?.imageName ||
+      `story-image-${index + 1}.webp`,
+  }));
+};
+
+const renderBrushedTitle = (title, highlightedText) => {
+  if (!title || !highlightedText) return title;
+
+  const normalizedTitle = title.toLowerCase();
+  const normalizedHighlight = highlightedText.toLowerCase();
+  const index = normalizedTitle.indexOf(normalizedHighlight);
+
+  if (index === -1) {
+    return (
+      <>
+        <span className="vg-story-brushed-word">{highlightedText}</span>{" "}
+        {title}
+      </>
+    );
+  }
+
+  return (
+    <>
+      {title.slice(0, index)}
+      <span className="vg-story-brushed-word">
+        {title.slice(index, index + highlightedText.length)}
+      </span>
+      {title.slice(index + highlightedText.length)}
+    </>
+  );
+};
+
 const Home = () => {
   const [email, setEmail] = useState("");
+  const [emailError, setEmailError] = useState("");
   const [activeStatIndex, setActiveStatIndex] = useState(null);
   const { isAuthenticated } = useAuth();
   const { animations, reducedMotion } = useTheme();
   const { contentSettings, faqs, fetchFAQs, loading } = useContent();
+  const navigate = useNavigate();
   const pageRef = useRef(null);
   const { scrollYProgress: pageScrollProgress } = useScroll({
     target: pageRef,
@@ -465,10 +525,36 @@ const Home = () => {
     oldDefaultCopy.ctaDescription,
     humanDefaultCopy.ctaDescription,
   );
+  const storyMeta = {
+    eyebrow: contentSettings?.homeStoryEyebrow || "How the work moves",
+    title:
+      contentSettings?.homeStoryTitle ||
+      "A study rhythm that feels easy to return to.",
+    highlightedText:
+      contentSettings?.homeStoryHighlightedText || "A study rhythm",
+    description:
+      contentSettings?.homeStoryDescription ||
+      "Learn from the course, test the idea, then use the result to choose the next revision. The page stays quiet, but the work keeps moving.",
+    chapters: normalizeStoryChapters(contentSettings?.homeStoryChapters),
+  };
 
   const handleEmailSubmit = (e) => {
     e.preventDefault();
-    setEmail("");
+    if (isAuthenticated) {
+      navigate("/courses");
+      return;
+    }
+
+    const result = validateStudentEmail(email);
+    if (!result.valid) {
+      setEmailError(result.message);
+      return;
+    }
+
+    setEmailError("");
+    navigate(`/register?email=${encodeURIComponent(result.email)}`, {
+      state: { email: result.email },
+    });
   };
 
   const renderChart = () => {
@@ -627,8 +713,8 @@ const Home = () => {
               >
                 <Button asChild size="lg" className="gap-2 px-6">
                   <Link to="/courses">
-                    <BookOpen className="w-4 h-4" />
-                    Explore Courses
+                    <Award className="w-4 h-4" />
+                    Test Yourself
                   </Link>
                 </Button>
                 <Button
@@ -638,8 +724,8 @@ const Home = () => {
                   className="gap-2 px-6"
                 >
                   <Link to="/courses">
-                    <Award className="w-4 h-4" />
-                    Take a Test
+                    <BookOpen className="w-4 h-4" />
+                    Explore Courses
                   </Link>
                 </Button>
               </motion.div>
@@ -656,7 +742,7 @@ const Home = () => {
               >
                 <Button asChild size="lg" className="gap-2 px-6">
                   <Link to="/register">
-                    Get Started Free
+                    Start Practicing
                     <ArrowRight className="w-4 h-4" />
                   </Link>
                 </Button>
@@ -689,6 +775,7 @@ const Home = () => {
         animations={animations}
         reducedMotion={reducedMotion}
         isAuthenticated={isAuthenticated}
+        story={storyMeta}
       />
 
       <Divider />
@@ -880,26 +967,48 @@ const Home = () => {
               {ctaDescription}
             </p>
 
-            <form
-              onSubmit={handleEmailSubmit}
-              className="flex flex-col sm:flex-row gap-3 max-w-md mx-auto"
-            >
-              <Input
-                type="email"
-                placeholder="Enter your email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                className="flex-1 h-11"
-              />
-              <Button
-                type="submit"
-                className="h-11 px-6 gap-2 whitespace-nowrap"
-              >
-                Get Started
-                <ArrowRight className="w-4 h-4" />
+            {isAuthenticated ? (
+              <Button asChild size="lg" className="gap-2 px-6">
+                <Link to="/courses">
+                  Test Yourself
+                  <ArrowRight className="w-4 h-4" />
+                </Link>
               </Button>
-            </form>
+            ) : (
+              <form
+                onSubmit={handleEmailSubmit}
+                className="mx-auto flex max-w-md flex-col gap-2"
+              >
+                <div className="flex flex-col gap-3 sm:flex-row">
+                  <Input
+                    type="email"
+                    placeholder="Enter your email"
+                    value={email}
+                    onChange={(e) => {
+                      setEmail(e.target.value);
+                      if (emailError) setEmailError("");
+                    }}
+                    required
+                    aria-invalid={emailError ? "true" : "false"}
+                    className={`h-11 flex-1 ${
+                      emailError ? "border-destructive" : ""
+                    }`}
+                  />
+                  <Button
+                    type="submit"
+                    className="h-11 gap-2 whitespace-nowrap px-6"
+                  >
+                    Get Started
+                    <ArrowRight className="w-4 h-4" />
+                  </Button>
+                </div>
+                {emailError && (
+                  <p className="text-left text-sm text-destructive">
+                    {emailError}
+                  </p>
+                )}
+              </form>
+            )}
 
             <p className="text-xs text-muted-foreground/60">
               Start learning today.
