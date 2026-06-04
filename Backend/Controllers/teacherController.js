@@ -14,10 +14,16 @@ import TeacherPayout from "../Models/TeacherPayout.js";
 import { v2 as cloudinary } from "cloudinary";
 import { generateSigningSecret } from "../Middleware/requestSignature.js";
 import { generateOtp, sendOtpEmail } from "../utils/OtpUtils.js";
-import redisClient, { invalidateCache } from "../Config/redis.js";
+import redisClient, {
+  invalidateCache,
+  isRedisConnectionError,
+  summarizeRedisError,
+} from "../Config/redis.js";
 
 const PLATFORM_FEE_PERCENT = 20;
 const TEACHER_CACHE_TTL = 300; // 5 min
+const LOGIN_ATTEMPT_WINDOW_MS = 15 * 60 * 1000;
+const teacherLoginAttempts = new Map();
 
 const teacherCacheKey = (id) => `teacher:profile:data:${id}`;
 const teacherAuthCacheKey = (id) => `teacher:auth:${id}`;
@@ -63,6 +69,64 @@ const cleanProfileText = (value = "", maxLength = 500) =>
     .replace(/\n{3,}/g, "\n\n")
     .trim()
     .slice(0, maxLength);
+
+const pruneTeacherLoginAttempts = () => {
+  const now = Date.now();
+  for (const [key, value] of teacherLoginAttempts.entries()) {
+    if (value.expiresAt <= now) {
+      teacherLoginAttempts.delete(key);
+    }
+  }
+};
+
+const incrementTeacherLoginAttempts = (key) => {
+  pruneTeacherLoginAttempts();
+  const now = Date.now();
+  const current = teacherLoginAttempts.get(key);
+  if (!current || current.expiresAt <= now) {
+    teacherLoginAttempts.set(key, {
+      count: 1,
+      expiresAt: now + LOGIN_ATTEMPT_WINDOW_MS,
+    });
+    return 1;
+  }
+
+  current.count += 1;
+  teacherLoginAttempts.set(key, current);
+  return current.count;
+};
+
+const clearTeacherLoginAttempts = (key) => {
+  teacherLoginAttempts.delete(key);
+};
+
+const checkTeacherLoginRateLimit = async (key) => {
+  try {
+    const attempts = await redisClient.incr(key);
+    if (attempts === 1) await redisClient.expire(key, 900);
+    return attempts;
+  } catch (error) {
+    if (!isRedisConnectionError(error)) throw error;
+    console.warn(
+      "Redis unavailable for teacher login rate limit; using process memory:",
+      summarizeRedisError(error),
+    );
+    return incrementTeacherLoginAttempts(key);
+  }
+};
+
+const clearTeacherLoginRateLimit = async (key) => {
+  clearTeacherLoginAttempts(key);
+  try {
+    await redisClient.del(key);
+  } catch (error) {
+    if (!isRedisConnectionError(error)) throw error;
+    console.warn(
+      "Redis unavailable while clearing teacher login rate limit:",
+      summarizeRedisError(error),
+    );
+  }
+};
 
 const generateTeacherToken = (teacherId) =>
   jwt.sign(
@@ -863,8 +927,7 @@ export const teacherLogin = async (req, res) => {
       req.headers["x-forwarded-for"]?.split(",")[0]?.trim() ||
       req.socket?.remoteAddress;
     const rateLimitKey = `teacher:login:attempts:${ip}`;
-    const attempts = await redisClient.incr(rateLimitKey);
-    if (attempts === 1) await redisClient.expire(rateLimitKey, 900); // 15 min
+    const attempts = await checkTeacherLoginRateLimit(rateLimitKey);
     if (attempts > 10) {
       return res.status(429).json({
         success: false,
@@ -890,7 +953,7 @@ export const teacherLogin = async (req, res) => {
     }
 
     // reset rate limit on success
-    await redisClient.del(rateLimitKey);
+    await clearTeacherLoginRateLimit(rateLimitKey);
 
     teacher.lastLoginAt = new Date();
     teacher.lastIp = ip;
