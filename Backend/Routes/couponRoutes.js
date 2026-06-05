@@ -71,27 +71,27 @@ router.post(
 // teacher routes
 router.post(
   "/teacher",
-  authenticateteacher,
-  requiredocumentverification,
-  teachercreatecoupon,
+  authenticateTeacher,
+  requireDocumentVerification,
+  teacherCreateCoupon,
 );
 router.get(
-  "/teacher/course/:courseid",
-  authenticateteacher,
-  requiredocumentverification,
-  teachergetcoursecoupons,
+  "/teacher/course/:courseId",
+  authenticateTeacher,
+  requireDocumentVerification,
+  teacherGetCourseCoupons,
 );
 router.delete(
-  "/teacher/:couponid",
-  authenticateteacher,
-  requiredocumentverification,
-  teacherdeletecoupon,
+  "/teacher/:couponId",
+  authenticateTeacher,
+  requireDocumentVerification,
+  teacherDeleteCoupon,
 );
 router.patch(
-  "/teacher/:couponid/status",
-  authenticateteacher,
-  requiredocumentverification,
-  teachertogglecouponstatus,
+  "/teacher/:couponId/status",
+  authenticateTeacher,
+  requireDocumentVerification,
+  teacherToggleCouponStatus,
 );
 // user routes
 router.post("/verify", authenticateUser, verifyRequestSignature, verifyCoupon);
