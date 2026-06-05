@@ -6,7 +6,7 @@
  * @exports route component rendered by the client router
  */
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTests } from "../context/TestContext";
@@ -80,6 +80,8 @@ const Test = () => {
   const [answers, setAnswers] = useState({});
   const [allDifficultyResults, setAllDifficultyResults] = useState([]);
   const [courseLoading, setCourseLoading] = useState(true); // this line
+  const transitionLockRef = useRef(false);
+  const [transitionInProgress, setTransitionInProgress] = useState(false);
 
   const primaryColors = getPrimaryColorClasses();
 
@@ -143,7 +145,9 @@ const Test = () => {
     const preventContextMenu = (e) => {
       if (testState.isActive && testPhase === "active") {
         e.preventDefault();
-        toast.error("Right-click disabled during test");
+        toast.error("Right-click disabled during test", {
+          id: "test-input-guard",
+        });
       }
     };
 
@@ -160,7 +164,9 @@ const Test = () => {
           (e.ctrlKey && e.key === "U")
         ) {
           e.preventDefault();
-          toast.error("Keyboard shortcuts disabled during test");
+          toast.error("Keyboard shortcuts disabled during test", {
+            id: "test-input-guard",
+          });
           handleDevToolsDetected();
         }
       }
@@ -170,9 +176,9 @@ const Test = () => {
     // tab / window inactive detection
     const handleVisibilityChange = () => {
       if (document.hidden && testState.isActive && testPhase === "active") {
-        toast.error(
-          "Tab switching or minimizing is not allowed during the test"
-        );
+        toast.error("Tab switching or minimizing is not allowed during the test", {
+          id: "test-input-guard",
+        });
         handleDevToolsDetected();
       }
     };
@@ -487,7 +493,9 @@ const Test = () => {
       // auth verification api call
       if (!isAuthenticated) {
         // console.error("authentication required");
-        toast.error("Please log in to start the test");
+        toast.error("Please log in to start the test", {
+          id: "test-start-error",
+        });
         navigate("/login", { state: { from: location } });
         return { success: false, error: "Not authenticated" };
       }
@@ -496,7 +504,9 @@ const Test = () => {
       const storedUser = localStorage.getItem("user");
       if (!storedUser) {
         // console.error("no user in localstorage");
-        toast.error("Session expired. Please login again.");
+        toast.error("Session expired. Please login again.", {
+          id: "test-start-error",
+        });
         navigate("/login", { state: { from: location } });
         return { success: false, error: "No session" };
       }
@@ -511,7 +521,9 @@ const Test = () => {
       // verify coursedata is loaded
       if (!courseData) {
         // console.error("course data not loaded");
-        toast.error("Course information not loaded. Please try again.");
+        toast.error("Course information not loaded. Please try again.", {
+          id: "test-start-error",
+        });
         return { success: false, error: "Course data missing" };
       }
 
@@ -563,7 +575,10 @@ const Test = () => {
 
             if (nextDiff) {
               toast.info(
-                `Skipping ${activeDifficulty.name} (no questions). Starting ${nextDifficultyName}...`
+                `Skipping ${activeDifficulty.name} (no questions). Starting ${nextDifficultyName}...`,
+                {
+                  id: "test-difficulty-transition",
+                }
               );
               setSelectedDifficulty(nextDiff);
 
@@ -571,7 +586,10 @@ const Test = () => {
             }
           } else {
             toast.error(
-              "No difficulties with questions available for this course"
+              "No difficulties with questions available for this course",
+              {
+                id: "test-difficulty-transition",
+              }
             );
             navigate("/courses");
           }
@@ -584,23 +602,31 @@ const Test = () => {
           result.error?.includes("authentication")
         ) {
           // console.error("authentication error");
-          toast.error("Session expired. Please login again.");
+          toast.error("Session expired. Please login again.", {
+            id: "test-start-error",
+          });
           navigate("/login", { state: { from: location } });
           return result;
         }
 
         // console.error("test start failed:", result.error);
-        toast.error(result.error || "Failed to start test");
+        toast.error(result.error || "Failed to start test", {
+          id: "test-start-error",
+        });
         return result;
       } catch (error) {
         // console.error("exception:", error);
 
         // handle network/auth errors
         if (error.response?.status === 401) {
-          toast.error("Session expired. Please login again.");
+          toast.error("Session expired. Please login again.", {
+            id: "test-start-error",
+          });
           navigate("/login", { state: { from: location } });
         } else {
-          toast.error(error.message || "Failed to start test");
+          toast.error(error.message || "Failed to start test", {
+            id: "test-start-error",
+          });
         }
 
         return { success: false, error: error.message };
@@ -666,7 +692,9 @@ const Test = () => {
   const handleNextQuestion = useCallback(() => {
     // only allow navigation if answer was validated
     if (!currentQuestion || selectedAnswer === null) {
-      toast.error("Please answer the current question first");
+      toast.error("Please answer the current question first", {
+        id: "test-question-guard",
+      });
       return;
     }
 
@@ -718,10 +746,19 @@ const Test = () => {
   const handleAutoSubmit = useCallback(async (options = {}) => {
     const allowIncomplete = Boolean(options?.allowIncomplete);
 
-    if (!allowIncomplete && !canCompleteDifficulty()) {
-      toast.error("Please answer all questions before proceeding");
+    if (transitionLockRef.current) {
       return;
     }
+
+    if (!allowIncomplete && !canCompleteDifficulty()) {
+      toast.error("Please answer all questions before proceeding", {
+        id: "test-completion-guard",
+      });
+      return;
+    }
+
+    transitionLockRef.current = true;
+    setTransitionInProgress(true);
 
     try {
       const currentResults = calculateCurrentDifficultyResults();
@@ -754,11 +791,16 @@ const Test = () => {
           setTestPhase("active");
           setAnswers({});
           setSelectedAnswer(null);
-          toast.success(`Starting ${nextDifficultyName} difficulty`);
+          toast.success(`Starting ${nextDifficultyName} difficulty`, {
+            id: "test-difficulty-transition",
+          });
         } else if (startResult.isNoQuestionsError) {
           // next difficulty has no questions - try to find the next one
           toast(
-            `No questions in ${nextDifficultyName}. Checking for more difficulties...`
+            `No questions in ${nextDifficultyName}. Checking for more difficulties...`,
+            {
+              id: "test-difficulty-transition",
+            }
           );
 
           const nextIndex = allDiffs.indexOf(nextDifficultyName);
@@ -780,10 +822,14 @@ const Test = () => {
               setTestPhase("active");
               setAnswers({});
               setSelectedAnswer(null);
-              toast.success(`Starting ${subsequentDiff} difficulty`);
+              toast.success(`Starting ${subsequentDiff} difficulty`, {
+                id: "test-difficulty-transition",
+              });
             } else if (secondNextResult.isNoQuestionsError) {
               // subsequent difficulty also has no questions - submit test
-              toast("No more difficulties available. Completing test...");
+              toast("No more difficulties available. Completing test...", {
+                id: "test-difficulty-transition",
+              });
               const result = await submitTest(true, updatedResults);
 
               if (result.success) {
@@ -811,7 +857,7 @@ const Test = () => {
 
                   toast.success(
                     `Test complete! +${pointsEarned} points${rankMessage}`,
-                    { duration: 5000 }
+                    { duration: 5000, id: "test-complete" }
                   );
                 }
 
@@ -824,6 +870,7 @@ const Test = () => {
                     toast.success(`New badge unlocked!`, {
                       duration: 5000,
                       icon: "",
+                      id: "test-new-badge",
                     });
                   }, 1000);
                 }
@@ -833,11 +880,15 @@ const Test = () => {
             } else {
               // error starting subsequent difficulty
               console.error(secondNextResult);
-              toast.error("Failed to start next difficulty");
+              toast.error("Failed to start next difficulty", {
+                id: "test-difficulty-transition",
+              });
             }
           } else {
             // no subsequent difficulty exists - submit test with current results
-            toast("No more difficulties available. Completing test...");
+            toast("No more difficulties available. Completing test...", {
+              id: "test-difficulty-transition",
+            });
             const result = await submitTest(true, updatedResults);
 
             if (result.success) {
@@ -865,7 +916,7 @@ const Test = () => {
 
                 toast.success(
                   `Test complete! +${pointsEarned} points${rankMessage}`,
-                  { duration: 5000 }
+                  { duration: 5000, id: "test-complete" }
                 );
               }
 
@@ -875,6 +926,7 @@ const Test = () => {
                   toast.success(`New badge unlocked!`, {
                     duration: 5000,
                     icon: "",
+                    id: "test-new-badge",
                   });
                 }, 1000);
               }
@@ -885,7 +937,9 @@ const Test = () => {
         } else {
           // other error starting next difficulty
           console.error(startResult);
-          toast.error("Failed to start next difficulty");
+          toast.error("Failed to start next difficulty", {
+            id: "test-difficulty-transition",
+          });
         }
       } else {
         // no more difficulties configured - submit test
@@ -916,7 +970,7 @@ const Test = () => {
 
             toast.success(
               `Test complete! +${pointsEarned} points${rankMessage}`,
-              { duration: 5000 }
+              { duration: 5000, id: "test-complete" }
             );
           }
 
@@ -926,6 +980,7 @@ const Test = () => {
               toast.success(`New badge unlocked!`, {
                 duration: 5000,
                 icon: "",
+                id: "test-new-badge",
               });
             }, 1000);
           }
@@ -935,7 +990,12 @@ const Test = () => {
       }
     } catch (error) {
       // console.error("auto-transition failed:", error);
-      toast.error("Failed to proceed");
+      toast.error("Failed to proceed", {
+        id: "test-difficulty-transition",
+      });
+    } finally {
+      transitionLockRef.current = false;
+      setTransitionInProgress(false);
     }
   }, [
     allDifficultyResults,
@@ -961,12 +1021,17 @@ const Test = () => {
       return;
     }
 
+    if (transitionLockRef.current) {
+      return;
+    }
+
     setShowExitModal(false);
     setShowSubmitModal(false);
     setShowReloadWarning(false);
 
     toast("Time is up. Moving to the next available step.", {
       duration: 3000,
+      id: "test-difficulty-transition",
     });
 
     handleAutoSubmit({ allowIncomplete: true, reason: "timeExpired" });
@@ -1411,33 +1476,42 @@ const Test = () => {
                       // check if there are more difficulties to complete
                       hasNextDifficulty() ? (
                         <Button
-                          onClick={handleAutoSubmit}
-                          disabled={!canCompleteDifficulty()}
+                          onClick={() => handleAutoSubmit()}
+                          disabled={!canCompleteDifficulty() || transitionInProgress}
+                          loading={transitionInProgress}
                           className={`px-6 py-2 cursor-pointer transition-all duration-200 ${
-                            !canCompleteDifficulty()
+                            !canCompleteDifficulty() || transitionInProgress
                               ? "opacity-50 cursor-not-allowed bg-gray-400 text-gray-700"
                               : "bg-blue-600 hover:bg-blue-700 text-white"
                           }`}
                         >
-                          {canCompleteDifficulty()
+                          {transitionInProgress
+                            ? "Moving..."
+                            : canCompleteDifficulty()
                             ? "Next Difficulty"
                             : "Answer All Questions"}
                         </Button>
                       ) : (
                         <Button
-                          onClick={handleAutoSubmit}
+                          onClick={() => handleAutoSubmit()}
                           disabled={
-                            !canCompleteDifficulty() || isValidatingAnswer
+                            !canCompleteDifficulty() ||
+                            isValidatingAnswer ||
+                            transitionInProgress
                           }
-                          loading={isValidatingAnswer}
+                          loading={isValidatingAnswer || transitionInProgress}
                           className={`px-6 py-2 cursor-pointer transition-all duration-200 ${
-                            !canCompleteDifficulty() || isValidatingAnswer
+                            !canCompleteDifficulty() ||
+                            isValidatingAnswer ||
+                            transitionInProgress
                               ? "opacity-50 cursor-not-allowed bg-gray-400 text-gray-700"
                               : "bg-blue-600 hover:bg-blue-700 text-white"
                           }`}
                         >
-                          {isValidatingAnswer
-                            ? "Validating..."
+                          {transitionInProgress
+                            ? "Submitting..."
+                            : isValidatingAnswer
+                              ? "Validating..."
                             : canCompleteDifficulty()
                             ? "Complete Test"
                             : "Answer All Questions"}
