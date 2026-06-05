@@ -419,6 +419,7 @@ export const botProtection = async (req, res, next) => {
 
     const isSecurityBootstrapPath =
       req.path === "/api/security/signing-secret" ||
+      req.path === "/api/security/session-status" ||
       req.path === "/api/security/verify-challenge";
 
     if (isSecurityBootstrapPath && isLegitimateOrigin(origin, referer)) {

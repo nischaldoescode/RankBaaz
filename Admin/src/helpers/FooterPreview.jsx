@@ -16,6 +16,16 @@ import {
   Youtube,
 } from "lucide-react";
 
+const FRONTEND_PUBLIC_ORIGIN =
+  import.meta.env.VITE_FRONTEND_PUBLIC_URL || "https://vidhgrow.online";
+
+const resolvePublicImageSrc = (src = "") => {
+  if (!src) return "";
+  if (/^(https?:|blob:|data:)/i.test(src)) return src;
+  if (src.startsWith("/")) return `${FRONTEND_PUBLIC_ORIGIN}${src}`;
+  return src;
+};
+
 export const FooterPreview = ({ data }) => {
   if (!data) return null;
 
@@ -23,7 +33,7 @@ export const FooterPreview = ({ data }) => {
   const copyrightText = data.copyrightText?.replace("{year}", currentYear);
 
   return (
-    <div className="space-y-6 bg-gradient-to-br from-muted/30 to-background p-8 rounded-xl border border-border">
+    <div className="space-y-6 rounded-xl border border-border bg-gradient-to-br from-muted/30 to-background p-4 sm:p-8">
       <div className="text-center">
         <h3 className="text-2xl font-bold text-foreground mb-2">
           Footer Preview
@@ -42,7 +52,7 @@ export const FooterPreview = ({ data }) => {
             </h4>
             {data.logo?.url && (
               <img
-                src={data.logo.url}
+                src={resolvePublicImageSrc(data.logo.url)}
                 alt="Logo"
                 className="h-8 mb-3 object-contain"
               />

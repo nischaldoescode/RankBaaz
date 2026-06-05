@@ -36,11 +36,21 @@ const iconMap = {
   Heart,
 };
 
+const FRONTEND_PUBLIC_ORIGIN =
+  import.meta.env.VITE_FRONTEND_PUBLIC_URL || "https://vidhgrow.online";
+
+const resolvePublicImageSrc = (src = "") => {
+  if (!src) return "";
+  if (/^(https?:|blob:|data:)/i.test(src)) return src;
+  if (src.startsWith("/")) return `${FRONTEND_PUBLIC_ORIGIN}${src}`;
+  return src;
+};
+
 export const HomePreview = ({ data }) => {
   if (!data) return null;
 
   return (
-    <div className="space-y-8 bg-gradient-to-br from-muted/30 to-background p-8 rounded-xl border border-border">
+    <div className="space-y-6 rounded-xl border border-border bg-gradient-to-br from-muted/30 to-background p-4 sm:space-y-8 sm:p-8">
       <div className="text-center">
         <h3 className="text-2xl font-bold text-foreground mb-2">
           Home Page Preview
@@ -57,7 +67,7 @@ export const HomePreview = ({ data }) => {
         </h4>
         {data.logo?.url && (
           <img
-            src={data.logo.url}
+            src={resolvePublicImageSrc(data.logo.url)}
             alt="Logo"
             className="h-16 mb-6 object-contain mx-auto"
           />
@@ -94,7 +104,7 @@ export const HomePreview = ({ data }) => {
               <div key={idx} className="rounded-xl bg-muted/30 p-4">
                 {(chapter.image?.url || chapter.image?.fallbackSrc) && (
                   <img
-                    src={chapter.image?.url || chapter.image?.fallbackSrc}
+                    src={resolvePublicImageSrc(chapter.image?.url || chapter.image?.fallbackSrc)}
                     alt={chapter.image?.alt || chapter.title}
                     className="mb-4 h-28 w-full rounded-lg object-cover"
                   />

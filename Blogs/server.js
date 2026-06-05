@@ -214,6 +214,38 @@ const seoImage = (value = "") => absoluteUrl(value) || DEFAULT_OG_IMAGE;
 const imageAlt = (image = {}, fallback = "Vidhgrow blog image") =>
   String(image?.alt || fallback).trim() || fallback;
 
+const firstValue = (source = {}, keys = []) => {
+  for (const key of keys) {
+    const value = source?.[key];
+    if (value !== undefined && value !== null && value !== "") return value;
+  }
+  return undefined;
+};
+
+const postCoverImage = (post = {}) =>
+  firstValue(post, ["coverImage", "coverimage"]) || {};
+
+const postPublishedAt = (post = {}) =>
+  firstValue(post, ["publishedAt", "publishedat", "createdAt", "createdat"]) || "";
+
+const postUpdatedAt = (post = {}) =>
+  firstValue(post, ["updatedAt", "updatedat", "publishedAt", "publishedat", "createdAt", "createdat"]) || "";
+
+const postContentHtml = (post = {}) =>
+  firstValue(post, ["contentHtml", "contenthtml"]) || "";
+
+const postWordCount = (post = {}) =>
+  Number(firstValue(post, ["wordCount", "wordcount"]) || 0);
+
+const seoField = (seo = {}, camelKey, lowerKey) =>
+  firstValue(seo, [camelKey, lowerKey]) || "";
+
+const socialField = (social = {}, camelKey, lowerKey) =>
+  firstValue(social, [camelKey, lowerKey]) || "";
+
+const shareSettings = (settings = {}) =>
+  firstValue(settings, ["socialMedia", "socialmedia"]) || {};
+
 const truncateMeta = (value = "", maxLength = 138) => {
   const text = stripHtml(value);
   if (text.length <= maxLength) return text;
@@ -243,7 +275,7 @@ const wordCountFromHtml = (html = "") => {
 
 const readingTimeMinutes = (post = {}, html = "") => {
   const bodyWords = html ? wordCountFromHtml(html) : 0;
-  const storedWords = Number(post.wordCount || 0);
+  const storedWords = postWordCount(post);
   const previewWords = wordCountFromHtml(`${post.title || ""} ${post.excerpt || ""} ${(post.tags || []).join(" ")}`);
   const words = bodyWords || storedWords || previewWords;
   return Math.max(1, Math.ceil(words / 220));
@@ -458,6 +490,7 @@ const pageshell = ({
       apiBase: PUBLIC_API_BASE,
       loginUrl: "https://vidhgrow.online/login",
       profileUrl: `${PUBLIC_API_BASE}/api/auth/profile`,
+      sessionStatusUrl: `${PUBLIC_API_BASE}/api/security/session-status`,
     })};
   </script>
   <script src="/assets/app.js" defer></script>
@@ -480,7 +513,7 @@ const header = () => `<header class="site-header">
 </header>`;
 
 const footer = (settings = {}) => {
-  const social = settings.socialmedia || {};
+  const social = shareSettings(settings);
   const links = Object.entries(social).filter(([, url]) => url);
   return `<footer class="site-footer">
     <div class="footer-copy">
@@ -509,10 +542,10 @@ const postcardauthor = (post = {}) => {
 
 const postcard = (post) => `<article class="post-card">
   <a href="/${escapeHtml(post.slug)}" class="post-card-image">
-    <img src="${escapeHtml(seoImage(post.coverimage?.url))}" alt="${escapeHtml(imageAlt(post.coverimage, `cover image for ${post.title}`))}" loading="lazy" />
+    <img src="${escapeHtml(seoImage(postCoverImage(post).url))}" alt="${escapeHtml(imageAlt(postCoverImage(post), `cover image for ${post.title}`))}" loading="lazy" />
   </a>
   <div class="post-card-copy">
-    <time datetime="${escapeHtml(post.publishedat || post.createdat)}">${formatDate(post.publishedat || post.createdat)}</time>
+    <time datetime="${escapeHtml(postPublishedAt(post))}">${formatDate(postPublishedAt(post))}</time>
     <h2><a href="/${escapeHtml(post.slug)}">${escapeHtml(post.title)}</a></h2>
     <p>${escapeHtml(post.excerpt)}</p>
     <div class="post-meta">
@@ -601,10 +634,10 @@ const renderhome = async (url) => {
   ${
     latest && !query
       ? `<section class="featured-post news-feature">
-          <a href="/${escapeHtml(latest.slug)}"><img src="${escapeHtml(seoImage(latest.coverimage?.url))}" alt="${escapeHtml(imageAlt(latest.coverimage, `featured cover for ${latest.title}`))}" /></a>
+          <a href="/${escapeHtml(latest.slug)}"><img src="${escapeHtml(seoImage(postCoverImage(latest).url))}" alt="${escapeHtml(imageAlt(postCoverImage(latest), `featured cover for ${latest.title}`))}" /></a>
           <div>
             <p class="section-kicker">latest story</p>
-            <time datetime="${escapeHtml(latest.publishedat || latest.createdat)}">${formatDate(latest.publishedat || latest.createdat)}</time>
+            <time datetime="${escapeHtml(postPublishedAt(latest))}">${formatDate(postPublishedAt(latest))}</time>
             <h2><a href="/${escapeHtml(latest.slug)}">${escapeHtml(latest.title)}</a></h2>
             <p>${escapeHtml(latest.excerpt)}</p>
             <div class="post-meta">${postcardauthor(latest)}<span>${escapeHtml(readingTimeLabel(latest))}</span></div>
@@ -647,7 +680,7 @@ ${footer(settingsres.data)}`;
     title: HOME_SEO_TITLE,
     description: HOME_SEO_DESCRIPTION,
     canonical: BLOG_PUBLIC_URL,
-    image: latest?.coverimage?.url,
+    image: postCoverImage(latest).url,
     body,
     jsonld: {
       "@context": "https://schema.org",
@@ -729,7 +762,7 @@ ${footer(settingsres.data)}`;
     title: topicpagetitle(topic),
     description: topicpagedescription(topic),
     canonical: `${BLOG_PUBLIC_URL}/topic/${topic.slug}`,
-    image: posts[0]?.coverimage?.url,
+    image: postCoverImage(posts[0]).url,
     body,
     jsonld: {
       "@context": "https://schema.org",
@@ -743,11 +776,12 @@ ${footer(settingsres.data)}`;
 
 const robotsstring = (seo = {}) => {
   const robots = seo.robots || {};
+  const maxSnippet = Number(firstValue(robots, ["maxSnippet", "maxsnippet"]));
   return [
     robots.index === false ? "noindex" : "index",
     robots.follow === false ? "nofollow" : "follow",
-    `max-image-preview:${robots.maximagepreview || "large"}`,
-    `max-snippet:${Number.isFinite(robots.maxsnippet) ? robots.maxsnippet : -1}`,
+    `max-image-preview:${firstValue(robots, ["maxImagePreview", "maximagepreview"]) || "large"}`,
+    `max-snippet:${Number.isFinite(maxSnippet) ? maxSnippet : -1}`,
   ].join(",");
 };
 
@@ -806,9 +840,9 @@ const renderrelatedposts = (posts = []) => {
         .map(
           (post) => `<article class="related-card">
             <a href="/${escapeHtml(post.slug)}" class="related-image">
-              <img src="${escapeHtml(seoImage(post.coverimage?.url))}" alt="${escapeHtml(imageAlt(post.coverimage, `related cover for ${post.title}`))}" loading="lazy" />
+              <img src="${escapeHtml(seoImage(postCoverImage(post).url))}" alt="${escapeHtml(imageAlt(postCoverImage(post), `related cover for ${post.title}`))}" loading="lazy" />
             </a>
-            <time datetime="${escapeHtml(post.publishedat || post.createdat)}">${formatDate(post.publishedat || post.createdat)}</time>
+            <time datetime="${escapeHtml(postPublishedAt(post))}">${formatDate(postPublishedAt(post))}</time>
             <h3><a href="/${escapeHtml(post.slug)}">${escapeHtml(post.title)}</a></h3>
             <p>${escapeHtml(post.excerpt || "")}</p>
           </article>`,
@@ -840,9 +874,10 @@ const renderarticlecontext = (post, contenthtml = "") => {
   const bodywordcount = wordCountFromHtml(contenthtml);
   const bodyparagraphcount = paragraphCountFromHtml(contenthtml);
   const title = post.title || "this vidhgrow update";
-  const seotitle = post.seo?.metatitle && post.seo.metatitle !== title ? post.seo.metatitle : "";
+  const seotitle = seoField(post.seo, "metaTitle", "metatitle");
+  const visibleSeoTitle = seotitle && seotitle !== title ? seotitle : "";
   const visiblecontext = `${title} ${post.excerpt || ""} ${post.category || ""} ${(post.tags || []).join(" ")} ${contenthtml}`;
-  const missingseoterms = missingImportantTerms(post.seo?.metatitle || title, visiblecontext);
+  const missingseoterms = missingImportantTerms(seotitle || title, visiblecontext);
   if (bodywordcount >= 250 && bodyparagraphcount >= 3 && !missingseoterms.length) return "";
 
   const category = post.category || "platform";
@@ -853,7 +888,7 @@ const renderarticlecontext = (post, contenthtml = "") => {
     <p class="eyebrow">quick context</p>
     <h2 id="article-context-title">where this note fits</h2>
     <p>this blog connects ${escapeHtml(title)} with ${escapeHtml(category)} work, teacher workflows, course updates, student practice, and platform improvements</p>
-    ${seotitle ? `<p>it also supports the seo title ${escapeHtml(seotitle)} without adding a long filler section</p>` : ""}
+    ${visibleSeoTitle ? `<p>it also supports the seo title ${escapeHtml(visibleSeoTitle)} without adding a long filler section</p>` : ""}
     <p>related ideas: ${escapeHtml(tagtext)}</p>
   </section>`;
 };
@@ -948,17 +983,22 @@ const renderpost = async (slug) => {
     fetchJson(`/api/blogs/public/${encodeURIComponent(slug)}`),
     fetchJson("/api/blogs/settings/share").catch(() => ({ data: {} })),
   ]);
-  const { post, comments, relatedposts } = postres.data;
+  const { post, comments } = postres.data;
+  const relatedposts = firstValue(postres.data, ["relatedPosts", "relatedposts"]) || [];
   const defaultcanonical = `${BLOG_PUBLIC_URL}/${post.slug}`;
-  const canonical = absoluteUrl(post.seo?.canonicalurl) || defaultcanonical;
-  const title = metaTitle(post.seo?.metatitle || post.title, post.title);
-  const description = metaDescription(post.seo?.metadescription || post.excerpt, post.excerpt || post.plaintextpreview);
-  const social = settingsres.data?.socialmedia || {};
+  const canonical = absoluteUrl(seoField(post.seo, "canonicalUrl", "canonicalurl")) || defaultcanonical;
+  const title = metaTitle(seoField(post.seo, "metaTitle", "metatitle") || post.title, post.title);
+  const description = metaDescription(
+    seoField(post.seo, "metaDescription", "metadescription") || post.excerpt,
+    post.excerpt || firstValue(post, ["plainTextPreview", "plaintextpreview"]),
+  );
+  const social = shareSettings(settingsres.data);
   const shareurl = canonical;
-  const sharetitle = post.social?.sharetitle || post.title;
-  const coverurl = seoImage(post.coverimage?.url);
-  const coveralt = imageAlt(post.coverimage, `${post.title} cover image`);
-  const contenthtml = prepareArticleContentHtml(post.contenthtml, post.title);
+  const sharetitle = socialField(post.social, "shareTitle", "sharetitle") || post.title;
+  const cover = postCoverImage(post);
+  const coverurl = seoImage(cover.url);
+  const coveralt = imageAlt(cover, `${post.title} cover image`);
+  const contenthtml = prepareArticleContentHtml(postContentHtml(post), post.title);
   const readtime = readingTimeLabel(post, contenthtml);
   const articlecontext = renderarticlecontext(post, contenthtml);
 
@@ -979,7 +1019,7 @@ const renderpost = async (slug) => {
       ${renderAuthorAvatar(post.author)}
       <div>
         <a href="/author/${escapeHtml(post.author?.slug || "")}">${escapeHtml(post.author?.name || "vidhgrow editorial")}</a>
-        <span>${formatDate(post.publishedat || post.createdat)} · ${escapeHtml(readtime)}</span>
+        <span>${formatDate(postPublishedAt(post))} · ${escapeHtml(readtime)}</span>
       </div>
     </div>
     <img class="article-cover" src="${escapeHtml(coverurl)}" alt="${escapeHtml(coveralt)}" />
@@ -1021,8 +1061,8 @@ ${footer(settingsres.data)}`;
       headline: post.title,
       description,
       image: coverurl,
-      datepublished: post.publishedat,
-      datemodified: post.updatedat,
+      datePublished: postPublishedAt(post),
+      dateModified: postUpdatedAt(post),
       author: {
         "@type": "person",
         name: post.author?.name || "vidhgrow editorial",
@@ -1034,7 +1074,7 @@ ${footer(settingsres.data)}`;
         url: "https://vidhgrow.online",
       },
       mainentityofpage: canonical,
-      wordcount: post.wordcount,
+      wordCount: postWordCount(post),
     },
   });
 };
@@ -1123,7 +1163,7 @@ const renderfeed = async () => {
       <title>${escapeHtml(post.title)}</title>
       <link>${BLOG_PUBLIC_URL}/${escapeHtml(post.slug)}</link>
       <guid>${BLOG_PUBLIC_URL}/${escapeHtml(post.slug)}</guid>
-      <pubdate>${new Date(post.publishedat || post.createdat).toUTCString()}</pubdate>
+      <pubdate>${new Date(postPublishedAt(post)).toUTCString()}</pubdate>
       <description>${escapeHtml(post.excerpt)}</description>
     </item>`,
       )
