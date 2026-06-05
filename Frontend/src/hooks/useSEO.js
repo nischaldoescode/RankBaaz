@@ -68,18 +68,18 @@ export const useSEO = ({
 
     // open graph - basic
     { property: "og:type", content: type },
-    { property: "og:title", content: fulltitle },
-    { property: "og:description", content: finaldescription },
-    (finalimage
+    { property: "og:title", content: fullTitle },
+    { property: "og:description", content: finalDescription },
+    ...(finalImage
       ? [
-          { property: "og:image", content: finalimage },
-          { property: "og:image:secure_url", content: finalimage },
+          { property: "og:image", content: finalImage },
+          { property: "og:image:secure_url", content: finalImage },
           { property: "og:image:width", content: "1200" },
           { property: "og:image:height", content: "630" },
-          { property: "og:image:alt", content: fulltitle },
+          { property: "og:image:alt", content: fullTitle },
         ]
       : []),
-    { property: "og:url", content: finalurl },
+    { property: "og:url", content: finalUrl },
     { property: "og:site_name", content: siteName },
     { property: "og:locale", content: "en_US" },
 
@@ -147,9 +147,10 @@ export const useSEO = ({
   scriptTags.push({
     innerHTML: `
       window.dataLayer = window.dataLayer || [];
-      gtag("js", new Date());
+      window.gtag = window.gtag || function gtag(){window.dataLayer.push(arguments);};
+      window.gtag("js", new Date());
 
-      gtag("config", "G-GQK7Y7WTG1");
+      window.gtag("config", "G-GQK7Y7WTG1");
     `,
   });
   // cleaner to remove null, undefined, empty strings, empty arrays, empty objects

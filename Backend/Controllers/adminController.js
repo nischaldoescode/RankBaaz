@@ -20,6 +20,8 @@ import {
 import redisClient from "../Config/redis.js";
 import IpBlock from "../Models/IpBlock.js";
 
+const getAdminJwtSecret = () => process.env.ADMIN_JWT_SECRET || process.env.JWT_SECRET;
+
 /**
  * lightweight ip geolocation using free ip-api.com (no api key needed)
  * returns country and isp/org info
@@ -272,15 +274,20 @@ export const adminLogin = async (req, res) => {
     await trackAdminLoginAttempt(email, true);
 
     // generate tokens
+    const adminJwtSecret = getAdminJwtSecret();
+    if (!adminJwtSecret) {
+      throw new Error("Admin JWT secret is not configured");
+    }
+
     const accessToken = jwt.sign(
       { adminId: admin._id, role: "admin" },
-      process.env.ADMIN_JWT_SECRET,
+      adminJwtSecret,
       { expiresIn: "7d" },
     );
 
     const refreshToken = jwt.sign(
       { adminId: admin._id, role: "admin" },
-      process.env.ADMIN_JWT_SECRET,
+      adminJwtSecret,
       { expiresIn: "30d" },
     );
 

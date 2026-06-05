@@ -12,6 +12,8 @@ import Admin from "../Models/Admin.js";
 import CryptoJS from "crypto-js";
 import { verifyRequestSignature } from "./requestSignature.js";
 
+const getAdminJwtSecret = () => process.env.ADMIN_JWT_SECRET || process.env.JWT_SECRET;
+
 const decryptCookieData = (encryptedData) => {
   try {
     const encryptionKey = process.env.COOKIE_ENCRYPTION_KEY;
@@ -203,7 +205,11 @@ export const authenticateAdmin = async (req, res, next) => {
     }
 
     // layer 2: verify jwt with admin secret
-    const decoded = jwt.verify(token, process.env.ADMIN_JWT_SECRET);
+    const adminJwtSecret = getAdminJwtSecret();
+    if (!adminJwtSecret) {
+      throw new Error("Admin JWT secret is not configured");
+    }
+    const decoded = jwt.verify(token, adminJwtSecret);
 
     // layer 3: verify request signature
     const signature = req.headers["x-request-signature"];
@@ -293,8 +299,12 @@ export const authenticateAny = async (req, res, next) => {
     // handle admin token (unchanged)
     if (adminToken) {
       try {
-        const decoded = jwt.verify(adminToken, process.env.JWT_SECRET);
-        const admin = await Admin.findById(decoded.userId).select("-password");
+        const adminJwtSecret = getAdminJwtSecret();
+        if (!adminJwtSecret) {
+          throw new Error("Admin JWT secret is not configured");
+        }
+        const decoded = jwt.verify(adminToken, adminJwtSecret);
+        const admin = await Admin.findById(decoded.adminId || decoded.userId).select("-password");
         if (!admin) {
           return res.status(401).json({
             success: false,
