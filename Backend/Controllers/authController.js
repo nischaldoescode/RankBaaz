@@ -424,16 +424,36 @@ const generateLocationKey = (req) => {
   return CryptoJS.SHA256(ip).toString().substring(0, 16);
 };
 
-const normalizeId = (value) => {
-  if (!value) return value;
+const normalizeId = (value, seen = new WeakSet()) => {
+  if (!value) return null;
   if (typeof value === "string") return value;
-  if (value._id) return normalizeId(value._id);
-  if (value.$oid) return value.$oid;
+  if (typeof value === "number") return String(value);
+
+  if (typeof value === "object") {
+    if (typeof value.toHexString === "function") {
+      return value.toHexString();
+    }
+
+    if (seen.has(value)) {
+      return null;
+    }
+
+    seen.add(value);
+
+    if (value.$oid) return String(value.$oid);
+
+    const nestedId = value._id;
+    if (nestedId && nestedId !== value) {
+      return normalizeId(nestedId, seen);
+    }
+  }
+
   if (typeof value.toString === "function") {
     const normalized = value.toString();
     return normalized === "[object Object]" ? null : normalized;
   }
-  return value;
+
+  return null;
 };
 
 // generate jwt token
