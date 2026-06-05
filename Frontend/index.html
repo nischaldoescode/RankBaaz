@@ -335,6 +335,19 @@
         (function () {
           "use strict";
           const _0x3f3f89 = _0x483a;
+          let _0x554af8 = ![];
+          const showWarning = function () {
+            try {
+              if (_0x554af8) return;
+              _0x554af8 = !![];
+              if (typeof window.showWarning === "function") {
+                window.showWarning();
+              }
+            } catch (_0x33c59c) {
+            } finally {
+              _0x554af8 = ![];
+            }
+          };
           try {
             if (
               location[_0x3f3f89(0x145)] === _0x3f3f89(0x13b) ||

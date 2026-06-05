@@ -516,132 +516,144 @@ const Test = () => {
     []
   );
 
-  const handleStartTest = useCallback(async () => {
-    // auth verification api call
-    if (!isAuthenticated) {
-      // console.error("authentication required");
-      toast.error("Please log in to start the test");
-      navigate("/login", { state: { from: location } });
-      return { success: false, error: "Not authenticated" };
-    }
+  const handleStartTest = useCallback(
+    async (difficultyOverride = null, triedDifficulties = new Set()) => {
+      const activeDifficulty = difficultyOverride || selectedDifficulty;
 
-    // verify localstorage user exists
-    const storedUser = localStorage.getItem("user");
-    if (!storedUser) {
-      // console.error("no user in localstorage");
-      toast.error("Session expired. Please login again.");
-      navigate("/login", { state: { from: location } });
-      return { success: false, error: "No session" };
-    }
-
-    // console.log("auth check passed, proceeding with test start");
-
-    if (!selectedDifficulty) {
-      // console.error("no difficulty selected");
-      return { success: false, error: "No difficulty selected" };
-    }
-
-    // verify coursedata is loaded
-    if (!courseData) {
-      // console.error("course data not loaded");
-      toast.error("Course information not loaded. Please try again.");
-      return { success: false, error: "Course data missing" };
-    }
-
-    try {
-      clearError();
-
-      // dispatch({ type: test_actions.set_loading, payload: true });
-      // the loading state is already managed by the starttest function in testcontext
-
-      // console.log(
-      // `starting test for course: ${courseid}, difficulty: ${selecteddifficulty.name}`
-      // );
-
-      const result = await startTest(courseId, selectedDifficulty.name);
-
-      // better error handling
-      if (!result) {
-        throw new Error("No response from start test");
+      // auth verification api call
+      if (!isAuthenticated) {
+        // console.error("authentication required");
+        toast.error("Please log in to start the test");
+        navigate("/login", { state: { from: location } });
+        return { success: false, error: "Not authenticated" };
       }
 
-      if (result.success) {
-        // console.log("test started successfully");
-        setTestPhase("active");
-        setSelectedAnswer(null);
-        setAnswers({});
-        return result;
+      // verify localstorage user exists
+      const storedUser = localStorage.getItem("user");
+      if (!storedUser) {
+        // console.error("no user in localstorage");
+        toast.error("Session expired. Please login again.");
+        navigate("/login", { state: { from: location } });
+        return { success: false, error: "No session" };
       }
 
-      if (result.isNoQuestionsError) {
-        // auto-skip to next difficulty if no questions
-        const allDiffOrder = ["Easy", "Medium", "Hard"];
-        const currentIndex = allDiffOrder.indexOf(selectedDifficulty.name);
-        const nextDifficultyName = allDiffOrder[currentIndex + 1];
+      // console.log("auth check passed, proceeding with test start");
 
-        if (nextDifficultyName) {
-          // try next difficulty
-          const nextDiff = courseData?.difficulties?.find(
-            (d) => d.name === nextDifficultyName
-          );
+      if (!activeDifficulty) {
+        // console.error("no difficulty selected");
+        return { success: false, error: "No difficulty selected" };
+      }
 
-          if (nextDiff) {
-            toast.info(
-              `Skipping ${selectedDifficulty.name} (no questions). Starting ${nextDifficultyName}...`
-            );
-            setSelectedDifficulty(nextDiff);
+      // verify coursedata is loaded
+      if (!courseData) {
+        // console.error("course data not loaded");
+        toast.error("Course information not loaded. Please try again.");
+        return { success: false, error: "Course data missing" };
+      }
 
-            // recursively try next difficulty
-            return handleStartTest();
-          }
-        } else {
-          // no more difficulties available
-          toast.error(
-            "No difficulties with questions available for this course"
-          );
-          navigate("/courses");
+      try {
+        clearError();
+
+        // dispatch({ type: test_actions.set_loading, payload: true });
+        // the loading state is already managed by the starttest function in testcontext
+
+        // console.log(
+        // `starting test for course: ${courseid}, difficulty: ${selecteddifficulty.name}`
+        // );
+
+        const result = await startTest(courseId, activeDifficulty.name);
+
+        // better error handling
+        if (!result) {
+          throw new Error("No response from start test");
         }
+
+        if (result.success) {
+          // console.log("test started successfully");
+          setTestPhase("active");
+          setSelectedAnswer(null);
+          setAnswers({});
+          return result;
+        }
+
+        if (result.isNoQuestionsError) {
+          const nextTriedDifficulties = new Set(triedDifficulties);
+          nextTriedDifficulties.add(activeDifficulty.name);
+          const availableDifficulties = Array.isArray(courseData?.difficulties)
+            ? courseData.difficulties.filter((difficulty) => difficulty?.name)
+            : [];
+          const allDiffOrder = availableDifficulties.length
+            ? availableDifficulties.map((difficulty) => difficulty.name)
+            : ["Easy", "Medium", "Hard"];
+          const currentIndex = allDiffOrder.indexOf(activeDifficulty.name);
+          const nextDifficultyName = allDiffOrder.find(
+            (difficultyName, index) =>
+              index > currentIndex && !nextTriedDifficulties.has(difficultyName)
+          );
+
+          if (nextDifficultyName) {
+            const nextDiff =
+              availableDifficulties.find(
+                (difficulty) => difficulty.name === nextDifficultyName
+              ) || { name: nextDifficultyName };
+
+            if (nextDiff) {
+              toast.info(
+                `Skipping ${activeDifficulty.name} (no questions). Starting ${nextDifficultyName}...`
+              );
+              setSelectedDifficulty(nextDiff);
+
+              return handleStartTest(nextDiff, nextTriedDifficulties);
+            }
+          } else {
+            toast.error(
+              "No difficulties with questions available for this course"
+            );
+            navigate("/courses");
+          }
+          return result;
+        }
+
+        // handle authentication errors specifically
+        if (
+          result.error?.includes("Credentials") ||
+          result.error?.includes("authentication")
+        ) {
+          // console.error("authentication error");
+          toast.error("Session expired. Please login again.");
+          navigate("/login", { state: { from: location } });
+          return result;
+        }
+
+        // console.error("test start failed:", result.error);
+        toast.error(result.error || "Failed to start test");
         return result;
+      } catch (error) {
+        // console.error("exception:", error);
+
+        // handle network/auth errors
+        if (error.response?.status === 401) {
+          toast.error("Session expired. Please login again.");
+          navigate("/login", { state: { from: location } });
+        } else {
+          toast.error(error.message || "Failed to start test");
+        }
+
+        return { success: false, error: error.message };
       }
-
-      // handle authentication errors specifically
-      if (
-        result.error?.includes("Credentials") ||
-        result.error?.includes("authentication")
-      ) {
-        // console.error("authentication error");
-        toast.error("Session expired. Please login again.");
-        navigate("/login", { state: { from: location } });
-        return result;
-      }
-
-      // console.error("test start failed:", result.error);
-      toast.error(result.error || "Failed to start test");
-      return result;
-    } catch (error) {
-      // console.error("exception:", error);
-
-      // handle network/auth errors
-      if (error.response?.status === 401) {
-        toast.error("Session expired. Please login again.");
-        navigate("/login", { state: { from: location } });
-      } else {
-        toast.error(error.message || "Failed to start test");
-      }
-
-      return { success: false, error: error.message };
-    }
-    // finally block with dispatch
-  }, [
-    courseId,
-    selectedDifficulty,
-    startTest,
-    clearError,
-    courseData,
-    navigate,
-    location,
-    isAuthenticated,
-  ]);
+      // finally block with dispatch
+    },
+    [
+      courseId,
+      selectedDifficulty,
+      startTest,
+      clearError,
+      courseData,
+      navigate,
+      location,
+      isAuthenticated,
+    ]
+  );
   const handleTermsAccept = useCallback(async () => {
     setTermsAccepted(true);
     setShowTerms(false);
@@ -1140,17 +1152,50 @@ const Test = () => {
   }
 
   if (error && !currentTest) {
-    // log error details for monitoring
-    console.error("", {
-      error,
-      courseId,
-      timestamp: new Date().toISOString(),
-      userAgent: navigator.userAgent,
-      testState,
-    });
+    const isSessionError = /session|auth|login|credential/i.test(error);
 
-    // throw error to be caught by errorboundary
-    throw new Error(`Test Error: ${error}`);
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-950 px-4 py-12">
+        <div className="mx-auto max-w-xl">
+          <Card className="!p-8 text-center">
+            <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-full bg-amber-50 text-amber-600 dark:bg-amber-950/40 dark:text-amber-300">
+              <ExclamationTriangleIcon className="h-7 w-7" />
+            </div>
+            <h1 className="mb-3 text-2xl font-semibold text-gray-950 dark:text-white">
+              Could not start this test
+            </h1>
+            <p className="mb-6 text-sm leading-6 text-gray-600 dark:text-gray-300">
+              {error}
+            </p>
+            <div className="flex flex-col justify-center gap-3 sm:flex-row">
+              <Button
+                variant="secondary"
+                onClick={() => {
+                  clearError();
+                  setShowTerms(false);
+                  setTermsAccepted(false);
+                  setSelectedDifficulty(null);
+                }}
+              >
+                Choose difficulty again
+              </Button>
+              <Button
+                onClick={() => {
+                  clearError();
+                  if (isSessionError) {
+                    navigate("/login", { state: { from: location } });
+                    return;
+                  }
+                  navigate("/courses");
+                }}
+              >
+                {isSessionError ? "Log in again" : "Back to courses"}
+              </Button>
+            </div>
+          </Card>
+        </div>
+      </div>
+    );
   }
 
   const renderTestPhase = () => {
