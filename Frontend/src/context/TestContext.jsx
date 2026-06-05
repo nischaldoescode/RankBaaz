@@ -442,10 +442,6 @@ export const TestProvider = ({ children }) => {
 
       dispatch({ type: TEST_ACTIONS.SET_LOADING, payload: false });
 
-      if (!state.testState.isActive) {
-        toast.success("Test started! Good luck!");
-      }
-
       return { success: true, test, difficulty: difficulty };
     } catch (err) {
       // console.error("start test error:", err);
@@ -605,7 +601,6 @@ export const TestProvider = ({ children }) => {
       });
       dispatch({ type: TEST_ACTIONS.END_TEST });
 
-      toast.success("Test submitted successfully!");
       return { success: true };
     } catch (err) {
       const msg = handleApiError(err, "Failed to submit test");
