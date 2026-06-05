@@ -1,6 +1,11 @@
 /**
- * keeps the main module focused and readable.
+ * boots the public vidhgrow app, providers, router, theme state, and global styles
+ *
+ * @file frontend/src/main.jsx
+ * @module frontend/src/main
+ * @exports vite entry module for browser startup
  */
+
 import React, { useEffect } from "react";
 import ReactDOM from "react-dom/client";
 import { BrowserRouter, useLocation } from "react-router-dom";
@@ -38,14 +43,14 @@ import { cacheManager } from "./utils/cacheManager";
 
 // // clear expired cache entries on startup
 // cachemanager.clearexpired().then((cleared) => {
-//   if (cleared > 0) {
-//     console.log(`[cache] cleaned up ${cleared} expired entries on startu`);
-//   }
+// if (cleared > 0) {
+// console.log(`[cache] cleaned up ${cleared} expired entries on startu`);
+// }
 // });
 
 // // optional: log cache stats
 // cachemanager.getstats().then((stats) => {
-//   console.log('[cache] statistics:', stats);
+// console.log('[cache] statistics:', stats);
 // })
 
 ReactDOM.createRoot(document.getElementById("root")).render(

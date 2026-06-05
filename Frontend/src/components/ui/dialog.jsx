@@ -1,6 +1,11 @@
 /**
- * keeps the dialog component focused and readable.
+ * renders the reusable dialog ui primitive with accessible states and theme friendly styling
+ *
+ * @file frontend/src/components/ui/dialog.jsx
+ * @module frontend/src/components/ui/dialog
+ * @exports component used by pages and shared layouts
  */
+
 import * as React from "react"
 import * as DialogPrimitive from "@radix-ui/react-dialog"
 import { X } from "lucide-react"

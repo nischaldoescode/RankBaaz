@@ -1,6 +1,11 @@
 /**
- * keeps the global leader board page focused and readable.
+ * renders the admin global leader board workspace with data loading, actions, dialogs, and responsive states
+ *
+ * @file admin/src/pages/globalleaderboard.jsx
+ * @module admin/src/pages/globalleaderboard
+ * @exports route component rendered by the client router
  */
+
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { toast } from "react-toastify";

@@ -1,6 +1,11 @@
 /**
- * keeps the khalti routes route focused and readable.
+ * mounts khalti routes api endpoints and keeps middleware order explicit for each request path
+ *
+ * @file backend/routes/khaltiroutes.js
+ * @module backend/routes/khaltiroutes
+ * @exports express router mounted by the api server
  */
+
 import express from "express";
 import {
   initiateKhaltiPayment,

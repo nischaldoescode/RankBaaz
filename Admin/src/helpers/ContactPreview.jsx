@@ -1,6 +1,11 @@
 /**
- * keeps the contact preview utility focused and readable.
+ * builds the admin contact preview helper view used for content previews and modal workflows
+ *
+ * @file admin/src/helpers/contactpreview.jsx
+ * @module admin/src/helpers/contactpreview
+ * @exports module members used by the related app runtime
  */
+
 import {
   Brain,
   Target,

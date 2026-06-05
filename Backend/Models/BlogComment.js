@@ -1,6 +1,11 @@
 /**
- * keeps the blog comment model focused and readable.
+ * defines the blog comment database schema, validation rules, indexes, and document relationships
+ *
+ * @file backend/models/blogcomment.js
+ * @module backend/models/blogcomment
+ * @exports mongoose model used by controllers and services
  */
+
 import mongoose from "mongoose";
 
 const blogCommentSchema = new mongoose.Schema(

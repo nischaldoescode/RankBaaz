@@ -1,6 +1,11 @@
 /**
- * keeps the index module focused and readable.
+ * connects backend database startup, connection errors, and shared persistence configuration
+ *
+ * @file backend/database/index.js
+ * @module backend/database/index
+ * @exports connection helpers used during backend startup
  */
+
 import Course from "../Models/Course.js";
 import Category from "../Models/Category.js";
 import TestResult from "../Models/TestResult.js";

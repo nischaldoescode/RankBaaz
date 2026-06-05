@@ -1,5 +1,9 @@
 /**
- * keeps the check course access utility focused and readable.
+ * provides check course access helpers shared by controllers, middleware, and services
+ *
+ * @file backend/helpers/checkcourseaccess.js
+ * @module backend/helpers/checkcourseaccess
+ * @exports module members used by the related app runtime
  */
 
 import Payment from "../Models/Payment.js";

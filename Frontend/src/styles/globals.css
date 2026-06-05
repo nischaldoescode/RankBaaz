@@ -1,6 +1,11 @@
 /**
- * keeps the globals stylesheet focused and readable.
+ * styles the public globals layer with responsive rules, theme tokens, animations, and app surfaces
+ *
+ * @file frontend/src/styles/globals.css
+ * @module frontend/src/styles/globals
+ * @exports stylesheet rules consumed by the matching app or component
  */
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;

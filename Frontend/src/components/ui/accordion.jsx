@@ -1,6 +1,11 @@
 /**
- * keeps the accordion component focused and readable.
+ * renders the reusable accordion ui primitive with accessible states and theme friendly styling
+ *
+ * @file frontend/src/components/ui/accordion.jsx
+ * @module frontend/src/components/ui/accordion
+ * @exports component used by pages and shared layouts
  */
+
 import * as React from "react"
 import * as AccordionPrimitive from "@radix-ui/react-accordion"
 import { ChevronDownIcon } from "lucide-react"

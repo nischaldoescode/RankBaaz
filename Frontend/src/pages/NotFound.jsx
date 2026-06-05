@@ -1,6 +1,11 @@
 /**
- * keeps the not found page focused and readable.
+ * renders the public not found page with content settings, auth aware actions, seo data, and responsive layout
+ *
+ * @file frontend/src/pages/notfound.jsx
+ * @module frontend/src/pages/notfound
+ * @exports route component rendered by the client router
  */
+
 import React, { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";

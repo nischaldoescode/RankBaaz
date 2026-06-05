@@ -1,6 +1,11 @@
 /**
- * keeps the teacher application model focused and readable.
+ * defines the teacher application database schema, validation rules, indexes, and document relationships
+ *
+ * @file backend/models/teacherapplication.js
+ * @module backend/models/teacherapplication
+ * @exports mongoose model used by controllers and services
  */
+
 import mongoose from "mongoose";
 
 /**

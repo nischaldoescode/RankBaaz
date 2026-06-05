@@ -1,6 +1,11 @@
 /**
- * keeps the content settings model focused and readable.
+ * defines the content settings database schema, validation rules, indexes, and document relationships
+ *
+ * @file backend/models/contentsettings.js
+ * @module backend/models/contentsettings
+ * @exports mongoose model used by controllers and services
  */
+
 import mongoose from 'mongoose';
 import connection2 from '../Config/mongodb2.js';
 
@@ -109,74 +114,73 @@ const contentSettingsSchema = new mongoose.Schema({
 
 
   // hero section
-  heroTitle: {
-    type: String,
-    default: 'Learn clearly. Practice with purpose.',
+  herotitle: {
+    type: string,
+    default: 'learn clearly. practice with purpose.',
   },
-  heroHighlight: {
-    type: String,
-    default: 'Keep progress visible',
+  herohighlight: {
+    type: string,
+    default: 'keep progress visible',
   },
-  heroDescription: {
-    type: String,
-    default: 'Vidhgrow brings teacher-led courses, exam-style tests, and progress reports into one calm workspace, so every attempt points to the next useful step.',
+  herodescription: {
+    type: string,
+    default: 'vidhgrow brings teacher-led courses, exam-style tests, and progress reports into one calm workspace, so every attempt points to the next useful step.',
   },
 
   // home page story section
-  homeStoryEyebrow: {
-    type: String,
-    default: 'How the work moves',
+  homestoryeyebrow: {
+    type: string,
+    default: 'how the work moves',
   },
-  homeStoryTitle: {
-    type: String,
-    default: 'A study rhythm that feels easy to return to.',
+  homestorytitle: {
+    type: string,
+    default: 'a study rhythm that feels easy to return to.',
   },
-  homeStoryHighlightedText: {
-    type: String,
-    default: 'A study rhythm',
+  homestoryhighlightedtext: {
+    type: string,
+    default: 'a study rhythm',
   },
-  homeStoryDescription: {
-    type: String,
+  homestorydescription: {
+    type: string,
     default:
-      'Learn from the course, test the idea, then use the result to choose the next revision. The page stays quiet, but the work keeps moving.',
+      'learn from the course, test the idea, then use the result to choose the next revision. the page stays quiet, but the work keeps moving.',
   },
-  homeStoryChapters: [{
+  homestorychapters: [{
     kicker: {
-      type: String,
+      type: string,
       default: '',
     },
     title: {
-      type: String,
+      type: string,
       default: '',
     },
     description: {
-      type: String,
+      type: string,
       default: '',
     },
     image: {
       url: {
-        type: String,
+        type: string,
         default: null,
       },
-      publicId: {
-        type: String,
+      publicid: {
+        type: string,
         default: null,
       },
-      fallbackSrc: {
-        type: String,
+      fallbacksrc: {
+        type: string,
         default: null,
       },
       alt: {
-        type: String,
+        type: string,
         default: '',
       },
     },
-    imageName: {
-      type: String,
+    imagename: {
+      type: string,
       default: '',
     },
   }],
-
   // stats section for home page
   stats: [{
     icon: {

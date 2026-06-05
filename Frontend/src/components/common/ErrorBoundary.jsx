@@ -1,6 +1,11 @@
 /**
- * keeps the error boundary component focused and readable.
+ * renders the shared error boundary component used across public pages and app level flows
+ *
+ * @file frontend/src/components/common/errorboundary.jsx
+ * @module frontend/src/components/common/errorboundary
+ * @exports component used by pages and shared layouts
  */
+
 import React from "react";
 import { motion } from "framer-motion";
 import { AlertTriangle, RefreshCw, Home, Mail, Bug } from "lucide-react";

@@ -1,6 +1,11 @@
 /**
- * keeps the create course page focused and readable.
+ * renders the admin create course workspace with data loading, actions, dialogs, and responsive states
+ *
+ * @file admin/src/pages/createcourse.jsx
+ * @module admin/src/pages/createcourse
+ * @exports route component rendered by the client router
  */
+
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import {
   Save,
@@ -284,7 +289,7 @@ const CreateCourse = () => {
   const { createCourseWithQuestions } = useAdmin();
   const [showQuestionPreview, setShowQuestionPreview] = useState(false);
 
-  // modal and course setup state.
+  // modal and course setup state
   const [showFormatModal, setShowFormatModal] = useState(false);
   const [fileUploadError, setFileUploadError] = useState("");
   const [isProcessingFile, setIsProcessingFile] = useState(false);

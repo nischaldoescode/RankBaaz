@@ -1,6 +1,11 @@
 /**
- * keeps the admin controller controller focused and readable.
+ * handles admin controller api requests, input validation, persistence calls, side effects, and response shaping
+ *
+ * @file backend/controllers/admincontroller.js
+ * @module backend/controllers/admincontroller
+ * @exports request handlers used by backend routes
  */
+
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { body, validationResult } from "express-validator";
@@ -134,7 +139,7 @@ export const adminRegister = async (req, res) => {
       });
     }
 
-    //  block registration if any admin already exists
+    // block registration if any admin already exists
     const adminExists = await Admin.exists({});
     if (adminExists) {
       return res.status(403).json({

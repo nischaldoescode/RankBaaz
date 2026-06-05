@@ -1,6 +1,11 @@
 /**
- * keeps the auth context context focused and readable.
+ * provides admin auth context state, api access, loading flags, and shared actions to child views
+ *
+ * @file admin/src/contexts/authcontext.jsx
+ * @module admin/src/contexts/authcontext
+ * @exports provider and hooks used by child components
  */
+
 import React, { createContext, useContext, useState, useEffect } from "react";
 import axios from "axios";
 import { toast, ToastContainer } from "react-toastify";
@@ -120,9 +125,8 @@ axios.interceptors.response.use(
         // clear old secret
         adminRequestSigner.clearSigningSecret();
 
-        // fetch secret without cache/etag reuse.
-        const secretResponse = await refreshAdminSigningSecret();
-
+        // fetch secret without cache/etag reuse
+        const secretresponse = await refreshadminsigningsecret();
         if (!secretResponse.data.success) {
           throw new Error("Failed to get signing secret");
         }
@@ -133,7 +137,7 @@ axios.interceptors.response.use(
         console.log("Signing secret refreshed successfully");
 
         // keep _signatureretry on the retried request. if this still fails,
-        // the next response stops instead of refreshing forever.
+        // the next response stops instead of refreshing forever
         const signedRequest = adminRequestSigner.signRequest(originalRequest);
         return axios(signedRequest);
       } catch (signatureError) {
@@ -281,7 +285,7 @@ export const AuthProvider = ({ children }) => {
       try {
         response = await axios.post("/admin/login", credentials);
       } catch (error) {
-        // captcha handling (same as )...
+        // captcha handling (same as )
         if (error.response?.data?.code === "CAPTCHA_REQUIRED") {
           const captchaData = error.response.data.data;
           const solvingToast = toast.loading("Solving security challenge...");

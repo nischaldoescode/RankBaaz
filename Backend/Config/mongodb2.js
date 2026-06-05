@@ -1,6 +1,11 @@
 /**
- * keeps the mongodb2 module focused and readable.
+ * configures mongodb2 for backend startup, shared connections, secrets, and production fallbacks
+ *
+ * @file backend/config/mongodb2.js
+ * @module backend/config/mongodb2
+ * @exports connection helpers used during backend startup
  */
+
 import mongoose from "mongoose";
 import dotenv from "dotenv";
 

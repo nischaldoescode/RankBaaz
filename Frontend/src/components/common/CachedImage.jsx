@@ -1,6 +1,11 @@
 /**
- * keeps the cached image component focused and readable.
+ * renders the shared cached image component used across public pages and app level flows
+ *
+ * @file frontend/src/components/common/cachedimage.jsx
+ * @module frontend/src/components/common/cachedimage
+ * @exports component used by pages and shared layouts
  */
+
 import React, { useState, useEffect } from 'react';
 import { cacheManager } from '../../utils/cacheManager';
 

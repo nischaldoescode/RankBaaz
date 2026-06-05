@@ -1,6 +1,11 @@
 /**
- * keeps the create indexes module focused and readable.
+ * runs the create indexes migration and keeps database indexes aligned with production queries
+ *
+ * @file backend/migrations/createindexes.js
+ * @module backend/migrations/createindexes
+ * @exports module members used by the related app runtime
  */
+
 import { createIndexes } from '../database/index.js';
 import mongoose from "mongoose";
 import dotenv from "dotenv";

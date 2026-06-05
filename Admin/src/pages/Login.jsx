@@ -1,6 +1,11 @@
 /**
- * keeps the login page focused and readable.
+ * renders the admin login workspace with data loading, actions, dialogs, and responsive states
+ *
+ * @file admin/src/pages/login.jsx
+ * @module admin/src/pages/login
+ * @exports route component rendered by the client router
  */
+
 import React, { useState, useEffect } from "react";
 import {
   Eye,

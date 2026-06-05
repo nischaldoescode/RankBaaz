@@ -1,6 +1,11 @@
 /**
- * keeps the test question component focused and readable.
+ * renders the test question component with attempt state, feedback controls, and secure exam flow
+ *
+ * @file frontend/src/components/test/testquestion.jsx
+ * @module frontend/src/components/test/testquestion
+ * @exports component used by pages and shared layouts
  */
+
 import React, { useState, useEffect } from "react";
 import { Card } from "@/components/ui/Card";
 import { Alert, AlertDescription } from "@/components/ui/alert";

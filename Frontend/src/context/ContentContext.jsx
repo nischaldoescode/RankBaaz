@@ -1,6 +1,11 @@
 /**
- * keeps the content context context focused and readable.
+ * provides public content context state, api access, loading flags, and shared actions to child views
+ *
+ * @file frontend/src/context/contentcontext.jsx
+ * @module frontend/src/context/contentcontext
+ * @exports provider and hooks used by child components
  */
+
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { apiMethods } from "../services/api";
 import { cachedAPICall } from "../utils/cacheManager";

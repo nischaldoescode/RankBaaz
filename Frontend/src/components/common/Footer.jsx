@@ -1,6 +1,11 @@
 /**
- * keeps the footer component focused and readable.
+ * renders the shared footer component used across public pages and app level flows
+ *
+ * @file frontend/src/components/common/footer.jsx
+ * @module frontend/src/components/common/footer
+ * @exports component used by pages and shared layouts
  */
+
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
@@ -50,9 +55,8 @@ const Footer = () => {
 
   // resources
   const resources = [
-    { name: "FAQs", href: "/#faqs" },
+    { name: "faqs", href: "/#faqs" },
   ];
-
   // social media icons mapping
   const socialIcons = {
     instagram: Instagram,

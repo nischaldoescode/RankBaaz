@@ -1,6 +1,11 @@
 /**
- * keeps the tabs component focused and readable.
+ * renders the reusable tabs ui primitive with accessible states and theme friendly styling
+ *
+ * @file frontend/src/components/ui/tabs.jsx
+ * @module frontend/src/components/ui/tabs
+ * @exports component used by pages and shared layouts
  */
+
 import * as React from "react"
 import * as TabsPrimitive from "@radix-ui/react-tabs"
 

@@ -1,6 +1,11 @@
 /**
- * keeps the violations page focused and readable.
+ * renders the admin violations workspace with data loading, actions, dialogs, and responsive states
+ *
+ * @file admin/src/pages/violations.jsx
+ * @module admin/src/pages/violations
+ * @exports route component rendered by the client router
  */
+
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { toast } from "react-toastify";

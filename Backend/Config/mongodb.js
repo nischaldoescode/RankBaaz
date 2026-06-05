@@ -1,6 +1,11 @@
 /**
- * keeps the mongodb module focused and readable.
+ * configures mongodb for backend startup, shared connections, secrets, and production fallbacks
+ *
+ * @file backend/config/mongodb.js
+ * @module backend/config/mongodb
+ * @exports connection helpers used during backend startup
  */
+
 import mongoose from 'mongoose';
 
 const connectDB = async (options = {}) => {

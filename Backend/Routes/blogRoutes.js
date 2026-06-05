@@ -1,6 +1,11 @@
 /**
- * keeps the blog routes route focused and readable.
+ * mounts blog routes api endpoints and keeps middleware order explicit for each request path
+ *
+ * @file backend/routes/blogroutes.js
+ * @module backend/routes/blogroutes
+ * @exports express router mounted by the api server
  */
+
 import express from "express";
 import {
   adminCreateAuthor,
@@ -31,14 +36,14 @@ import { verifyRequestSignature } from "../Middleware/requestSignature.js";
 
 const router = express.Router();
 
-// public ssr/search routes. the separate blogs frontend consumes these server-side.
+// public ssr/search routes. the separate blogs frontend consumes these server-side
 router.get("/public", listPublishedBlogs);
 router.get("/public/:slug", getPublishedBlogBySlug);
 router.get("/authors/:slug", getPublishedAuthor);
 router.get("/settings/share", getBlogShareSettings);
 router.get("/sitemap.xml", generateBlogSitemap);
 
-// logged-in vidhgrow users can comment. signature check prevents replay/fake-header requests.
+// logged-in vidhgrow users can comment. signature check prevents replay/fake-header requests
 router.post(
   "/comments/:postId",
   authenticateUser,
@@ -46,7 +51,7 @@ router.post(
   createBlogComment,
 );
 
-// admin blog workspace.
+// admin blog workspace
 router.get("/admin/posts", authenticateAdmin, verifyRequestSignature, adminListBlogPosts);
 router.get("/admin/indexing", authenticateAdmin, verifyRequestSignature, adminGetBlogIndexingStatus);
 router.post("/admin/indexing/indexnow", authenticateAdmin, verifyRequestSignature, adminSubmitBlogIndexNow);

@@ -1,6 +1,11 @@
 /**
- * keeps the use test security module focused and readable.
+ * provides the use test security hook for page logic, browser state, and reusable frontend behavior
+ *
+ * @file frontend/src/hooks/usetestsecurity.js
+ * @module frontend/src/hooks/usetestsecurity
+ * @exports helpers imported by related app modules
  */
+
 import { useEffect, useCallback, useRef } from 'react';
 import { useAuth } from './useAuth';
 

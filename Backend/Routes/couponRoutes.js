@@ -1,6 +1,11 @@
 /**
- * keeps the coupon routes route focused and readable.
+ * mounts coupon routes api endpoints and keeps middleware order explicit for each request path
+ *
+ * @file backend/routes/couponroutes.js
+ * @module backend/routes/couponroutes
+ * @exports express router mounted by the api server
  */
+
 import express from "express";
 import {
   createCoupon,
@@ -66,29 +71,28 @@ router.post(
 // teacher routes
 router.post(
   "/teacher",
-  authenticateTeacher,
-  requireDocumentVerification,
-  teacherCreateCoupon,
+  authenticateteacher,
+  requiredocumentverification,
+  teachercreatecoupon,
 );
 router.get(
-  "/teacher/course/:courseId",
-  authenticateTeacher,
-  requireDocumentVerification,
-  teacherGetCourseCoupons,
+  "/teacher/course/:courseid",
+  authenticateteacher,
+  requiredocumentverification,
+  teachergetcoursecoupons,
 );
 router.delete(
-  "/teacher/:couponId",
-  authenticateTeacher,
-  requireDocumentVerification,
-  teacherDeleteCoupon,
+  "/teacher/:couponid",
+  authenticateteacher,
+  requiredocumentverification,
+  teacherdeletecoupon,
 );
 router.patch(
-  "/teacher/:couponId/status",
-  authenticateTeacher,
-  requireDocumentVerification,
-  teacherToggleCouponStatus,
+  "/teacher/:couponid/status",
+  authenticateteacher,
+  requiredocumentverification,
+  teachertogglecouponstatus,
 );
-
 // user routes
 router.post("/verify", authenticateUser, verifyRequestSignature, verifyCoupon);
 

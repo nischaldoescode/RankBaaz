@@ -1,6 +1,11 @@
 /**
- * keeps the difficulty selection component focused and readable.
+ * renders the test difficulty selection component with attempt state, feedback controls, and secure exam flow
+ *
+ * @file frontend/src/components/test/difficultyselection.jsx
+ * @module frontend/src/components/test/difficultyselection
+ * @exports component used by pages and shared layouts
  */
+
 import React, { useState, useEffect, useCallback } from "react";
 import {
   Card,

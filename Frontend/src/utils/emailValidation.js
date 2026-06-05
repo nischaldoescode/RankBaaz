@@ -1,5 +1,9 @@
 /**
- * keeps student email checks aligned with backend registration rules.
+ * keeps student email checks aligned with backend registration rules
+ *
+ * @file frontend/src/utils/emailvalidation.js
+ * @module frontend/src/utils/emailvalidation
+ * @exports helpers used by auth and landing page email forms
  */
 const allowedStudentEmailDomains = new Set([
   "gmail.com",

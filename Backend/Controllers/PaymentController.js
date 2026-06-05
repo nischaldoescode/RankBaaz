@@ -1,6 +1,11 @@
 /**
- * keeps the payment controller controller focused and readable.
+ * handles payment controller api requests, input validation, persistence calls, side effects, and response shaping
+ *
+ * @file backend/controllers/paymentcontroller.js
+ * @module backend/controllers/paymentcontroller
+ * @exports request handlers used by backend routes
  */
+
 import Razorpay from "razorpay";
 import crypto from "crypto";
 import Course from "../Models/Course.js";

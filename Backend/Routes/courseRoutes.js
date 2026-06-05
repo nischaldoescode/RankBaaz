@@ -1,6 +1,11 @@
 /**
- * keeps the course routes route focused and readable.
+ * mounts course routes api endpoints and keeps middleware order explicit for each request path
+ *
+ * @file backend/routes/courseroutes.js
+ * @module backend/routes/courseroutes
+ * @exports express router mounted by the api server
  */
+
 import express from "express";
 import {
   createCourse,

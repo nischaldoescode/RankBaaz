@@ -1,6 +1,11 @@
 /**
- * keeps the avatar component focused and readable.
+ * renders the reusable avatar ui primitive with accessible states and theme friendly styling
+ *
+ * @file frontend/src/components/ui/avatar.jsx
+ * @module frontend/src/components/ui/avatar
+ * @exports component used by pages and shared layouts
  */
+
 import * as React from "react"
 import * as AvatarPrimitive from "@radix-ui/react-avatar"
 

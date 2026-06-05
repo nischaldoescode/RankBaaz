@@ -1,6 +1,11 @@
 /**
- * keeps the auth middleware focused and readable.
+ * handles auth middleware checks before controllers receive the request
+ *
+ * @file backend/middleware/auth.js
+ * @module backend/middleware/auth
+ * @exports middleware functions used by protected backend routes
  */
+
 import jwt from "jsonwebtoken";
 import User from "../Models/User.js";
 import Admin from "../Models/Admin.js";

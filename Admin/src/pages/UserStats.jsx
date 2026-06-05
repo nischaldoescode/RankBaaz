@@ -1,6 +1,11 @@
 /**
- * keeps the user stats page focused and readable.
+ * renders the admin user stats workspace with data loading, actions, dialogs, and responsive states
+ *
+ * @file admin/src/pages/userstats.jsx
+ * @module admin/src/pages/userstats
+ * @exports route component rendered by the client router
  */
+
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { toast, ToastContainer } from "react-toastify";

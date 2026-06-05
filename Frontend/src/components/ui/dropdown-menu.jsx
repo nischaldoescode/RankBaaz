@@ -1,6 +1,11 @@
 /**
- * keeps the dropdown menu component focused and readable.
+ * renders the reusable dropdown menu ui primitive with accessible states and theme friendly styling
+ *
+ * @file frontend/src/components/ui/dropdown-menu.jsx
+ * @module frontend/src/components/ui/dropdown-menu
+ * @exports component used by pages and shared layouts
  */
+
 import * as React from "react"
 import * as DropdownMenuPrimitive from "@radix-ui/react-dropdown-menu"
 import { Check, ChevronRight, Circle } from "lucide-react"

@@ -1,6 +1,11 @@
 /**
- * keeps the categories page focused and readable.
+ * renders the admin categories workspace with data loading, actions, dialogs, and responsive states
+ *
+ * @file admin/src/pages/categories.jsx
+ * @module admin/src/pages/categories
+ * @exports route component rendered by the client router
  */
+
 import React, { useState } from "react";
 import { Plus, Edit2, Trash2, FolderOpen, Search } from "lucide-react";
 import { useAdmin } from "../contexts/AdminContext";

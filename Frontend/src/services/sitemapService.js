@@ -1,6 +1,11 @@
 /**
- * keeps the sitemap service service focused and readable.
+ * wraps public sitemap service calls, api responses, caching, and frontend data helpers
+ *
+ * @file frontend/src/services/sitemapservice.js
+ * @module frontend/src/services/sitemapservice
+ * @exports api helpers used by client views
  */
+
 import { apiMethods } from './api';
 
 class SitemapService {

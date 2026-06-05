@@ -1,6 +1,11 @@
 /**
- * keeps the teacher dashboard page focused and readable.
+ * renders the teacher dashboard teacher dashboard tab with data loading, actions, forms, and mobile states
+ *
+ * @file teachers/src/pages/dashboard/teacherdashboard.jsx
+ * @module teachers/src/pages/dashboard/teacherdashboard
+ * @exports route component rendered by the client router
  */
+
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTeacher } from "../../context/TeacherContext.jsx";
@@ -13,7 +18,7 @@ import { teacherApi } from "../../services/api.js";
 import toast from "react-hot-toast";
 
 /**
- * builds dicebear avatar urls with the croodles-neutral style.
+ * builds dicebear avatar urls with the croodles-neutral style
  */
 const dicebearUrl = (seed) =>
   `https://api.dicebear.com/9.x/croodles-neutral/svg?seed=${encodeURIComponent(seed)}`;

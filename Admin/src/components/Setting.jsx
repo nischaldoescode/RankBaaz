@@ -1,6 +1,11 @@
 /**
- * keeps the setting component focused and readable.
+ * renders the admin setting component with navigation, controls, user actions, and responsive states
+ *
+ * @file admin/src/components/setting.jsx
+ * @module admin/src/components/setting
+ * @exports component used by pages and shared layouts
  */
+
 import React, { useState, useEffect } from "react";
 import { useAuth } from "../contexts/AuthContext";
 import {
@@ -124,7 +129,7 @@ const AdminSettings = () => {
   const handleProfileSubmit = async (e) => {
     e.preventDefault();
 
-    // clear previous api errors.
+    // clear previous api errors
     setApiErrors({});
 
     if (!validateProfileForm()) {
@@ -136,7 +141,7 @@ const AdminSettings = () => {
       // Profile updated successfully
       setApiErrors({});
     } else {
-      // handle api errors.
+      // handle api errors
       if (result.message && result.message.includes("Email is already taken")) {
         setApiErrors({ email: result.message });
       } else {

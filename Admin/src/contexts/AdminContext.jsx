@@ -1,6 +1,11 @@
 /**
- * keeps the admin context context focused and readable.
+ * provides admin context state, api access, loading flags, and shared actions to child views
+ *
+ * @file admin/src/contexts/admincontext.jsx
+ * @module admin/src/contexts/admincontext
+ * @exports provider and hooks used by child components
  */
+
 import React, { createContext, useContext, useState, useEffect } from "react";
 import axios from "axios";
 import { toast, ToastContainer } from "react-toastify";
@@ -579,7 +584,7 @@ export const AdminProvider = ({ children }) => {
         formData.append("isPaid", courseData.isPaid);
         formData.append("price", courseData.isPaid ? courseData.price || 0 : 0);
 
-        // ... existing video content logic ...
+        // video content flow
       } else if (!courseData.isPaid) {
         formData.append("videoType", "remove");
       }

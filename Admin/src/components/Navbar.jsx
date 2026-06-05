@@ -1,5 +1,9 @@
 /**
- * keeps the navbar component focused and readable.
+ * renders the admin navbar, notification tray, account actions, and sidebar trigger
+ *
+ * @file admin/src/components/navbar.jsx
+ * @module admin/src/components/navbar
+ * @exports component used by the admin shell
  */
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";

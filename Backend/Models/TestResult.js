@@ -1,6 +1,11 @@
 /**
- * keeps the test result model focused and readable.
+ * defines the test result database schema, validation rules, indexes, and document relationships
+ *
+ * @file backend/models/testresult.js
+ * @module backend/models/testresult
+ * @exports mongoose model used by controllers and services
  */
+
 import mongoose from "mongoose";
 
 const testResultSchema = new mongoose.Schema(

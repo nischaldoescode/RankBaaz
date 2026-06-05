@@ -1,6 +1,11 @@
 /**
- * keeps the app module focused and readable.
+ * defines teacher portal routes, auth gates, onboarding pages, and dashboard entry points
+ *
+ * @file teachers/src/app.jsx
+ * @module teachers/src/app
+ * @exports root app component consumed by main.jsx
  */
+
 import React, { Suspense } from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { Toaster } from "react-hot-toast";

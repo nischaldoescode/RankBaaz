@@ -1,6 +1,11 @@
 /**
- * keeps the question cache service service focused and readable.
+ * coordinates question cache service business logic, cache fallbacks, database reads, and reusable api side effects
+ *
+ * @file backend/services/questioncacheservice.js
+ * @module backend/services/questioncacheservice
+ * @exports service functions used by controllers and scheduled work
  */
+
 import redisClient from "../Config/redis.js";
 
 class QuestionCacheService {

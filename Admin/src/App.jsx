@@ -1,6 +1,11 @@
 /**
- * keeps the app module focused and readable.
+ * defines admin panel routes, auth gates, dashboard layout, and page level navigation
+ *
+ * @file admin/src/app.jsx
+ * @module admin/src/app
+ * @exports root app component consumed by main.jsx
  */
+
 import React, { useState } from "react";
 import {
   BrowserRouter as Router,

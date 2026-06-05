@@ -1,5 +1,9 @@
 /**
- * keeps the content controller controller focused and readable.
+ * handles content settings, public page previews, faqs, contact data, and legal page updates
+ *
+ * @file backend/controllers/contentcontroller.js
+ * @module backend/controllers/contentcontroller
+ * @exports request handlers used by content routes and admin content tools
  */
 import ContentSettings from "../Models/ContentSettings.js";
 import FAQ from "../Models/FAQ.js";

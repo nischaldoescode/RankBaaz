@@ -1,14 +1,9 @@
 /**
- * pm2 ecosystem configuration
- * production-grade process management with clustering
+ * configures backend pm2 process settings, cluster behavior, memory limits, and runtime environment defaults
  *
- * features:
- * - multi-core cpu utilization via clustering
- * - automatic process restart on failure
- * - memory limit protection
- * - log rotation for disk space management
- * - zero-downtime reload
- * - environment-specific configurations
+ * @file backend/ecosystem.config.js
+ * @module backend/ecosystem
+ * @exports pm2 process configuration used by production and deployment scripts
  */
 
 module.exports = {
@@ -30,7 +25,7 @@ module.exports = {
 
     // number of instances
     // "max" = use all cpu cores
-    // or specify a number: 2, 4, etc.
+    // or specify a number: 2, 4, etc
     instances: "max",
 
     // auto restart configuration

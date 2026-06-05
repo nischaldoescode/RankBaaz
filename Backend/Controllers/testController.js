@@ -1,6 +1,11 @@
 /**
- * keeps the test controller controller focused and readable.
+ * handles test controller api requests, input validation, persistence calls, side effects, and response shaping
+ *
+ * @file backend/controllers/testcontroller.js
+ * @module backend/controllers/testcontroller
+ * @exports request handlers used by backend routes
  */
+
 import { body, validationResult } from "express-validator";
 import TestResult from "../Models/TestResult.js";
 import Course from "../Models/Course.js";
@@ -221,7 +226,7 @@ export const checkAnswer = async (req, res) => {
       await questionCacheService.cacheQuestion(courseId, questionId, question);
     }
 
-    // rest of validation logic remains same...
+    // rest of validation logic remains same
     const correctAnswer = question.correctAnswer;
     const questionType = question.questionType;
 
@@ -332,7 +337,7 @@ export const submitTest = async (req, res) => {
                   ? diffConfig?.marksPerQuestion || 5
                   : 0;
 
-                // updating counters for this difficulty ...
+                // updating counters for this difficulty
                 if (isCorrect) diffCorrectCount++;
                 diffTotalScore += marksAwarded;
 
@@ -706,11 +711,10 @@ export const getTestResult = async (req, res) => {
     }
 
     // now fetch course with only needed fields
-    const course = await Course.findById(testResult.course)
+    const course = await course.findbyid(testresult.course)
       .select("name teacher questions._id questions.question questions.explanation")
-      .populate("teacher", "name username profileImage")
+      .populate("teacher", "name username profileimage")
       .lean();
-
     if (!course) {
       return res.status(404).json({
         success: false,

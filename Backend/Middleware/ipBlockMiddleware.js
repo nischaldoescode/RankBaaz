@@ -1,6 +1,11 @@
 /**
- * keeps the ip block middleware middleware focused and readable.
+ * handles ip block middleware checks before controllers receive the request
+ *
+ * @file backend/middleware/ipblockmiddleware.js
+ * @module backend/middleware/ipblockmiddleware
+ * @exports middleware functions used by protected backend routes
  */
+
 import IpBlock from "../Models/IpBlock.js";
 
 /**

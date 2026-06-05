@@ -1,6 +1,11 @@
 /**
- * keeps the separator component focused and readable.
+ * renders the reusable separator ui primitive with accessible states and theme friendly styling
+ *
+ * @file frontend/src/components/ui/separator.jsx
+ * @module frontend/src/components/ui/separator
+ * @exports component used by pages and shared layouts
  */
+
 "use client"
 
 import * as React from "react"

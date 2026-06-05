@@ -1,6 +1,11 @@
 /**
- * keeps the teacher profile page focused and readable.
+ * renders the public teacher profile page with content settings, auth aware actions, seo data, and responsive layout
+ *
+ * @file frontend/src/pages/teacherprofile.jsx
+ * @module frontend/src/pages/teacherprofile
+ * @exports route component rendered by the client router
  */
+
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { motion } from "framer-motion";
@@ -14,7 +19,7 @@ const DICEBEAR = (seed) =>
 
 const TeacherProfile = () => {
   const { username: rawUsername } = useParams();
-  // accept both /@username and /teacher/@username.
+  // accept both /@username and /teacher/@username
   const username = rawUsername?.startsWith("@")
     ? rawUsername.slice(1)
     : rawUsername;
@@ -37,7 +42,7 @@ const TeacherProfile = () => {
       .get(`${API}/teachers/public/${username}`)
       .then((r) => setData(r.data.data))
       .catch((err) => {
-        // not found and blocked teachers share the same public 404.
+        // not found and blocked teachers share the same public 404
         setNotFound(true);
       })
       .finally(() => setLoading(false));
@@ -52,7 +57,7 @@ const TeacherProfile = () => {
   }
 
   if (notFound || !data) {
-    // use the shared 404 page.
+    // use the shared 404 page
     return <NotFound />;
   }
 

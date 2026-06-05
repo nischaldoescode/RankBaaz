@@ -1,6 +1,11 @@
 /**
- * keeps the alert component focused and readable.
+ * renders the reusable alert ui primitive with accessible states and theme friendly styling
+ *
+ * @file frontend/src/components/ui/alert.jsx
+ * @module frontend/src/components/ui/alert
+ * @exports component used by pages and shared layouts
  */
+
 import * as React from "react"
 import { cva } from "class-variance-authority";
 

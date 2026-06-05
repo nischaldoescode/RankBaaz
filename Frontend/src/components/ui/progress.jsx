@@ -1,6 +1,11 @@
 /**
- * keeps the progress component focused and readable.
+ * renders the reusable progress ui primitive with accessible states and theme friendly styling
+ *
+ * @file frontend/src/components/ui/progress.jsx
+ * @module frontend/src/components/ui/progress
+ * @exports component used by pages and shared layouts
  */
+
 import * as React from "react"
 import * as ProgressPrimitive from "@radix-ui/react-progress"
 

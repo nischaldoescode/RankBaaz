@@ -1,6 +1,11 @@
 /**
- * keeps the teacher cta component focused and readable.
+ * renders the public teacher cta component with reusable layout, actions, and responsive behavior
+ *
+ * @file frontend/src/components/teachers/teachercta.jsx
+ * @module frontend/src/components/teachers/teachercta
+ * @exports component used by pages and shared layouts
  */
+
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";

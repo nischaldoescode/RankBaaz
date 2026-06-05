@@ -1,6 +1,11 @@
 /**
- * keeps the cloudinary module focused and readable.
+ * configures cloudinary for backend startup, shared connections, secrets, and production fallbacks
+ *
+ * @file backend/config/cloudinary.js
+ * @module backend/config/cloudinary
+ * @exports connection helpers used during backend startup
  */
+
 import { v2 as cloudinary } from "cloudinary";
 
 const connectCloudinary = async () => {

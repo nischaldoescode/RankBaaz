@@ -1,6 +1,11 @@
 /**
- * keeps the index stylesheet focused and readable.
+ * styles the teacher index layer with responsive layout rules, controls, surfaces, and theme polish
+ *
+ * @file teachers/src/index.css
+ * @module teachers/src/index
+ * @exports stylesheet rules consumed by the matching app or component
  */
+
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 @import "@fontsource-variable/inter";

@@ -1,6 +1,11 @@
 /**
- * keeps the blog controller controller focused and readable.
+ * handles blog controller api requests, input validation, persistence calls, side effects, and response shaping
+ *
+ * @file backend/controllers/blogcontroller.js
+ * @module backend/controllers/blogcontroller
+ * @exports request handlers used by backend routes
  */
+
 import crypto from "crypto";
 import DOMPurify from "isomorphic-dompurify";
 import { v2 as cloudinary } from "cloudinary";

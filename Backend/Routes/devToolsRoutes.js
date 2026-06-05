@@ -1,6 +1,11 @@
 /**
- * keeps the dev tools routes route focused and readable.
+ * mounts dev tools routes api endpoints and keeps middleware order explicit for each request path
+ *
+ * @file backend/routes/devtoolsroutes.js
+ * @module backend/routes/devtoolsroutes
+ * @exports express router mounted by the api server
  */
+
 import express from "express";
 import {
   recordViolation,

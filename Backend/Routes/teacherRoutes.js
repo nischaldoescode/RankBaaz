@@ -1,6 +1,11 @@
 /**
- * keeps the teacher routes route focused and readable.
+ * mounts teacher routes api endpoints and keeps middleware order explicit for each request path
+ *
+ * @file backend/routes/teacherroutes.js
+ * @module backend/routes/teacherroutes
+ * @exports express router mounted by the api server
  */
+
 import express from "express";
 import multer from "multer";
 import { v2 as cloudinary } from "cloudinary";
@@ -81,7 +86,7 @@ const uploadProfileImage = multer({
   },
 }).single("profileImage");
 
-// document storage accepts pdf, jpg, and png up to 1mb each.
+// document storage accepts pdf, jpg, and png up to 1mb each
 const documentStorage = new CloudinaryStorage({
   cloudinary,
   params: (req, file) => ({
@@ -193,7 +198,7 @@ router.post("/check-email", async (req, res) => {
     const exists = await Teacher.exists({
       email: req.body.email?.toLowerCase(),
     });
-    // return only existence, not account state.
+    // return only existence, not account state
     return res.status(200).json({ success: true, exists: !!exists });
   } catch {
     res.status(500).json({ success: false, exists: false });
@@ -283,7 +288,7 @@ router.post(
   authenticateTeacher,
   handleDocumentUpload,
   uploadDocuments,
-  // documents tab remains available during verification.
+  // documents tab remains available during verification
 );
 router.put(
   "/me/courses/:courseId/questions/:questionId",

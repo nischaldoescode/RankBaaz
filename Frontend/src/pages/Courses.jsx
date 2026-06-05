@@ -1,6 +1,11 @@
 /**
- * keeps the courses page focused and readable.
+ * renders the public courses page with content settings, auth aware actions, seo data, and responsive layout
+ *
+ * @file frontend/src/pages/courses.jsx
+ * @module frontend/src/pages/courses
+ * @exports route component rendered by the client router
  */
+
 import React, { useState, useEffect, useCallback } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
@@ -309,7 +314,7 @@ const Courses = () => {
     }
   };
 
-  // this useeffect your existing useeffect
+  // course list refreshes when filters or data change
   useEffect(() => {
     const checkMobile = () => {
       const mobile = window.innerWidth < 500;

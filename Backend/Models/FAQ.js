@@ -1,6 +1,11 @@
 /**
- * keeps the faq model focused and readable.
+ * defines the faq database schema, validation rules, indexes, and document relationships
+ *
+ * @file backend/models/faq.js
+ * @module backend/models/faq
+ * @exports mongoose model used by controllers and services
  */
+
 import mongoose from 'mongoose';
 import connection2 from '../Config/mongodb2.js';
 

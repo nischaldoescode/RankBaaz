@@ -1,6 +1,11 @@
 /**
- * keeps the document tab page focused and readable.
+ * renders the teacher dashboard document tab with data loading, actions, forms, and mobile states
+ *
+ * @file teachers/src/pages/dashboard/documenttab.jsx
+ * @module teachers/src/pages/dashboard/documenttab
+ * @exports route component rendered by the client router
  */
+
 import React, { useState, useRef } from "react";
 import { motion } from "framer-motion";
 import { useTeacher } from "../../context/TeacherContext.jsx";

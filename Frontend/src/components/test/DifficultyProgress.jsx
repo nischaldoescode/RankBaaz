@@ -1,6 +1,11 @@
 /**
- * keeps the difficulty progress component focused and readable.
+ * renders the test difficulty progress component with attempt state, feedback controls, and secure exam flow
+ *
+ * @file frontend/src/components/test/difficultyprogress.jsx
+ * @module frontend/src/components/test/difficultyprogress
+ * @exports component used by pages and shared layouts
  */
+
 import React from 'react';
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";

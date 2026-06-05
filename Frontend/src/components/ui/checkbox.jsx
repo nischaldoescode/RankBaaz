@@ -1,6 +1,11 @@
 /**
- * keeps the checkbox component focused and readable.
+ * renders the reusable checkbox ui primitive with accessible states and theme friendly styling
+ *
+ * @file frontend/src/components/ui/checkbox.jsx
+ * @module frontend/src/components/ui/checkbox
+ * @exports component used by pages and shared layouts
  */
+
 import * as React from "react"
 import * as CheckboxPrimitive from "@radix-ui/react-checkbox"
 import { Check } from "lucide-react"

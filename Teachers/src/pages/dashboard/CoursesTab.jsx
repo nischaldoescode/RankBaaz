@@ -1,6 +1,11 @@
 /**
- * keeps the courses tab page focused and readable.
+ * renders the teacher dashboard courses tab with data loading, actions, forms, and mobile states
+ *
+ * @file teachers/src/pages/dashboard/coursestab.jsx
+ * @module teachers/src/pages/dashboard/coursestab
+ * @exports route component rendered by the client router
  */
+
 import React, { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { teacherApi } from "../../services/api.js";

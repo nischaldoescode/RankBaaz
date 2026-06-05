@@ -1,6 +1,11 @@
 /**
- * keeps the teacher controller controller focused and readable.
+ * handles teacher controller api requests, input validation, persistence calls, side effects, and response shaping
+ *
+ * @file backend/controllers/teachercontroller.js
+ * @module backend/controllers/teachercontroller
+ * @exports request handlers used by backend routes
  */
+
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import crypto from "crypto";
@@ -366,7 +371,7 @@ export const sendSignupOtp = async (req, res) => {
         .json({ success: false, message: "Email does not match invite" });
     }
 
-    // limit otp sends to three per ten minutes.
+    // limit otp sends to three per ten minutes
     const rateKey = `teacher:otp:rate:${email.toLowerCase()}`;
     const attempts = await redisClient.incr(rateKey);
     if (attempts === 1) await redisClient.expire(rateKey, 600);
@@ -698,7 +703,7 @@ export const teacherSignup = async (req, res) => {
       });
     }
 
-    // check email was verified by otp.
+    // check email was verified by otp
     const emailVerified = await redisClient.get(
       `teacher:email:verified:${payload.email.toLowerCase()}`,
     );
@@ -731,7 +736,7 @@ export const teacherSignup = async (req, res) => {
     }
 
     if (existingStudent) {
-      // do not reveal that this email belongs to a student.
+      // do not reveal that this email belongs to a student
       return res.status(400).json({
         success: false,
         message:
@@ -1883,7 +1888,7 @@ const buildInviteEmail = (name, content, signupLink, subject, options = {}) => {
     primaryColor = "#2563eb",
   } = options;
 
-  // convert plain text content to html paragraphs.
+  // convert plain text content to html paragraphs
   const htmlContent = content
     .split("\n")
     .filter((line) => line.trim() !== "")
@@ -2473,7 +2478,7 @@ export const teacherCreateCourse = async (req, res) => {
       return res.status(404).json({ success: false, message: "Not found" });
     }
 
-    // route middleware already blocks this, but keep the controller defensive.
+    // route middleware already blocks this, but keep the controller defensive
     if (teacher.accessBlocked || teacher.documentStatus !== "verified") {
       return res.status(403).json({
         success: false,

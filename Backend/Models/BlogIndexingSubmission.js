@@ -1,6 +1,11 @@
 /**
- * keeps the blog indexing submission model focused and readable.
+ * defines the blog indexing submission database schema, validation rules, indexes, and document relationships
+ *
+ * @file backend/models/blogindexingsubmission.js
+ * @module backend/models/blogindexingsubmission
+ * @exports mongoose model used by controllers and services
  */
+
 import mongoose from "mongoose";
 
 const blogIndexingSubmissionSchema = new mongoose.Schema(

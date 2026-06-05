@@ -1,6 +1,11 @@
 /**
- * keeps the user manage ment page focused and readable.
+ * renders the admin user manage ment workspace with data loading, actions, dialogs, and responsive states
+ *
+ * @file admin/src/pages/usermanagement.jsx
+ * @module admin/src/pages/usermanagement
+ * @exports route component rendered by the client router
  */
+
 import React, { useState, useEffect } from "react";
 import { useAdmin } from "../contexts/AdminContext";
 import {

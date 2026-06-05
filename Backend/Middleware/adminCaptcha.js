@@ -1,6 +1,11 @@
 /**
- * keeps the admin captcha middleware focused and readable.
+ * handles admin captcha middleware checks before controllers receive the request
+ *
+ * @file backend/middleware/admincaptcha.js
+ * @module backend/middleware/admincaptcha
+ * @exports middleware functions used by protected backend routes
  */
+
 import crypto from "crypto";
 import redisClient, {
   isRedisConnectionError,

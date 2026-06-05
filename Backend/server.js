@@ -1,6 +1,11 @@
 /**
- * keeps the server module focused and readable.
+ * configures the vidhgrow api server, middleware order, trusted origins, sessions, routes, and production security headers
+ *
+ * @file backend/server.js
+ * @module backend/server
+ * @exports module members used by the related app runtime
  */
+
 import express from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
@@ -438,7 +443,7 @@ app.use(checkIpBlock);
 app.use(botProtection);
 
 // console.log(
-//   " bot protection and origin enforcement disabled for testing"
+// " bot protection and origin enforcement disabled for testing"
 // );
 
 app.post("/api/security/verify-challenge", verifyChallenge);
@@ -515,13 +520,13 @@ app.get("/sitemap-profiles.xml", async (req, res) => {
 
 // apply express-fileupload only to routes that need it
 app.use((req, res, next) => {
-  // routes with multer need the raw multipart stream.
+  // routes with multer need the raw multipart stream
   const multerRoutes = ["/api/courses", "/api/teachers"];
   if (multerRoutes.some((route) => req.path.startsWith(route))) {
     return next();
   }
 
-  // content and blog media routes still use express-fileupload.
+  // content and blog media routes still use express-fileupload
   fileUpload({
     useTempFiles: true,
     tempFileDir: "/tmp/",
@@ -608,7 +613,7 @@ app.use("*", (req, res) => {
  * two categories:
  * 1. unauthenticated public routes (login, register, etc.)
  * 2. cookie-authenticated routes that don't need signatures
- *    - /api/security/signing-secret (breaks chicken-and-egg problem)
+ * - /api/security/signing-secret (breaks chicken-and-egg problem)
  *
  * @constant {array<string>} publicroutes - exact path matches
  */
@@ -827,7 +832,7 @@ app.use((req, res, next) => {
       return res.status(403).send(getSimple403HTML());
     }
 
-    //check for both user auth cookie and admin session cookie
+    // check for both user auth cookie and admin session cookie
     if (hasSignature) {
       const hasUserAuthCookie = !!req.signedCookies.auth_session; // user jwt cookie
       const hasAdminSession = !!req.session?.adminId || !!req.signedCookies.sid; // admin session
@@ -913,7 +918,7 @@ app.use((req, res, next) => {
   const referer = req.get("Referer");
   const hasSignature = !!req.headers["x-request-signature"];
 
-  // block direct api access without a trusted origin.
+  // block direct api access without a trusted origin
   if (!origin && !referer) {
     console.warn("Blocked direct access:", {
       path: req.path,

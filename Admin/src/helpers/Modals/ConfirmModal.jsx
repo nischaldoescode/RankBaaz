@@ -1,6 +1,11 @@
 /**
- * keeps the confirm modal utility focused and readable.
+ * builds the admin confirm modal helper view used for content previews and modal workflows
+ *
+ * @file admin/src/helpers/modals/confirmmodal.jsx
+ * @module admin/src/helpers/modals/confirmmodal
+ * @exports module members used by the related app runtime
  */
+
 import React from "react";
 import { X, AlertTriangle } from "lucide-react";
 

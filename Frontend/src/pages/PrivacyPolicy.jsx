@@ -1,6 +1,11 @@
 /**
- * keeps the privacy policy page focused and readable.
+ * renders the public privacy policy page with content settings, auth aware actions, seo data, and responsive layout
+ *
+ * @file frontend/src/pages/privacypolicy.jsx
+ * @module frontend/src/pages/privacypolicy
+ * @exports route component rendered by the client router
  */
+
 import React, { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Shield, Calendar, FileText } from "lucide-react";

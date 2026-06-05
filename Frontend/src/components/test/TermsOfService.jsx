@@ -1,6 +1,11 @@
 /**
- * keeps the terms of service component focused and readable.
+ * renders the test terms of service component with attempt state, feedback controls, and secure exam flow
+ *
+ * @file frontend/src/components/test/termsofservice.jsx
+ * @module frontend/src/components/test/termsofservice
+ * @exports component used by pages and shared layouts
  */
+
 import React, { useState } from "react";
 import {
   Card,

@@ -1,6 +1,11 @@
 /**
- * keeps the badge service service focused and readable.
+ * coordinates badge service business logic, cache fallbacks, database reads, and reusable api side effects
+ *
+ * @file backend/services/badgeservice.js
+ * @module backend/services/badgeservice
+ * @exports service functions used by controllers and scheduled work
  */
+
 import User from "../Models/User.js";
 import TestResult from "../Models/TestResult.js";
 import pointsService from "./pointsService.js";

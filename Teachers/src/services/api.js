@@ -1,6 +1,11 @@
 /**
- * keeps the api service focused and readable.
+ * wraps teacher api access, signed requests, retries, and response handling
+ *
+ * @file teachers/src/services/api.js
+ * @module teachers/src/services/api
+ * @exports api helpers used by client views
  */
+
 import axios from "axios";
 import { teacherRequestSigner } from "../utils/requestSigning.js";
 
@@ -32,7 +37,7 @@ const refreshTeacherSigningSecret = async () => {
   return false;
 };
 
-// public teacher routes do not have a signing secret yet.
+// public teacher routes do not have a signing secret yet
 const UNSIGNED_ROUTES = [
   "/teachers/login",
   "/teachers/logout",

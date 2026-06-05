@@ -1,6 +1,11 @@
 /**
- * keeps the security routes route focused and readable.
+ * mounts security routes api endpoints and keeps middleware order explicit for each request path
+ *
+ * @file backend/routes/securityroutes.js
+ * @module backend/routes/securityroutes
+ * @exports express router mounted by the api server
  */
+
 import express from "express";
 import {
   verifyRequestSignature,

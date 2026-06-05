@@ -1,6 +1,11 @@
 /**
- * keeps the admin routes route focused and readable.
+ * mounts admin routes api endpoints and keeps middleware order explicit for each request path
+ *
+ * @file backend/routes/adminroutes.js
+ * @module backend/routes/adminroutes
+ * @exports express router mounted by the api server
  */
+
 import express from "express";
 import {
   adminLogin,

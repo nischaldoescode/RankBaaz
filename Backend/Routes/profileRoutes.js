@@ -1,6 +1,11 @@
 /**
- * keeps the profile routes route focused and readable.
+ * mounts profile routes api endpoints and keeps middleware order explicit for each request path
+ *
+ * @file backend/routes/profileroutes.js
+ * @module backend/routes/profileroutes
+ * @exports express router mounted by the api server
  */
+
 import express from "express";
 import {
   getPublicProfile,

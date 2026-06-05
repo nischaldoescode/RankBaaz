@@ -1,6 +1,11 @@
 /**
- * keeps the signup page focused and readable.
+ * renders the teacher signup page with auth flow, form state, validation, and responsive layout
+ *
+ * @file teachers/src/pages/signup.jsx
+ * @module teachers/src/pages/signup
+ * @exports route component rendered by the client router
  */
+
 import React, { useState, useEffect, useMemo } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";

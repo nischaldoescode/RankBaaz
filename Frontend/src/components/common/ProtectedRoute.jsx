@@ -1,6 +1,11 @@
 /**
- * keeps the protected route component focused and readable.
+ * renders the shared protected route component used across public pages and app level flows
+ *
+ * @file frontend/src/components/common/protectedroute.jsx
+ * @module frontend/src/components/common/protectedroute
+ * @exports component used by pages and shared layouts
  */
+
 import React from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';

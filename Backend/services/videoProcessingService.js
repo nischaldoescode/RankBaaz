@@ -1,6 +1,11 @@
 /**
- * keeps the video processing service service focused and readable.
+ * coordinates video processing service business logic, cache fallbacks, database reads, and reusable api side effects
+ *
+ * @file backend/services/videoprocessingservice.js
+ * @module backend/services/videoprocessingservice
+ * @exports service functions used by controllers and scheduled work
  */
+
 class VideoProcessingService {
   constructor() {
     this.allowedDomains = [

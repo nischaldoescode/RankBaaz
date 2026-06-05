@@ -1,17 +1,42 @@
 /**
- * keeps the leaderboard service service focused and readable.
+ * coordinates leaderboard service business logic, cache fallbacks, database reads, and reusable api side effects
+ *
+ * @file backend/services/leaderboardservice.js
+ * @module backend/services/leaderboardservice
+ * @exports service functions used by controllers and scheduled work
  */
+
 import redisClient from "../Config/redis.js";
 import TestResult from "../Models/TestResult.js";
 import User from "../Models/User.js";
 import mongoose from "mongoose";
 
+/**
+ * groups leaderboard cache keys, redis reads, mongodb fallbacks, and rank lookups
+ *
+ * @class
+ */
 class LeaderboardService {
+  /**
+   * builds the redis key for a course leaderboard
+   *
+   * @param {string|object} courseId course id used by the leaderboard cache
+   * @param {string} difficulty selected difficulty filter or all
+   * @returns {string} redis sorted set key
+   */
   getLeaderboardKey(courseId, difficulty = "all") {
     return `leaderboard:${courseId}:${difficulty}`;
   }
 
-  // course-specific leaderboard (best performance in a course)
+  /**
+   * reads the course leaderboard from redis and falls back to mongodb
+   *
+   * @param {string|object} courseId course id used for the leaderboard
+   * @param {string} difficulty selected difficulty filter or all
+   * @param {number} limit maximum number of rows to return
+   * @param {number} offset number of ranked rows to skip
+   * @returns {promise<object[]>} ranked course leaderboard rows
+   */
   async getLeaderboard(courseId, difficulty = "all", limit = 100, offset = 0) {
     try {
       const key = this.getLeaderboardKey(courseId, difficulty);
@@ -64,7 +89,14 @@ class LeaderboardService {
     }
   }
 
-  // mongodb fallback for course leaderboards
+  /**
+   * rebuilds a course leaderboard directly from stored test results
+   *
+   * @param {string|object} courseId course id used for the aggregation
+   * @param {string} difficulty selected difficulty filter or all
+   * @param {number} limit maximum number of rows to return
+   * @returns {promise<object[]>} ranked rows created from mongodb
+   */
   async getCourseLeaderboardFromDB(courseId, difficulty = "all", limit = 100) {
     try {
       const matchCriteria = { course: courseId };
@@ -111,7 +143,16 @@ class LeaderboardService {
     }
   }
 
-  // update course-specific leaderboard
+  /**
+   * writes a course attempt score into the redis leaderboard
+   *
+   * @param {string|object} userId user id that completed the attempt
+   * @param {string|object} courseId course id used for the leaderboard
+   * @param {string} difficulty selected difficulty filter for the attempt
+   * @param {number} percentage attempt percentage used in the composite score
+   * @param {number} timeTaken attempt duration used as the tie breaker
+   * @returns {promise<boolean>} true when redis accepts the update
+   */
   async updateLeaderboard(userId, courseId, difficulty, percentage, timeTaken) {
     try {
       const key = this.getLeaderboardKey(courseId, difficulty);
@@ -127,7 +168,14 @@ class LeaderboardService {
     }
   }
 
-  // points-based course leaderboard (total points in a course)
+  /**
+   * reads the points based leaderboard for a course
+   *
+   * @param {string|object} courseId course id used for the leaderboard
+   * @param {string} difficulty selected difficulty filter or all
+   * @param {number} limit maximum number of rows to return
+   * @returns {promise<object[]>} points ranked course leaderboard rows
+   */
   async getCourseLeaderboardWithPoints(
     courseId,
     difficulty = "all",
@@ -162,6 +210,14 @@ class LeaderboardService {
     }
   }
 
+  /**
+   * rebuilds and caches the points based course leaderboard
+   *
+   * @param {string|object} courseId course id used for the aggregation
+   * @param {string} difficulty selected difficulty filter or all
+   * @param {number} limit maximum number of rows to return
+   * @returns {promise<object[]>} rebuilt points leaderboard rows
+   */
   async rebuildCourseLeaderboardWithPoints(courseId, difficulty, limit) {
     const matchCriteria = { course: courseId };
     if (difficulty !== "all") {
@@ -217,6 +273,14 @@ class LeaderboardService {
     return leaderboard;
   }
 
+  /**
+   * converts redis sorted set values into full leaderboard rows
+   *
+   * @param {string[]} redisResults alternating user ids and scores from redis
+   * @param {string} courseId course id used for test stats
+   * @param {string} difficulty selected difficulty filter used by the caller
+   * @returns {promise<object[]>} formatted leaderboard rows with user and test data
+   */
   async formatCourseLeaderboard(redisResults, courseId, difficulty) {
     // extract all user ids first
     const userIds = [];
@@ -292,7 +356,11 @@ class LeaderboardService {
     return leaderboard;
   }
 
-  // this method to initialize leaderboards on server startup
+  /**
+   * confirms the leaderboard service is ready during server startup
+   *
+   * @returns {promise<boolean>} true when startup checks pass
+   */
   async initialize() {
     try {
       console.log("Initializing leaderboard service...");
@@ -306,7 +374,14 @@ class LeaderboardService {
     }
   }
 
-  // this method to get a user's rank in a course leaderboard
+  /**
+   * reads a user's rank from redis and falls back to mongodb
+   *
+   * @param {string|object} userId user id to rank
+   * @param {string|object} courseId course id used for the leaderboard
+   * @param {string} difficulty selected difficulty filter or all
+   * @returns {promise<number|null>} one based rank or null
+   */
   async getUserRank(userId, courseId, difficulty = "all") {
     try {
       const key = this.getLeaderboardKey(courseId, difficulty);
@@ -326,7 +401,14 @@ class LeaderboardService {
     }
   }
 
-  // this helper method for mongodb rank lookup
+  /**
+   * calculates a user's rank from mongodb test results
+   *
+   * @param {string|object} userId user id to rank
+   * @param {string|object} courseId course id used for the leaderboard
+   * @param {string} difficulty selected difficulty filter or all
+   * @returns {promise<number|null>} one based rank or null
+   */
   async getUserRankFromDB(userId, courseId, difficulty = "all") {
     try {
       const matchCriteria = { course: courseId };

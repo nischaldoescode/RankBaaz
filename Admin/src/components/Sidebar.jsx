@@ -1,6 +1,11 @@
 /**
- * keeps the sidebar component focused and readable.
+ * renders the admin sidebar component with navigation, controls, user actions, and responsive states
+ *
+ * @file admin/src/components/sidebar.jsx
+ * @module admin/src/components/sidebar
+ * @exports component used by pages and shared layouts
  */
+
 import React, { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import {

@@ -1,6 +1,11 @@
 /**
- * keeps the payment tab page focused and readable.
+ * renders the teacher dashboard payment tab with data loading, actions, forms, and mobile states
+ *
+ * @file teachers/src/pages/dashboard/paymenttab.jsx
+ * @module teachers/src/pages/dashboard/paymenttab
+ * @exports route component rendered by the client router
  */
+
 import React, { useState } from "react";
 import { motion } from "framer-motion";
 import { useTeacher } from "../../context/TeacherContext.jsx";

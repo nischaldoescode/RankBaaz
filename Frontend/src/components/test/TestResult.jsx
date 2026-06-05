@@ -1,6 +1,11 @@
 /**
- * keeps the test result component focused and readable.
+ * renders the test result component with attempt state, feedback controls, and secure exam flow
+ *
+ * @file frontend/src/components/test/testresult.jsx
+ * @module frontend/src/components/test/testresult
+ * @exports component used by pages and shared layouts
  */
+
 import React, { useEffect, useState, useCallback, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate, useParams } from "react-router-dom";

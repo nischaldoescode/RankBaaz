@@ -1,6 +1,11 @@
 /**
- * keeps the public profile page focused and readable.
+ * renders the public profile page with content settings, auth aware actions, seo data, and responsive layout
+ *
+ * @file frontend/src/pages/publicprofile.jsx
+ * @module frontend/src/pages/publicprofile
+ * @exports route component rendered by the client router
  */
+
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";

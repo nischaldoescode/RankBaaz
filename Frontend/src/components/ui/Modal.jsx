@@ -1,6 +1,11 @@
 /**
- * keeps the modal component focused and readable.
+ * renders the reusable modal ui primitive with accessible states and theme friendly styling
+ *
+ * @file frontend/src/components/ui/modal.jsx
+ * @module frontend/src/components/ui/modal
+ * @exports component used by pages and shared layouts
  */
+
 import React, { useEffect, useRef, useCallback, useState } from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";

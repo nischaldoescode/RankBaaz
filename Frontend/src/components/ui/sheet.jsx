@@ -1,6 +1,11 @@
 /**
- * keeps the sheet component focused and readable.
+ * renders the reusable sheet ui primitive with accessible states and theme friendly styling
+ *
+ * @file frontend/src/components/ui/sheet.jsx
+ * @module frontend/src/components/ui/sheet
+ * @exports component used by pages and shared layouts
  */
+
 import * as React from "react";
 import * as SheetPrimitive from "@radix-ui/react-dialog";
 import { XIcon } from "lucide-react";

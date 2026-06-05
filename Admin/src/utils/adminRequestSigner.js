@@ -1,6 +1,11 @@
 /**
- * keeps the admin request signer utility focused and readable.
+ * provides the admin request signer utility for signed requests, secure api calls, and shared helpers
+ *
+ * @file admin/src/utils/adminrequestsigner.js
+ * @module admin/src/utils/adminrequestsigner
+ * @exports helpers imported by related app modules
  */
+
 import crypto from "crypto-js";
 import axios from "axios";
 
@@ -116,11 +121,11 @@ class AdminRequestSigner {
   }
 
   /**
-   * build the exact path axios will send, including query params.
+   * build the exact path axios will send, including query params
    *
    * axios drops null/undefined params from the real request url. using
    * urlsearchparams directly turns undefined into "undefined", which breaks
-   * hmac checks for optional params such as excludeid.
+   * hmac checks for optional params such as excludeid
    */
   buildSignedPath(config) {
     const baseURL = config.baseURL || axios.defaults.baseURL || window.location.origin;
@@ -139,7 +144,7 @@ class AdminRequestSigner {
    * sign axios request config with hmac-sha256 signature
    *
    * path construction logic:
-   * backend uses req.path which includes the full api path.
+   * backend uses req.path which includes the full api path
    *
    * examples:
    * - axios config.url = "/content/settings"
@@ -147,7 +152,7 @@ class AdminRequestSigner {
    * - backend req.path = "/api/content/settings"
    *
    * therefore, we reconstruct the full path including /api prefix
-   * to match what the backend verification middleware sees.
+   * to match what the backend verification middleware sees
    *
    * @param {object} config - axios request configuration object
    * @param {string} config.url - relative or absolute request url

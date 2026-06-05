@@ -1,6 +1,11 @@
 /**
- * keeps the index stylesheet focused and readable.
+ * styles the admin index layer with responsive layout rules, controls, surfaces, and theme polish
+ *
+ * @file admin/src/index.css
+ * @module admin/src/index
+ * @exports stylesheet rules consumed by the matching app or component
  */
+
 @import "tailwindcss";
 
 input[type=number] {

@@ -1,6 +1,11 @@
 /**
- * keeps the legal page preview utility focused and readable.
+ * builds the admin legal page preview helper view used for content previews and modal workflows
+ *
+ * @file admin/src/helpers/legalpagepreview.jsx
+ * @module admin/src/helpers/legalpagepreview
+ * @exports module members used by the related app runtime
  */
+
 // legal page preview component
 export const LegalPagePreview = ({ title, sections, metadata, content }) => {
   // if no sections but has old content (markdown), show that

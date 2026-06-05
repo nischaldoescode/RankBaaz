@@ -1,6 +1,11 @@
 /**
- * keeps the blocked page page focused and readable.
+ * renders the public blocked page with content settings, auth aware actions, seo data, and responsive layout
+ *
+ * @file frontend/src/pages/blockedpage.jsx
+ * @module frontend/src/pages/blockedpage
+ * @exports route component rendered by the client router
  */
+
 import React from "react";
 import { ShieldOff } from "lucide-react";
 

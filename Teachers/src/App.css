@@ -1,6 +1,11 @@
 /**
- * keeps the app stylesheet focused and readable.
+ * styles the teacher app layer with responsive layout rules, controls, surfaces, and theme polish
+ *
+ * @file teachers/src/app.css
+ * @module teachers/src/app
+ * @exports stylesheet rules consumed by the matching app or component
  */
+
 .counter {
   font-size: 16px;
   padding: 5px 10px;

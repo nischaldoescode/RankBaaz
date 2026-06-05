@@ -1,6 +1,11 @@
 /**
- * keeps the course details expander component focused and readable.
+ * renders the public course details expander component with reusable layout, actions, and responsive behavior
+ *
+ * @file frontend/src/components/testandcourse/coursedetailsexpander.jsx
+ * @module frontend/src/components/testandcourse/coursedetailsexpander
+ * @exports component used by pages and shared layouts
  */
+
 import React, { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import { ChevronDown, Play, Eye } from "lucide-react";

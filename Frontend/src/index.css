@@ -1,6 +1,11 @@
 /**
- * keeps the index stylesheet focused and readable.
+ * styles the public index layer with responsive rules, theme tokens, animations, and app surfaces
+ *
+ * @file frontend/src/index.css
+ * @module frontend/src/index
+ * @exports stylesheet rules consumed by the matching app or component
  */
+
 @import "tailwindcss";
 
 .scrollbar-hide {

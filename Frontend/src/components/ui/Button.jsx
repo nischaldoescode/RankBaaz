@@ -1,6 +1,11 @@
 /**
- * keeps the button component focused and readable.
+ * renders the reusable button ui primitive with accessible states and theme friendly styling
+ *
+ * @file frontend/src/components/ui/button.jsx
+ * @module frontend/src/components/ui/button
+ * @exports component used by pages and shared layouts
  */
+
 import * as React from "react";
 import { Slot } from "@radix-ui/react-slot";
 import { cva } from "class-variance-authority";

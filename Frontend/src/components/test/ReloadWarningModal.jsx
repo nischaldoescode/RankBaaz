@@ -1,6 +1,11 @@
 /**
- * keeps the reload warning modal component focused and readable.
+ * renders the test reload warning modal component with attempt state, feedback controls, and secure exam flow
+ *
+ * @file frontend/src/components/test/reloadwarningmodal.jsx
+ * @module frontend/src/components/test/reloadwarningmodal
+ * @exports component used by pages and shared layouts
  */
+
 import React from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ExclamationTriangleIcon, XMarkIcon } from "@heroicons/react/24/outline";
