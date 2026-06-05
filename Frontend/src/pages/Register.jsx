@@ -418,6 +418,8 @@ const Register = () => {
       );
 
       if (response.data.success) {
+        setOtpTimer(0);
+        setCanResendOtp(false);
         setRegisterStep(3);
         const suggestedUsername = usernameSuggestions[0];
         if (suggestedUsername && !username) {
@@ -540,6 +542,21 @@ const Register = () => {
     }
   };
 
+  const handleChangeRegistrationDetails = () => {
+    if (registerStep === 2 && otpTimer > 0) {
+      toast.error(`Please wait ${otpTimer}s before changing details`);
+      return;
+    }
+
+    setRegisterStep(1);
+    setOtpValue("");
+    setUsername("");
+    setUsernameAvailable(null);
+    setErrors({});
+    setOtpTimer(0);
+    setCanResendOtp(false);
+  };
+
   const shouldAnimate = animations && !reducedMotion;
   const errorAnimation = shouldAnimate
     ? { initial: { opacity: 0, y: -10 }, animate: { opacity: 1, y: 0 } }
@@ -611,20 +628,19 @@ const Register = () => {
             ) : (
               <button
                 type="button"
-                onClick={() => {
-                  setRegisterStep(1);
-                  setOtpValue("");
-                  setUsername("");
-                  setUsernameAvailable(null);
-                  setErrors({});
-                  setOtpTimer(0);
-                  setCanResendOtp(false);
-                }}
-                className="inline-flex items-center space-x-2 text-muted-foreground hover:text-foreground transition-colors duration-200"
+                onClick={handleChangeRegistrationDetails}
+                disabled={registerStep === 2 && otpTimer > 0}
+                className={`inline-flex items-center space-x-2 transition-colors duration-200 ${
+                  registerStep === 2 && otpTimer > 0
+                    ? "cursor-not-allowed text-muted-foreground/50"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
               >
                 <ArrowLeft className="w-4 h-4" />
                 <span className="text-sm sm:text-base">
-                  Back to registration form
+                  {registerStep === 2 && otpTimer > 0
+                    ? `Back in ${otpTimer}s`
+                    : "Back to registration form"}
                 </span>
               </button>
             )}
@@ -1189,15 +1205,7 @@ const Register = () => {
                         {otpTimer === 0 && (
                           <button
                             type="button"
-                            onClick={() => {
-                              setRegisterStep(1);
-                              setOtpValue("");
-                              setUsername("");
-                              setUsernameAvailable(null);
-                              setErrors({});
-                              setOtpTimer(0);
-                              setCanResendOtp(false);
-                            }}
+                            onClick={handleChangeRegistrationDetails}
                             className="text-xs text-primary hover:text-primary/80 transition-colors"
                           >
                             Change your details?

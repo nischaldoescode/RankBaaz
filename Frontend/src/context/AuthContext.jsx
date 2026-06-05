@@ -100,6 +100,40 @@ export const AuthProvider = ({ children }) => {
     initializeAuth();
   }, []);
 
+  const refreshSessionAndSigningSecret = async () => {
+    const refreshResponse = await apiMethods.auth.refreshToken();
+    const signingSecret = refreshResponse.data?.data?.signingSecret;
+    const signingSecretExpiresIn =
+      refreshResponse.data?.data?.signingSecretExpiresIn;
+
+    if (signingSecret && signingSecretExpiresIn) {
+      requestSigner.setSigningSecret(signingSecret, signingSecretExpiresIn);
+    }
+
+    return refreshResponse;
+  };
+
+  const ensureSigningSecret = async () => {
+    requestSigner.loadSigningSecret();
+
+    if (requestSigner.isSecretValid()) {
+      return;
+    }
+
+    try {
+      const secretResponse = await apiMethods.auth.getSigningSecret();
+
+      if (secretResponse.data.success) {
+        requestSigner.setSigningSecret(
+          secretResponse.data.data.signingSecret,
+          secretResponse.data.data.expiresIn
+        );
+      }
+    } catch (secretError) {
+      await refreshSessionAndSigningSecret();
+    }
+  };
+
   /**
    * initialize authentication state on app load
    * flow:
@@ -115,9 +149,9 @@ export const AuthProvider = ({ children }) => {
       if (userData) {
         const user = JSON.parse(userData);
 
-        requestSigner.loadSigningSecret();
-
         try {
+          await ensureSigningSecret();
+
           const response = await apiMethods.auth.getProfile();
           const validatedUser = response.data?.data?.user;
 
@@ -125,21 +159,6 @@ export const AuthProvider = ({ children }) => {
             clearAuthData();
             dispatch({ type: AUTH_ACTIONS.LOGOUT });
             return;
-          }
-
-          if (!requestSigner.isSecretValid()) {
-            try {
-              const secretResponse = await apiMethods.auth.getSigningSecret();
-
-              if (secretResponse.data.success) {
-                requestSigner.setSigningSecret(
-                  secretResponse.data.data.signingSecret,
-                  secretResponse.data.data.expiresIn
-                );
-              }
-            } catch (secretError) {
-              console.error("Failed to fetch signing secret:", secretError);
-            }
           }
 
           dispatch({
@@ -150,11 +169,25 @@ export const AuthProvider = ({ children }) => {
             },
           });
         } catch (error) {
-          if (error.response?.status === 401) {
+          try {
+            await refreshSessionAndSigningSecret();
+            const retryResponse = await apiMethods.auth.getProfile();
+            const retriedUser = retryResponse.data?.data?.user;
+
+            if (!retriedUser) {
+              throw new Error("Profile data missing after refresh");
+            }
+
+            dispatch({
+              type: AUTH_ACTIONS.LOGIN_SUCCESS,
+              payload: {
+                user: retriedUser,
+                token: null,
+              },
+            });
+          } catch (refreshError) {
             clearAuthData();
             dispatch({ type: AUTH_ACTIONS.LOGOUT });
-          } else {
-            dispatch({ type: AUTH_ACTIONS.SET_LOADING, payload: false });
           }
         }
       } else {
