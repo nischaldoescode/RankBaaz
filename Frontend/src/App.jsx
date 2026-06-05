@@ -1,6 +1,11 @@
 /**
- * keeps the app module focused and readable.
+ * defines the public vidhgrow routes, protected views, layout shells, and shared page flow
+ *
+ * @file frontend/src/app.jsx
+ * @module frontend/src/app
+ * @exports root app component consumed by main.jsx
  */
+
 import React, { Suspense, useEffect, useState } from "react";
 import {
   Routes,

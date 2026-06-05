@@ -1,6 +1,11 @@
 /**
- * keeps the course model focused and readable.
+ * defines the course database schema, validation rules, indexes, and document relationships
+ *
+ * @file backend/models/course.js
+ * @module backend/models/course
+ * @exports mongoose model used by controllers and services
  */
+
 import mongoose from "mongoose";
 
 const courseSchema = new mongoose.Schema(
@@ -246,7 +251,7 @@ const courseSchema = new mongoose.Schema(
       default: true,
     },
 
-    // null means the course was created by admin.
+    // null means the course was created by admin
     teacher: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Teacher",

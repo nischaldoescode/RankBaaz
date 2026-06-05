@@ -1,6 +1,11 @@
 /**
- * keeps the geo restriction middleware focused and readable.
+ * handles geo restriction middleware checks before controllers receive the request
+ *
+ * @file backend/middleware/georestriction.js
+ * @module backend/middleware/georestriction
+ * @exports middleware functions used by protected backend routes
  */
+
 import Course from "../Models/Course.js";
 
 /**
@@ -27,7 +32,7 @@ const resolveCountry = async (ip) => {
 };
 
 /**
- * adds the resolved country to req for course access checks.
+ * adds the resolved country to req for course access checks
  */
 export const attachUserCountry = async (req, res, next) => {
   const ip =

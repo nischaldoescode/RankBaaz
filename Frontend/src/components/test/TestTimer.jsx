@@ -1,6 +1,11 @@
 /**
- * keeps the test timer component focused and readable.
+ * renders the test timer component with attempt state, feedback controls, and secure exam flow
+ *
+ * @file frontend/src/components/test/testtimer.jsx
+ * @module frontend/src/components/test/testtimer
+ * @exports component used by pages and shared layouts
  */
+
 import React, { useState, useEffect, useRef } from 'react';
 import { Card, CardContent } from "@/components/ui/Card";
 import { Progress } from "@/components/ui/progress";

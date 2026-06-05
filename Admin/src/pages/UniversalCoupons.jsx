@@ -1,6 +1,11 @@
 /**
- * keeps the universal coupons page focused and readable.
+ * renders the admin universal coupons workspace with data loading, actions, dialogs, and responsive states
+ *
+ * @file admin/src/pages/universalcoupons.jsx
+ * @module admin/src/pages/universalcoupons
+ * @exports route component rendered by the client router
  */
+
 import React, { useState, useEffect, useCallback } from "react"; // usecallback
 import { useAdmin } from "../contexts/AdminContext";
 import {

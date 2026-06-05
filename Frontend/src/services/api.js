@@ -1,6 +1,11 @@
 /**
- * keeps the api service focused and readable.
+ * wraps public api service calls, api responses, caching, and frontend data helpers
+ *
+ * @file frontend/src/services/api.js
+ * @module frontend/src/services/api
+ * @exports api helpers used by client views
  */
+
 import axios from "axios";
 import toast from "react-hot-toast";
 import crypto from "crypto-js";

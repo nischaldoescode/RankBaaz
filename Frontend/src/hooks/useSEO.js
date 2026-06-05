@@ -1,6 +1,11 @@
 /**
- * keeps the use seo module focused and readable.
+ * provides the use seo hook for page logic, browser state, and reusable frontend behavior
+ *
+ * @file frontend/src/hooks/useseo.js
+ * @module frontend/src/hooks/useseo
+ * @exports helpers imported by related app modules
  */
+
 import { useEffect } from "react";
 import { useHead } from "@unhead/react";
 import { useContent } from "../context/ContentContext";
@@ -63,18 +68,18 @@ export const useSEO = ({
 
     // open graph - basic
     { property: "og:type", content: type },
-    { property: "og:title", content: fullTitle },
-    { property: "og:description", content: finalDescription },
-    ...(finalImage
+    { property: "og:title", content: fulltitle },
+    { property: "og:description", content: finaldescription },
+    (finalimage
       ? [
-          { property: "og:image", content: finalImage },
-          { property: "og:image:secure_url", content: finalImage },
+          { property: "og:image", content: finalimage },
+          { property: "og:image:secure_url", content: finalimage },
           { property: "og:image:width", content: "1200" },
           { property: "og:image:height", content: "630" },
-          { property: "og:image:alt", content: fullTitle },
+          { property: "og:image:alt", content: fulltitle },
         ]
       : []),
-    { property: "og:url", content: finalUrl },
+    { property: "og:url", content: finalurl },
     { property: "og:site_name", content: siteName },
     { property: "og:locale", content: "en_US" },
 

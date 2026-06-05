@@ -1,6 +1,11 @@
 /**
- * keeps the card component focused and readable.
+ * renders the reusable card ui primitive with accessible states and theme friendly styling
+ *
+ * @file frontend/src/components/ui/card.jsx
+ * @module frontend/src/components/ui/card
+ * @exports component used by pages and shared layouts
  */
+
 import * as React from "react"
 
 import { cn } from "@/lib/utils"

@@ -1,6 +1,11 @@
 /**
- * keeps the content context context focused and readable.
+ * provides admin content context state, api access, loading flags, and shared actions to child views
+ *
+ * @file admin/src/contexts/contentcontext.jsx
+ * @module admin/src/contexts/contentcontext
+ * @exports provider and hooks used by child components
  */
+
 import React, { createContext, useContext, useState } from "react";
 import axios from "axios";
 import { toast } from "react-toastify";
@@ -121,7 +126,7 @@ export const ContentProvider = ({ children }) => {
           );
 
           // keep _signatureretry on the retried request so a permanent
-          // mismatch fails once instead of starting a refresh loop.
+          // mismatch fails once instead of starting a refresh loop
           const signedRequest = adminRequestSigner.signRequest(originalRequest);
           return api(signedRequest);
         } catch (signatureError) {
@@ -155,7 +160,7 @@ export const ContentProvider = ({ children }) => {
               adminRequestSigner.clearSigningSecret();
 
               // settimeout(() => {
-              //   window.location.href = "/login";
+              // window.location.href = "/login";
               // }, 100);
             }
           }
@@ -197,7 +202,7 @@ export const ContentProvider = ({ children }) => {
         if (data[key] instanceof File) {
           formData.append(key, data[key]);
         } else if (key === "logo" || key === "favicon") {
-          // backend keeps the saved asset object unless a new file is provided.
+          // backend keeps the saved asset object unless a new file is provided
           return;
         } else if (typeof data[key] === "object" && data[key] !== null) {
           formData.append(key, JSON.stringify(data[key]));

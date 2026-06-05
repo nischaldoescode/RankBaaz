@@ -1,6 +1,11 @@
 /**
- * keeps the test page focused and readable.
+ * renders the public test page with content settings, auth aware actions, seo data, and responsive layout
+ *
+ * @file frontend/src/pages/test.jsx
+ * @module frontend/src/pages/test
+ * @exports route component rendered by the client router
  */
+
 import React, { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
@@ -550,7 +555,7 @@ const Test = () => {
       // the loading state is already managed by the starttest function in testcontext
 
       // console.log(
-      //   `starting test for course: ${courseid}, difficulty: ${selecteddifficulty.name}`
+      // `starting test for course: ${courseid}, difficulty: ${selecteddifficulty.name}`
       // );
 
       const result = await startTest(courseId, selectedDifficulty.name);
@@ -984,9 +989,9 @@ const Test = () => {
         const course = response.data.data.course;
 
         // console.log(`course loaded:`, {
-        //   name: course.name,
-        //   ispaid: course.ispaid,
-        //   difficulties: course.difficulties?.length,
+        // name: course.name,
+        // ispaid: course.ispaid,
+        // difficulties: course.difficulties?.length,
         // });
 
         setCourseData(course);
@@ -1028,7 +1033,7 @@ const Test = () => {
 
       // wait for coursedata to be loaded checking
       if (!courseData) {
-        // console.log("course data still loading...");
+        // console.log("course data still loading");
         return;
       }
 

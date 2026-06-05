@@ -1,6 +1,11 @@
 /**
- * keeps the button component focused and readable.
+ * renders the teacher button component with accessible controls and dashboard ready behavior
+ *
+ * @file teachers/src/components/ui/button.jsx
+ * @module teachers/src/components/ui/button
+ * @exports component used by pages and shared layouts
  */
+
 import * as React from "react"
 import { cva } from "class-variance-authority";
 import { Slot } from "radix-ui"

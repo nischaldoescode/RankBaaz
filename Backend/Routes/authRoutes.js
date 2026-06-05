@@ -1,6 +1,11 @@
 /**
- * keeps the auth routes route focused and readable.
+ * mounts auth routes api endpoints and keeps middleware order explicit for each request path
+ *
+ * @file backend/routes/authroutes.js
+ * @module backend/routes/authroutes
+ * @exports express router mounted by the api server
  */
+
 import express from "express";
 import {
   register,

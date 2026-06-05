@@ -1,6 +1,11 @@
 /**
- * keeps the contact page focused and readable.
+ * renders the public contact page with content settings, auth aware actions, seo data, and responsive layout
+ *
+ * @file frontend/src/pages/contact.jsx
+ * @module frontend/src/pages/contact
+ * @exports route component rendered by the client router
  */
+
 import React, { useEffect } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
@@ -254,7 +259,7 @@ const Contact = () => {
             <Link
               to="/#faqs"
               onClick={() => {
-                // scroll to faqs after navigation.
+                // scroll to faqs after navigation
                 setTimeout(() => {
                   const faqSection = document.getElementById("faqs");
                   if (faqSection) {

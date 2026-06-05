@@ -1,6 +1,11 @@
 /**
- * keeps the upload middleware focused and readable.
+ * handles upload middleware checks before controllers receive the request
+ *
+ * @file backend/middleware/upload.js
+ * @module backend/middleware/upload
+ * @exports middleware functions used by protected backend routes
  */
+
 import multer from "multer";
 import { v2 as cloudinary } from "cloudinary";
 import { createRequire } from "module";

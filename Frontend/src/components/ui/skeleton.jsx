@@ -1,6 +1,11 @@
 /**
- * keeps the skeleton component focused and readable.
+ * renders the reusable skeleton ui primitive with accessible states and theme friendly styling
+ *
+ * @file frontend/src/components/ui/skeleton.jsx
+ * @module frontend/src/components/ui/skeleton
+ * @exports component used by pages and shared layouts
  */
+
 import { cn } from "@/lib/utils"
 
 function Skeleton({

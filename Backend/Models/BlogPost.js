@@ -1,6 +1,11 @@
 /**
- * keeps the blog post model focused and readable.
+ * defines the blog post database schema, validation rules, indexes, and document relationships
+ *
+ * @file backend/models/blogpost.js
+ * @module backend/models/blogpost
+ * @exports mongoose model used by controllers and services
  */
+
 import mongoose from "mongoose";
 
 const encryptedPayloadSchema = new mongoose.Schema(

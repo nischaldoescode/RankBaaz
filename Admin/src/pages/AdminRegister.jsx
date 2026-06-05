@@ -1,6 +1,11 @@
 /**
- * keeps the admin register page focused and readable.
+ * renders the admin register workspace with data loading, actions, dialogs, and responsive states
+ *
+ * @file admin/src/pages/adminregister.jsx
+ * @module admin/src/pages/adminregister
+ * @exports route component rendered by the client router
  */
+
 import React, { useState } from "react";
 import { useAuth } from "../contexts/AuthContext";
 import { Mail, Lock, User, Calendar, Users, Eye, EyeOff, AlertCircle, CheckCircle, X } from "lucide-react";

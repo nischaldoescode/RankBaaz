@@ -1,6 +1,11 @@
 /**
- * keeps the test context context focused and readable.
+ * provides public test context state, api access, loading flags, and shared actions to child views
+ *
+ * @file frontend/src/context/testcontext.jsx
+ * @module frontend/src/context/testcontext
+ * @exports provider and hooks used by child components
  */
+
 import React, {
   createContext,
   useContext,
@@ -334,7 +339,7 @@ export const TestProvider = ({ children }) => {
       dispatch({ type: TEST_ACTIONS.SET_LOADING, payload: true });
 
       // console.log(
-      //   `starting test - course: ${courseid}, difficulty: ${difficulty}`
+      // `starting test - course: ${courseid}, difficulty: ${difficulty}`
       // );
 
       // remove caching for now to ensure fresh data
@@ -351,9 +356,9 @@ export const TestProvider = ({ children }) => {
 
         test = response.data.data;
         // console.log(`test data received:`, {
-        //   questioncount: test.questions?.length,
-        //   coursename: test.courseinfo?.name,
-        //   difficulty: test.courseinfo?.difficulty?.name,
+        // questioncount: test.questions?.length,
+        // coursename: test.courseinfo?.name,
+        // difficulty: test.courseinfo?.difficulty?.name,
         // });
       } catch (apiError) {
         // better error categorization
@@ -513,8 +518,8 @@ export const TestProvider = ({ children }) => {
 
       // final submission only - use accumulated results from component
       // console.log(
-      //   "final submission with accumulated results:",
-      //   accumulatedresults
+      // "final submission with accumulated results:",
+      // accumulatedresults
       // );
 
       if (!accumulatedResults || accumulatedResults.length === 0) {

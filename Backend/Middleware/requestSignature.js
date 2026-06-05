@@ -1,6 +1,11 @@
 /**
- * keeps the request signature middleware focused and readable.
+ * handles request signature middleware checks before controllers receive the request
+ *
+ * @file backend/middleware/requestsignature.js
+ * @module backend/middleware/requestsignature
+ * @exports middleware functions used by protected backend routes
  */
+
 import crypto from "crypto";
 import redisClient, {
   isRedisConnectionError,
@@ -309,7 +314,7 @@ export const verifyRequestSignature = async (req, res, next) => {
       .createHmac("sha256", secret)
       .update(payload)
       .digest("hex");
-    // only log signing details in development.
+    // only log signing details in development
     if (process.env.NODE_ENV === "development") {
       console.log("Verification details:", {
         method,

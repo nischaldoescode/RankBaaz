@@ -1,6 +1,11 @@
 /**
- * keeps the advanced cache middleware focused and readable.
+ * handles advanced cache middleware checks before controllers receive the request
+ *
+ * @file backend/middleware/advancedcache.js
+ * @module backend/middleware/advancedcache
+ * @exports middleware functions used by protected backend routes
  */
+
 import redisClient, { cacheUtils, CacheKeys } from "../Config/redis.js";
 
 /**
@@ -121,7 +126,7 @@ export const warmCache = async () => {
     };
 
     // warm frequently accessed endpoints
-    // note: this is a example. in production, you'd query the database directly.
+    // note: this is a example. in production, you'd query the database directly
     console.log("Cache warming completed");
   } catch (error) {
     console.error("Cache warming failed:", error.message);

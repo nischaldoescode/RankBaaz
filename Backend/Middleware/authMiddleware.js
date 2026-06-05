@@ -1,6 +1,11 @@
 /**
- * keeps the auth middleware middleware focused and readable.
+ * handles auth middleware checks before controllers receive the request
+ *
+ * @file backend/middleware/authmiddleware.js
+ * @module backend/middleware/authmiddleware
+ * @exports middleware functions used by protected backend routes
  */
+
 import jwt from "jsonwebtoken";
 import User from "../Models/User.js";
 import Admin from "../Models/Admin.js";
@@ -213,7 +218,7 @@ export const authenticateAdmin = async (req, res, next) => {
         });
       }
 
-      //  cache with adminid
+      // cache with adminid
       await setCachedUser(`admin:${decoded.adminId}`, admin);
     }
 

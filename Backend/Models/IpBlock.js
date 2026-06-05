@@ -1,6 +1,11 @@
 /**
- * keeps the ip block model focused and readable.
+ * defines the ip block database schema, validation rules, indexes, and document relationships
+ *
+ * @file backend/models/ipblock.js
+ * @module backend/models/ipblock
+ * @exports mongoose model used by controllers and services
  */
+
 import mongoose from "mongoose";
 
 /**
@@ -27,7 +32,7 @@ const ipBlockSchema = new mongoose.Schema(
       type: Date,
       default: null,
     },
-    // user may be deleted while the block remains.
+    // user may be deleted while the block remains
     userId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",

@@ -1,6 +1,11 @@
 /**
- * keeps the protected route component focused and readable.
+ * renders the admin protected route component with navigation, controls, user actions, and responsive states
+ *
+ * @file admin/src/components/protectedroute.jsx
+ * @module admin/src/components/protectedroute
+ * @exports component used by pages and shared layouts
  */
+
 import React from "react";
 import { useAuth } from "../contexts/AuthContext"; // this import
 

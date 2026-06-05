@@ -1,6 +1,11 @@
 /**
- * keeps the teacher management page focused and readable.
+ * renders the admin teacher management workspace with data loading, actions, dialogs, and responsive states
+ *
+ * @file admin/src/pages/teachermanagement.jsx
+ * @module admin/src/pages/teachermanagement
+ * @exports route component rendered by the client router
  */
+
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAdmin } from "../contexts/AdminContext.jsx";

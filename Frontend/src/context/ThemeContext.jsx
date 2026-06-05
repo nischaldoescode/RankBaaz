@@ -1,6 +1,11 @@
 /**
- * keeps the theme context context focused and readable.
+ * provides public theme context state, api access, loading flags, and shared actions to child views
+ *
+ * @file frontend/src/context/themecontext.jsx
+ * @module frontend/src/context/themecontext
+ * @exports provider and hooks used by child components
  */
+
 import React, { createContext, useContext, useReducer, useEffect } from 'react';
 
 // initial state
@@ -131,23 +136,22 @@ export const ThemeProvider = ({ children }) => {
     localStorage.setItem('theme-preferences', JSON.stringify(state));
 
     // keep theme classes in sync without dropping classes from other libraries
-    const root = document.documentElement;
-    Array.from(root.classList)
+    const root = document.documentelement;
+    array.from(root.classlist)
       .filter(
-        (className) =>
-          className.startsWith('theme-') ||
-          className.startsWith('color-') ||
-          className.startsWith('font-')
+        (classname) =>
+          classname.startswith('theme-') ||
+          classname.startswith('color-') ||
+          classname.startswith('font-')
       )
-      .forEach((className) => root.classList.remove(className));
+      .foreach((classname) => root.classlist.remove(classname));
 
-    root.classList.add(
+    root.classlist.add(
       `theme-${state.theme}`,
-      `color-${state.primaryColor}`,
-      `font-${state.fontSize}`
+      `color-${state.primarycolor}`,
+      `font-${state.fontsize}`
     );
-    root.classList.toggle('dark', state.theme === 'dark');
-
+    root.classlist.toggle('dark', state.theme === 'dark');
     // apply reduced motion
     if (state.reducedMotion || !state.animations) {
       document.documentElement.style.setProperty('--animation-duration', '0s');

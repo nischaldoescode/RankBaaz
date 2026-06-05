@@ -1,6 +1,11 @@
 /**
- * keeps the content routes route focused and readable.
+ * mounts content routes api endpoints and keeps middleware order explicit for each request path
+ *
+ * @file backend/routes/contentroutes.js
+ * @module backend/routes/contentroutes
+ * @exports express router mounted by the api server
  */
+
 import express from "express";
 import {
   getContentSettings,

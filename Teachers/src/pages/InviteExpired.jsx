@@ -1,6 +1,11 @@
 /**
- * keeps the invite expired page focused and readable.
+ * renders the teacher invite expired page with auth flow, form state, validation, and responsive layout
+ *
+ * @file teachers/src/pages/inviteexpired.jsx
+ * @module teachers/src/pages/inviteexpired
+ * @exports route component rendered by the client router
  */
+
 import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { useSearchParams } from "react-router-dom";

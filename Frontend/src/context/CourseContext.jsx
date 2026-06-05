@@ -1,6 +1,11 @@
 /**
- * keeps the course context context focused and readable.
+ * provides public course context state, api access, loading flags, and shared actions to child views
+ *
+ * @file frontend/src/context/coursecontext.jsx
+ * @module frontend/src/context/coursecontext
+ * @exports provider and hooks used by child components
  */
+
 import React, { createContext, useContext, useReducer, useEffect } from "react";
 import { apiMethods, handleApiError } from "../services/api";
 import toast from "react-hot-toast";

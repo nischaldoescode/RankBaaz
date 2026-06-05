@@ -1,6 +1,11 @@
 /**
- * keeps the points service service focused and readable.
+ * coordinates points service business logic, cache fallbacks, database reads, and reusable api side effects
+ *
+ * @file backend/services/pointsservice.js
+ * @module backend/services/pointsservice
+ * @exports service functions used by controllers and scheduled work
  */
+
 import User from "../Models/User.js";
 import TestResult from "../Models/TestResult.js";
 import redisClient from "../Config/redis.js";

@@ -1,6 +1,11 @@
 /**
- * keeps the login page focused and readable.
+ * renders the public login page with content settings, auth aware actions, seo data, and responsive layout
+ *
+ * @file frontend/src/pages/login.jsx
+ * @module frontend/src/pages/login
+ * @exports route component rendered by the client router
  */
+
 import React, { useState, useEffect, useMemo } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";

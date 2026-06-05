@@ -1,6 +1,11 @@
 /**
- * keeps the app stylesheet focused and readable.
+ * styles the admin app layer with responsive layout rules, controls, surfaces, and theme polish
+ *
+ * @file admin/src/app.css
+ * @module admin/src/app
+ * @exports stylesheet rules consumed by the matching app or component
  */
+
 @import "tailwindcss";
 input[type=number] {
   -moz-appearance: textfield;

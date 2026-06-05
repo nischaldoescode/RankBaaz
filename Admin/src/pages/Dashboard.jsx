@@ -1,6 +1,11 @@
 /**
- * keeps the dashboard page focused and readable.
+ * renders the admin dashboard workspace with data loading, actions, dialogs, and responsive states
+ *
+ * @file admin/src/pages/dashboard.jsx
+ * @module admin/src/pages/dashboard
+ * @exports route component rendered by the client router
  */
+
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import {

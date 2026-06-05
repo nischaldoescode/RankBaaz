@@ -1,6 +1,11 @@
 /**
- * keeps the select component focused and readable.
+ * renders the reusable select ui primitive with accessible states and theme friendly styling
+ *
+ * @file frontend/src/components/ui/select.jsx
+ * @module frontend/src/components/ui/select
+ * @exports component used by pages and shared layouts
  */
+
 import * as React from "react"
 import * as SelectPrimitive from "@radix-ui/react-select"
 import { Check, ChevronDown, ChevronUp } from "lucide-react"

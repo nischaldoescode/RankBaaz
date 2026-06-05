@@ -1,6 +1,11 @@
 /**
- * keeps the badge component focused and readable.
+ * renders the reusable badge ui primitive with accessible states and theme friendly styling
+ *
+ * @file frontend/src/components/ui/badge.jsx
+ * @module frontend/src/components/ui/badge
+ * @exports component used by pages and shared layouts
  */
+
 import * as React from "react"
 import { cva } from "class-variance-authority";
 

@@ -1,5 +1,9 @@
 /**
- * keeps the pdf ratelimiter utility focused and readable.
+ * provides pdf download rate limiting with redis fallback handling
+ *
+ * @file backend/helpers/pdfratelimiter.js
+ * @module backend/helpers/pdfratelimiter
+ * @exports middleware used by pdf download routes
  */
 // ratelimiters.js
 import ioredisRatelimit from "ioredis-ratelimit";

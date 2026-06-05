@@ -1,6 +1,11 @@
 /**
- * keeps the teacher context context focused and readable.
+ * provides teacher context state, auth checks, profile data, and shared actions to dashboard views
+ *
+ * @file teachers/src/context/teachercontext.jsx
+ * @module teachers/src/context/teachercontext
+ * @exports provider and hooks used by child components
  */
+
 import React, {
   createContext,
   useContext,
@@ -56,13 +61,13 @@ export const TeacherProvider = ({ children }) => {
       localStorage.setItem("teacher", JSON.stringify(profileTeacher));
       return true;
     } catch (err) {
-      // only clear session on 401.
+      // only clear session on 401
       if (err.response?.status === 401) {
         localStorage.removeItem("teacher");
         teacherRequestSigner.clearSigningSecret();
         setTeacher(null);
       }
-      // protected routes handle redirection.
+      // protected routes handle redirection
       return false;
     } finally {
       setLoading(false);
@@ -70,7 +75,7 @@ export const TeacherProvider = ({ children }) => {
   }, []);
 
   useEffect(() => {
-    // signup and expired invite pages do not represent an active session.
+    // signup and expired invite pages do not represent an active session
     const publicPaths = ["/signup", "/invite-expired"];
     const currentPath = window.location.pathname;
     const isPublicPath = publicPaths.some((p) => currentPath.startsWith(p));

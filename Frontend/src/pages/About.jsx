@@ -1,6 +1,11 @@
 /**
- * keeps the about page focused and readable.
+ * renders the public about page with content settings, auth aware actions, seo data, and responsive layout
+ *
+ * @file frontend/src/pages/about.jsx
+ * @module frontend/src/pages/about
+ * @exports route component rendered by the client router
  */
+
 import React, { useRef, useState } from "react";
 import { motion, useScroll, useTransform } from "framer-motion";
 import { Link } from "react-router-dom";

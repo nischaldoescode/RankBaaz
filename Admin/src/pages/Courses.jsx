@@ -1,6 +1,11 @@
 /**
- * keeps the courses page focused and readable.
+ * renders the admin courses workspace with data loading, actions, dialogs, and responsive states
+ *
+ * @file admin/src/pages/courses.jsx
+ * @module admin/src/pages/courses
+ * @exports route component rendered by the client router
  */
+
 import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { useAdmin } from "../contexts/AdminContext";

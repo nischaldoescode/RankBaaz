@@ -1,6 +1,11 @@
 /**
- * keeps the category model focused and readable.
+ * defines the category database schema, validation rules, indexes, and document relationships
+ *
+ * @file backend/models/category.js
+ * @module backend/models/category
+ * @exports mongoose model used by controllers and services
  */
+
 import mongoose from "mongoose";
 
 const categorySchema = new mongoose.Schema(

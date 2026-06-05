@@ -1,6 +1,11 @@
 /**
- * keeps the cookie consent component focused and readable.
+ * renders the shared cookie consent component used across public pages and app level flows
+ *
+ * @file frontend/src/components/common/cookieconsent.jsx
+ * @module frontend/src/components/common/cookieconsent
+ * @exports component used by pages and shared layouts
  */
+
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Link } from "react-router-dom";

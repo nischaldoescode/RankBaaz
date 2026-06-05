@@ -1,6 +1,11 @@
 /**
- * keeps the course review model focused and readable.
+ * defines the course review database schema, validation rules, indexes, and document relationships
+ *
+ * @file backend/models/coursereview.js
+ * @module backend/models/coursereview
+ * @exports mongoose model used by controllers and services
  */
+
 import mongoose from "mongoose";
 
 const courseReviewSchema = new mongoose.Schema(

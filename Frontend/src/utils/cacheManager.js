@@ -1,6 +1,11 @@
 /**
- * keeps the cache manager utility focused and readable.
+ * provides public cache manager utilities for secure requests, validation, caching, and shared helpers
+ *
+ * @file frontend/src/utils/cachemanager.js
+ * @module frontend/src/utils/cachemanager
+ * @exports helpers imported by related app modules
  */
+
 // src/utils/cachemanager.js
 /**
  * cache manager for api responses and images
@@ -117,17 +122,17 @@ class CacheManager {
             return;
           }
 
-          //   console.log(`[cache] hit for ${endpoint} (age: ${math.round((date.now() - cached.timestamp) / 1000 / 60)}m)`);
+          // console.log(`[cache] hit for ${endpoint} (age: ${math.round((date.now() - cached.timestamp) / 1000 / 60)}m)`);
           resolve(cached.data);
         };
 
         request.onerror = () => {
-          //   console.error(request.error);
+          // console.error(request.error);
           reject(request.error);
         };
       });
     } catch (error) {
-      //   console.error(error);
+      // console.error(error);
       return null;
     }
   }
@@ -158,17 +163,17 @@ class CacheManager {
         const request = store.put(cacheEntry);
 
         request.onsuccess = () => {
-          //   console.log(`[cache] stored ${endpoint}`);
+          // console.log(`[cache] stored ${endpoint}`);
           resolve();
         };
 
         request.onerror = () => {
-          //   console.error(request.error);
+          // console.error(request.error);
           reject(request.error);
         };
       });
     } catch (error) {
-      //   console.error( error);
+      // console.error( error);
     }
   }
 
@@ -182,7 +187,7 @@ class CacheManager {
       const store = transaction.objectStore(STORES.API_CACHE);
       store.delete(key);
     } catch (error) {
-      //   console.error(error);
+      // console.error(error);
     }
   }
 
@@ -207,7 +212,7 @@ class CacheManager {
           if (cursor) {
             if (cursor.value.endpoint.includes(endpointPattern)) {
               cursor.delete();
-              //   console.log(`[cache] cleared ${cursor.value.endpoint}`);
+              // console.log(`[cache] cleared ${cursor.value.endpoint}`);
             }
             cursor.continue();
           } else {
@@ -218,7 +223,7 @@ class CacheManager {
         request.onerror = () => reject(request.error);
       });
     } catch (error) {
-      //   console.error(error);
+      // console.error(error);
     }
   }
 
@@ -248,14 +253,14 @@ class CacheManager {
             cursor.continue();
           } else {
             if (cleared > 0) {
-              //   console.log(`[cache] cleared ${cleared} expired entries`);
+              // console.log(`[cache] cleared ${cleared} expired entries`);
             }
             resolve(cleared);
           }
         };
       });
     } catch (error) {
-      //   console.error(error);
+      // console.error(error);
       return 0;
     }
   }
@@ -277,9 +282,9 @@ class CacheManager {
         transaction.objectStore(STORES.IMAGE_CACHE).clear(),
       ]);
 
-      //   console.log('[cache] all cache cleared');
+      // console.log('[cache] all cache cleared');
     } catch (error) {
-      //   console.error(error);
+      // console.error(error);
     }
   }
 
@@ -317,7 +322,7 @@ class CacheManager {
         };
       });
     } catch (error) {
-      //   console.error(error);
+      // console.error(error);
       return { total: 0, valid: 0, expired: 0 };
     }
   }
@@ -504,7 +509,7 @@ export async function cachedAPICall(
     // if fetch fails, try to return stale cache as fallback
     const stale = await cacheManager.getAPI(endpoint, params);
     if (stale) {
-      //   console.log(`[cache] using stale cache for ${endpoint} due to fetch error`);
+      // console.log(`[cache] using stale cache for ${endpoint} due to fetch error`);
       return stale;
     }
     throw error;

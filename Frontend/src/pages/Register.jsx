@@ -1,6 +1,11 @@
 /**
- * keeps the register page focused and readable.
+ * renders the public register page with content settings, auth aware actions, seo data, and responsive layout
+ *
+ * @file frontend/src/pages/register.jsx
+ * @module frontend/src/pages/register
+ * @exports route component rendered by the client router
  */
+
 import React, { useState, useEffect, useCallback, useMemo, memo } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";

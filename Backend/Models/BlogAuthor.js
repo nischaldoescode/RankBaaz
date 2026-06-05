@@ -1,6 +1,11 @@
 /**
- * keeps the blog author model focused and readable.
+ * defines the blog author database schema, validation rules, indexes, and document relationships
+ *
+ * @file backend/models/blogauthor.js
+ * @module backend/models/blogauthor
+ * @exports mongoose model used by controllers and services
  */
+
 import mongoose from "mongoose";
 
 const blogAuthorSchema = new mongoose.Schema(

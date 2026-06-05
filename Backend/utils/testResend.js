@@ -1,6 +1,11 @@
 /**
- * keeps the test resend utility focused and readable.
+ * provides test resend utilities shared by backend workflows and operational scripts
+ *
+ * @file backend/utils/testresend.js
+ * @module backend/utils/testresend
+ * @exports module members used by the related app runtime
  */
+
 // test-resend.js
 import { Resend } from "resend";
 import dotenv from "dotenv";

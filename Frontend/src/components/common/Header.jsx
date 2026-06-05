@@ -1,6 +1,11 @@
 /**
- * keeps the header component focused and readable.
+ * renders the shared header component used across public pages and app level flows
+ *
+ * @file frontend/src/components/common/header.jsx
+ * @module frontend/src/components/common/header
+ * @exports component used by pages and shared layouts
  */
+
 import React, { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
@@ -104,26 +109,25 @@ const Header = () => {
   };
 
   // desktop nav link
-  const DesktopNavLink = ({ link }) => (
-    <Link
+  const desktopnavlink = ({ link }) => (
+    <link
       to={link.path}
-      className={`relative flex items-center gap-1.5 px-3.5 py-2 rounded-full text-sm font-semibold transition-all duration-200 ${
-        isActive(link.path)
+      classname={`relative flex items-center gap-1.5 px-3.5 py-2 rounded-full text-sm font-semibold transition-all duration-200 ${
+        isactive(link.path)
           ? "text-primary"
           : "text-muted-foreground hover:text-foreground hover:bg-blue-50"
       }`}
     >
-      {isActive(link.path) && (
+      {isactive(link.path) && (
         <motion.span
-          layoutId="desktop-nav-fill"
-          className="absolute inset-0 rounded-full bg-primary/10"
+          layoutid="desktop-nav-fill"
+          classname="absolute inset-0 rounded-full bg-primary/10"
           transition={{ type: "spring", stiffness: 420, damping: 34 }}
         />
       )}
-      <span className="relative z-10">{link.label}</span>
-    </Link>
+      <span classname="relative z-10">{link.label}</span>
+    </link>
   );
-
   return (
     <>
       {/* desktop and tablet header */}

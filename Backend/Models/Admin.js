@@ -1,6 +1,11 @@
 /**
- * keeps the admin model focused and readable.
+ * defines the admin database schema, validation rules, indexes, and document relationships
+ *
+ * @file backend/models/admin.js
+ * @module backend/models/admin
+ * @exports mongoose model used by controllers and services
  */
+
 import mongoose from "mongoose";
 
 const adminSchema = new mongoose.Schema(

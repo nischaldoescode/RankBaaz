@@ -1,5 +1,9 @@
 /**
- * keeps the app module focused and readable.
+ * handles blog search, comment auth, share links, counters, and ambient parallax
+ *
+ * @file blogs/public/app.js
+ * @module blogs/public/app
+ * @exports browser behavior for the server-rendered blogs frontend
  */
 const hexToBytes = (hex) => {
   const bytes = new Uint8Array(hex.length / 2);

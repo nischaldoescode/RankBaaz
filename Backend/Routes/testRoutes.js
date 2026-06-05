@@ -1,6 +1,11 @@
 /**
- * keeps the test routes route focused and readable.
+ * mounts test routes api endpoints and keeps middleware order explicit for each request path
+ *
+ * @file backend/routes/testroutes.js
+ * @module backend/routes/testroutes
+ * @exports express router mounted by the api server
  */
+
 import express from "express";
 import {
   startTest,

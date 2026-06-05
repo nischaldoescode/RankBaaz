@@ -1,6 +1,11 @@
 /**
- * keeps the about preview utility focused and readable.
+ * builds the admin about preview helper view used for content previews and modal workflows
+ *
+ * @file admin/src/helpers/aboutpreview.jsx
+ * @module admin/src/helpers/aboutpreview
+ * @exports module members used by the related app runtime
  */
+
 import {
   Brain,
   Target,

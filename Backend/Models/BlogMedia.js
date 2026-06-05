@@ -1,6 +1,11 @@
 /**
- * keeps the blog media model focused and readable.
+ * defines the blog media database schema, validation rules, indexes, and document relationships
+ *
+ * @file backend/models/blogmedia.js
+ * @module backend/models/blogmedia
+ * @exports mongoose model used by controllers and services
  */
+
 import mongoose from "mongoose";
 
 const blogMediaSchema = new mongoose.Schema(

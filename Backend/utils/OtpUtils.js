@@ -1,6 +1,11 @@
 /**
- * keeps the otp utils utility focused and readable.
+ * provides otp utils utilities shared by backend workflows and operational scripts
+ *
+ * @file backend/utils/otputils.js
+ * @module backend/utils/otputils
+ * @exports module members used by the related app runtime
  */
+
 import { Resend } from "resend";
 import dotenv from "dotenv";
 

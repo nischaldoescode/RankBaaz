@@ -1,6 +1,11 @@
 /**
- * keeps the teacher join page focused and readable.
+ * renders the public teacher join page with content settings, auth aware actions, seo data, and responsive layout
+ *
+ * @file frontend/src/pages/teacherjoin.jsx
+ * @module frontend/src/pages/teacherjoin
+ * @exports route component rendered by the client router
  */
+
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import axios from "axios";
@@ -215,7 +220,7 @@ const ApplicationForm = ({ onApplied }) => {
     } catch (err) {
       const msg = err.response?.data?.message || "Failed to submit";
       if (msg.toLowerCase().includes("already")) {
-        // keep the existing application state visible.
+        // keep the existing application state visible
         setStored({
           email: form.email,
           status: "pending",
@@ -418,7 +423,7 @@ const TeacherJoin = () => {
   const PORTAL_URL =
     import.meta.env.VITE_TEACHER_PORTAL_URL || "http://localhost:5175";
 
-  // keep hash navigation focused on the form.
+  // keep hash navigation focused on the form
   useEffect(() => {
     if (typeof window === "undefined") return;
     if (window.location.hash === "#apply") return;

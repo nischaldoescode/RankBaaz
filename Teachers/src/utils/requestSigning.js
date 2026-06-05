@@ -1,10 +1,15 @@
 /**
- * keeps the request signing utility focused and readable.
+ * provides teacher request signing utilities for secure requests, validation, and shared client helpers
+ *
+ * @file teachers/src/utils/requestsigning.js
+ * @module teachers/src/utils/requestsigning
+ * @exports helpers imported by related app modules
  */
+
 import crypto from "crypto-js";
 
 /**
- * signs teacher panel requests using the same hmac flow as admin.
+ * signs teacher panel requests using the same hmac flow as admin
  */
 class TeacherRequestSigner {
   constructor() {

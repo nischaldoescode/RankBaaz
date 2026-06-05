@@ -1,6 +1,11 @@
 /**
- * keeps the contact info model focused and readable.
+ * defines the contact info database schema, validation rules, indexes, and document relationships
+ *
+ * @file backend/models/contactinfo.js
+ * @module backend/models/contactinfo
+ * @exports mongoose model used by controllers and services
  */
+
 import mongoose from "mongoose";
 import connection2 from "../Config/mongodb2.js";
 

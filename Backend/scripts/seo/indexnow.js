@@ -1,6 +1,11 @@
 /**
- * keeps the indexnow module focused and readable.
+ * runs the indexnow backend script with clear inputs, service calls, and operational output
+ *
+ * @file backend/scripts/seo/indexnow.js
+ * @module backend/scripts/seo/indexnow
+ * @exports module members used by the related app runtime
  */
+
 const key = "4eeccfa93b5449c58a8a6cd15e76d9fc";
 const host = "vidhgrow.online";
 const keyLocation = "https://vidhgrow.online/4eeccfa93b5449c58a8a6cd15e76d9fc.txt";

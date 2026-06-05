@@ -1,6 +1,11 @@
 /**
- * keeps the blog management page focused and readable.
+ * renders the admin blog management workspace with data loading, actions, dialogs, and responsive states
+ *
+ * @file admin/src/pages/blogmanagement.jsx
+ * @module admin/src/pages/blogmanagement
+ * @exports route component rendered by the client router
  */
+
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import axios from "axios";
 import { toast } from "react-toastify";
@@ -895,7 +900,7 @@ const BlogManagement = () => {
         try {
           if (range.intersectsNode(block)) blocks.add(block);
         } catch {
-          // ignore detached nodes while the editor is changing.
+          // ignore detached nodes while the editor is changing
         }
       });
 

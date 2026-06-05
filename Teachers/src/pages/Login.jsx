@@ -1,6 +1,11 @@
 /**
- * keeps the login page focused and readable.
+ * renders the teacher login page with auth flow, form state, validation, and responsive layout
+ *
+ * @file teachers/src/pages/login.jsx
+ * @module teachers/src/pages/login
+ * @exports route component rendered by the client router
  */
+
 import React, { useEffect, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { motion } from "framer-motion";
@@ -63,7 +68,7 @@ const Login = () => {
         (msg.toLowerCase().includes("not found") ||
           msg.toLowerCase().includes("invalid credentials"))
       ) {
-        // infer whether the email exists from the login error.
+        // infer whether the email exists from the login error
         // since the backend returns "invalid credentials" for both wrong password
         // and non-existent email (security best practice), we show a helpful message
         // only if the email field looks valid but login fails

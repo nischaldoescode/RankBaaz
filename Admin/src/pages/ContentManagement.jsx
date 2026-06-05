@@ -1,6 +1,11 @@
 /**
- * keeps the content management page focused and readable.
+ * renders the admin content management workspace with data loading, actions, dialogs, and responsive states
+ *
+ * @file admin/src/pages/contentmanagement.jsx
+ * @module admin/src/pages/contentmanagement
+ * @exports route component rendered by the client router
  */
+
 import React, { useState, useEffect, useCallback } from "react";
 import { toast } from "react-toastify";
 import { useContent } from "../contexts/ContentContext";
@@ -595,7 +600,6 @@ const SortableFAQItem = ({ faq, index, handleEditFAQ, handleDeleteFAQ }) => {
 };
 
 // main component
-
 const ContentManagement = () => {
   const {
     loading,

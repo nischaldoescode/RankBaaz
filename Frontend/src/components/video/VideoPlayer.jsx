@@ -1,6 +1,11 @@
 /**
- * keeps the video player component focused and readable.
+ * renders the public video player component with reusable layout, actions, and responsive behavior
+ *
+ * @file frontend/src/components/video/videoplayer.jsx
+ * @module frontend/src/components/video/videoplayer
+ * @exports component used by pages and shared layouts
  */
+
 import React, { useMemo } from "react";
 import { AlertCircle } from "lucide-react";
 

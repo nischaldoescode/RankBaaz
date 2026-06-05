@@ -1,6 +1,11 @@
 /**
- * keeps the pdf service service focused and readable.
+ * coordinates pdf service business logic, cache fallbacks, database reads, and reusable api side effects
+ *
+ * @file backend/services/pdfservice.js
+ * @module backend/services/pdfservice
+ * @exports service functions used by controllers and scheduled work
  */
+
 import PDFDocument from "pdfkit";
 
 /**
@@ -84,7 +89,7 @@ class PDFService {
       return currentY;
     }
 
-    // ... existing line-by-line rendering logic remains same ...
+    // keep line rendering compact so pdf layout stays predictable
     const lines = text.split("\n");
 
     lines.forEach((line, lineIndex) => {

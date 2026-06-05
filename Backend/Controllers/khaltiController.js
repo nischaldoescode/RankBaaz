@@ -1,6 +1,11 @@
 /**
- * keeps the khalti controller controller focused and readable.
+ * handles khalti controller api requests, input validation, persistence calls, side effects, and response shaping
+ *
+ * @file backend/controllers/khalticontroller.js
+ * @module backend/controllers/khalticontroller
+ * @exports request handlers used by backend routes
  */
+
 import axios from "axios";
 import Course from "../Models/Course.js";
 import Payment from "../Models/Payment.js";
@@ -14,7 +19,7 @@ const KHALTI_BASE = process.env.NODE_ENV === "production"
 const KHALTI_SECRET = process.env.KHALTI_SECRET_KEY;
 
 /**
- * starts a khalti payment for nepal.
+ * starts a khalti payment for nepal
  */
 export const initiateKhaltiPayment = async (req, res) => {
   try {
@@ -211,7 +216,7 @@ export const verifyKhaltiPayment = async (req, res) => {
 };
 
 /**
- * handles the user returning from khalti.
+ * handles the user returning from khalti
  * frontend handles the redirect; this is for backend confirmation only
  */
 export const khaltiCallback = async (req, res) => {

@@ -1,6 +1,11 @@
 /**
- * keeps the animations stylesheet focused and readable.
+ * styles the public animations layer with responsive rules, theme tokens, animations, and app surfaces
+ *
+ * @file frontend/src/styles/animations.css
+ * @module frontend/src/styles/animations
+ * @exports stylesheet rules consumed by the matching app or component
  */
+
 /* custom keyframe animations */
 @keyframes fadeInUp {
   from {
@@ -595,9 +600,9 @@
 
 /* reduced motion preferences */
 @media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
+  * ,
+  * ::before,
+  * ::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;

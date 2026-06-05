@@ -1,6 +1,11 @@
 /**
- * keeps the home preview utility focused and readable.
+ * builds the admin home preview helper view used for content previews and modal workflows
+ *
+ * @file admin/src/helpers/homepreview.jsx
+ * @module admin/src/helpers/homepreview
+ * @exports module members used by the related app runtime
  */
+
 import {
   Brain,
   Target,

@@ -1,6 +1,11 @@
 /**
- * keeps the rich text renderer component focused and readable.
+ * renders the public rich text renderer component with reusable layout, actions, and responsive behavior
+ *
+ * @file frontend/src/components/plugins/richtextrenderer.jsx
+ * @module frontend/src/components/plugins/richtextrenderer
+ * @exports component used by pages and shared layouts
  */
+
 import React from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkMath from 'remark-math';

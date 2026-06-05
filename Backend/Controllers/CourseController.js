@@ -1,6 +1,11 @@
 /**
- * keeps the course controller controller focused and readable.
+ * handles course controller api requests, input validation, persistence calls, side effects, and response shaping
+ *
+ * @file backend/controllers/coursecontroller.js
+ * @module backend/controllers/coursecontroller
+ * @exports request handlers used by backend routes
  */
+
 import { body, validationResult } from "express-validator";
 import Course from "../Models/Course.js";
 import TestResult from "../Models/TestResult.js";
@@ -408,7 +413,7 @@ export const createCourse = async (req, res) => {
       console.log("No course image file uploaded");
     }
 
-    //handle video links only for paid courses
+    // handle video links only for paid courses
     let videoContent = {
       type: "none",
       courseVideo: { links: [] },
@@ -773,7 +778,7 @@ export const updateCourse = async (req, res) => {
 
             // process each difficulty's links
             for (const [diffName, diffData] of Object.entries(diffVideosData)) {
-              //  skip if no links provided (make it optional)
+              // skip if no links provided (make it optional)
               if (!diffData.links || diffData.links.length === 0) {
                 continue; // skip this difficulty, don't throw error
               }

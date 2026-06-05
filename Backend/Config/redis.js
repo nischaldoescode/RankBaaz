@@ -1,5 +1,9 @@
 /**
- * keeps the redis module focused and readable.
+ * configures redis for backend startup, shared connections, cache helpers, and production fallbacks
+ *
+ * @file backend/config/redis.js
+ * @module backend/config/redis
+ * @exports redis client, cache helpers, health checks, and invalidation helpers
  */
 import Redis from "ioredis";
 import dotenv from "dotenv";
@@ -97,7 +101,7 @@ const redisClient = new Redis(redisConnectionUrl, {
   // Keep-alive to prevent connection drops
   keepAlive: 30000,
 
-  // Keep command failure paths predictable when Redis is unavailable.
+  // Keep command failure paths predictable when Redis is unavailable
   enableAutoPipelining: false,
 
   // Lazy connection (connect on first command)

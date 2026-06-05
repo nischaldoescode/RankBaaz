@@ -1,6 +1,11 @@
 /**
- * keeps the pending registration model focused and readable.
+ * defines the pending registration database schema, validation rules, indexes, and document relationships
+ *
+ * @file backend/models/pendingregistration.js
+ * @module backend/models/pendingregistration
+ * @exports mongoose model used by controllers and services
  */
+
 import mongoose from "mongoose";
 
 const pendingRegistrationSchema = new mongoose.Schema({

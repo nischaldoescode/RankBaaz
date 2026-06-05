@@ -1,6 +1,11 @@
 /**
- * keeps the loading component focused and readable.
+ * renders the shared loading component used across public pages and app level flows
+ *
+ * @file frontend/src/components/common/loading.jsx
+ * @module frontend/src/components/common/loading
+ * @exports component used by pages and shared layouts
  */
+
 import React from 'react';
 import { motion } from 'framer-motion';
 import { useTheme } from '../../context/ThemeContext';

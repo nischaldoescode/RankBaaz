@@ -1,6 +1,11 @@
 /**
- * keeps the input component focused and readable.
+ * renders the reusable input ui primitive with accessible states and theme friendly styling
+ *
+ * @file frontend/src/components/ui/input.jsx
+ * @module frontend/src/components/ui/input
+ * @exports component used by pages and shared layouts
  */
+
 import * as React from "react"
 
 import { cn } from "@/lib/utils"

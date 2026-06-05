@@ -1,6 +1,11 @@
 /**
- * keeps the scroll area component focused and readable.
+ * renders the reusable scroll area ui primitive with accessible states and theme friendly styling
+ *
+ * @file frontend/src/components/ui/scroll-area.jsx
+ * @module frontend/src/components/ui/scroll-area
+ * @exports component used by pages and shared layouts
  */
+
 import * as React from "react"
 import * as ScrollAreaPrimitive from "@radix-ui/react-scroll-area"
 

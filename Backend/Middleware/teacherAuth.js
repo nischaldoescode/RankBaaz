@@ -1,6 +1,11 @@
 /**
- * keeps the teacher auth middleware focused and readable.
+ * handles teacher auth middleware checks before controllers receive the request
+ *
+ * @file backend/middleware/teacherauth.js
+ * @module backend/middleware/teacherauth
+ * @exports middleware functions used by protected backend routes
  */
+
 import jwt from "jsonwebtoken";
 import Teacher from "../Models/Teacher.js";
 import redisClient from "../Config/redis.js";
@@ -96,8 +101,8 @@ export const authenticateTeacher = async (req, res, next) => {
 };
 
 /**
- * block teacher-only features until documents are verified.
- * profile + document upload routes stay open so the teacher can verification.
+ * block teacher-only features until documents are verified
+ * profile + document upload routes stay open so the teacher can verification
  */
 export const requireDocumentVerification = (req, res, next) => {
   const teacher = req.teacher;

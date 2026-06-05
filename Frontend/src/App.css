@@ -1,6 +1,11 @@
 /**
- * keeps the app stylesheet focused and readable.
+ * styles the public app layer with responsive rules, theme tokens, animations, and app surfaces
+ *
+ * @file frontend/src/app.css
+ * @module frontend/src/app
+ * @exports stylesheet rules consumed by the matching app or component
  */
+
 @import "tailwindcss";
 @import "tw-animate-css";
 

@@ -1,6 +1,11 @@
 /**
- * keeps the bot protection middleware focused and readable.
+ * handles bot protection middleware checks before controllers receive the request
+ *
+ * @file backend/middleware/botprotection.js
+ * @module backend/middleware/botprotection
+ * @exports middleware functions used by protected backend routes
  */
+
 import redisClient, {
   isRedisConnectionError,
   summarizeRedisError,
@@ -152,7 +157,7 @@ const isLegitimateOrigin = (origin, referer) => {
 
       if (!isAllowed) {
         // security: detect cors proxy patterns
-        // common patterns: cors-anywhere, allorigins, etc.
+        // common patterns: cors-anywhere, allorigins, etc
         const corsProxyPatterns = [
           /cors-anywhere/i,
           /corsproxy/i,
@@ -407,7 +412,7 @@ export const botProtection = async (req, res, next) => {
     const origin = req.get("Origin") || "";
     const referer = req.get("Referer") || "";
 
-    // layer 1: allow health and harmless browser/host probes.
+    // layer 1: allow health and harmless browser/host probes
     if (req.path === "/health" || req.path === "/" || req.path === "/favicon.ico") {
       return next();
     }

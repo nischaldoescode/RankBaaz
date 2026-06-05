@@ -1,6 +1,11 @@
 /**
- * keeps the payment routes route focused and readable.
+ * mounts payment routes api endpoints and keeps middleware order explicit for each request path
+ *
+ * @file backend/routes/paymentroutes.js
+ * @module backend/routes/paymentroutes
+ * @exports express router mounted by the api server
  */
+
 import express from "express";
 import {
   createOrder,

@@ -1,6 +1,11 @@
 /**
- * keeps the dev tools controller controller focused and readable.
+ * handles dev tools controller api requests, input validation, persistence calls, side effects, and response shaping
+ *
+ * @file backend/controllers/devtoolscontroller.js
+ * @module backend/controllers/devtoolscontroller
+ * @exports request handlers used by backend routes
  */
+
 import User from "../Models/User.js";
 import Course from "../Models/Course.js";
 import pointsService from "../services/pointsService.js";

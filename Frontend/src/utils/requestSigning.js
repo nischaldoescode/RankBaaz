@@ -1,6 +1,11 @@
 /**
- * keeps the request signing utility focused and readable.
+ * provides public request signing utilities for secure requests, validation, caching, and shared helpers
+ *
+ * @file frontend/src/utils/requestsigning.js
+ * @module frontend/src/utils/requestsigning
+ * @exports helpers imported by related app modules
  */
+
 import crypto from "crypto-js";
 
 // utility for signing api requests

@@ -1,6 +1,11 @@
 /**
- * keeps the auth controller controller focused and readable.
+ * handles auth controller api requests, input validation, persistence calls, side effects, and response shaping
+ *
+ * @file backend/controllers/authcontroller.js
+ * @module backend/controllers/authcontroller
+ * @exports request handlers used by backend routes
  */
+
 import bcrypt from "bcryptjs";
 import CryptoJS from "crypto-js";
 import jwt from "jsonwebtoken";
@@ -812,7 +817,7 @@ export const verifyOTP = async (req, res) => {
       });
     }
 
-    // check if username is already taken anywhere public handles are used.
+    // check if username is already taken anywhere public handles are used
     const Teacher = (await import("../Models/Teacher.js")).default;
     const [existingUsername, existingTeacherUsername] = await Promise.all([
       User.findOne({ username: normalizedUsername }),

@@ -1,6 +1,11 @@
 /**
- * keeps the home page focused and readable.
+ * renders the public home page with content settings, auth aware actions, seo data, and responsive layout
+ *
+ * @file frontend/src/pages/home.jsx
+ * @module frontend/src/pages/home
+ * @exports route component rendered by the client router
  */
+
 import React, { useState, useEffect, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { motion, useScroll, useTransform } from "framer-motion";

@@ -1,6 +1,11 @@
 /**
- * keeps the forgot password page focused and readable.
+ * renders the public forgot password page with content settings, auth aware actions, seo data, and responsive layout
+ *
+ * @file frontend/src/pages/forgotpassword.jsx
+ * @module frontend/src/pages/forgotpassword
+ * @exports route component rendered by the client router
  */
+
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";

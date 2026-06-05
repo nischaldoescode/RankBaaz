@@ -1,6 +1,11 @@
 /**
- * keeps the leaderboard info modal component focused and readable.
+ * renders the public leaderboard info modal component with reusable layout, actions, and responsive behavior
+ *
+ * @file frontend/src/components/leaderboard/leaderboardinfomodal.jsx
+ * @module frontend/src/components/leaderboard/leaderboardinfomodal
+ * @exports component used by pages and shared layouts
  */
+
 import Modal from "@/components/ui/Modal";
 
 export const LeaderboardInfoModal = ({ isOpen, onClose, infoData }) => {

@@ -1,6 +1,11 @@
 /**
- * keeps the terms of service page focused and readable.
+ * renders the public terms of service page with content settings, auth aware actions, seo data, and responsive layout
+ *
+ * @file frontend/src/pages/termsofservice.jsx
+ * @module frontend/src/pages/termsofservice
+ * @exports route component rendered by the client router
  */
+
 import React, { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Scale, Calendar, FileText } from "lucide-react";

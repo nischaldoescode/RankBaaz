@@ -1,6 +1,11 @@
 /**
- * keeps the tracking routes route focused and readable.
+ * mounts tracking routes api endpoints and keeps middleware order explicit for each request path
+ *
+ * @file backend/routes/trackingroutes.js
+ * @module backend/routes/trackingroutes
+ * @exports express router mounted by the api server
  */
+
 import express from "express";
 import redisClient from "../Config/redis.js";
 

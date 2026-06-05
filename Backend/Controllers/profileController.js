@@ -1,6 +1,11 @@
 /**
- * keeps the profile controller controller focused and readable.
+ * handles profile controller api requests, input validation, persistence calls, side effects, and response shaping
+ *
+ * @file backend/controllers/profilecontroller.js
+ * @module backend/controllers/profilecontroller
+ * @exports request handlers used by backend routes
  */
+
 import User from "../Models/User.js";
 import TestResult from "../Models/TestResult.js";
 import pointsService from "../services/pointsService.js";

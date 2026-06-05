@@ -1,6 +1,11 @@
 /**
- * keeps the user model focused and readable.
+ * defines the user database schema, validation rules, indexes, and document relationships
+ *
+ * @file backend/models/user.js
+ * @module backend/models/user
+ * @exports mongoose model used by controllers and services
  */
+
 import mongoose from "mongoose";
 
 const userSchema = new mongoose.Schema(

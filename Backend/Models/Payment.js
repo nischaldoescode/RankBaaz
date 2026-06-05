@@ -1,6 +1,11 @@
 /**
- * keeps the payment model focused and readable.
+ * defines the payment database schema, validation rules, indexes, and document relationships
+ *
+ * @file backend/models/payment.js
+ * @module backend/models/payment
+ * @exports mongoose model used by controllers and services
  */
+
 import mongoose from "mongoose";
 
 const paymentSchema = new mongoose.Schema(

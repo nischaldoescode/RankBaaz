@@ -1,6 +1,11 @@
 /**
- * keeps the footer preview utility focused and readable.
+ * builds the admin footer preview helper view used for content previews and modal workflows
+ *
+ * @file admin/src/helpers/footerpreview.jsx
+ * @module admin/src/helpers/footerpreview
+ * @exports module members used by the related app runtime
  */
+
 import {
   Mail,
   Phone,

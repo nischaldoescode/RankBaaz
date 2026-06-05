@@ -1,6 +1,11 @@
 /**
- * keeps the coupon controller controller focused and readable.
+ * handles coupon controller api requests, input validation, persistence calls, side effects, and response shaping
+ *
+ * @file backend/controllers/couponcontroller.js
+ * @module backend/controllers/couponcontroller
+ * @exports request handlers used by backend routes
  */
+
 import Coupon from "../Models/Coupon.js";
 import Course from "../Models/Course.js";
 import crypto from "crypto";
@@ -609,9 +614,8 @@ export const deleteCoupon = async (req, res) => {
 
 
 // teacher coupon management
-
 /**
- * lets a teacher create a coupon when admin has granted access.
+ * lets a teacher create a coupon when admin has granted access
  * and teacher owns the course
  */
 export const teacherCreateCoupon = async (req, res) => {

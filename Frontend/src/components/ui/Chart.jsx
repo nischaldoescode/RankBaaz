@@ -1,6 +1,11 @@
 /**
- * keeps the chart component focused and readable.
+ * renders the reusable chart ui primitive with accessible states and theme friendly styling
+ *
+ * @file frontend/src/components/ui/chart.jsx
+ * @module frontend/src/components/ui/chart
+ * @exports component used by pages and shared layouts
  */
+
 import React, { useMemo } from 'react';
 import {
   LineChart,

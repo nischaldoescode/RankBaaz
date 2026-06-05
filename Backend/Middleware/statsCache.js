@@ -1,6 +1,11 @@
 /**
- * keeps the stats cache middleware focused and readable.
+ * handles stats cache middleware checks before controllers receive the request
+ *
+ * @file backend/middleware/statscache.js
+ * @module backend/middleware/statscache
+ * @exports middleware functions used by protected backend routes
  */
+
 import redisClient, {
   isRedisConnectionError,
   summarizeRedisError,

@@ -1,6 +1,11 @@
 /**
- * keeps the blog crypto utility focused and readable.
+ * provides blog crypto utilities shared by backend workflows and operational scripts
+ *
+ * @file backend/utils/blogcrypto.js
+ * @module backend/utils/blogcrypto
+ * @exports module members used by the related app runtime
  */
+
 import crypto from "crypto";
 
 const ALGORITHM = "aes-256-gcm";

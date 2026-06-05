@@ -1,6 +1,11 @@
 /**
- * keeps the analytics tab page focused and readable.
+ * renders the teacher dashboard analytics tab with data loading, actions, forms, and mobile states
+ *
+ * @file teachers/src/pages/dashboard/analyticstab.jsx
+ * @module teachers/src/pages/dashboard/analyticstab
+ * @exports route component rendered by the client router
  */
+
 import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { teacherApi } from "../../services/api.js";

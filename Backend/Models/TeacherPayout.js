@@ -1,6 +1,11 @@
 /**
- * keeps the teacher payout model focused and readable.
+ * defines the teacher payout database schema, validation rules, indexes, and document relationships
+ *
+ * @file backend/models/teacherpayout.js
+ * @module backend/models/teacherpayout
+ * @exports mongoose model used by controllers and services
  */
+
 import mongoose from "mongoose";
 
 /**
