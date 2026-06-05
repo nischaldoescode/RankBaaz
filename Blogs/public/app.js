@@ -102,15 +102,17 @@ const updateCommentAuthState = async () => {
   if (loginLink) loginLink.href = loginUrl();
 
   try {
-    const headers = await signRequest(config.profileUrl, "GET", "");
-    const response = await fetch(config.profileUrl, {
+    const response = await fetch(config.sessionStatusUrl, {
       method: "GET",
       credentials: "include",
-      headers,
+      headers: { Accept: "application/json" },
     });
     const data = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(data.message || "Not logged in");
-    const user = data?.data?.user || {};
+    if (!response.ok || !data?.data?.authenticated) {
+      throw new Error("not logged in");
+    }
+
+    const user = data.data.user || {};
     const name = user.name || user.username || "your Vidhgrow account";
     if (state) state.textContent = `Commenting as ${name}`;
     panel.classList.add("is-logged-in");

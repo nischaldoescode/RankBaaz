@@ -86,6 +86,9 @@ export const getContentSettings = async (req, res) => {
 };
 
 export const updateContentSettings = async (req, res) => {
+  const uploadedPublicIds = [];
+  const oldPublicIdsToDelete = [];
+
   try {
     const settings = await ContentSettings.getSettings();
     const updateData = { ...req.body };
@@ -120,12 +123,15 @@ export const updateContentSettings = async (req, res) => {
     // handle logo upload (supports both express-fileupload and multer)
     const logoFile = getUploadedFile(req.files, "logo");
     if (logoFile) {
-      await destroyCloudinaryAsset(settings.logo?.publicId);
       const logoResult = await uploadContentImage(
         logoFile,
         "content/logos",
         [{ width: 200, height: 200, crop: "fit" }],
       );
+      uploadedPublicIds.push(logoResult.publicId);
+      if (settings.logo?.publicId) {
+        oldPublicIdsToDelete.push(settings.logo.publicId);
+      }
       updateData.logo = {
         url: logoResult.url,
         publicId: logoResult.publicId,
@@ -134,12 +140,15 @@ export const updateContentSettings = async (req, res) => {
 
     const aboutHeroImageFile = getUploadedFile(req.files, "aboutHeroImageFile");
     if (aboutHeroImageFile) {
-      await destroyCloudinaryAsset(settings.aboutHeroImage?.publicId);
       const uploaded = await uploadContentImage(
         aboutHeroImageFile,
         "content/page-images",
         [{ width: 1400, height: 1000, crop: "limit", quality: "auto" }],
       );
+      uploadedPublicIds.push(uploaded.publicId);
+      if (settings.aboutHeroImage?.publicId) {
+        oldPublicIdsToDelete.push(settings.aboutHeroImage.publicId);
+      }
 
       updateData.aboutHeroImage = {
         ...(updateData.aboutHeroImage || settings.aboutHeroImage?.toObject?.() || {}),
@@ -165,12 +174,15 @@ export const updateContentSettings = async (req, res) => {
         const nextImage = chapters[index]?.image || existingImage || {};
 
         if (file) {
-          await destroyCloudinaryAsset(existingImage.publicId);
           const uploaded = await uploadContentImage(
             file,
             "content/page-images",
             [{ width: 1400, height: 900, crop: "limit", quality: "auto" }],
           );
+          uploadedPublicIds.push(uploaded.publicId);
+          if (existingImage.publicId) {
+            oldPublicIdsToDelete.push(existingImage.publicId);
+          }
 
           chapters[index] = {
             ...chapters[index],
@@ -208,13 +220,17 @@ export const updateContentSettings = async (req, res) => {
 
     Object.assign(settings, updateData);
     await settings.save();
-    await invalidateCache.content();
+    await Promise.all(oldPublicIdsToDelete.map((publicId) => destroyCloudinaryAsset(publicId)));
+    await invalidateCache.content().catch((error) => {
+      console.error("Content cache invalidation failed:", error);
+    });
     res.status(200).json({
       success: true,
       message: "Content settings updated successfully",
       data: { settings },
     });
   } catch (error) {
+    await Promise.all(uploadedPublicIds.map((publicId) => destroyCloudinaryAsset(publicId)));
     console.error("Update content settings error:", error);
     res.status(500).json({
       success: false,

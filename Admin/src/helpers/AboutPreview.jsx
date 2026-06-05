@@ -36,11 +36,21 @@ const iconMap = {
   Heart,
 };
 
+const FRONTEND_PUBLIC_ORIGIN =
+  import.meta.env.VITE_FRONTEND_PUBLIC_URL || "https://vidhgrow.online";
+
+const resolvePublicImageSrc = (src = "") => {
+  if (!src) return "";
+  if (/^(https?:|blob:|data:)/i.test(src)) return src;
+  if (src.startsWith("/")) return `${FRONTEND_PUBLIC_ORIGIN}${src}`;
+  return src;
+};
+
 export const AboutPreview = ({ data }) => {
   if (!data) return null;
 
   return (
-    <div className="space-y-8 bg-gradient-to-br from-muted/30 to-background p-8 rounded-xl border border-border">
+    <div className="space-y-6 rounded-xl border border-border bg-gradient-to-br from-muted/30 to-background p-4 sm:space-y-8 sm:p-8">
       <div className="text-center">
         <h3 className="text-2xl font-bold text-foreground mb-2">
           About Page Preview
@@ -69,7 +79,7 @@ export const AboutPreview = ({ data }) => {
           </div>
           {(data.hero?.image?.url || data.hero?.image?.fallbackSrc) && (
             <img
-              src={data.hero.image.url || data.hero.image.fallbackSrc}
+              src={resolvePublicImageSrc(data.hero.image.url || data.hero.image.fallbackSrc)}
               alt={data.hero.image.alt || "About page image"}
               className="h-44 w-full rounded-xl object-cover"
             />

@@ -39,6 +39,61 @@ const isTeacherSurface = (req) => {
 };
 
 /**
+ * reports whether a public surface has a valid user cookie without exposing tokens or signing secrets
+ *
+ * @param {object} req express request object with signed cookies
+ * @param {object} res express response object used to send the session state
+ * @returns {promise<void>} json response with a safe auth summary
+ */
+const sessionStatus = async (req, res) => {
+  try {
+    const encryptedUserCookie = req.signedCookies.auth_session;
+
+    if (!encryptedUserCookie) {
+      return res.status(200).json({
+        success: true,
+        data: { authenticated: false },
+      });
+    }
+
+    const cookieData = decryptCookieData(encryptedUserCookie);
+
+    if (!cookieData?.token) {
+      return res.status(200).json({
+        success: true,
+        data: { authenticated: false },
+      });
+    }
+
+    const decoded = jwt.verify(cookieData.token, process.env.JWT_SECRET);
+    const user = await User.findById(decoded.userId).select("name username isVerified").lean();
+
+    if (!user?.isVerified) {
+      return res.status(200).json({
+        success: true,
+        data: { authenticated: false },
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        authenticated: true,
+        user: {
+          name: user.name || "",
+          username: user.username || "",
+        },
+      },
+    });
+  } catch {
+    return res.status(200).json({
+      success: true,
+      data: { authenticated: false },
+    });
+  }
+};
+
+/**
  * cookie-only authentication middleware for /signing-secret endpoint
  *
  * validates only auth cookies, not request signatures
@@ -255,6 +310,7 @@ const authCookieOnly = async (req, res, next) => {
  * - bot protection applies via global middleware
  */
 router.get("/signing-secret", authCookieOnly, getSigningSecretEndpoint);
+router.get("/session-status", sessionStatus);
 
 
 

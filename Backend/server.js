@@ -631,6 +631,7 @@ const publicRoutes = [
   "/api/auth/refresh-token",
   "/api/security/verify-challenge",
   "/api/security/signing-secret",
+  "/api/security/session-status",
   "api/security/signing-secret/clear",
   "/api/admin/login",
   "/api/admin/check-exists",

@@ -84,6 +84,82 @@ const defaultAboutStats = [
   { value: 'Clear', label: 'Progress reports' },
 ];
 
+const getRawSettings = (settings) => ({
+  ...(settings?._doc || {}),
+  ...(settings?.toObject?.({ minimize: false }) || settings || {}),
+});
+
+const pickSavedValue = (doc, camelKey, legacyKey) =>
+  doc?.[camelKey] ?? doc?.[legacyKey];
+
+const normalizeStoryChapter = (chapter = {}, index = 0) => {
+  const fallback = defaultHomeStoryChapters[index] || defaultHomeStoryChapters[0];
+  const image = chapter.image || {};
+
+  return {
+    kicker: chapter.kicker || fallback.kicker,
+    title: chapter.title || fallback.title,
+    description: chapter.description || fallback.description,
+    image: {
+      url: image.url || null,
+      publicId: image.publicId || image.publicid || null,
+      fallbackSrc: image.fallbackSrc || image.fallbacksrc || fallback.image.fallbackSrc,
+      alt: image.alt || fallback.image.alt,
+    },
+    imageName: chapter.imageName || chapter.imagename || fallback.imageName,
+  };
+};
+
+const hasLegacyStoryShape = (chapters = []) =>
+  Array.isArray(chapters) &&
+  chapters.some((chapter = {}) => {
+    const image = chapter.image || {};
+    return (
+      chapter.imagename !== undefined ||
+      image.publicid !== undefined ||
+      image.fallbacksrc !== undefined
+    );
+  });
+
+const migrateLegacyContentKeys = (settings) => {
+  let needsSave = false;
+  const rawSettings = getRawSettings(settings);
+  const assignments = [
+    ['heroTitle', 'herotitle'],
+    ['heroHighlight', 'herohighlight'],
+    ['heroDescription', 'herodescription'],
+    ['homeStoryEyebrow', 'homestoryeyebrow'],
+    ['homeStoryTitle', 'homestorytitle'],
+    ['homeStoryHighlightedText', 'homestoryhighlightedtext'],
+    ['homeStoryDescription', 'homestorydescription'],
+  ];
+
+  assignments.forEach(([camelKey, legacyKey]) => {
+    const value = pickSavedValue(rawSettings, camelKey, legacyKey);
+    if (value !== undefined && settings[camelKey] !== value) {
+      settings[camelKey] = value;
+      needsSave = true;
+    }
+  });
+
+  const legacyStoryChapters = rawSettings.homestorychapters;
+  const storyChapters = legacyStoryChapters?.length
+    ? legacyStoryChapters
+    : hasLegacyStoryShape(rawSettings.homeStoryChapters)
+      ? rawSettings.homeStoryChapters
+      : null;
+
+  if (storyChapters?.length) {
+    const normalized = storyChapters.map((chapter, index) =>
+      normalizeStoryChapter(chapter, index),
+    );
+    settings.homeStoryChapters = normalized;
+    needsSave = true;
+  }
+
+  return needsSave;
+};
+
 const contentSettingsSchema = new mongoose.Schema({
   // site identity
   siteName: {
@@ -114,70 +190,70 @@ const contentSettingsSchema = new mongoose.Schema({
 
 
   // hero section
-  herotitle: {
-    type: string,
+  heroTitle: {
+    type: String,
     default: 'learn clearly. practice with purpose.',
   },
-  herohighlight: {
-    type: string,
+  heroHighlight: {
+    type: String,
     default: 'keep progress visible',
   },
-  herodescription: {
-    type: string,
+  heroDescription: {
+    type: String,
     default: 'vidhgrow brings teacher-led courses, exam-style tests, and progress reports into one calm workspace, so every attempt points to the next useful step.',
   },
 
   // home page story section
-  homestoryeyebrow: {
-    type: string,
+  homeStoryEyebrow: {
+    type: String,
     default: 'how the work moves',
   },
-  homestorytitle: {
-    type: string,
+  homeStoryTitle: {
+    type: String,
     default: 'a study rhythm that feels easy to return to.',
   },
-  homestoryhighlightedtext: {
-    type: string,
+  homeStoryHighlightedText: {
+    type: String,
     default: 'a study rhythm',
   },
-  homestorydescription: {
-    type: string,
+  homeStoryDescription: {
+    type: String,
     default:
       'learn from the course, test the idea, then use the result to choose the next revision. the page stays quiet, but the work keeps moving.',
   },
-  homestorychapters: [{
+  homeStoryChapters: [{
     kicker: {
-      type: string,
+      type: String,
       default: '',
     },
     title: {
-      type: string,
+      type: String,
       default: '',
     },
     description: {
-      type: string,
+      type: String,
       default: '',
     },
     image: {
       url: {
-        type: string,
+        type: String,
         default: null,
       },
-      publicid: {
-        type: string,
+      publicId: {
+        type: String,
         default: null,
       },
-      fallbacksrc: {
-        type: string,
+      fallbackSrc: {
+        type: String,
         default: null,
       },
       alt: {
-        type: string,
+        type: String,
         default: '',
       },
     },
-    imagename: {
-      type: string,
+    imageName: {
+      type: String,
       default: '',
     },
   }],
@@ -422,7 +498,7 @@ contentSettingsSchema.statics.getSettings = async function() {
       aboutStats: defaultAboutStats,
     });
   } else {
-    let needsSave = false;
+    let needsSave = migrateLegacyContentKeys(settings);
 
     if (!settings.homeStoryChapters?.length) {
       settings.homeStoryChapters = defaultHomeStoryChapters;

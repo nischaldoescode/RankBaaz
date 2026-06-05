@@ -6,7 +6,7 @@
  * @exports route component rendered by the client router
  */
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { toast } from "react-toastify";
 import { useContent } from "../contexts/ContentContext";
 import {
@@ -157,8 +157,18 @@ const defaultAboutValues = [
   },
 ];
 
+const FRONTEND_PUBLIC_ORIGIN =
+  import.meta.env.VITE_FRONTEND_PUBLIC_URL || "https://vidhgrow.online";
+
+const resolvePublicImageSrc = (src = "") => {
+  if (!src) return "";
+  if (/^(https?:|blob:|data:)/i.test(src)) return src;
+  if (src.startsWith("/")) return `${FRONTEND_PUBLIC_ORIGIN}${src}`;
+  return src;
+};
+
 const getImagePreviewSrc = (image, fallbackSrc = "") =>
-  image?.url || image?.fallbackSrc || fallbackSrc;
+  resolvePublicImageSrc(image?.url || image?.fallbackSrc || fallbackSrc);
 
 // sortable legal section component
 const SortableLegalSection = ({
@@ -676,6 +686,14 @@ const ContentManagement = () => {
   const [previewType, setPreviewType] = useState("home");
 
   const [isSettingsDirty, setIsSettingsDirty] = useState(false);
+  const previewUrlsRef = useRef({});
+
+  const clearPreviewUrls = useCallback(() => {
+    Object.values(previewUrlsRef.current).forEach((url) => {
+      if (url) URL.revokeObjectURL(url);
+    });
+    previewUrlsRef.current = {};
+  }, []);
 
   /**
    * marks settings as dirty and updates form state
@@ -684,6 +702,8 @@ const ContentManagement = () => {
     setIsSettingsDirty(true);
     setSettingsForm(updater);
   }, []);
+
+  useEffect(() => () => clearPreviewUrls(), [clearPreviewUrls]);
   useEffect(() => {
     fetchContentSettings();
     fetchFAQs();
@@ -693,6 +713,7 @@ const ContentManagement = () => {
 
   useEffect(() => {
     if (contentSettings) {
+      clearPreviewUrls();
       const existingChart = contentSettings.chartConfig || {};
       setSettingsForm({
         ...contentSettings,
@@ -749,7 +770,7 @@ const ContentManagement = () => {
       });
       setIsSettingsDirty(false);
     }
-  }, [contentSettings]);
+  }, [contentSettings, clearPreviewUrls]);
 
   useEffect(() => {
     if (contactInfo) {
@@ -780,6 +801,7 @@ const ContentManagement = () => {
     e.preventDefault();
     const result = await updateContentSettings(settingsForm);
     if (result?.success) {
+      clearPreviewUrls();
       setIsSettingsDirty(false);
     }
   };
@@ -926,9 +948,17 @@ const ContentManagement = () => {
         return;
       }
 
+      const previewKey = `${field}PreviewUrl`;
+      if (previewUrlsRef.current[previewKey]) {
+        URL.revokeObjectURL(previewUrlsRef.current[previewKey]);
+      }
+      const previewUrl = URL.createObjectURL(file);
+      previewUrlsRef.current[previewKey] = previewUrl;
+
       updateSettingsForm((prev) => ({
         ...prev,
         [field]: file,
+        [previewKey]: previewUrl,
       }));
     }
   };
@@ -1020,22 +1050,22 @@ const ContentManagement = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4 sm:p-6 lg:p-8">
-      <div className="max-w-7xl mx-auto">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">
+    <div className="min-h-screen bg-gray-50 px-3 py-4 sm:px-6 lg:px-8">
+      <div className="mx-auto w-full max-w-7xl">
+        <div className="mb-6 flex flex-col gap-2 sm:mb-8">
+          <h1 className="text-2xl font-bold text-gray-900 sm:text-3xl">
             Content Management
           </h1>
-          <p className="text-gray-600 mt-2">
+          <p className="max-w-3xl text-sm text-gray-600 sm:text-base">
             Manage your site content, FAQs, contact information, and legal pages
           </p>
         </div>
 
         {/* tabs */}
-        <div className="bg-white rounded-lg shadow-sm mb-6">
+        <div className="mb-6 overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-gray-200">
           <div className="border-b border-gray-200">
             <nav
-              className="flex space-x-4 px-6 overflow-x-auto"
+              className="flex gap-2 overflow-x-auto px-3 sm:px-5"
               aria-label="Tabs"
             >
               {tabs.map((tab) => {
@@ -1045,7 +1075,7 @@ const ContentManagement = () => {
                     key={tab.id}
                     onClick={() => setActiveTab(tab.id)}
                     className={`
-                      flex items-center space-x-2 py-4 px-3 border-b-2 font-medium text-sm cursor-pointer whitespace-nowrap
+                      flex min-h-12 shrink-0 items-center gap-2 border-b-2 px-2 py-3 text-sm font-medium cursor-pointer whitespace-nowrap sm:px-3 sm:py-4
                       ${
                         activeTab === tab.id
                           ? "border-blue-500 text-blue-600"
@@ -1061,7 +1091,7 @@ const ContentManagement = () => {
             </nav>
           </div>
 
-          <div className="p-6">
+          <div className="p-3 sm:p-5 lg:p-6">
             {/* site settings tab */}
             {activeTab === "settings" && (
               <form onSubmit={handleSettingsSubmit} className="space-y-8">
@@ -1131,7 +1161,7 @@ const ContentManagement = () => {
                       {/* show current logo with delete option */}
                       {settingsForm.logo?.url && (
                         <div className="mb-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
-                          <div className="flex items-center justify-between mb-2">
+                          <div className="mb-2 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                             <span className="text-sm font-medium text-gray-700">
                               Current Logo:
                             </span>
@@ -1160,7 +1190,7 @@ const ContentManagement = () => {
                             </button>
                           </div>
                           <img
-                            src={settingsForm.logo.url}
+                            src={getImagePreviewSrc(settingsForm.logo)}
                             alt="Logo"
                             className="h-20 object-contain bg-white p-2 rounded border border-gray-300"
                           />
@@ -1188,6 +1218,13 @@ const ContentManagement = () => {
                           <p className="text-xs font-medium text-blue-900 mb-2">
                             New logo selected (not saved yet):
                           </p>
+                          {settingsForm.logoPreviewUrl && (
+                            <img
+                              src={settingsForm.logoPreviewUrl}
+                              alt="Selected logo preview"
+                              className="mb-2 h-20 object-contain rounded border border-blue-200 bg-white p-2"
+                            />
+                          )}
                           <p className="text-xs text-blue-700">
                             {settingsForm.logo.name}
                           </p>
@@ -1346,6 +1383,8 @@ const ContentManagement = () => {
                       );
                       const selectedFile =
                         settingsForm[`homeStoryImageFile_${index}`];
+                      const selectedPreview =
+                        settingsForm[`homeStoryImageFile_${index}PreviewUrl`];
 
                       return (
                         <div
@@ -1454,9 +1493,9 @@ const ContentManagement = () => {
                                 <ImageIcon className="h-4 w-4" />
                                 Image
                               </div>
-                              {previewSrc && (
+                              {(selectedPreview || previewSrc) && (
                                 <img
-                                  src={previewSrc}
+                                  src={selectedPreview || previewSrc}
                                   alt={chapter.image?.alt || chapter.title}
                                   className="h-28 w-full rounded-lg border border-gray-200 object-cover"
                                 />
@@ -1509,7 +1548,7 @@ const ContentManagement = () => {
 
                 {/* home page stats */}
                 <div className="space-y-6">
-                  <div className="flex items-center justify-between">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <h3 className="text-lg font-semibold text-gray-900">
                       Home Page - Stats Section
                     </h3>
@@ -1522,7 +1561,7 @@ const ContentManagement = () => {
                           label: "",
                         })
                       }
-                      className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 cursor-pointer"
+                      className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 cursor-pointer sm:w-auto"
                     >
                       <Plus className="w-4 h-4" />
                       <span>Add Stat</span>
@@ -1849,7 +1888,7 @@ const ContentManagement = () => {
 
                 {/* home page features */}
                 <div className="space-y-6">
-                  <div className="flex items-center justify-between">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <h3 className="text-lg font-semibold text-gray-900">
                       Home Page - Features Section
                     </h3>
@@ -1862,7 +1901,7 @@ const ContentManagement = () => {
                           description: "",
                         })
                       }
-                      className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 cursor-pointer"
+                      className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 cursor-pointer sm:w-auto"
                     >
                       <Plus className="w-4 h-4" />
                       <span>Add Feature</span>
@@ -2145,12 +2184,22 @@ const ContentManagement = () => {
                         About Image
                       </div>
                       {getImagePreviewSrc(
-                        settingsForm.aboutHeroImage,
+                        {
+                          ...(settingsForm.aboutHeroImage || {}),
+                          url:
+                            settingsForm.aboutHeroImageFilePreviewUrl ||
+                            settingsForm.aboutHeroImage?.url,
+                        },
                         "/images/about-learning-workspace.webp",
                       ) && (
                         <img
                           src={getImagePreviewSrc(
-                            settingsForm.aboutHeroImage,
+                            {
+                              ...(settingsForm.aboutHeroImage || {}),
+                              url:
+                                settingsForm.aboutHeroImageFilePreviewUrl ||
+                                settingsForm.aboutHeroImage?.url,
+                            },
                             "/images/about-learning-workspace.webp",
                           )}
                           alt={settingsForm.aboutHeroImage?.alt || "About page image"}
@@ -2258,7 +2307,7 @@ const ContentManagement = () => {
 
                 {/* about page values */}
                 <div className="space-y-6">
-                  <div className="flex items-center justify-between">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <h3 className="text-lg font-semibold text-gray-900">
                       About Page - Values Section
                     </h3>
@@ -2273,7 +2322,7 @@ const ContentManagement = () => {
                           bgColor: "bg-blue-500/10",
                         })
                       }
-                      className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 cursor-pointer"
+                      className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 cursor-pointer sm:w-auto"
                     >
                       <Plus className="w-4 h-4" />
                       <span>Add Value</span>
@@ -2301,7 +2350,7 @@ const ContentManagement = () => {
                           </button>
                         </div>
                         <div className="grid grid-cols-1 gap-4">
-                          <div className="grid grid-cols-3 gap-4">
+                          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
                             <div>
                               <label className="block text-sm font-medium text-gray-700 mb-2">
                                 Icon
@@ -2468,7 +2517,7 @@ const ContentManagement = () => {
 
                 {/* about page features */}
                 <div className="space-y-6">
-                  <div className="flex items-center justify-between">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <h3 className="text-lg font-semibold text-gray-900">
                       About Page - Features Section
                     </h3>
@@ -2481,7 +2530,7 @@ const ContentManagement = () => {
                           description: "",
                         })
                       }
-                      className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 cursor-pointer"
+                      className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 cursor-pointer sm:w-auto"
                     >
                       <Plus className="w-4 h-4" />
                       <span>Add Feature</span>
@@ -2573,7 +2622,7 @@ const ContentManagement = () => {
 
                 {/* about page stats */}
                 <div className="space-y-6">
-                  <div className="flex items-center justify-between">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <h3 className="text-lg font-semibold text-gray-900">
                       About Page - Stats Section
                     </h3>
@@ -2582,7 +2631,7 @@ const ContentManagement = () => {
                       onClick={() =>
                         addToArray("aboutStats", { value: "", label: "" })
                       }
-                      className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 cursor-pointer"
+                      className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 cursor-pointer sm:w-auto"
                     >
                       <Plus className="w-4 h-4" />
                       <span>Add Stat</span>
@@ -2651,11 +2700,11 @@ const ContentManagement = () => {
                     <AboutStatsPreview data={settingsForm.aboutStats} />
                   )}
 
-                <div className="flex justify-end pt-6 border-t">
+                <div className="flex justify-stretch border-t pt-6 sm:justify-end">
                   <button
                     type="submit"
                     disabled={loading || !isSettingsDirty}
-                    className={`flex items-center space-x-2 px-6 py-2 rounded-lg transition-colors ${
+                    className={`flex w-full items-center justify-center gap-2 rounded-lg px-6 py-2 transition-colors sm:w-auto ${
                       isSettingsDirty && !loading
                         ? "bg-blue-600 text-white hover:bg-blue-700 cursor-pointer"
                         : "bg-gray-300 text-gray-500 cursor-not-allowed"
