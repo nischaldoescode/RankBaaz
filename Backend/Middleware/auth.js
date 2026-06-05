@@ -44,6 +44,18 @@ const hasSessionContextChanged = (decoded, currentIp, currentUserAgent) => {
   return shouldEnforceSessionIp() && decoded.ip !== currentIp;
 };
 
+const normalizeDecodedUserId = (value) => {
+  if (!value) return null;
+  if (typeof value === "string") return value;
+  if (value._id) return normalizeDecodedUserId(value._id);
+  if (value.$oid) return value.$oid;
+  if (typeof value.toString === "function") {
+    const normalized = value.toString();
+    return normalized === "[object Object]" ? null : normalized;
+  }
+  return null;
+};
+
 const isBootstrapProfileRequest = (req, type) => {
   if (req.method !== "GET") return false;
   const path = (req.originalUrl || req.path || "").split("?")[0];
@@ -143,7 +155,16 @@ export const authenticateUser = async (req, res, next) => {
     // this check ensures headers are present
 
     // layer 6: verify user exists and is verified
-    const user = await User.findById(decoded.userId).select("-password -otp");
+    const decodedUserId = normalizeDecodedUserId(decoded.userId);
+    if (!decodedUserId) {
+      return res.status(401).json({
+        success: false,
+        message: "Invalid authentication token.",
+        code: "TOKEN_INVALID",
+      });
+    }
+
+    const user = await User.findById(decodedUserId).select("-password -otp");
 
     if (!user || !user.isVerified) {
       return res.status(401).json({
@@ -367,7 +388,15 @@ export const authenticateAny = async (req, res, next) => {
       });
     }
 
-    const user = await User.findById(decoded.userId).select("-password -otp");
+    const decodedUserId = normalizeDecodedUserId(decoded.userId);
+    if (!decodedUserId) {
+      return res.status(401).json({
+        success: false,
+        message: "Invalid authentication token.",
+      });
+    }
+
+    const user = await User.findById(decodedUserId).select("-password -otp");
     if (!user || !user.isVerified) {
       return res.status(401).json({
         success: false,
