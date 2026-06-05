@@ -91,6 +91,33 @@ const authReducer = (state, action) => {
 // create context
 const AuthContext = createContext();
 
+const normalizeAuthUser = (user) => {
+  if (!user) return null;
+
+  const source = user._doc ? { ...user._doc } : { ...user };
+  const {
+    password,
+    otp,
+    __v,
+    $__,
+    $isNew,
+    _doc,
+    resetPasswordToken,
+    resetPasswordExpires,
+    ...safeUser
+  } = source;
+  const id = safeUser.id || safeUser._id;
+
+  return {
+    ...safeUser,
+    id,
+    _id: id,
+  };
+};
+
+const getUserDisplayName = (user) =>
+  user?.name || user?.username || user?.email || "there";
+
 // provider component
 export const AuthProvider = ({ children }) => {
   const [state, dispatch] = useReducer(authReducer, initialState);
@@ -147,13 +174,16 @@ export const AuthProvider = ({ children }) => {
       const userData = localStorage.getItem("user");
 
       if (userData) {
-        const user = JSON.parse(userData);
+        const cachedUser = normalizeAuthUser(JSON.parse(userData));
+        if (cachedUser) {
+          localStorage.setItem("user", JSON.stringify(cachedUser));
+        }
 
         try {
           await ensureSigningSecret();
 
           const response = await apiMethods.auth.getProfile();
-          const validatedUser = response.data?.data?.user;
+          const validatedUser = normalizeAuthUser(response.data?.data?.user);
 
           if (!validatedUser) {
             clearAuthData();
@@ -172,7 +202,7 @@ export const AuthProvider = ({ children }) => {
           try {
             await refreshSessionAndSigningSecret();
             const retryResponse = await apiMethods.auth.getProfile();
-            const retriedUser = retryResponse.data?.data?.user;
+            const retriedUser = normalizeAuthUser(retryResponse.data?.data?.user);
 
             if (!retriedUser) {
               throw new Error("Profile data missing after refresh");
@@ -211,7 +241,7 @@ export const AuthProvider = ({ children }) => {
       dispatch({ type: AUTH_ACTIONS.CLEAR_ERROR });
 
       const response = await apiMethods.auth.login(credentials);
-      const user = response.data?.data?.user;
+      const user = normalizeAuthUser(response.data?.data?.user);
       const signingSecret = response.data?.data?.signingSecret;
       const signingSecretExpiresIn =
         response.data?.data?.signingSecretExpiresIn;
@@ -232,7 +262,7 @@ export const AuthProvider = ({ children }) => {
         payload: { user, token: null },
       });
 
-      toast.success(`Welcome back, ${user.name}!`, {
+      toast.success(`Welcome back, ${getUserDisplayName(user)}!`, {
         id: "login-success",
       });
 
@@ -428,7 +458,7 @@ export const AuthProvider = ({ children }) => {
       }
 
       // if no otp required (shouldn't happen normally)
-      const { user } = response.data.data;
+      const user = normalizeAuthUser(response.data.data.user);
       localStorage.setItem("user", JSON.stringify(user));
 
       dispatch({
@@ -436,7 +466,7 @@ export const AuthProvider = ({ children }) => {
         payload: { user, token: null },
       });
 
-      toast.success(`Welcome to Vidhgrow, ${user.name}!`);
+      toast.success(`Welcome to Vidhgrow, ${getUserDisplayName(user)}!`);
       return { success: true, user };
     } catch (error) {
       const errorMessage = handleApiError(error, "Registration failed");
@@ -460,7 +490,7 @@ export const AuthProvider = ({ children }) => {
       if (response.data.success) {
         // if username was provided, user is created - log them in
         if (username && response.data.data.user) {
-          const { user } = response.data.data;
+          const user = normalizeAuthUser(response.data.data.user);
           const signingSecret = response.data.data.signingSecret;
           const signingSecretExpiresIn =
             response.data.data.signingSecretExpiresIn;
@@ -480,7 +510,7 @@ export const AuthProvider = ({ children }) => {
             payload: { user, token: null },
           });
 
-          toast.success(`Welcome to Vidhgrow, ${user.name}!`);
+          toast.success(`Welcome to Vidhgrow, ${getUserDisplayName(user)}!`);
           return { success: true, user };
         }
 
@@ -518,7 +548,7 @@ export const AuthProvider = ({ children }) => {
       dispatch({ type: AUTH_ACTIONS.SET_LOADING, payload: true });
 
       const response = await apiMethods.auth.updateProfile(profileData);
-      const updatedUser = response.data.data.user; // ed: ed .data
+      const updatedUser = normalizeAuthUser(response.data.data.user);
 
       // update localstorage
       localStorage.setItem("user", JSON.stringify(updatedUser));

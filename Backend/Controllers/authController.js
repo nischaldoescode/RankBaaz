@@ -424,13 +424,26 @@ const generateLocationKey = (req) => {
   return CryptoJS.SHA256(ip).toString().substring(0, 16);
 };
 
+const normalizeId = (value) => {
+  if (!value) return value;
+  if (typeof value === "string") return value;
+  if (value._id) return normalizeId(value._id);
+  if (value.$oid) return value.$oid;
+  if (typeof value.toString === "function") {
+    const normalized = value.toString();
+    return normalized === "[object Object]" ? null : normalized;
+  }
+  return value;
+};
+
 // generate jwt token
 const generateToken = (userId, req) => {
   const deviceId = generateDeviceFingerprint(req);
   const locationKey = generateLocationKey(req);
+  const normalizedUserId = normalizeId(userId);
 
   const payload = {
-    userId,
+    userId: normalizedUserId,
     deviceId,
     locationKey,
     ip: req.ip || req.connection.remoteAddress,
@@ -445,9 +458,10 @@ const generateToken = (userId, req) => {
 const generateRefreshToken = (userId, req) => {
   const deviceId = generateDeviceFingerprint(req);
   const locationKey = generateLocationKey(req);
+  const normalizedUserId = normalizeId(userId);
 
   const payload = {
-    userId,
+    userId: normalizedUserId,
     deviceId,
     locationKey,
     ip: req.ip || req.connection.remoteAddress,
@@ -457,6 +471,32 @@ const generateRefreshToken = (userId, req) => {
   };
 
   return jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: "30d" });
+};
+
+const buildSafeUserResponse = (user) => {
+  const source =
+    typeof user?.toObject === "function"
+      ? user.toObject({ getters: false, virtuals: false })
+      : user?._doc
+        ? { ...user._doc }
+        : { ...(user || {}) };
+
+  const {
+    password,
+    otp,
+    resetPasswordToken,
+    resetPasswordExpires,
+    __v,
+    ...safeUser
+  } = source;
+
+  const id = normalizeId(safeUser._id || safeUser.id);
+
+  return {
+    ...safeUser,
+    _id: id,
+    id,
+  };
 };
 
 const buildSessionCookieOptions = (req, maxAge) => {
@@ -479,8 +519,8 @@ const buildSessionCookieOptions = (req, maxAge) => {
   return options;
 };
 
-const buildSessionClearCookieOptions = (req) => {
-  const options = {
+const getSessionClearCookieOptions = (req) => {
+  const baseOptions = {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
@@ -488,14 +528,26 @@ const buildSessionClearCookieOptions = (req) => {
     path: "/",
   };
 
+  const options = [baseOptions];
+
   if (process.env.NODE_ENV === "production") {
     const hostname = req.hostname || req.get("host");
     if (hostname && hostname.includes("vidhgrow.online")) {
-      options.domain = ".vidhgrow.online";
+      options.push({
+        ...baseOptions,
+        domain: ".vidhgrow.online",
+      });
     }
   }
 
   return options;
+};
+
+const clearSessionCookies = (res, req) => {
+  getSessionClearCookieOptions(req).forEach((options) => {
+    res.clearCookie("auth_session", options);
+    res.clearCookie("refresh_session", options);
+  });
 };
 
 // register user
@@ -945,19 +997,12 @@ export const verifyOTP = async (req, res) => {
       issuedAt: Date.now(),
     });
 
-    // same cookieoptions configuration as above
-    const cookieOptions = {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-      signed: true,
-      path: "/",
-    };
+    const cookieOptions = buildSessionCookieOptions(
+      req,
+      7 * 24 * 60 * 60 * 1000
+    );
 
-    if (process.env.NODE_ENV === "production") {
-      cookieOptions.domain = ".vidhgrow.online";
-    }
+    clearSessionCookies(res, req);
 
     if (process.env.NODE_ENV === "development") {
       console.log("Setting auth_session cookie:", {
@@ -978,18 +1023,10 @@ export const verifyOTP = async (req, res) => {
       issuedAt: Date.now(),
     });
 
-    const refreshCookieOptions = {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      maxAge: 30 * 24 * 60 * 60 * 1000,
-      signed: true,
-      path: "/",
-    };
-
-    if (process.env.NODE_ENV === "production") {
-      refreshCookieOptions.domain = ".vidhgrow.online";
-    }
+    const refreshCookieOptions = buildSessionCookieOptions(
+      req,
+      30 * 24 * 60 * 60 * 1000
+    );
 
     if (process.env.NODE_ENV === "development") {
       console.log("Setting auth_session cookie:", {
@@ -1011,15 +1048,7 @@ export const verifyOTP = async (req, res) => {
       success: true,
       message: "Registration completed successfully",
       data: {
-        user: {
-          id: user._id,
-          name: user.name,
-          email: user.email,
-          username: user.username,
-          age: user.age,
-          gender: user.gender,
-          isVerified: user.isVerified,
-        },
+        user: buildSafeUserResponse(user),
         signingSecret,
         signingSecretExpiresIn: 7 * 24 * 60 * 60,
       },
@@ -1352,22 +1381,12 @@ export const login = async (req, res) => {
       issuedAt: Date.now(),
     });
 
-    // cookie options (ed as per solution 2)
-    const cookieOptions = {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-      signed: true,
-      path: "/",
-    };
+    const cookieOptions = buildSessionCookieOptions(
+      req,
+      7 * 24 * 60 * 60 * 1000
+    );
 
-    if (process.env.NODE_ENV === "production") {
-      const hostname = req.hostname || req.get("host");
-      if (hostname && hostname.includes("vidhgrow.online")) {
-        cookieOptions.domain = ".vidhgrow.online";
-      }
-    }
+    clearSessionCookies(res, req);
 
     res.cookie("auth_session", authCookieData, cookieOptions);
 
@@ -1378,26 +1397,14 @@ export const login = async (req, res) => {
       issuedAt: Date.now(),
     });
 
-    const refreshCookieOptions = {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      maxAge: 30 * 24 * 60 * 60 * 1000,
-      signed: true,
-      path: "/",
-    };
-
-    if (process.env.NODE_ENV === "production") {
-      const hostname = req.hostname || req.get("host");
-      if (hostname && hostname.includes("vidhgrow.online")) {
-        refreshCookieOptions.domain = ".vidhgrow.online";
-      }
-    }
+    const refreshCookieOptions = buildSessionCookieOptions(
+      req,
+      30 * 24 * 60 * 60 * 1000
+    );
 
     res.cookie("refresh_session", refreshCookieData, refreshCookieOptions);
 
-    // build user response (remove password)
-    const { password: _, otp, ...userResponse } = user;
+    const userResponse = buildSafeUserResponse(user);
 
     // optimized: generate signing secret asynchronously
     const signingSecret = await generateSigningSecret(user._id.toString());
@@ -1423,10 +1430,7 @@ export const login = async (req, res) => {
 // logout user - updated to handle admin
 export const logout = async (req, res) => {
   try {
-    const clearCookieOptions = buildSessionClearCookieOptions(req);
-
-    res.clearCookie("auth_session", clearCookieOptions);
-    res.clearCookie("refresh_session", clearCookieOptions);
+    clearSessionCookies(res, req);
 
     res.status(200).json({
       success: true,
@@ -1462,7 +1466,15 @@ export const refreshToken = async (req, res) => {
     }
 
     const decoded = jwt.verify(cookieData.token, process.env.JWT_SECRET);
-    const user = await User.findById(decoded.userId);
+    const decodedUserId = normalizeId(decoded.userId);
+    if (!decodedUserId) {
+      return res.status(401).json({
+        success: false,
+        message: "Invalid refresh token",
+      });
+    }
+
+    const user = await User.findById(decodedUserId);
 
     if (!user || !user.isVerified) {
       return res.status(401).json({
@@ -1487,6 +1499,8 @@ export const refreshToken = async (req, res) => {
       req,
       7 * 24 * 60 * 60 * 1000
     );
+
+    clearSessionCookies(res, req);
 
     res.cookie("auth_session", newCookieData, cookieOptions);
 
