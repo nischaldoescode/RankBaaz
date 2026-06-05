@@ -43,6 +43,37 @@ const initialState = {
   },
 };
 
+const parseTimerSeconds = (...values) => {
+  for (const value of values) {
+    if (value === null || value === undefined || value === "") continue;
+
+    if (typeof value === "number" && Number.isFinite(value) && value > 0) {
+      return Math.floor(value);
+    }
+
+    if (typeof value === "string") {
+      const trimmed = value.trim();
+      const parts = trimmed.split(":").map((part) => Number(part));
+
+      if (
+        parts.length === 2 &&
+        parts.every((part) => Number.isFinite(part) && part >= 0)
+      ) {
+        const [minutes, seconds] = parts;
+        const totalSeconds = minutes * 60 + seconds;
+        if (totalSeconds > 0) return totalSeconds;
+      }
+
+      const numericValue = Number(trimmed);
+      if (Number.isFinite(numericValue) && numericValue > 0) {
+        return Math.floor(numericValue);
+      }
+    }
+  }
+
+  return 60;
+};
+
 // action types
 const TEST_ACTIONS = {
   UPDATE_QUESTION_TIMER: "UPDATE_QUESTION_TIMER",
@@ -81,10 +112,12 @@ const testReducer = (state, action) => {
 
       // extract difficulty settings from courseinfo
       const difficultySettings = testData.courseInfo?.difficulty;
-      const timeLimit =
-        difficultySettings?.timerSettings?.maxTime ||
+      const timeLimit = parseTimerSeconds(
+        difficultySettings?.timerSettings?.maxTime,
+        difficultySettings?.maxTime,
         testData.courseInfo?.maxTime ||
-        60;
+          testData.maxTime
+      );
 
       // questions are directly in testdata.questions
       const questions = testData.questions || [];

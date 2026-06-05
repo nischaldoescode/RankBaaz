@@ -459,6 +459,45 @@ const generateRefreshToken = (userId, req) => {
   return jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: "30d" });
 };
 
+const buildSessionCookieOptions = (req, maxAge) => {
+  const options = {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    maxAge,
+    signed: true,
+    path: "/",
+  };
+
+  if (process.env.NODE_ENV === "production") {
+    const hostname = req.hostname || req.get("host");
+    if (hostname && hostname.includes("vidhgrow.online")) {
+      options.domain = ".vidhgrow.online";
+    }
+  }
+
+  return options;
+};
+
+const buildSessionClearCookieOptions = (req) => {
+  const options = {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    signed: true,
+    path: "/",
+  };
+
+  if (process.env.NODE_ENV === "production") {
+    const hostname = req.hostname || req.get("host");
+    if (hostname && hostname.includes("vidhgrow.online")) {
+      options.domain = ".vidhgrow.online";
+    }
+  }
+
+  return options;
+};
+
 // register user
 export const register = async (req, res) => {
   try {
@@ -1384,8 +1423,10 @@ export const login = async (req, res) => {
 // logout user - updated to handle admin
 export const logout = async (req, res) => {
   try {
-    res.clearCookie("auth_session");
-    res.clearCookie("refresh_session");
+    const clearCookieOptions = buildSessionClearCookieOptions(req);
+
+    res.clearCookie("auth_session", clearCookieOptions);
+    res.clearCookie("refresh_session", clearCookieOptions);
 
     res.status(200).json({
       success: true,
@@ -1442,13 +1483,12 @@ export const refreshToken = async (req, res) => {
       issuedAt: Date.now(),
     });
 
-    res.cookie("auth_session", newCookieData, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-      signed: true,
-    });
+    const cookieOptions = buildSessionCookieOptions(
+      req,
+      7 * 24 * 60 * 60 * 1000
+    );
+
+    res.cookie("auth_session", newCookieData, cookieOptions);
 
     const newRefreshCookieData = encryptCookieData({
       token: newRefreshToken,
@@ -1457,13 +1497,12 @@ export const refreshToken = async (req, res) => {
       issuedAt: Date.now(),
     });
 
-    res.cookie("refresh_session", newRefreshCookieData, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      maxAge: 30 * 24 * 60 * 60 * 1000,
-      signed: true,
-    });
+    const refreshCookieOptions = buildSessionCookieOptions(
+      req,
+      30 * 24 * 60 * 60 * 1000
+    );
+
+    res.cookie("refresh_session", newRefreshCookieData, refreshCookieOptions);
 
     if (process.env.NODE_ENV === "development") {
       console.log("Setting auth_session cookie:", {

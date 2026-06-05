@@ -231,6 +231,8 @@ const Login = () => {
       if (response.data.success) {
         // clear otp from state moving to password step
         setFormData((prev) => ({ ...prev, otp: "" }));
+        setOtpTimer(0);
+        setCanResendOtp(false);
         setLoginStep(3);
         toast.success("OTP verified");
       } else {
@@ -261,6 +263,11 @@ const Login = () => {
   };
 
   const handleChangeEmail = () => {
+    if (loginStep === 2 && otpTimer > 0) {
+      toast.error(`Please wait ${otpTimer}s before changing email`);
+      return;
+    }
+
     setLoginStep(1);
     // clear otp and password, preserve email
     setFormData((prev) => ({
@@ -379,21 +386,20 @@ const Login = () => {
                 ) : (
                   <button
                     type="button"
-                    onClick={() => {
-                      setLoginStep(1);
-                      setFormData((prev) => ({
-                        ...prev,
-                        otp: "",
-                        password: "",
-                      }));
-                      setErrors({});
-                      setOtpTimer(0);
-                      setCanResendOtp(false);
-                    }}
-                    className="inline-flex items-center space-x-2 text-muted-foreground hover:text-foreground transition-colors duration-200"
+                    onClick={handleChangeEmail}
+                    disabled={loginStep === 2 && otpTimer > 0}
+                    className={`inline-flex items-center space-x-2 transition-colors duration-200 ${
+                      loginStep === 2 && otpTimer > 0
+                        ? "cursor-not-allowed text-muted-foreground/50"
+                        : "text-muted-foreground hover:text-foreground"
+                    }`}
                   >
                     <ArrowLeft className="w-4 h-4" />
-                    <span className="text-sm sm:text-base">Back to email</span>
+                    <span className="text-sm sm:text-base">
+                      {loginStep === 2 && otpTimer > 0
+                        ? `Back in ${otpTimer}s`
+                        : "Back to email"}
+                    </span>
                   </button>
                 )}
               </motion.div>

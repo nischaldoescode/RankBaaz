@@ -34,6 +34,16 @@ const generateDeviceFingerprint = (req) => {
   ).toString();
 };
 
+const shouldEnforceSessionIp = () => process.env.STRICT_SESSION_IP === "true";
+
+const hasSessionContextChanged = (decoded, currentIp, currentUserAgent) => {
+  if (decoded.userAgent !== currentUserAgent) {
+    return true;
+  }
+
+  return shouldEnforceSessionIp() && decoded.ip !== currentIp;
+};
+
 const isBootstrapProfileRequest = (req, type) => {
   if (req.method !== "GET") return false;
   const path = (req.originalUrl || req.path || "").split("?")[0];
@@ -100,7 +110,7 @@ export const authenticateUser = async (req, res, next) => {
     const currentIp = req.ip || req.connection.remoteAddress;
     const currentUserAgent = req.get("User-Agent");
 
-    if (decoded.ip !== currentIp || decoded.userAgent !== currentUserAgent) {
+    if (hasSessionContextChanged(decoded, currentIp, currentUserAgent)) {
       return res.status(401).json({
         success: false,
         message: "Session context changed. Please login again.",
@@ -350,7 +360,7 @@ export const authenticateAny = async (req, res, next) => {
 
     const currentIp = req.ip || req.connection.remoteAddress;
     const currentUserAgent = req.get("User-Agent");
-    if (decoded.ip !== currentIp || decoded.userAgent !== currentUserAgent) {
+    if (hasSessionContextChanged(decoded, currentIp, currentUserAgent)) {
       return res.status(401).json({
         success: false,
         message: "Please login again.",

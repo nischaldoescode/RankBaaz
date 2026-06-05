@@ -95,7 +95,7 @@ const Test = () => {
     }
 
     let detectionInterval;
-    let performanceCheck;
+    let initialDetectionTimeout;
 
     // method 1: console detection
     const consoleCheck = () => {
@@ -114,25 +114,15 @@ const Test = () => {
       return widthThreshold || heightThreshold;
     };
 
-    // method 3: performance timing check
-    performanceCheck = () => {
-      const start = performance.now();
-
-      // trigger potential devtools detection
-      const devtools = /./;
-      devtools.toString = function () {
-        return true;
-      };
-
-      console.log("%c", devtools);
-
-      const end = performance.now();
-      return end - start > 100;
-    };
-
     // combined detection
     const detectDevTools = () => {
-      const detected = consoleCheck() || sizeCheck() || performanceCheck();
+      let detected = false;
+
+      try {
+        detected = consoleCheck() || sizeCheck();
+      } catch (error) {
+        detected = sizeCheck();
+      }
 
       if (detected && !devToolsOpen && !violationRecorded) {
         setDevToolsOpen(true);
@@ -144,6 +134,7 @@ const Test = () => {
 
     // run detection every 1 second
     detectionInterval = setInterval(detectDevTools, 1000);
+    initialDetectionTimeout = window.setTimeout(detectDevTools, 250);
 
     // also detect on window resize
     window.addEventListener("resize", detectDevTools);
@@ -192,6 +183,7 @@ const Test = () => {
       document.removeEventListener("visibilitychange", handleVisibilityChange);
 
       clearInterval(detectionInterval);
+      window.clearTimeout(initialDetectionTimeout);
       window.removeEventListener("resize", detectDevTools);
       document.removeEventListener("contextmenu", preventContextMenu);
       document.removeEventListener("keydown", preventDevToolsShortcuts);
@@ -416,30 +408,6 @@ const Test = () => {
     setShowReloadWarning(false);
   };
 
-  const handleTimeExpiredSubmit = useCallback(() => {
-    // console.log("time expired - resetting test");
-
-    // close any open modals
-    setShowExitModal(false);
-    setShowSubmitModal(false);
-    setShowReloadWarning(false);
-
-    // show toast notification
-    toast.error("Time expired! Test ended.", {
-      duration: 3000,
-      icon: "⏰",
-    });
-
-    // small delay for animation, then reset and navigate
-    setTimeout(() => {
-      resetTest();
-      setAnswers({});
-      setSelectedAnswer(null);
-      setTestPhase("start");
-      navigate("/courses");
-    }, 500);
-  }, [resetTest, navigate]);
-
   const handleLeaveTest = useCallback(async () => {
     await handleAbandonTest();
     setShowReloadWarning(false);
@@ -457,23 +425,14 @@ const Test = () => {
     timeRemaining: timeRemainingFormatted,
   });
 
-  // use effect to auto-submit when time runs out
-  useEffect(() => {
-    if (testState.isActive && testState.timeRemaining === 0 && !testResult) {
-      // console.log("time expired - resetting test");
-      handleTimeExpiredSubmit();
-    }
-  }, [
-    testState.timeRemaining,
-    testState.isActive,
-    testResult,
-    handleTimeExpiredSubmit,
-  ]);
-
   const calculateCurrentDifficultyResults = () => {
+    const currentQuestions = currentTest?.questions || [];
+    const answeredQuestionIds = Object.keys(answers).filter((questionId) =>
+      currentQuestions.some((question) => question._id === questionId)
+    );
     const correctAnswersCount = Object.entries(answers).filter(
       ([questionId, userAnswer]) => {
-        const question = currentTest.questions.find(
+        const question = currentQuestions.find(
           (q) => q._id === questionId
         );
         if (!question) return false;
@@ -481,8 +440,13 @@ const Test = () => {
       }
     ).length;
 
-    const totalQuestions = testState.totalQuestions;
-    const wrongAnswersCount = totalQuestions - correctAnswersCount;
+    const totalQuestions = currentQuestions.length || testState.totalQuestions;
+    const answeredQuestionsCount = answeredQuestionIds.length;
+    const wrongAnswersCount = Math.max(
+      0,
+      answeredQuestionsCount - correctAnswersCount
+    );
+    const unansweredCount = Math.max(0, totalQuestions - answeredQuestionsCount);
     const maxMarksPerQuestion = selectedDifficulty?.marksPerQuestion || 5;
     const totalScore = correctAnswersCount * maxMarksPerQuestion;
     const maxPossibleScore = totalQuestions * maxMarksPerQuestion;
@@ -492,7 +456,7 @@ const Test = () => {
       totalQuestions,
       correctAnswers: correctAnswersCount,
       wrongAnswers: wrongAnswersCount,
-      unanswered: 0,
+      unanswered: unansweredCount,
       totalScore,
       maxPossibleScore,
       timeTaken: Math.floor(
@@ -751,8 +715,10 @@ const Test = () => {
       : 0;
   }, [currentTest, answers]);
 
-  const handleAutoSubmit = useCallback(async () => {
-    if (!canCompleteDifficulty()) {
+  const handleAutoSubmit = useCallback(async (options = {}) => {
+    const allowIncomplete = Boolean(options?.allowIncomplete);
+
+    if (!allowIncomplete && !canCompleteDifficulty()) {
       toast.error("Please answer all questions before proceeding");
       return;
     }
@@ -765,12 +731,18 @@ const Test = () => {
 
       const currentDiffName =
         currentTest?.courseInfo?.difficulty?.name || selectedDifficulty.name;
-      const allDiffs = ["Easy", "Medium", "Hard"];
+      const courseDifficulties = Array.isArray(courseData?.difficulties)
+        ? courseData.difficulties.filter((difficulty) => difficulty?.name)
+        : [];
+      const allDiffs = courseDifficulties.length
+        ? courseDifficulties.map((difficulty) => difficulty.name)
+        : ["Easy", "Medium", "Hard"];
       const currentIndex = allDiffs.indexOf(currentDiffName);
-      const nextDifficultyName = allDiffs[currentIndex + 1];
+      const nextDifficultyName =
+        currentIndex >= 0 ? allDiffs[currentIndex + 1] : null;
 
       const nextDiff = nextDifficultyName
-        ? courseData.difficulties.find((d) => d.name === nextDifficultyName)
+        ? courseDifficulties.find((d) => d.name === nextDifficultyName)
         : null;
 
       if (nextDiff) {
@@ -789,20 +761,19 @@ const Test = () => {
             `No questions in ${nextDifficultyName}. Checking for more difficulties...`
           );
 
-          const allDiffOrder = ["Easy", "Medium", "Hard"];
-          const nextIndex = allDiffOrder.indexOf(nextDifficultyName);
-          const subsequentDiff = allDiffOrder[nextIndex + 1];
+          const nextIndex = allDiffs.indexOf(nextDifficultyName);
+          const subsequentDiff = allDiffs[nextIndex + 1];
 
           if (
             subsequentDiff &&
-            courseData.difficulties.find((d) => d.name === subsequentDiff)
+            courseDifficulties.find((d) => d.name === subsequentDiff)
           ) {
             // try the difficulty the one with no questions
             const secondNextResult = await startTest(courseId, subsequentDiff);
 
             if (secondNextResult.success) {
               // successfully started the subsequent difficulty
-              const secondNextDiffObj = courseData.difficulties.find(
+              const secondNextDiffObj = courseDifficulties.find(
                 (d) => d.name === subsequentDiff
               );
               setSelectedDifficulty(secondNextDiffObj);
@@ -974,7 +945,56 @@ const Test = () => {
     courseId,
     startTest,
     answers,
+    currentTest,
+    testState.startTime,
+    testState.totalQuestions,
     canCompleteDifficulty,
+  ]);
+
+  const handleTimeExpiredSubmit = useCallback(() => {
+    if (
+      !currentTest ||
+      !testState.isActive ||
+      testState.totalQuestions <= 0 ||
+      testState.totalTimeAllowed <= 0
+    ) {
+      return;
+    }
+
+    setShowExitModal(false);
+    setShowSubmitModal(false);
+    setShowReloadWarning(false);
+
+    toast("Time is up. Moving to the next available step.", {
+      duration: 3000,
+    });
+
+    handleAutoSubmit({ allowIncomplete: true, reason: "timeExpired" });
+  }, [
+    currentTest,
+    testState.isActive,
+    testState.totalQuestions,
+    testState.totalTimeAllowed,
+    handleAutoSubmit,
+  ]);
+
+  useEffect(() => {
+    if (
+      testState.isActive &&
+      testState.timeRemaining === 0 &&
+      testState.totalTimeAllowed > 0 &&
+      currentTest &&
+      !testResult
+    ) {
+      handleTimeExpiredSubmit();
+    }
+  }, [
+    testState.timeRemaining,
+    testState.totalTimeAllowed,
+    testState.isActive,
+    currentTest,
+    testResult,
+    handleTimeExpiredSubmit,
   ]);
 
   useEffect(() => {
