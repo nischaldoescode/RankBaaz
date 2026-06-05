@@ -136,22 +136,22 @@ export const ThemeProvider = ({ children }) => {
     localStorage.setItem('theme-preferences', JSON.stringify(state));
 
     // keep theme classes in sync without dropping classes from other libraries
-    const root = document.documentelement;
-    array.from(root.classlist)
+    const root = document.documentElement;
+    Array.from(root.classList)
       .filter(
-        (classname) =>
-          classname.startswith('theme-') ||
-          classname.startswith('color-') ||
-          classname.startswith('font-')
+        (className) =>
+          className.startsWith('theme-') ||
+          className.startsWith('color-') ||
+          className.startsWith('font-')
       )
-      .foreach((classname) => root.classlist.remove(classname));
+      .forEach((className) => root.classList.remove(className));
 
-    root.classlist.add(
+    root.classList.add(
       `theme-${state.theme}`,
-      `color-${state.primarycolor}`,
-      `font-${state.fontsize}`
+      `color-${state.primaryColor}`,
+      `font-${state.fontSize}`
     );
-    root.classlist.toggle('dark', state.theme === 'dark');
+    root.classList.toggle('dark', state.theme === 'dark');
     // apply reduced motion
     if (state.reducedMotion || !state.animations) {
       document.documentElement.style.setProperty('--animation-duration', '0s');

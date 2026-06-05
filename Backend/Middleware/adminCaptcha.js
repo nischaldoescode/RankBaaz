@@ -20,6 +20,51 @@ import redisClient, {
 const ADMIN_CAPTCHA_DIFFICULTY = 5; // harder than regular users
 const ADMIN_CAPTCHA_TTL = 120; // 2 minutes
 const MAX_LOGIN_ATTEMPTS = 3; // require captcha 3 failed logins
+const LOGIN_ATTEMPT_TTL_MS = 10 * 60 * 1000;
+
+const fallbackAttempts = new Map();
+const fallbackCaptchas = new Map();
+
+const warnRedisFallback = (label, error) => {
+  if (!isRedisConnectionError(error)) throw error;
+  console.warn(label, summarizeRedisError(error));
+};
+
+const pruneFallbackState = () => {
+  const now = Date.now();
+
+  for (const [key, value] of fallbackAttempts.entries()) {
+    if (value.expiresAt <= now) fallbackAttempts.delete(key);
+  }
+
+  for (const [key, value] of fallbackCaptchas.entries()) {
+    if (value.expiresAt <= now) fallbackCaptchas.delete(key);
+  }
+};
+
+const getFallbackAttemptCount = (identifier) => {
+  pruneFallbackState();
+  const item = fallbackAttempts.get(identifier);
+  return item?.count || 0;
+};
+
+const incrementFallbackAttempt = (identifier) => {
+  pruneFallbackState();
+  const now = Date.now();
+  const current = fallbackAttempts.get(identifier);
+
+  if (!current || current.expiresAt <= now) {
+    fallbackAttempts.set(identifier, {
+      count: 1,
+      expiresAt: now + LOGIN_ATTEMPT_TTL_MS,
+    });
+    return 1;
+  }
+
+  current.count += 1;
+  fallbackAttempts.set(identifier, current);
+  return current.count;
+};
 
 /**
  * generate admin captcha challenge
@@ -35,11 +80,23 @@ export const generateAdminCaptcha = async (identifier) => {
     difficulty: ADMIN_CAPTCHA_DIFFICULTY,
   };
 
-  await redisClient.setex(
-    captchaKey,
-    ADMIN_CAPTCHA_TTL,
-    JSON.stringify(captchaData)
-  );
+  fallbackCaptchas.set(identifier, {
+    ...captchaData,
+    expiresAt: timestamp + ADMIN_CAPTCHA_TTL * 1000,
+  });
+
+  try {
+    await redisClient.setex(
+      captchaKey,
+      ADMIN_CAPTCHA_TTL,
+      JSON.stringify(captchaData)
+    );
+  } catch (error) {
+    warnRedisFallback(
+      "Redis unavailable while storing admin captcha; using process memory:",
+      error,
+    );
+  }
 
   return {
     seed,
@@ -53,7 +110,23 @@ export const generateAdminCaptcha = async (identifier) => {
  */
 export const verifyAdminCaptcha = async (identifier, seed, nonce) => {
   const captchaKey = `admin:captcha:${identifier}`;
-  const stored = await redisClient.get(captchaKey);
+  let stored;
+
+  try {
+    stored = await redisClient.get(captchaKey);
+  } catch (error) {
+    warnRedisFallback(
+      "Redis unavailable while reading admin captcha; using process memory:",
+      error,
+    );
+  }
+
+  if (!stored) {
+    const fallback = fallbackCaptchas.get(identifier);
+    if (fallback) {
+      stored = JSON.stringify(fallback);
+    }
+  }
 
   if (!stored) {
     return { valid: false, reason: "Captcha expired or not found" };
@@ -84,7 +157,15 @@ export const verifyAdminCaptcha = async (identifier, seed, nonce) => {
   }
 
   // clean up
-  await redisClient.del(captchaKey);
+  fallbackCaptchas.delete(identifier);
+  try {
+    await redisClient.del(captchaKey);
+  } catch (error) {
+    warnRedisFallback(
+      "Redis unavailable while clearing admin captcha; using process memory:",
+      error,
+    );
+  }
 
   return { valid: true };
 };
@@ -97,16 +178,34 @@ export const trackAdminLoginAttempt = async (identifier, success = false) => {
 
   if (success) {
     // clear attempts on successful login
-    await redisClient.del(attemptKey);
+    fallbackAttempts.delete(identifier);
+    try {
+      await redisClient.del(attemptKey);
+    } catch (error) {
+      warnRedisFallback(
+        "Redis unavailable while clearing admin login attempts; using process memory:",
+        error,
+      );
+    }
     return { requiresCaptcha: false, attempts: 0 };
   }
 
-  // increment failed attempts
-  const attempts = await redisClient.incr(attemptKey);
+  let attempts;
 
-  // set expiry on first attempt (10 minutes)
-  if (attempts === 1) {
-    await redisClient.expire(attemptKey, 600);
+  try {
+    // increment failed attempts
+    attempts = await redisClient.incr(attemptKey);
+
+    // set expiry on first attempt (10 minutes)
+    if (attempts === 1) {
+      await redisClient.expire(attemptKey, 600);
+    }
+  } catch (error) {
+    warnRedisFallback(
+      "Redis unavailable while tracking admin login attempts; using process memory:",
+      error,
+    );
+    attempts = incrementFallbackAttempt(identifier);
   }
 
   const requiresCaptcha = attempts >= MAX_LOGIN_ATTEMPTS;
@@ -119,8 +218,16 @@ export const trackAdminLoginAttempt = async (identifier, success = false) => {
  */
 export const isCaptchaRequired = async (identifier) => {
   const attemptKey = `admin:attempts:${identifier}`;
-  const attempts = await redisClient.get(attemptKey);
-  return attempts >= MAX_LOGIN_ATTEMPTS;
+  try {
+    const attempts = await redisClient.get(attemptKey);
+    return Number(attempts || 0) >= MAX_LOGIN_ATTEMPTS;
+  } catch (error) {
+    warnRedisFallback(
+      "Redis unavailable while checking admin login attempts; using process memory:",
+      error,
+    );
+    return getFallbackAttemptCount(identifier) >= MAX_LOGIN_ATTEMPTS;
+  }
 };
 
 /**

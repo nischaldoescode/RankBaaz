@@ -127,9 +127,11 @@
     ></script>
     <script>
       window.dataLayer = window.dataLayer || [];
-      gtag("js", new Date());
+      function gtag(){window.dataLayer.push(arguments);}
+      window.gtag = window.gtag || gtag;
+      window.gtag("js", new Date());
 
-      gtag("config", "G-GQK7Y7WTG1");
+      window.gtag("config", "G-GQK7Y7WTG1");
     </script>
 
     <!-- Structured Data - WebSite -->

@@ -108,25 +108,24 @@ const Header = () => {
     setTheme(isDarkMode ? "light" : "dark");
   };
 
-  // desktop nav link
-  const desktopnavlink = ({ link }) => (
-    <link
+  const DesktopNavLink = ({ link }) => (
+    <Link
       to={link.path}
-      classname={`relative flex items-center gap-1.5 px-3.5 py-2 rounded-full text-sm font-semibold transition-all duration-200 ${
-        isactive(link.path)
+      className={`relative flex items-center gap-1.5 rounded-full px-3.5 py-2 text-sm font-semibold transition-all duration-200 ${
+        isActive(link.path)
           ? "text-primary"
           : "text-muted-foreground hover:text-foreground hover:bg-blue-50"
       }`}
     >
-      {isactive(link.path) && (
+      {isActive(link.path) && (
         <motion.span
-          layoutid="desktop-nav-fill"
-          classname="absolute inset-0 rounded-full bg-primary/10"
+          layoutId="desktop-nav-fill"
+          className="absolute inset-0 rounded-full bg-primary/10"
           transition={{ type: "spring", stiffness: 420, damping: 34 }}
         />
       )}
-      <span classname="relative z-10">{link.label}</span>
-    </link>
+      <span className="relative z-10">{link.label}</span>
+    </Link>
   );
   return (
     <>

@@ -20,6 +20,8 @@ import CryptoJS from "crypto-js";
 
 const router = express.Router();
 
+const getAdminJwtSecret = () => process.env.ADMIN_JWT_SECRET || process.env.JWT_SECRET;
+
 /**
  * helper: decrypt cookie data (for user auth)
  */
@@ -151,7 +153,11 @@ const authCookieOnly = async (req, res, next) => {
     if (adminToken) {
       try {
         // verify admin jwt
-        const decoded = jwt.verify(adminToken, process.env.ADMIN_JWT_SECRET);
+        const adminJwtSecret = getAdminJwtSecret();
+        if (!adminJwtSecret) {
+          throw new Error("Admin JWT secret is not configured");
+        }
+        const decoded = jwt.verify(adminToken, adminJwtSecret);
         const admin = await Admin.findById(decoded.adminId).select("-password");
 
         if (!admin) {
