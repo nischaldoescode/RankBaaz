@@ -44,11 +44,30 @@ const hasSessionContextChanged = (decoded, currentIp, currentUserAgent) => {
   return shouldEnforceSessionIp() && decoded.ip !== currentIp;
 };
 
-const normalizeDecodedUserId = (value) => {
+const normalizeDecodedUserId = (value, seen = new WeakSet()) => {
   if (!value) return null;
   if (typeof value === "string") return value;
-  if (value._id) return normalizeDecodedUserId(value._id);
-  if (value.$oid) return value.$oid;
+  if (typeof value === "number") return String(value);
+
+  if (typeof value === "object") {
+    if (typeof value.toHexString === "function") {
+      return value.toHexString();
+    }
+
+    if (seen.has(value)) {
+      return null;
+    }
+
+    seen.add(value);
+
+    if (value.$oid) return String(value.$oid);
+
+    const nestedId = value._id;
+    if (nestedId && nestedId !== value) {
+      return normalizeDecodedUserId(nestedId, seen);
+    }
+  }
+
   if (typeof value.toString === "function") {
     const normalized = value.toString();
     return normalized === "[object Object]" ? null : normalized;
