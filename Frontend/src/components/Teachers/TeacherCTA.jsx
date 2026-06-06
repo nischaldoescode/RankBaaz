@@ -1,9 +1,9 @@
 /**
- * renders the public teacher cta component with reusable layout, actions, and responsive behavior
+ * renders the public teacher call to action shown on the homepage
  *
  * @file frontend/src/components/teachers/teachercta.jsx
  * @module frontend/src/components/teachers/teachercta
- * @exports component used by pages and shared layouts
+ * @returns {JSX.Element} homepage teacher section with application and portal links
  */
 
 import { useEffect, useState } from "react";
@@ -33,13 +33,12 @@ const TeacherCTASection = () => {
             <div className="flex-1 text-center lg:text-left">
 
               <h2 className="text-3xl sm:text-4xl font-bold text-foreground mb-4">
-                Share your expertise.{" "}
-                <span className="text-primary">Earn from it.</span>
+                Teach where practice{" "}
+                <span className="text-primary">has room to grow.</span>
               </h2>
 
               <p className="text-muted-foreground text-base leading-relaxed mb-6 max-w-lg mx-auto lg:mx-0">
-                Join our invite-only teacher program. Keep 80% of every course
-                sale.
+                Bring clear lessons to learners who are ready to work.
               </p>
 
               {count !== null && (
@@ -70,8 +69,8 @@ const TeacherCTASection = () => {
             {/* perks */}
             <div className="flex-shrink-0 grid grid-cols-2 gap-3 w-full max-w-xs">
               {[
-                { label: "Revenue share", value: "80%" },
-                { label: "Approval time", value: "< 48h" },
+                { label: "Review window", value: "48h" },
+                { label: "Course tools", value: "Ready" },
               ].map((item, i) => (
                 <div
                   key={i}

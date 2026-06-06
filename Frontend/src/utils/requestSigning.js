@@ -1,14 +1,23 @@
 /**
- * provides public request signing utilities for secure requests, validation, caching, and shared helpers
+ * provides browser-side request signing for authenticated frontend api calls
  *
  * @file frontend/src/utils/requestsigning.js
  * @module frontend/src/utils/requestsigning
- * @exports helpers imported by related app modules
+ * @exports requestsigner singleton used by axios interceptors
  */
 
 import crypto from "crypto-js";
 
-// utility for signing api requests
+const isDevelopmentMode = () =>
+  import.meta.env.MODE === "development" ||
+  import.meta.env.VITE_MODE === "development" ||
+  import.meta.env.VITE_ENV === "development";
+
+/**
+ * stores a short lived signing secret and adds hmac headers to protected requests
+ *
+ * @class requestsigner
+ */
 class RequestSigner {
   constructor() {
     this.signingSecret = null;
@@ -73,7 +82,9 @@ class RequestSigner {
 
   signRequest(config) {
     if (!this.isSecretValid()) {
-      console.warn("Signing secret expired or missing");
+      if (isDevelopmentMode()) {
+        console.warn("Signing secret expired or missing");
+      }
       return config;
     }
 
@@ -97,7 +108,7 @@ class RequestSigner {
       config.headers["X-Request-Timestamp"] = timestamp;
       config.headers["X-Request-Nonce"] = nonce;
 
-      if (import.meta.env.VITE_MODE === "development") {
+      if (isDevelopmentMode()) {
         console.log("Request signed:", {
           method,
           path,
@@ -106,7 +117,9 @@ class RequestSigner {
         });
       }
     } catch (error) {
-      console.error("Signing failed:", error);
+      if (isDevelopmentMode()) {
+        console.error("Signing failed:", error);
+      }
     }
 
     return config;

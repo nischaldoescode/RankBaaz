@@ -1,13 +1,18 @@
 /**
- * provides the admin request signer utility for signed requests, secure api calls, and shared helpers
+ * provides browser-side request signing for authenticated admin api calls
  *
  * @file admin/src/utils/adminrequestsigner.js
  * @module admin/src/utils/adminrequestsigner
- * @exports helpers imported by related app modules
+ * @exports adminrequestsigner singleton used by admin axios clients
  */
 
 import crypto from "crypto-js";
 import axios from "axios";
+
+const isDevelopmentMode = () =>
+  import.meta.env.MODE === "development" ||
+  import.meta.env.VITE_MODE === "development" ||
+  import.meta.env.VITE_ENV === "development";
 
 /**
  * admin request signer
@@ -135,7 +140,9 @@ class AdminRequestSigner {
       const parsedUrl = new URL(requestUri, baseURL || window.location.origin);
       return parsedUrl.pathname + parsedUrl.search;
     } catch (error) {
-      console.error("Failed to build signed path:", error);
+      if (isDevelopmentMode()) {
+        console.error("Failed to build signed path:", error);
+      }
       return config.url || "/";
     }
   }
@@ -164,7 +171,9 @@ class AdminRequestSigner {
    */
   signRequest(config) {
     if (!this.isSecretValid()) {
-      console.warn("Signing secret expired or missing");
+      if (isDevelopmentMode()) {
+        console.warn("Signing secret expired or missing");
+      }
       return config;
     }
 
@@ -191,7 +200,7 @@ class AdminRequestSigner {
       config.headers["X-Request-Nonce"] = nonce;
 
       // development logging
-      if (import.meta.env.VITE_MODE === "development") {
+      if (isDevelopmentMode()) {
         console.log("Request signed:", {
           method,
           originalUrl: config.url,
@@ -203,7 +212,9 @@ class AdminRequestSigner {
         });
       }
     } catch (error) {
-      console.error("Signing failed:", error);
+      if (isDevelopmentMode()) {
+        console.error("Signing failed:", error);
+      }
       throw error; // propagate error to prevent unsigned requests
     }
 

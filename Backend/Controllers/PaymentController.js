@@ -1,9 +1,11 @@
 /**
- * handles payment controller api requests, input validation, persistence calls, side effects, and response shaping
+ * handles course payment order creation, payment verification, and purchase lookup
  *
  * @file backend/controllers/paymentcontroller.js
  * @module backend/controllers/paymentcontroller
- * @exports request handlers used by backend routes
+ * @exports createOrder builds a provider order and returns browser-safe checkout data
+ * @exports verifyPayment validates provider signatures before storing access
+ * @exports checkPurchase returns whether the authenticated user owns a course
  */
 
 import Razorpay from "razorpay";
@@ -20,6 +22,13 @@ const razorpay = new Razorpay({
   key_secret: process.env.RAZORPAY_SECRET?.trim(),
 });
 
+/**
+ * creates a paid course order for the authenticated user
+ *
+ * @param {import("express").Request} req signed request containing user id, course id, and optional coupon id
+ * @param {import("express").Response} res response used to return checkout-safe order data
+ * @returns {Promise<void>} sends validation errors, provider errors, or order data
+ */
 export const createOrder = async (req, res) => {
   try {
     const { courseId, couponId } = req.body; // couponid here
@@ -38,11 +47,13 @@ export const createOrder = async (req, res) => {
     const razorpayKeyId = process.env.RAZORPAY_KEY_ID.trim();
     const razorpaySecret = process.env.RAZORPAY_SECRET.trim();
 
-    console.log("Credential verification:", {
-      keyLength: razorpayKeyId.length,
-      secretLength: razorpaySecret.length,
-      keyFormat: razorpayKeyId.startsWith("rzp_") ? "Valid" : "Invalid",
-    });
+    if (!razorpayKeyId.startsWith("rzp_") || razorpaySecret.length < 16) {
+      console.error("payment credentials failed format validation");
+      return res.status(500).json({
+        success: false,
+        message: "Payment system configuration error",
+      });
+    }
 
     // validate course
     const course = await Course.findById(courseId);
@@ -150,20 +161,9 @@ export const createOrder = async (req, res) => {
       receipt: options.receipt,
     });
 
-    console.log("Using credentials:", {
-      keyId: process.env.RAZORPAY_KEY_ID?.substring(0, 15) + "...",
-      hasSecret: !!process.env.RAZORPAY_SECRET,
-    });
-
     let order;
     try {
       order = await razorpay.orders.create(options);
-      console.log("FULL KEY CHECK:", {
-        keyId: razorpayKeyId,
-        secretFirstChars: razorpaySecret.substring(0, 4),
-        secretLastChars: razorpaySecret.substring(razorpaySecret.length - 4),
-      });
-
       console.log("Order created successfully:", order.id);
     } catch (razorpayError) {
       console.error("Order creation failed:", {

@@ -1,9 +1,9 @@
 /**
- * renders the admin teacher management workspace with data loading, actions, dialogs, and responsive states
+ * renders the admin teacher management workspace with application review and invite tools
  *
  * @file admin/src/pages/teachermanagement.jsx
  * @module admin/src/pages/teachermanagement
- * @exports route component rendered by the client router
+ * @returns {JSX.Element} admin route for teacher applications, documents, and profile actions
  */
 
 import React, { useState, useEffect, useCallback, useRef } from "react";
@@ -94,9 +94,9 @@ const EMAIL_TEMPLATES = [
 
 Your expertise and passion for education will be a great addition to our platform. As a teacher, you'll:
 
-- Keep 80% of every course sale
 - Reach thousands of motivated students
 - Create courses with full control over pricing and content
+- Work with clear teacher terms before publishing
 
 Click the button below to complete your registration. The link expires in 4 minutes, so please register promptly.
 
@@ -111,7 +111,7 @@ The Vidhgrow Team`,
     subject: "Invitation to teach on Vidhgrow",
     body: `We've reviewed your application and would like to invite you to teach on Vidhgrow.
 
-Your background is a good fit for the courses our students are looking for. As a Vidhgrow teacher you'll keep 80% of every sale, with payouts processed directly to your bank or digital wallet.
+Your background is a good fit for the courses our students are looking for. As a Vidhgrow teacher, you will get clear course tools, a reviewed profile, and transparent earning terms before publishing.
 
 Please complete your registration using the link below. It expires in 4 minutes.
 

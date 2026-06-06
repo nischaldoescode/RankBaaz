@@ -1,9 +1,14 @@
 /**
- * renders the public payment modal component with reusable layout, actions, and responsive behavior
+ * renders the course checkout modal and keeps provider setup behind the backend order response
  *
  * @file frontend/src/components/payment/paymentmodal.jsx
  * @module frontend/src/components/payment/paymentmodal
- * @exports component used by pages and shared layouts
+ * @param {object} props component props
+ * @param {boolean} props.isOpen controls whether the modal is mounted
+ * @param {Function} props.onClose closes the modal after cancel or completion
+ * @param {object} props.course course being purchased
+ * @param {Function} props.onSuccess refreshes course access after verification
+ * @returns {JSX.Element|null} checkout modal or null when closed
  */
 
 import React, { useState, useEffect } from "react";
@@ -28,10 +33,6 @@ import toast from "react-hot-toast";
 import { useAuth } from "@/context/AuthContext";
 import { useContent } from "@/context/ContentContext";
 
-/**
- * handles razorpay and khalti checkout flows
- * geo restriction determines which payment gateway is shown
- */
 const PaymentModal = ({ isOpen, onClose, course, onSuccess }) => {
   const { user } = useAuth();
   const { contentSettings } = useContent();
@@ -46,11 +47,9 @@ const PaymentModal = ({ isOpen, onClose, course, onSuccess }) => {
   const [couponError, setCouponError] = useState("");
   const [khaltiLoading, setKhaltiLoading] = useState(false);
 
-  // determine payment gateway from course geo restriction
+  // choose the checkout route from course availability rules
   const isNepalCourse = course?.geoRestriction === "nepal";
-  const isIndiaCourse = !isNepalCourse; // default razorpay
-
-  const keyID = import.meta.env.VITE_RAZORPAY_KEY_ID;
+  const isIndiaCourse = !isNepalCourse;
 
   useEffect(() => {
     if (isOpen && course && isIndiaCourse) {
@@ -70,7 +69,7 @@ const PaymentModal = ({ isOpen, onClose, course, onSuccess }) => {
     }
   }, [isOpen]);
 
-  // razorpay order
+  // order creation returns only the public checkout key needed by the browser
   const createRazorpayOrder = async (appliedCouponId = null) => {
     try {
       setLoading(true);
@@ -130,7 +129,7 @@ const PaymentModal = ({ isOpen, onClose, course, onSuccess }) => {
   const validateIndiaPhone = (p) => /^[6-9]\d{9}$/.test(p);
   const validateNepalPhone = (p) => /^9[6-8]\d{8}$/.test(p);
 
-  // razorpay payment
+  // hosted checkout is opened with the public key returned by the backend
   const handleRazorpayPayment = async () => {
     if (!phoneNumber.trim()) {
       setPhoneError("Phone number is required");
@@ -144,10 +143,18 @@ const PaymentModal = ({ isOpen, onClose, course, onSuccess }) => {
       toast.error("Payment not initialized. Refresh and try again.");
       return;
     }
+    const gatewayKey = orderData?.keyId;
+    if (
+      typeof gatewayKey !== "string" ||
+      !gatewayKey.trim().startsWith("rzp_")
+    ) {
+      toast.error("Payment setup is not ready. Refresh and try again.");
+      return;
+    }
     setPhoneError("");
 
     const options = {
-      key: keyID,
+      key: gatewayKey.trim(),
       amount: orderData.amount,
       currency: orderData.currency,
       order_id: orderData.orderId,
