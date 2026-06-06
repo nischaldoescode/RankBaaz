@@ -1,9 +1,9 @@
 /**
- * renders the teacher dashboard courses tab with data loading, actions, forms, and mobile states
+ * renders the teacher dashboard courses tab with course creation, editing, and responsive states
  *
  * @file teachers/src/pages/dashboard/coursestab.jsx
  * @module teachers/src/pages/dashboard/coursestab
- * @exports route component rendered by the client router
+ * @returns {JSX.Element} teacher dashboard section for managing courses and course forms
  */
 
 import React, { useState, useEffect, useCallback } from "react";
@@ -1310,7 +1310,7 @@ const CreateCourseModal = ({ teacher, onClose, onCreated }) => {
             />
             {teacher?.country === "nepal" && (
               <p style={{ fontSize: 11, color: "#7c3aed", marginTop: 4 }}>
-                Nepal-only course with Khalti payment.
+                Nepal-only course with local checkout availability.
               </p>
             )}
           </div>

@@ -1,15 +1,21 @@
 /**
- * wraps public api service calls, api responses, caching, and frontend data helpers
+ * wraps public api service calls, signed requests, auth refresh, and shared endpoint helpers
  *
  * @file frontend/src/services/api.js
  * @module frontend/src/services/api
- * @exports api helpers used by client views
+ * @exports api axios instance and api method helpers used by client views
  */
 
 import axios from "axios";
 import toast from "react-hot-toast";
 import crypto from "crypto-js";
 import { requestSigner } from "../utils/requestSigning.js";
+
+const isDevelopmentMode = () =>
+  import.meta.env.MODE === "development" ||
+  import.meta.env.VITE_ENV === "development" ||
+  import.meta.env.VITE_MODE === "development";
+
 // create axios instance with default config
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL || "http://localhost:7000",
@@ -53,7 +59,7 @@ const solveChallenge = async (seed, difficulty) => {
 };
 
 const logApiError = (error, context) => {
-  if (import.meta.env.VITE_VITE_ENV !== "development") return;
+  if (!isDevelopmentMode()) return;
 
   console.group(`${context}`);
   console.error("Full error object:", error);
@@ -176,7 +182,7 @@ api.interceptors.response.use(
       }
 
       try {
-        if (import.meta.env.VITE_ENV === "development") {
+        if (isDevelopmentMode()) {
           console.log(
             `Handling ${error.response.data.code}, fetching new secret...`,
           );
@@ -209,7 +215,7 @@ api.interceptors.response.use(
         // store secret
         requestSigner.setSigningSecret(newSecret, expiresIn);
 
-        if (import.meta.env.VITE_ENV === "development") {
+        if (isDevelopmentMode()) {
           console.log("Secret refreshed successfully");
         }
 
@@ -219,7 +225,7 @@ api.interceptors.response.use(
         // re-sign the original request with secret
         const signedRequest = requestSigner.signRequest(originalRequest);
 
-        if (import.meta.env.VITE_ENV === "development") {
+        if (isDevelopmentMode()) {
           console.log("Retrying original request");
         }
 
@@ -268,7 +274,7 @@ api.interceptors.response.use(
     // handle network errors
     if (!error.response) {
       const detailedMessage =
-        import.meta.env.VITE_ENV === "development"
+        isDevelopmentMode()
           ? `Network error on ${originalRequest?.method?.toUpperCase()} ${
               originalRequest?.url
             }. ` +
@@ -277,12 +283,14 @@ api.interceptors.response.use(
             }`
           : "Network error. Please check your connection.";
 
-      console.error("Network error details:", {
-        url: originalRequest?.url,
-        method: originalRequest?.method,
-        baseURL: import.meta.env.VITE_API_URL,
-        message: error.message,
-      });
+      if (isDevelopmentMode()) {
+        console.error("Network error details:", {
+          url: originalRequest?.url,
+          method: originalRequest?.method,
+          baseURL: import.meta.env.VITE_API_URL,
+          message: error.message,
+        });
+      }
 
       return Promise.reject({
         message: detailedMessage,
@@ -298,7 +306,7 @@ api.interceptors.response.use(
 
     const { status, data } = error.response;
 
-    if (import.meta.env.VITE_ENV === "development") {
+    if (isDevelopmentMode()) {
       console.warn(`${status} Error:`, {
         url: originalRequest?.url,
         method: originalRequest?.method,
@@ -312,9 +320,11 @@ api.interceptors.response.use(
 
       // if csrf token error, try to refresh csrf token first
       if (errorCode && errorCode.includes("CSRF")) {
-        console.log(
-          "CSRF error detected, token will be refreshed automatically",
-        );
+        if (isDevelopmentMode()) {
+          console.log(
+            "CSRF error detected, token will be refreshed automatically",
+          );
+        }
         // the interceptor at the top will handle fetching csrf token
         return Promise.reject(error);
       }
@@ -333,7 +343,9 @@ api.interceptors.response.use(
           !window.location.pathname.includes("/login") &&
           !window.location.pathname.includes("/register")
         ) {
-          console.log("Redirecting to login due to auth failure");
+          if (isDevelopmentMode()) {
+            console.log("Redirecting to login due to auth failure");
+          }
           window.location.href = "/login";
         }
 
@@ -383,28 +395,29 @@ api.interceptors.response.use(
       }
     }
 
-    // log other errors
-    switch (status) {
-      case 400:
-        console.error("Bad request:", data?.message);
-        break;
-      case 403:
-        console.error("Access denied");
-        break;
-      case 404:
-        console.error("Resource not found:", data?.message);
-        break;
-      case 429:
-        console.error("Too many requests");
-        break;
-      case 500:
-        console.error("Server error");
-        break;
-      case 503:
-        console.error("Service unavailable");
-        break;
-      default:
-        console.error("Error:", data?.message);
+    if (isDevelopmentMode()) {
+      switch (status) {
+        case 400:
+          console.error("Bad request:", data?.message);
+          break;
+        case 403:
+          console.error("Access denied");
+          break;
+        case 404:
+          console.error("Resource not found:", data?.message);
+          break;
+        case 429:
+          console.error("Too many requests");
+          break;
+        case 500:
+          console.error("Server error");
+          break;
+        case 503:
+          console.error("Service unavailable");
+          break;
+        default:
+          console.error("Error:", data?.message);
+      }
     }
 
     return Promise.reject(error);
@@ -553,7 +566,9 @@ export const apiMethods = {
 };
 
 export const handleApiError = (error, defaultMessage = "An error occurred") => {
-  console.error("API Error:", error);
+  if (isDevelopmentMode()) {
+    console.error("API Error:", error);
+  }
 
   if (error.response?.data?.message) {
     return error.response.data.message;

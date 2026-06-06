@@ -1,9 +1,9 @@
 /**
- * renders the public teacher join page with content settings, auth aware actions, seo data, and responsive layout
+ * renders the public teacher application page with local draft state and backend status checks
  *
  * @file frontend/src/pages/teacherjoin.jsx
  * @module frontend/src/pages/teacherjoin
- * @exports route component rendered by the client router
+ * @returns {JSX.Element} teacher application route with review, registered, and form states
  */
 
 import React, { useState, useEffect } from "react";
@@ -398,8 +398,8 @@ const ApplicationForm = ({ onApplied }) => {
 
 const PERKS = [
   {
-    title: "80% Revenue Share",
-    desc: "Keep the majority of every course sale.",
+    title: "Clear Teacher Share",
+    desc: "Know how course earnings are handled before you publish.",
   },
   {
     title: "Analytics",
@@ -519,7 +519,8 @@ const TeacherJoin = () => {
             transition={{ delay: 0.08 }}
             className="text-3xl sm:text-5xl lg:text-6xl font-extrabold text-foreground mb-4 sm:mb-5 leading-tight"
           >
-            Teach. Earn. <span className="text-primary">Keep 80%.</span>
+            Teach with Vidhgrow.{" "}
+            <span className="text-primary">Grow with care.</span>
           </motion.h1>
 
           <motion.p
@@ -528,9 +529,8 @@ const TeacherJoin = () => {
             transition={{ delay: 0.14 }}
             className="text-base sm:text-lg text-muted-foreground mb-6 sm:mb-8 max-w-2xl mx-auto leading-relaxed"
           >
-            Join Vidhgrow&apos;s invite-only teacher program. Create courses,
-            reach thousands of students across India and Nepal, and get paid via
-            Razorpay or Khalti.
+            Create focused courses, reach serious learners, and keep every
+            teaching step calm.
           </motion.p>
 
           {/* login link */}
