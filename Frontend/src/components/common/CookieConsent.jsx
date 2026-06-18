@@ -41,9 +41,9 @@ const CookieConsent = () => {
           animate={{ y: 0, opacity: 1 }}
           exit={{ y: 100, opacity: 0 }}
           transition={{ type: "spring", stiffness: 300, damping: 30 }}
-          className="fixed bottom-4 left-4 right-4 z-[80] max-w-lg mx-auto lg:mx-0 lg:left-6 lg:right-auto"
+          className="fixed bottom-4 left-4 right-4 z-[80] mx-auto max-w-[calc(100vw-2rem)] lg:mx-0 lg:left-6 lg:right-auto lg:max-w-lg"
         >
-          <div className="bg-background border border-border rounded-2xl shadow-xl p-5 space-y-4">
+          <div className="bg-background border border-border rounded-2xl shadow-xl p-4 space-y-4 sm:p-5">
             <div>
               <p className="text-sm font-semibold text-foreground mb-1">We use cookies</p>
               <p className="text-xs text-muted-foreground leading-relaxed">
@@ -78,7 +78,7 @@ const CookieConsent = () => {
               </motion.div>
             )}
 
-            <div className="flex items-center gap-2">
+            <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center">
               <button
                 onClick={() => accept(true)}
                 className="flex-1 h-9 bg-primary text-primary-foreground rounded-lg text-xs font-semibold hover:opacity-90 transition-opacity"
@@ -93,7 +93,7 @@ const CookieConsent = () => {
               </button>
               <button
                 onClick={() => setShowDetails((p) => !p)}
-                className="h-9 px-3 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                className="col-span-2 h-9 px-3 text-xs text-muted-foreground hover:text-foreground transition-colors sm:col-span-1"
               >
                 {showDetails ? "Less" : "Details"}
               </button>

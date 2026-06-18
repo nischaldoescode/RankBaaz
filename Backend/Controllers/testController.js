@@ -928,11 +928,6 @@ export const downloadTestPDF = async (req, res) => {
     const downloadToken = req.query.token; // one-time token for users
 
     console.log(`=== PDF DOWNLOAD REQUEST ===`);
-    console.log(`Test ID: ${testId}`);
-    console.log(`User ID: ${userId}`);
-    console.log(`Is Admin: ${isAdmin}`);
-    console.log(`Token: ${downloadToken ? "Present" : "None"}`);
-
     // validate testid format
     if (!mongoose.Types.ObjectId.isValid(testId)) {
       return res.status(400).json({
@@ -1037,14 +1032,16 @@ export const downloadTestPDF = async (req, res) => {
     // import pdf service
     const pdfService = (await import("../services/pdfService.js")).default;
 
-    // generate pdf
-    console.log(`Generating PDF for test ${testId}...`);
+    // generate the report after ownership and export rules are settled
     const pdfBuffer = await pdfService.generateTestResultPDF(
       testResult,
       testResult.course,
       testResult.user,
       isAdmin
     );
+    if (!Buffer.isBuffer(pdfBuffer) || pdfBuffer.length === 0) {
+      throw new Error("test pdf renderer returned an empty buffer");
+    }
 
     // update download status (only for non-admin users)
     if (!isAdmin) {
@@ -1052,13 +1049,14 @@ export const downloadTestPDF = async (req, res) => {
         pdfDownloaded: true,
         pdfDownloadedAt: new Date(),
       });
-      console.log(`PDF download recorded for test ${testId}`);
-    } else {
-      console.log(`Admin download - no download limit applied`);
     }
 
     // set response headers
-    const filename = `Vidhgrow_${testResult.course.name.replace(/[^a-z0-9]/gi, "_")}_${
+    const safeCourseName = String(testResult.course.name || "course")
+      .replace(/[^a-z0-9]+/gi, "_")
+      .replace(/^_+|_+$/g, "")
+      .slice(0, 72);
+    const filename = `Vidhgrow_${safeCourseName || "course"}_${
       new Date().toISOString().split("T")[0]
     }.pdf`;
 
@@ -1068,11 +1066,11 @@ export const downloadTestPDF = async (req, res) => {
     res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
     res.setHeader("Pragma", "no-cache");
     res.setHeader("Expires", "0");
+    res.setHeader("X-Content-Type-Options", "nosniff");
+    res.setHeader("Accept-Ranges", "none");
 
     // send pdf
     res.send(pdfBuffer);
-
-    console.log(`PDF sent successfully: ${filename}`);
   } catch (error) {
     console.error("Download PDF error:", error);
     res.status(500).json({

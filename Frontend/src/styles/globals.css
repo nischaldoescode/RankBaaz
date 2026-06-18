@@ -112,6 +112,15 @@ a,
   z-index: 2;
 }
 
+.vg-home-hero-title {
+  max-width: 100%;
+  text-wrap: balance;
+}
+
+.vg-home-hero-description {
+  max-width: min(100%, 42rem);
+}
+
 .vg-home-parallax-stage {
   position: absolute;
   inset: 0;
@@ -119,6 +128,7 @@ a,
   min-height: 100%;
   overflow: hidden;
   pointer-events: none;
+  contain: paint;
 }
 
 .vg-home-story-lines {
@@ -127,6 +137,7 @@ a,
   width: 100%;
   height: 100%;
   min-height: 100%;
+  will-change: transform, opacity;
 }
 
 .vg-home-story-line {
@@ -412,10 +423,41 @@ a,
   text-shadow: 0 14px 40px rgba(var(--vg-primary-rgb), 0.16);
 }
 
-.vg-raw-highlight::before {
-  content: "";
+.vg-anime-brush-word {
+  position: relative;
+  display: inline-block;
+  isolation: isolate;
+  white-space: nowrap;
+  max-width: 100%;
+}
+
+.vg-anime-brush-text {
+  position: relative;
+  z-index: 1;
+  display: inline-block;
+}
+
+.vg-anime-brush-letter {
+  display: inline-block;
+  will-change: transform, opacity;
+}
+
+.vg-anime-brush-stroke,
+.vg-anime-brush-underline {
   position: absolute;
   z-index: -1;
+  pointer-events: none;
+  transform-origin: left center;
+  will-change: transform, opacity;
+}
+
+.vg-anime-enabled .vg-anime-brush-stroke,
+.vg-anime-enabled .vg-anime-brush-underline {
+  opacity: 0;
+  transform: scaleX(0);
+}
+
+.vg-raw-highlight .vg-anime-brush-stroke {
   left: -0.18em;
   right: -0.18em;
   top: 0.06em;
@@ -425,24 +467,17 @@ a,
     linear-gradient(97deg, rgba(37, 99, 235, 0.34), rgba(14, 165, 233, 0.24) 52%, rgba(37, 99, 235, 0.12)),
     repeating-linear-gradient(104deg, rgba(255, 255, 255, 0.24) 0 7px, transparent 7px 15px);
   clip-path: polygon(0 24%, 8% 13%, 22% 20%, 41% 10%, 58% 21%, 75% 12%, 94% 22%, 100% 18%, 98% 76%, 82% 82%, 62% 74%, 46% 86%, 24% 77%, 8% 84%, 0 72%);
-  transform: rotate(-0.7deg) scaleX(0);
-  transform-origin: left center;
-  animation: vg-paint-fill 0.9s cubic-bezier(0.2, 0.8, 0.2, 1) 0.45s forwards;
+  transform: rotate(-0.7deg);
 }
 
-.vg-raw-highlight::after {
-  content: "";
-  position: absolute;
-  z-index: -1;
+.vg-raw-highlight .vg-anime-brush-underline {
   left: -0.1em;
   right: 0.08em;
   bottom: 0.02em;
   height: 0.16em;
   border-radius: 999px 42px 999px 36px;
   background: rgba(var(--vg-primary-rgb), 0.42);
-  transform: rotate(-1.2deg) scaleX(0);
-  transform-origin: left center;
-  animation: vg-paint-fill 0.72s cubic-bezier(0.2, 0.8, 0.2, 1) 0.72s forwards;
+  transform: rotate(-1.2deg);
 }
 
 .vg-story-panel,
@@ -479,6 +514,7 @@ a,
   min-height: 100%;
   opacity: 0.72;
   pointer-events: none;
+  will-change: transform;
 }
 
 .vg-story-connector-path {
@@ -521,10 +557,7 @@ a,
   isolation: isolate;
 }
 
-.vg-story-brushed-word::before {
-  content: "";
-  position: absolute;
-  z-index: -1;
+.vg-story-brushed-word .vg-anime-brush-stroke {
   left: -0.14em;
   right: -0.14em;
   bottom: 0.02em;
@@ -534,9 +567,17 @@ a,
     linear-gradient(96deg, rgba(var(--vg-primary-rgb), 0.24), rgba(14, 165, 233, 0.16), transparent),
     repeating-linear-gradient(104deg, rgba(255, 255, 255, 0.3) 0 7px, transparent 7px 14px);
   clip-path: polygon(0 30%, 12% 8%, 31% 24%, 48% 12%, 72% 28%, 100% 18%, 96% 78%, 72% 66%, 48% 88%, 24% 68%, 2% 82%);
-  transform: rotate(-1deg) scaleX(0);
-  transform-origin: left center;
-  animation: vg-paint-fill 0.85s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+  transform: rotate(-1deg);
+}
+
+.vg-story-brushed-word .vg-anime-brush-underline {
+  left: -0.08em;
+  right: 0.04em;
+  bottom: -0.02em;
+  height: 0.1em;
+  border-radius: 999px;
+  background: rgba(var(--vg-primary-rgb), 0.32);
+  transform: rotate(-1deg);
 }
 
 .vg-story-index,
@@ -564,6 +605,24 @@ a,
     radial-gradient(circle at 86% 14%, rgba(var(--vg-primary-rgb), 0.09), transparent 32%);
   box-shadow: none;
   overflow: visible;
+}
+
+.vg-anime-chapter-ink {
+  position: absolute;
+  z-index: 0;
+  left: clamp(1rem, 5vw, 4rem);
+  right: clamp(1rem, 5vw, 4rem);
+  top: clamp(2rem, 5vw, 4rem);
+  height: 0.28rem;
+  border-radius: 999px 46% 999px 38%;
+  background:
+    linear-gradient(90deg, transparent, color-mix(in srgb, var(--chapter-accent, #3b82f6) 36%, transparent), transparent),
+    repeating-linear-gradient(104deg, rgba(255, 255, 255, 0.34) 0 8px, transparent 8px 16px);
+  opacity: 0;
+  transform: scaleX(0);
+  transform-origin: left center;
+  pointer-events: none;
+  will-change: transform, opacity;
 }
 
 .vg-story-chapter::before {
@@ -967,6 +1026,11 @@ a,
   padding-bottom: max(8px, env(safe-area-inset-bottom));
 }
 
+.vg-bottom-nav > nav {
+  max-width: min(430px, calc(100vw - 1.5rem));
+  overflow: hidden;
+}
+
 .vg-test-shell .sticky {
   border-color: rgba(148, 163, 184, 0.28) !important;
   background: rgba(255, 255, 255, 0.88) !important;
@@ -1070,15 +1134,50 @@ a,
     scroll-margin-top: 5rem;
   }
 
+  .vg-home-hero-title {
+    width: min(100%, 22rem);
+    font-size: clamp(1.72rem, 7.2vw, 2.05rem);
+    margin-inline: auto;
+    line-height: 1.12;
+    overflow-wrap: normal;
+    word-break: normal;
+    text-wrap: wrap;
+  }
+
+  .vg-raw-highlight {
+    display: inline-block;
+    max-width: 100%;
+    font-size: clamp(1.55rem, 6.7vw, 1.95rem);
+    line-height: 1.06;
+    white-space: nowrap;
+  }
+
+  .vg-home-hero-description {
+    width: min(100%, 21rem);
+    font-size: 0.98rem;
+    line-height: 1.65;
+    overflow-wrap: normal;
+  }
+
+  .vg-story-brushed-word {
+    max-width: 100%;
+    font-size: 0.96em;
+  }
+
+  .vg-anime-brush-stroke {
+    left: -0.08em;
+    right: -0.08em;
+  }
+
   .vg-home-story-lines {
     width: 180%;
     left: -48%;
-    opacity: 0.5;
+    opacity: 0.56;
   }
 
   .vg-parallax-depth-near,
   .vg-parallax-depth-mid {
-    opacity: 0.22;
+    opacity: 0.26;
   }
 
   .vg-depth-note {
@@ -1098,7 +1197,7 @@ a,
   .vg-story-connector {
     left: -42%;
     width: 178%;
-    opacity: 0.46;
+    opacity: 0.52;
   }
 
   .vg-story-scroll-marker {
@@ -1181,12 +1280,14 @@ a,
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .vg-raw-highlight::before,
-  .vg-raw-highlight::after,
-  .vg-story-brushed-word::before,
+  .vg-anime-brush-stroke,
+  .vg-anime-brush-underline,
+  .vg-anime-brush-letter,
+  .vg-anime-chapter-ink,
   .vg-artifact-icon svg {
     animation: none !important;
     transform: none !important;
+    opacity: 1 !important;
   }
 
   .vg-home-story-line,

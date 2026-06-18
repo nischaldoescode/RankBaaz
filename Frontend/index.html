@@ -29,8 +29,33 @@
     <meta name="msapplication-navbutton-color" content="#3b82f6" />
     <meta
       name="apple-mobile-web-app-status-bar-style"
-      content="black-translucent"
+      content="default"
     />
+    <script>
+      (function () {
+        try {
+          var saved = window.localStorage.getItem("theme-preferences");
+          var theme = "light";
+          var color = "blue";
+          var fontSize = "medium";
+
+          if (saved) {
+            var parsed = JSON.parse(saved);
+            theme = parsed.theme === "dark" ? "dark" : "light";
+            color = parsed.primaryColor || color;
+            fontSize = parsed.fontSize || fontSize;
+          }
+
+          var root = document.documentElement;
+          root.classList.add("theme-" + theme, "color-" + color, "font-" + fontSize);
+          root.classList.toggle("dark", theme === "dark");
+          root.style.backgroundColor = theme === "dark" ? "#020617" : "#ffffff";
+        } catch (_error) {
+          document.documentElement.classList.add("theme-light", "color-blue", "font-medium");
+          document.documentElement.style.backgroundColor = "#ffffff";
+        }
+      })();
+    </script>
 
     <!-- Open Graph / Facebook -->
     <meta property="og:type" content="website" />
@@ -79,10 +104,8 @@
 
     <!-- Apple Mobile Web App -->
     <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta
-      name="apple-mobile-web-app-status-bar-style"
-      content="black-translucent"
-    />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="apple-mobile-web-app-title" content="Vidhgrow" />
 
     <!-- Microsoft -->
@@ -194,12 +217,7 @@
       }
     </script>
 
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Poppins:wght@400;500;600;700;800&display=swap"
-      rel="stylesheet"
-    />
-    <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+    <script defer src="https://checkout.razorpay.com/v1/checkout.js"></script>
     <title>Vidhgrow - Prepare with Precision</title>
   </head>
   <style>

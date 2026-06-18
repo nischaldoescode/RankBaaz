@@ -24,7 +24,7 @@ import {
 } from "../Controllers/testController.js";
 
 import { checkCourseAccess } from "../helpers/CheckCourseAccess.js";
-import { authenticateUser } from "../Middleware/auth.js";
+import { authenticateAny, authenticateUser } from "../Middleware/auth.js";
 import { advancedCache } from "../Middleware/advancedCache.js";
 import {
   getSigningSecretEndpoint,
@@ -35,7 +35,22 @@ import { pdfDownloadLimiter } from "../helpers/pdfRatelimiter.js";
 const router = express.Router();
 
 /**
- * all test routes require authentication
+ * get /download-pdf/:testid - download test result as pdf
+ * auth: signed user or admin session with request signature
+ * security:
+ * - users: course export flag, one-time token, and one-download limit
+ * - admins: unlimited downloads for support and moderation review
+ */
+router.get(
+  "/download-pdf/:testId",
+  authenticateAny,
+  verifyRequestSignature,
+  pdfDownloadLimiter,
+  downloadTestPDF,
+);
+
+/**
+ * all remaining test routes require a verified student session
  */
 router.use(authenticateUser);
 
@@ -124,14 +139,5 @@ router.post("/abandon", verifyRequestSignature, abandonTest);
  * returns: one-time use token valid for 5 minutes
  */
 router.get("/generate-pdf-token/:testId", generatePDFDownloadToken);
-
-/**
- * get /download-pdf/:testid - download test result as pdf
- * auth: cookie required
- * security:
- * - users: one-time download only
- * - admins: unlimited downloads
- */
-router.get("/download-pdf/:testId", pdfDownloadLimiter, downloadTestPDF);
 
 export default router;

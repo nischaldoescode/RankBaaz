@@ -8,7 +8,8 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { motion, useScroll, useTransform } from "framer-motion";
+import { animate, createTimeline, stagger } from "animejs";
+import { motion, useScroll, useSpring, useTransform } from "framer-motion";
 import {
   BookOpen,
   Award,
@@ -69,6 +70,106 @@ const SectionLabel = ({ children }) => (
     {children}
   </motion.p>
 );
+
+/**
+ * runs an anime.js timeline once when an element becomes visible
+ *
+ * @param {object} targetRef react ref that points to the animated root element
+ * @param {boolean} enabled whether animations can run for the current user settings
+ * @param {Function} createAnimation callback that receives the root and returns anime instances
+ * @returns {void}
+ */
+const useAnimeOnView = (targetRef, enabled, createAnimation) => {
+  useEffect(() => {
+    const root = targetRef.current;
+    if (!enabled || !root || typeof window === "undefined") return undefined;
+
+    let hasPlayed = false;
+    let animeInstances = [];
+
+    const play = () => {
+      if (hasPlayed) return;
+      hasPlayed = true;
+      animeInstances = [createAnimation(root)].flat().filter(Boolean);
+    };
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry?.isIntersecting) {
+          play();
+          observer.disconnect();
+        }
+      },
+      { threshold: 0.34, rootMargin: "0px 0px -8% 0px" },
+    );
+
+    observer.observe(root);
+
+    return () => {
+      observer.disconnect();
+      animeInstances.forEach((instance) => {
+        if (instance?.revert) instance.revert();
+        else if (instance?.cancel) instance.cancel();
+      });
+    };
+  }, [targetRef, enabled, createAnimation]);
+};
+
+const animeChars = (value) =>
+  Array.from(String(value || "")).map((char, index) => (
+    <span
+      aria-hidden="true"
+      className="vg-anime-brush-letter"
+      key={`${char}-${index}`}
+    >
+      {char === " " ? "\u00a0" : char}
+    </span>
+  ));
+
+const AnimeBrushHighlight = ({ children, className = "", enabled }) => {
+  const rootRef = useRef(null);
+  const text = String(children || "");
+
+  useAnimeOnView(rootRef, enabled, (root) => {
+    const stroke = root.querySelector(".vg-anime-brush-stroke");
+    const underline = root.querySelector(".vg-anime-brush-underline");
+    const letters = root.querySelectorAll(".vg-anime-brush-letter");
+
+    return createTimeline({
+      defaults: { ease: "out(3)" },
+    })
+      .add(stroke, {
+        opacity: [0, 1],
+        scaleX: [0, 1],
+        duration: 760,
+      })
+      .add(underline, {
+        opacity: [0, 1],
+        scaleX: [0, 1],
+        duration: 520,
+      }, 170)
+      .add(letters, {
+        opacity: [0.68, 1],
+        translateY: [8, 0],
+        duration: 520,
+        delay: stagger(16),
+      }, 90);
+  });
+
+  return (
+    <span
+      ref={rootRef}
+      className={`vg-anime-brush-word ${enabled ? "vg-anime-enabled" : ""} ${className}`}
+      aria-label={text}
+    >
+      <span aria-hidden="true" className="vg-anime-brush-stroke" />
+      <span aria-hidden="true" className="vg-anime-brush-underline" />
+      <span aria-hidden="true" className="vg-anime-brush-text">
+        {animeChars(text)}
+      </span>
+    </span>
+  );
+};
 
 const humanDefaultCopy = {
   heroTitle: "Learn clearly. Practice with purpose.",
@@ -243,13 +344,41 @@ const StoryChapter = ({ item, index, animations, reducedMotion }) => {
     target: chapterRef,
     offset: ["start end", "end start"],
   });
-  const copyY = useTransform(scrollYProgress, [0, 0.5, 1], [96, 0, -76]);
-  const imageY = useTransform(scrollYProgress, [0, 0.5, 1], [190, -24, -230]);
-  const imageX = useTransform(scrollYProgress, [0, 0.5, 1], [34, 0, -42]);
-  const imageScale = useTransform(scrollYProgress, [0, 0.5, 1], [0.9, 1.07, 0.94]);
-  const imageRotate = useTransform(scrollYProgress, [0, 0.5, 1], [-3, 0.8, 2.4]);
-  const chapterOpacity = useTransform(scrollYProgress, [0, 0.14, 0.86, 1], [0.25, 1, 1, 0.28]);
-  const ruleScale = useTransform(scrollYProgress, [0.08, 0.72], [0, 1]);
+  const smoothProgress = useSpring(scrollYProgress, {
+    stiffness: 72,
+    damping: 24,
+    mass: 0.42,
+  });
+  const copyY = useTransform(smoothProgress, [0, 0.5, 1], [96, 0, -76]);
+  const imageY = useTransform(smoothProgress, [0, 0.5, 1], [190, -24, -230]);
+  const imageX = useTransform(smoothProgress, [0, 0.5, 1], [34, 0, -42]);
+  const imageScale = useTransform(smoothProgress, [0, 0.5, 1], [0.9, 1.07, 0.94]);
+  const imageRotate = useTransform(smoothProgress, [0, 0.5, 1], [-3, 0.8, 2.4]);
+  const chapterOpacity = useTransform(smoothProgress, [0, 0.14, 0.86, 1], [0.25, 1, 1, 0.28]);
+  const ruleScale = useTransform(smoothProgress, [0.08, 0.72], [0, 1]);
+
+  useAnimeOnView(chapterRef, animations && !reducedMotion, (root) => {
+    const ink = root.querySelector(".vg-anime-chapter-ink");
+    const copyParts = root.querySelectorAll(
+      ".vg-story-index, .vg-story-kicker, .vg-story-chapter-copy h3, .vg-story-chapter-copy p",
+    );
+
+    return [
+      animate(ink, {
+        opacity: [0, 1],
+        scaleX: [0, 1],
+        duration: 820,
+        ease: "out(3)",
+      }),
+      animate(copyParts, {
+        opacity: [0.72, 1],
+        translateY: [12, 0],
+        duration: 620,
+        delay: stagger(58),
+        ease: "out(3)",
+      }),
+    ];
+  });
 
   return (
     <motion.article
@@ -261,6 +390,7 @@ const StoryChapter = ({ item, index, animations, reducedMotion }) => {
       transition={{ duration: 0.55, delay: index * 0.08 }}
       className={`vg-story-chapter vg-story-chapter-${index + 1}`}
     >
+      <span className="vg-anime-chapter-ink" aria-hidden="true" />
       <motion.span
         className="vg-story-section-rule"
         style={reducedMotion ? undefined : { scaleX: ruleScale }}
@@ -302,11 +432,16 @@ const LearningStorySection = ({
     target: sectionRef,
     offset: ["start end", "end start"],
   });
-  const textX = useTransform(scrollYProgress, [0, 0.5, 1], [-54, 0, 34]);
-  const fade = useTransform(scrollYProgress, [0, 0.18, 0.78, 1], [0.4, 1, 1, 0.24]);
-  const connectorY = useTransform(scrollYProgress, [0, 1], [110, -180]);
-  const connectorDraw = useTransform(scrollYProgress, [0.06, 0.86], [0, 1]);
-  const markerY = useTransform(scrollYProgress, [0, 1], [70, -80]);
+  const smoothProgress = useSpring(scrollYProgress, {
+    stiffness: 68,
+    damping: 26,
+    mass: 0.48,
+  });
+  const textX = useTransform(smoothProgress, [0, 0.5, 1], [-54, 0, 34]);
+  const fade = useTransform(smoothProgress, [0, 0.18, 0.78, 1], [0.4, 1, 1, 0.24]);
+  const connectorY = useTransform(smoothProgress, [0, 1], [110, -180]);
+  const connectorDraw = useTransform(smoothProgress, [0.06, 0.86], [0, 1]);
+  const markerY = useTransform(smoothProgress, [0, 1], [70, -80]);
 
   const motionStyle = reducedMotion ? undefined : { x: textX, opacity: fade };
 
@@ -347,7 +482,9 @@ const LearningStorySection = ({
         >
           <SectionLabel>{story.eyebrow}</SectionLabel>
           <h2 className="text-3xl font-bold leading-tight text-foreground sm:text-4xl">
-            {renderBrushedTitle(story.title, story.highlightedText)}
+            {renderBrushedTitle(story.title, story.highlightedText, {
+              enabled: animations && !reducedMotion,
+            })}
           </h2>
           <p className="text-base leading-8 text-muted-foreground sm:text-lg">
             {story.description}
@@ -425,7 +562,7 @@ const normalizeStoryChapters = (chapters) => {
   }));
 };
 
-const renderBrushedTitle = (title, highlightedText) => {
+const renderBrushedTitle = (title, highlightedText, animationProps = {}) => {
   if (!title || !highlightedText) return title;
 
   const normalizedTitle = title.toLowerCase();
@@ -435,7 +572,12 @@ const renderBrushedTitle = (title, highlightedText) => {
   if (index === -1) {
     return (
       <>
-        <span className="vg-story-brushed-word">{highlightedText}</span>{" "}
+        <AnimeBrushHighlight
+          className="vg-story-brushed-word"
+          enabled={animationProps.enabled}
+        >
+          {highlightedText}
+        </AnimeBrushHighlight>{" "}
         {title}
       </>
     );
@@ -444,9 +586,12 @@ const renderBrushedTitle = (title, highlightedText) => {
   return (
     <>
       {title.slice(0, index)}
-      <span className="vg-story-brushed-word">
+      <AnimeBrushHighlight
+        className="vg-story-brushed-word"
+        enabled={animationProps.enabled}
+      >
         {title.slice(index, index + highlightedText.length)}
-      </span>
+      </AnimeBrushHighlight>
       {title.slice(index + highlightedText.length)}
     </>
   );
@@ -465,11 +610,16 @@ const Home = () => {
     target: pageRef,
     offset: ["start start", "end end"],
   });
-  const pageDriftY = useTransform(pageScrollProgress, [0, 1], [-24, 42]);
-  const pageDriftX = useTransform(pageScrollProgress, [0, 1], [18, -36]);
-  const heroY = useTransform(pageScrollProgress, [0, 0.2], [0, -80]);
-  const heroScale = useTransform(pageScrollProgress, [0, 0.2], [1, 0.96]);
-  const heroGridY = useTransform(pageScrollProgress, [0, 0.24], [0, 92]);
+  const smoothPageProgress = useSpring(pageScrollProgress, {
+    stiffness: 64,
+    damping: 28,
+    mass: 0.5,
+  });
+  const pageDriftY = useTransform(smoothPageProgress, [0, 1], [-24, 42]);
+  const pageDriftX = useTransform(smoothPageProgress, [0, 1], [18, -36]);
+  const heroY = useTransform(smoothPageProgress, [0, 0.2], [0, -80]);
+  const heroScale = useTransform(smoothPageProgress, [0, 0.2], [1, 0.96]);
+  const heroGridY = useTransform(smoothPageProgress, [0, 0.24], [0, 92]);
   const pageArtifactStyle = reducedMotion ? undefined : { y: pageDriftY, x: pageDriftX };
 
   useSEO({
@@ -666,7 +816,7 @@ const Home = () => {
   return (
     <div ref={pageRef} className="vg-home-shell relative overflow-x-hidden">
       <HomeParallaxStage
-        scrollProgress={pageScrollProgress}
+        scrollProgress={smoothPageProgress}
         reducedMotion={reducedMotion}
       />
       <motion.div
@@ -693,15 +843,18 @@ const Home = () => {
             transition={animations && !reducedMotion ? { duration: 0.7 } : {}}
             className="mx-auto max-w-4xl space-y-7 text-center"
           >
-            <h1 className="text-4xl sm:text-5xl lg:text-[3.25rem] font-bold tracking-tight leading-tight">
+            <h1 className="vg-home-hero-title text-4xl sm:text-5xl lg:text-[3.25rem] font-bold tracking-tight leading-tight">
               {heroTitle}
               <br />
-              <span className="vg-raw-highlight">
+              <AnimeBrushHighlight
+                className="vg-raw-highlight"
+                enabled={animations && !reducedMotion}
+              >
                 {heroHighlight}
-              </span>
+              </AnimeBrushHighlight>
             </h1>
 
-            <p className="text-lg sm:text-xl text-muted-foreground max-w-2xl mx-auto leading-relaxed">
+            <p className="vg-home-hero-description text-lg sm:text-xl text-muted-foreground max-w-2xl mx-auto leading-relaxed">
               {heroDescription}
             </p>
 
