@@ -2725,9 +2725,6 @@ export const downloadCoursePDF = async (req, res) => {
   try {
     const { courseId } = req.params;
 
-    console.log(`=== COURSE PDF DOWNLOAD REQUEST (Admin) ===`);
-    console.log(`Course ID: ${courseId}`);
-
     // validate courseid format
     if (!mongoose.Types.ObjectId.isValid(courseId)) {
       return res.status(400).json({
@@ -2751,12 +2748,25 @@ export const downloadCoursePDF = async (req, res) => {
     // import pdf service
     const pdfService = (await import("../services/pdfService.js")).default;
 
-    // generate course pdf (admin version - no test results)
-    console.log(`Generating course PDF for ${courseId}...`);
-    const pdfBuffer = await pdfService.generateCoursePDF(course);
+    // keep the visible audit trail tied to the authenticated admin session
+    const exportedBy = {
+      role: "admin",
+      name: req.admin?.name,
+      email: req.admin?.email,
+      includeEmail: true,
+    };
 
-    // set response headers
-    const filename = `Vidhgrow_Course_${course.name.replace(/[^a-z0-9]/gi, "_")}_${
+    // generate the admin pdf from sanitized course data
+    const pdfBuffer = await pdfService.generateCoursePDF(course, { exportedBy });
+    if (!Buffer.isBuffer(pdfBuffer) || pdfBuffer.length === 0) {
+      throw new Error("course pdf renderer returned an empty buffer");
+    }
+
+    const safeCourseName = String(course.name || "course")
+      .replace(/[^a-z0-9]+/gi, "_")
+      .replace(/^_+|_+$/g, "")
+      .slice(0, 72);
+    const filename = `Vidhgrow_Course_${safeCourseName || "course"}_${
       new Date().toISOString().split("T")[0]
     }.pdf`;
 
@@ -2766,11 +2776,11 @@ export const downloadCoursePDF = async (req, res) => {
     res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
     res.setHeader("Pragma", "no-cache");
     res.setHeader("Expires", "0");
+    res.setHeader("X-Content-Type-Options", "nosniff");
+    res.setHeader("Accept-Ranges", "none");
 
     // send pdf
     res.send(pdfBuffer);
-
-    console.log(`Course PDF sent successfully: ${filename}`);
   } catch (error) {
     console.error("Download course PDF error:", error);
     res.status(500).json({

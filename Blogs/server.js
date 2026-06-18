@@ -340,17 +340,46 @@ const readableUrlLabel = (href = "") => {
 
 const ensureReadableArticleLinks = (html = "") =>
   String(html).replace(/<a\b([^>]*\bhref=(["'])([^"']+)\2[^>]*)>([\s\S]*?)<\/a>/gi, (match, attrs, _quote, href, inner) => {
-    if (stripHtml(inner)) return match;
+    const currentLabel = stripHtml(inner).trim();
+    const readableLabel = escapeHtml(readableUrlLabel(href));
+    if (currentLabel && currentLabel !== href) return match;
 
-    const label = escapeHtml(readableUrlLabel(href));
     if (/<img\b/i.test(inner)) {
-      return `<a${attrs}>${inner}<span class="sr-only">${label}</span></a>`;
+      return `<a${attrs}>${inner}<span class="sr-only">${readableLabel}</span></a>`;
     }
-    return `<a${attrs}>${label}</a>`;
+    return `<a${attrs}>${readableLabel}</a>`;
   });
 
+const normalizeLooseOrderedList = (_match, _level, _attrs, content) => {
+  const items = String(content)
+    .split(/<br\s*\/?>/gi)
+    .map((item) => item.trim())
+    .filter((item) => stripHtml(item).trim());
+
+  if (!items.length) return "";
+  return `<ol>${items.map((item) => `<li>${item}</li>`).join("")}</ol>`;
+};
+
+/**
+ * cleans noisy editor html before it is rendered into public ssr pages
+ *
+ * @param {string} html saved editor html from the blog api
+ * @returns {string} article html with one page h1, fewer empty nodes, and readable links
+ */
+const cleanEditorArticleHtml = (html = "") =>
+  String(html)
+    .replace(/<h1\b([^>]*)>/gi, "<h2$1>")
+    .replace(/<\/h1>/gi, "</h2>")
+    .replace(/\sstyle=(["'])[^"']*\1/gi, "")
+    .replace(/<p>\s*(<br\s*\/?>\s*)+<\/p>/gi, "")
+    .replace(/<div>\s*(<br\s*\/?>\s*)*<\/div>/gi, "")
+    .replace(/<ol>\s*<h([2-6])\b([^>]*)>([\s\S]*?)<\/h\1>\s*<\/ol>/gi, normalizeLooseOrderedList)
+    .replace(/<h([2-6])\b([^>]*)>\s*(?:<br\s*\/?>|\s|&nbsp;)*<\/h\1>/gi, "")
+    .replace(/<h([2-6])\b([^>]*)>\s*(?:&gt;|>)\s*/gi, "<h$1$2>")
+    .replace(/<li>\s*<h([2-6])\b[^>]*>([\s\S]*?)<\/h\1>\s*<\/li>/gi, "<li>$2</li>");
+
 const prepareArticleContentHtml = (html = "", fallback = "Vidhgrow blog illustration") =>
-  ensureReadableArticleLinks(ensureContentImageAlts(html, fallback));
+  ensureReadableArticleLinks(ensureContentImageAlts(cleanEditorArticleHtml(html), fallback));
 
 const authorFallback = (name = "Vidhgrow") => {
   const letter = String(name).trim().charAt(0).toUpperCase() || "V";
@@ -684,7 +713,7 @@ ${footer(settingsres.data)}`;
     body,
     jsonld: {
       "@context": "https://schema.org",
-      "@type": "blog",
+      "@type": "Blog",
       name: "vidhgrow blogs",
       description: HOME_SEO_DESCRIPTION,
       url: BLOG_PUBLIC_URL,
@@ -766,7 +795,7 @@ ${footer(settingsres.data)}`;
     body,
     jsonld: {
       "@context": "https://schema.org",
-      "@type": "collectionpage",
+      "@type": "CollectionPage",
       name: topic.title,
       description: topic.description,
       url: `${BLOG_PUBLIC_URL}/topic/${topic.slug}`,
@@ -1057,24 +1086,24 @@ ${footer(settingsres.data)}`;
     body,
     jsonld: {
       "@context": "https://schema.org",
-      "@type": "blogposting",
+      "@type": "BlogPosting",
       headline: post.title,
       description,
       image: coverurl,
       datePublished: postPublishedAt(post),
       dateModified: postUpdatedAt(post),
       author: {
-        "@type": "person",
+        "@type": "Person",
         name: post.author?.name || "vidhgrow editorial",
         url: post.author?.slug ? `${BLOG_PUBLIC_URL}/author/${post.author.slug}` : BLOG_PUBLIC_URL,
       },
       publisher: {
-        "@type": "organization",
+        "@type": "Organization",
         name: "vidhgrow",
         url: "https://vidhgrow.online",
       },
-      mainentityofpage: canonical,
-      wordCount: postWordCount(post),
+      mainEntityOfPage: canonical,
+      wordCount: wordCountFromHtml(contenthtml) || postWordCount(post),
     },
   });
 };
