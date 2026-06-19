@@ -26,6 +26,47 @@ export const useAdmin = () => {
   return context;
 };
 
+/**
+ * shapes backend course data into the fields the admin course workspace reads
+ *
+ * @param {object} course raw or partially merged course object
+ * @returns {object} course object with stable admin-facing fields
+ */
+const normalizeAdminCourse = (course = {}) => ({
+  ...course,
+  name: course.title || course.name,
+  isActive:
+    course.isActive !== undefined ? course.isActive : course.status === "active",
+  difficultyLevels:
+    course.difficulties?.map((diff) => ({
+      difficulty: diff.name,
+      maxQuestions: course.maxQuestionsPerTest || 20,
+      marksPerQuestion: diff.marksPerQuestion,
+      timeLimit: diff.timerSettings?.maxTime || null,
+    })) || course.difficultyLevels || [],
+  image: course.image?.url || course.image,
+  categoryId: course.category?._id || course.category || course.categoryId || null,
+  categoryName: course.category?.name || course.categoryName || "Uncategorized",
+  videoContent: course.videoContent || null,
+  hasPdfExport: course.hasPdfExport === true,
+});
+
+/**
+ * merges a backend course update into an existing admin row without replacing the whole list
+ *
+ * @param {object} current currently rendered course row
+ * @param {object} update backend response or local patch
+ * @returns {object} normalized merged course row
+ */
+const mergeAdminCourse = (current = {}, update = {}) =>
+  normalizeAdminCourse({
+    ...current,
+    ...update,
+    category: update.category !== undefined ? update.category : current.category,
+    image: update.image !== undefined ? update.image : current.image,
+    updatedAt: update.updatedAt || current.updatedAt || new Date().toISOString(),
+  });
+
 export const AdminProvider = ({ children }) => {
   const [categories, setCategories] = useState([]);
   const [courses, setCourses] = useState([]);
@@ -158,19 +199,21 @@ export const AdminProvider = ({ children }) => {
       const data = response.data;
 
       if (data.success) {
-        // update local state immediately
+        const updatedCourse = data.data?.course;
+
+        // patch only the affected row so expanded panels keep their stable course id
         setCourses((prev) =>
           prev.map((course) =>
             course._id === courseId
-              ? {
-                  ...course,
-                  isActive: data.data?.course?.isActive ?? !course.isActive,
-                }
+              ? mergeAdminCourse(course, {
+                  ...updatedCourse,
+                  isActive: updatedCourse?.isActive ?? !course.isActive,
+                })
               : course,
           ),
         );
         toast.success(data.message);
-        return { success: true, data: data.data };
+        return { success: true, data: data.data, course: updatedCourse };
       } else {
         toast.error(data.message || "Failed to toggle course status");
         return { success: false };
@@ -183,6 +226,25 @@ export const AdminProvider = ({ children }) => {
       return { success: false };
     }
   };
+
+  /**
+   * patch one course row after a child operation changes derived values
+   *
+   * @param {string} courseId course id to patch
+   * @param {object|function} updater object patch or function receiving current course
+   * @returns {void}
+   */
+  const patchCourseInStore = (courseId, updater) => {
+    setCourses((prev) =>
+      prev.map((course) => {
+        if (course._id !== courseId) return course;
+
+        const patch = typeof updater === "function" ? updater(course) : updater;
+        return mergeAdminCourse(course, patch || {});
+      }),
+    );
+  };
+
   const fetchCourses = async (force = false) => {
     try {
       // don't show loading for background refreshes
@@ -196,34 +258,7 @@ export const AdminProvider = ({ children }) => {
       if (response.data.success) {
         const coursesData = response.data.data?.courses || [];
         // transform backend data to match frontend expectations
-        const transformedCourses = coursesData.map((course) => ({
-          ...course,
-          name: course.title || course.name,
-          isActive:
-            course.isActive !== undefined
-              ? course.isActive
-              : course.status === "active",
-          // transform difficulties to difficultylevels for frontend compatibility
-          difficultyLevels:
-            course.difficulties?.map((diff) => ({
-              difficulty: diff.name,
-              maxQuestions: course.maxQuestionsPerTest || 20,
-              marksPerQuestion: diff.marksPerQuestion,
-              timeLimit: diff.timerSettings?.maxTime || null,
-            })) || [],
-          // transform image structure
-          image: course.image?.url || course.image,
-          // set categoryid from course data or default
-          categoryId:
-            course.category?._id ||
-            course.category ||
-            course.categoryId ||
-            null,
-          categoryName: course.category?.name || "Uncategorized",
-          videoContent: course.videoContent || null,
-          // preserve haspdfexport field from backend
-          hasPdfExport: course.hasPdfExport || false,
-        }));
+        const transformedCourses = coursesData.map(normalizeAdminCourse);
         setCourses(Array.isArray(transformedCourses) ? transformedCourses : []);
       } else {
         setCourses([]);
@@ -615,20 +650,17 @@ export const AdminProvider = ({ children }) => {
           fullData: updatedCourseData,
         });
 
-        // update courses array with exact backend data
+        // merge the exact backend update into one row instead of replacing the list
         setCourses((prev) =>
           prev.map((course) =>
             course._id === courseId
-              ? {
-                  ...course,
+              ? mergeAdminCourse(course, {
                   ...updatedCourseData,
-                  // ensure these fields are properly set
                   hasPdfExport: updatedCourseData.hasPdfExport === true,
                   isPaid: updatedCourseData.isPaid === true,
                   price: updatedCourseData.price || 0,
                   isActive: updatedCourseData.isActive !== false,
-                  updatedAt: new Date(),
-                }
+                })
               : course,
           ),
         );
@@ -692,8 +724,8 @@ export const AdminProvider = ({ children }) => {
         // update local state immediately to prevent flicker
         setCourses((prev) => prev.filter((course) => course._id !== courseId));
 
-        // background refresh without loading state
-        Promise.all([fetchCourses(false), fetchCategories()]);
+        // category counters can refresh in the background without replacing courses
+        fetchCategories().catch(() => {});
 
         // dispatch notification event
         window.dispatchEvent(
@@ -721,12 +753,15 @@ export const AdminProvider = ({ children }) => {
   // questions management
   const fetchQuestions = async (courseId) => {
     try {
-      setLoading(true);
-      const response = await axios.get(`/courses/${courseId}/questions`);
       if (!courseId || courseId === "undefined") {
-        console.error("Invalid courseId provided to fetchQuestions");
+        console.error("invalid course id provided to fetch questions");
         return [];
       }
+
+      setLoading(true);
+      const response = await axios.get(`/courses/${courseId}/questions`, {
+        params: { _adminFresh: Date.now() },
+      });
       if (response.data.success) {
         const questionsData = response.data.data?.questions || [];
         setQuestions(Array.isArray(questionsData) ? questionsData : []);
@@ -1601,6 +1636,7 @@ export const AdminProvider = ({ children }) => {
     courses,
     createCourse,
     updateCourse,
+    patchCourseInStore,
     deleteCourse,
     fetchCourses,
 

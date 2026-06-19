@@ -2721,9 +2721,9 @@ export const deleteCategory = async (req, res) => {
  * @returns {buffer} pdf file containing course data
  *
  * security:
- * - admin authentication required
- * - no download limits for admins
- * - includes all course questions and configuration
+ * admin authentication and request signing are enforced before this handler
+ * pdf rate limiting is enforced at the route layer for every admin session
+ * no-store headers keep generated files out of shared browser and edge caches
  */
 export const downloadCoursePDF = async (req, res) => {
   setNoStoreHeaders(res);

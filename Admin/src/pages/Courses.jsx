@@ -64,6 +64,107 @@ const AdminModalPortal = ({ children, className = "", onBackdropClick }) => {
   );
 };
 
+/**
+ * renders course row actions in a document-level floating layer
+ *
+ * @param {object} props component props
+ * @param {domrect|null} props.anchorRect button rectangle used to position the menu
+ * @param {object} props.course course row represented by this menu
+ * @param {boolean} props.isBusy whether a course-level mutation is currently running
+ * @param {function} props.onClose closes the menu without mutating data
+ * @param {function} props.onEdit opens the course edit modal
+ * @param {function} props.onToggle toggles the active state after backend confirmation
+ * @param {function} props.onDelete opens the delete confirmation modal
+ * @returns {react.ReactPortal|null} floating menu mounted on document.body
+ */
+const CourseActionMenu = ({
+  anchorRect,
+  course,
+  isBusy,
+  onClose,
+  onEdit,
+  onToggle,
+  onDelete,
+}) => {
+  useEffect(() => {
+    const closeOnLayoutChange = () => onClose();
+
+    window.addEventListener("resize", closeOnLayoutChange);
+    window.addEventListener("scroll", closeOnLayoutChange, true);
+    return () => {
+      window.removeEventListener("resize", closeOnLayoutChange);
+      window.removeEventListener("scroll", closeOnLayoutChange, true);
+    };
+  }, [onClose]);
+
+  if (typeof document === "undefined" || !anchorRect) return null;
+
+  const menuWidth = 224;
+  const viewportPadding = 12;
+  const left = Math.max(
+    viewportPadding,
+    Math.min(anchorRect.right - menuWidth, window.innerWidth - menuWidth - viewportPadding),
+  );
+  const top = Math.max(
+    viewportPadding,
+    Math.min(anchorRect.bottom + 8, window.innerHeight - 180),
+  );
+
+  return createPortal(
+    <div
+      data-course-actions-menu
+      className="fixed inset-0 z-[2147482500]"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) onClose();
+      }}
+    >
+      <div
+        role="menu"
+        className="fixed w-56 overflow-hidden rounded-xl border border-gray-200 bg-white py-1 shadow-2xl ring-1 ring-black/5"
+        style={{ top, left }}
+      >
+        <button
+          type="button"
+          role="menuitem"
+          onClick={onEdit}
+          disabled={isBusy}
+          className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          <Edit2 className="h-4 w-4" />
+          Edit course
+        </button>
+        <button
+          type="button"
+          role="menuitem"
+          onClick={onToggle}
+          disabled={isBusy}
+          className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          {isBusy ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <Eye className="h-4 w-4" />
+          )}
+          {course.isActive || course.status === "active"
+            ? "Deactivate course"
+            : "Activate course"}
+        </button>
+        <button
+          type="button"
+          role="menuitem"
+          onClick={onDelete}
+          disabled={isBusy}
+          className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm text-red-600 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          <Trash2 className="h-4 w-4" />
+          Delete course
+        </button>
+      </div>
+    </div>,
+    document.body,
+  );
+};
+
 // coupon form component with debounce
 const CouponForm = ({ courseId, onSuccess, onCancel }) => {
   const { createCoupon, fetchCourseCoupons } = useAdmin();
@@ -618,6 +719,7 @@ const Courses = () => {
     fetchQuestions,
     deleteCourse,
     updateCourse,
+    patchCourseInStore,
     updateQuestion,
     deleteQuestion,
     loading,
@@ -664,6 +766,8 @@ const Courses = () => {
   const [showEditPreview, setShowEditPreview] = useState(false);
   const [editingCourse, setEditingCourse] = useState(null);
   const [openActionMenu, setOpenActionMenu] = useState(null);
+  const [actionMenuAnchor, setActionMenuAnchor] = useState(null);
+  const [courseOperations, setCourseOperations] = useState({});
   const [deleteConfirmCourse, setDeleteConfirmCourse] = useState(null);
   const [bulkDeleteConfirmation, setBulkDeleteConfirmation] = useState(null);
   const [editFormData, setEditFormData] = useState({});
@@ -722,15 +826,45 @@ const Courses = () => {
   }, [courses, editingCourse?._id, expandedCourse]); // run when courses are loaded
 
   useEffect(() => {
+    if (!expandedCourse) return;
+
+    const courseStillExists = courses.some((course) => course._id === expandedCourse);
+    if (courseStillExists || courses.length === 0) return;
+
+    setExpandedCourse(null);
+    const url = new URL(window.location);
+    url.searchParams.delete("manage");
+    window.history.pushState({}, "", url);
+  }, [courses, expandedCourse]);
+
+  useEffect(() => {
     const closeActionMenu = (event) => {
       if (!event.target.closest("[data-course-actions-menu]")) {
         setOpenActionMenu(null);
+        setActionMenuAnchor(null);
       }
     };
 
     document.addEventListener("mousedown", closeActionMenu);
     return () => document.removeEventListener("mousedown", closeActionMenu);
   }, []);
+
+  const setCourseOperation = useCallback((courseId, operation) => {
+    setCourseOperations((prev) => {
+      const next = { ...prev };
+      if (operation) next[courseId] = operation;
+      else delete next[courseId];
+      return next;
+    });
+  }, []);
+
+  const isCourseBusy = useCallback(
+    (courseId, operation = null) =>
+      operation
+        ? courseOperations[courseId] === operation
+        : Boolean(courseOperations[courseId]),
+    [courseOperations],
+  );
 
   const loadCourseCoupons = async (courseId) => {
     setLoadingCoupons((prev) => ({ ...prev, [courseId]: true }));
@@ -1126,10 +1260,24 @@ const Courses = () => {
   };
 
   const handleToggleCourseStatus = async (course) => {
-    const result = await toggleCourseStatus(course._id);
-    if (result.success) {
-      // refresh courses list in background
-      await fetchCourses();
+    if (!course?._id || isCourseBusy(course._id)) return;
+
+    setCourseOperation(course._id, "status");
+    try {
+      await toggleCourseStatus(course._id);
+    } finally {
+      setCourseOperation(course._id, null);
+    }
+  };
+
+  const handleTogglePdfExport = async (course) => {
+    if (!course?._id || isCourseBusy(course._id)) return;
+
+    setCourseOperation(course._id, "pdf");
+    try {
+      await togglePdfExport(course._id);
+    } finally {
+      setCourseOperation(course._id, null);
     }
   };
 
@@ -1158,10 +1306,6 @@ const Courses = () => {
       url.searchParams.delete("edit");
       window.history.pushState({}, "", url);
 
-      // let fetchcourses handle the state update through admincontext
-      await fetchCourses(false); // false = don't show loading spinner
-
-      // restore expansion state
       if (currentExpandedCourse) {
         setExpandedCourse(currentExpandedCourse);
       }
@@ -1402,8 +1546,6 @@ const Courses = () => {
       });
       setDifficultyErrors({});
 
-      // refresh courses
-      await fetchCourses();
     } else {
       toast.error(result.message || "Failed to update difficulty settings");
     }
@@ -1425,26 +1567,29 @@ const Courses = () => {
 
   const handleConfirmDelete = async () => {
     if (deleteConfirmCourse) {
-      // preserve expansion states deletion
+      // keep unrelated expanded panels open while the deleted course leaves the list
       const currentExpandedCourse = expandedCourse;
       const currentExpandedQuestions = { ...expandedQuestions };
+      const courseId = deleteConfirmCourse._id;
 
-      const result = await deleteCourse(deleteConfirmCourse._id);
+      setCourseOperation(courseId, "delete");
+      const result = await deleteCourse(courseId);
+      setCourseOperation(courseId, null);
+
       if (result.success) {
-        if (expandedCourse === deleteConfirmCourse._id) {
+        if (expandedCourse === courseId) {
           setExpandedCourse(null);
+          const url = new URL(window.location);
+          url.searchParams.delete("manage");
+          window.history.pushState({}, "", url);
         }
         setCourseQuestions((prev) => {
           const updated = { ...prev };
-          delete updated[deleteConfirmCourse._id];
+          delete updated[courseId];
           return updated;
         });
-
-        // refresh courses list
-        await fetchCourses();
-
-        // restore expansion states only if the deleted course wasn't the expanded one
-        if (currentExpandedCourse !== deleteConfirmCourse._id) {
+        // restore only when a different course was open
+        if (currentExpandedCourse !== courseId) {
           setExpandedCourse(currentExpandedCourse);
           setExpandedQuestions(currentExpandedQuestions);
         }
@@ -1518,10 +1663,17 @@ const Courses = () => {
         setQuestionFormData({});
         // only update question data, preserve course expansion
         const questionsData = await fetchQuestions(editingQuestion.courseId);
+        const activeQuestionCount = (questionsData || []).filter(
+          (q) => q.isActive !== false,
+        ).length;
         setCourseQuestions((prev) => ({
           ...prev,
           [editingQuestion.courseId]: questionsData || [],
         }));
+        patchCourseInStore(editingQuestion.courseId, {
+          questions: questionsData || [],
+          totalQuestions: activeQuestionCount,
+        });
       }
     }
   };
@@ -1537,11 +1689,19 @@ const Courses = () => {
     const result = await deleteQuestion(courseId, questionId);
 
     if (result.success) {
+      const nextQuestions = (courseQuestions[courseId] || []).filter(
+        (q) => q._id !== questionId,
+      );
+
       // only update local state - no refetch needed
       setCourseQuestions((prev) => ({
         ...prev,
-        [courseId]: (prev[courseId] || []).filter((q) => q._id !== questionId),
+        [courseId]: nextQuestions,
       }));
+      patchCourseInStore(courseId, {
+        questions: nextQuestions,
+        totalQuestions: nextQuestions.filter((q) => q.isActive !== false).length,
+      });
 
       // clear selections if question was selected
       const allKeys = Object.keys(selectedQuestions);
@@ -1693,12 +1853,18 @@ const Courses = () => {
         explanation: "",
       });
 
-      const questionsData = await fetchQuestions(addingQuestion.courseId);
+      const questionsData = await fetchQuestions(courseId);
+      const activeQuestionCount = (questionsData || []).filter(
+        (q) => q.isActive !== false,
+      ).length;
       setCourseQuestions((prev) => ({
         ...prev,
-        [addingQuestion.courseId]: questionsData || [],
+        [courseId]: questionsData || [],
       }));
-      await fetchCourses();
+      patchCourseInStore(courseId, {
+        questions: questionsData || [],
+        totalQuestions: activeQuestionCount,
+      });
     }
   };
 
@@ -1807,8 +1973,6 @@ const Courses = () => {
           difficultyVideos: [],
         });
 
-        // refresh courses
-        await fetchCourses();
       }
     } catch (error) {
       console.error("Error updating video content:", error);
@@ -1825,7 +1989,6 @@ const Courses = () => {
 
       if (result.success) {
         toast.success("All videos removed successfully!");
-        await fetchCourses();
       }
     } catch (error) {
       console.error("Error removing videos:", error);
@@ -2314,63 +2477,51 @@ const Courses = () => {
                           <div className="relative" data-course-actions-menu>
                             <button
                               type="button"
-                              onClick={() =>
+                              onClick={(event) => {
+                                setActionMenuAnchor(
+                                  event.currentTarget.getBoundingClientRect(),
+                                );
                                 setOpenActionMenu((current) =>
                                   current === course._id ? null : course._id,
-                                )
-                              }
+                                );
+                              }}
                               className="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all duration-200 cursor-pointer flex-shrink-0"
                               aria-haspopup="menu"
                               aria-expanded={openActionMenu === course._id}
                               title="Course actions"
                             >
-                              <MoreVertical className="h-4 w-4 sm:h-5 sm:w-5" />
+                              {isCourseBusy(course._id) ? (
+                                <Loader2 className="h-4 w-4 sm:h-5 sm:w-5 animate-spin" />
+                              ) : (
+                                <MoreVertical className="h-4 w-4 sm:h-5 sm:w-5" />
+                              )}
                             </button>
 
                             {openActionMenu === course._id && (
-                              <div
-                                role="menu"
-                                className="absolute right-0 top-11 z-50 w-[min(14rem,calc(100vw-2rem))] overflow-hidden rounded-lg border border-gray-200 bg-white py-1 shadow-lg"
-                              >
-                                <button
-                                  type="button"
-                                  role="menuitem"
-                                  onClick={() => {
-                                    setOpenActionMenu(null);
-                                    handleEditCourse(course);
-                                  }}
-                                  className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-700"
-                                >
-                                  <Edit2 className="h-4 w-4" />
-                                  Edit course
-                                </button>
-                                <button
-                                  type="button"
-                                  role="menuitem"
-                                  onClick={() => {
-                                    setOpenActionMenu(null);
-                                    handleToggleCourseStatus(course);
-                                  }}
-                                  className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-700"
-                                >
-                                  <Eye className="h-4 w-4" />
-                                  {course.isActive || course.status === "active"
-                                    ? "Deactivate course"
-                                    : "Activate course"}
-                                </button>
-                                <button
-                                  type="button"
-                                  role="menuitem"
-                                  onClick={() => {
-                                    setOpenActionMenu(null);
-                                    setDeleteConfirmCourse(course);
-                                  }}
-                                  className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm text-red-600 hover:bg-red-50"
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                  Delete course
-                                </button>
-                              </div>
+                              <CourseActionMenu
+                                anchorRect={actionMenuAnchor}
+                                course={course}
+                                isBusy={isCourseBusy(course._id)}
+                                onClose={() => {
+                                  setOpenActionMenu(null);
+                                  setActionMenuAnchor(null);
+                                }}
+                                onEdit={() => {
+                                  setOpenActionMenu(null);
+                                  setActionMenuAnchor(null);
+                                  handleEditCourse(course);
+                                }}
+                                onToggle={() => {
+                                  setOpenActionMenu(null);
+                                  setActionMenuAnchor(null);
+                                  handleToggleCourseStatus(course);
+                                }}
+                                onDelete={() => {
+                                  setOpenActionMenu(null);
+                                  setActionMenuAnchor(null);
+                                  setDeleteConfirmCourse(course);
+                                }}
+                              />
                             )}
                           </div>
                         </div>
@@ -2506,14 +2657,20 @@ const Courses = () => {
 
                           {/* toggle pdf export button */}
                           <button
-                            onClick={() => togglePdfExport(course._id)}
+                            onClick={() => handleTogglePdfExport(course)}
+                            disabled={isCourseBusy(course._id)}
                             className={`inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium transition-all cursor-pointer ${
                               course.hasPdfExport
                                 ? "bg-purple-100 text-purple-700 hover:bg-purple-200"
                                 : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                            }`}
+                            } disabled:cursor-not-allowed disabled:opacity-60`}
                           >
-                            {course.hasPdfExport ? (
+                            {isCourseBusy(course._id, "pdf") ? (
+                              <>
+                                <Loader2 className="w-4 h-4 mr-1.5 animate-spin" />
+                                Updating PDF Export
+                              </>
+                            ) : course.hasPdfExport ? (
                               <>
                                 <svg
                                   className="w-4 h-4 mr-1.5"
@@ -3813,16 +3970,29 @@ const Courses = () => {
             </p>
             <div className="flex space-x-3">
               <button
-                onClick={() => setDeleteConfirmCourse(null)}
-                className="flex-1 px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors cursor-pointer"
+                onClick={() => {
+                  if (!isCourseBusy(deleteConfirmCourse._id, "delete")) {
+                    setDeleteConfirmCourse(null);
+                  }
+                }}
+                disabled={isCourseBusy(deleteConfirmCourse._id, "delete")}
+                className="flex-1 px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors cursor-pointer disabled:cursor-not-allowed disabled:opacity-60"
               >
                 Cancel
               </button>
               <button
                 onClick={handleConfirmDelete}
-                className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors cursor-pointer"
+                disabled={isCourseBusy(deleteConfirmCourse._id, "delete")}
+                className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors cursor-pointer disabled:cursor-not-allowed disabled:opacity-60"
               >
-                Delete
+                {isCourseBusy(deleteConfirmCourse._id, "delete") ? (
+                  <span className="inline-flex items-center justify-center gap-2">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Deleting
+                  </span>
+                ) : (
+                  "Delete"
+                )}
               </button>
             </div>
           </div>
