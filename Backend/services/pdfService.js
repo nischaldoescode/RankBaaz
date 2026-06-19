@@ -7,7 +7,10 @@
  */
 
 import PDFDocument from "pdfkit";
-import { generateCoursePDF as generateRichCoursePDF } from "./coursePdfService.js";
+import {
+  generateCoursePDF as generateRichCoursePDF,
+  generateTestResultPDF as generateRichTestResultPDF,
+} from "./coursePdfService.js";
 
 /**
  * pdf service for generating test result pdfs and course pdfs
@@ -948,6 +951,10 @@ class PDFService {
    * @returns {promise<buffer>} pdf buffer
    */
   async generateTestResultPDF(testResult, course, user, isAdmin = false) {
+    if (process.env.PDF_LEGACY_RENDERER !== "true") {
+      return generateRichTestResultPDF(testResult, course, user, { isAdmin });
+    }
+
     return new Promise((resolve, reject) => {
       (async () => {
         try {
