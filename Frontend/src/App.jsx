@@ -221,14 +221,6 @@ function App() {
   const { animations, reducedMotion } = useTheme();
   const location = useLocation();
   const [ipBlocked, setIpBlocked] = useState(null); // null = not blocked, object = block info
-  // scroll to top on route
-  const ScrollToTop = () => {
-    const { pathname } = useLocation();
-    useEffect(() => {
-      window.scrollTo({ top: 0, behavior: "smooth" });
-    }, [pathname]);
-    return null;
-  };
 
   // intercept all axios/fetch errors globally for ip_blocked code
   useEffect(() => {

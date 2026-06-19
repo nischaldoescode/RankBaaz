@@ -551,6 +551,20 @@ a,
   bottom: 18rem;
 }
 
+.vg-story-heading {
+  max-width: min(100%, 48rem);
+  text-wrap: balance;
+}
+
+.vg-story-heading h2 {
+  text-wrap: balance;
+}
+
+.vg-story-heading p {
+  max-width: 42rem;
+  margin-inline: auto;
+}
+
 .vg-story-brushed-word {
   position: relative;
   display: inline-block;
@@ -1198,6 +1212,22 @@ a,
     left: -42%;
     width: 178%;
     opacity: 0.52;
+  }
+
+  .vg-story-heading {
+    width: min(100%, 22rem);
+    transform: none !important;
+  }
+
+  .vg-story-heading h2 {
+    font-size: clamp(1.65rem, 7vw, 2.08rem);
+    line-height: 1.12;
+  }
+
+  .vg-story-heading p {
+    width: min(100%, 21rem);
+    font-size: 0.98rem;
+    line-height: 1.7;
   }
 
   .vg-story-scroll-marker {

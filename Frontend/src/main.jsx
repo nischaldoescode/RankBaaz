@@ -9,17 +9,83 @@
 import React, { useEffect } from "react";
 import ReactDOM from "react-dom/client";
 import { BrowserRouter, useLocation } from "react-router-dom";
+import Lenis from "lenis";
 import App from "./App.jsx";
 import { AuthProvider } from "./context/AuthContext.jsx";
 import { CourseProvider } from "./context/CourseContext.jsx";
 import { TestProvider } from "./context/TestContext.jsx";
-import { ThemeProvider } from "./context/ThemeContext.jsx";
+import { ThemeProvider, useTheme } from "./context/ThemeContext.jsx";
+import "lenis/dist/lenis.css";
 import "./styles/globals.css";
+
+/**
+ * keeps smooth scrolling native friendly and disabled for reduced motion users
+ *
+ * @returns {null} no markup because lenis only manages browser scrolling
+ */
+const SmoothScrollController = () => {
+  const { animations = true, reducedMotion = false } = useTheme() || {};
+
+  useEffect(() => {
+    if (typeof window === "undefined" || typeof document === "undefined") {
+      return undefined;
+    }
+
+    if (!animations || reducedMotion) {
+      document.documentElement.classList.remove("vg-lenis-ready");
+      return undefined;
+    }
+
+    const isCoarsePointer =
+      window.matchMedia?.("(pointer: coarse)")?.matches || false;
+    const isIOS =
+      /iPad|iPhone|iPod/.test(window.navigator.userAgent) ||
+      (window.navigator.platform === "MacIntel" &&
+        window.navigator.maxTouchPoints > 1);
+
+    const lenis = new Lenis({
+      autoRaf: true,
+      anchors: true,
+      autoResize: true,
+      gestureOrientation: "vertical",
+      lerp: isCoarsePointer ? 0.16 : 0.105,
+      smoothWheel: true,
+      syncTouch: isCoarsePointer && !isIOS,
+      syncTouchLerp: 0.075,
+      touchMultiplier: 0.92,
+      wheelMultiplier: 0.82,
+      prevent: (node) =>
+        Boolean(
+          node?.closest?.(
+            "[data-lenis-prevent], [role='dialog'], [data-radix-popper-content-wrapper], .vg-no-smooth-scroll",
+          ),
+        ),
+    });
+
+    window.__vidhgrowLenis = lenis;
+    document.documentElement.classList.add("vg-lenis-ready");
+
+    return () => {
+      if (window.__vidhgrowLenis === lenis) {
+        delete window.__vidhgrowLenis;
+      }
+      lenis.destroy();
+      document.documentElement.classList.remove("vg-lenis-ready");
+    };
+  }, [animations, reducedMotion]);
+
+  return null;
+};
 
 const ScrollToTop = () => {
   const { pathname } = useLocation();
   useEffect(() => {
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    const lenis = window.__vidhgrowLenis;
+    if (lenis?.scrollTo) {
+      lenis.scrollTo(0, { immediate: true });
+      return;
+    }
+    window.scrollTo({ top: 0, left: 0, behavior: "auto" });
   }, [pathname]);
   return null;
 };
@@ -65,6 +131,7 @@ ReactDOM.createRoot(document.getElementById("root")).render(
                 v7_relativeSplatPath: true,
               }}
             >
+              <SmoothScrollController />
               <ScrollToTop />
               <App />
             </BrowserRouter>

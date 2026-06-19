@@ -4,6 +4,7 @@
  * @file backend/services/coursepdfservice.js
  * @module backend/services/coursepdfservice
  * @exports generateCoursePDF creates the course pdf buffer used by admin and future student export routes
+ * @exports generateTestResultPDF creates a protected student test report with stable question formatting
  * @param {object} course course document converted to a plain object
  * @param {object} options optional export controls passed by the controller
  * @param {object} options.exportedBy authenticated actor shown in the pdf audit details
@@ -17,6 +18,7 @@
  */
 
 import { existsSync, readFileSync } from "fs";
+import { createHash } from "crypto";
 import path from "path";
 import { fileURLToPath } from "url";
 import PDFDocument from "pdfkit";
@@ -258,6 +260,9 @@ const normalizeRichTextForPdf = (value = "") => {
 const compactText = (value, limit = 120) =>
   escapePdfText(value, limit).replace(/\s+/g, " ").trim();
 
+const normalizeEmailForPdf = (value = "") =>
+  compactText(value, 140).replace(/@example\.com$/i, "@vidhgrow.online");
+
 /**
  * normalizes the authenticated actor shown inside exported pdf files
  *
@@ -271,9 +276,9 @@ const compactText = (value, limit = 120) =>
 const normalizeExportContext = (exportedBy = {}) => {
   const role = compactText(exportedBy.role || "admin", 24).toLowerCase() || "admin";
   const name = compactText(exportedBy.name, 80);
-  const email = compactText(exportedBy.email, 140);
+  const email = normalizeEmailForPdf(exportedBy.email);
   const includeEmail = exportedBy.includeEmail === true || role === "admin";
-  const displayName = name || email || role;
+  const displayName = name || (includeEmail ? email : role) || role;
   const visibleIdentity =
     includeEmail && name && email ? `${name} (${email})` : displayName;
 
@@ -284,6 +289,42 @@ const normalizeExportContext = (exportedBy = {}) => {
     includeEmail,
     displayName,
     visibleIdentity,
+  };
+};
+
+const ownerPasswordSeed = () =>
+  process.env.PDF_OWNER_PASSWORD ||
+  process.env.COOKIE_ENCRYPTION_KEY ||
+  process.env.JWT_SECRET ||
+  process.env.ADMIN_JWT_SECRET ||
+  "vidhgrow-pdf-owner-password";
+
+/**
+ * returns pdfkit security options for exports that should not be casually edited
+ *
+ * @param {boolean} enabled whether the current export should include permission flags
+ * @param {string} salt stable export-specific value mixed into the owner password
+ * @returns {object} pdfkit encryption and permission options
+ */
+const pdfProtectionOptions = (enabled, salt = "") => {
+  if (!enabled) return {};
+
+  const ownerPassword = createHash("sha256")
+    .update(`${ownerPasswordSeed()}:${salt}`)
+    .digest("hex");
+
+  return {
+    userPassword: "",
+    ownerPassword,
+    permissions: {
+      printing: "highResolution",
+      modifying: false,
+      copying: false,
+      annotating: false,
+      fillingForms: false,
+      contentAccessibility: true,
+      documentAssembly: false,
+    },
   };
 };
 
@@ -804,6 +845,101 @@ const convertMathToPlainText = (value) => {
   unicodeFallbacks.forEach(([pattern, replacement]) => {
     text = text.replace(pattern, replacement);
   });
+
+  const superscriptAscii = {
+    "⁰": "0",
+    "¹": "1",
+    "²": "2",
+    "³": "3",
+    "⁴": "4",
+    "⁵": "5",
+    "⁶": "6",
+    "⁷": "7",
+    "⁸": "8",
+    "⁹": "9",
+    "⁺": "+",
+    "⁻": "-",
+    "⁼": "=",
+    "⁽": "(",
+    "⁾": ")",
+    "ᵃ": "a",
+    "ᵇ": "b",
+    "ᶜ": "c",
+    "ᵈ": "d",
+    "ᵉ": "e",
+    "ᶠ": "f",
+    "ᵍ": "g",
+    "ʰ": "h",
+    "ⁱ": "i",
+    "ʲ": "j",
+    "ᵏ": "k",
+    "ˡ": "l",
+    "ᵐ": "m",
+    "ⁿ": "n",
+    "ᵒ": "o",
+    "ᵖ": "p",
+    "ʳ": "r",
+    "ˢ": "s",
+    "ᵗ": "t",
+    "ᵘ": "u",
+    "ᵛ": "v",
+    "ʷ": "w",
+    "ˣ": "x",
+    "ʸ": "y",
+    "ᶻ": "z",
+  };
+  const subscriptAscii = {
+    "₀": "0",
+    "₁": "1",
+    "₂": "2",
+    "₃": "3",
+    "₄": "4",
+    "₅": "5",
+    "₆": "6",
+    "₇": "7",
+    "₈": "8",
+    "₉": "9",
+    "₊": "+",
+    "₋": "-",
+    "₌": "=",
+    "₍": "(",
+    "₎": ")",
+    "ₐ": "a",
+    "ₑ": "e",
+    "ₕ": "h",
+    "ᵢ": "i",
+    "ⱼ": "j",
+    "ₖ": "k",
+    "ₗ": "l",
+    "ₘ": "m",
+    "ₙ": "n",
+    "ₒ": "o",
+    "ₚ": "p",
+    "ᵣ": "r",
+    "ₛ": "s",
+    "ₜ": "t",
+    "ᵤ": "u",
+    "ᵥ": "v",
+    "ₓ": "x",
+  };
+
+  const scriptRunToAscii = (run, marker, table) =>
+    `${marker}(` +
+    run
+      .split("")
+      .map((char) => table[char] || char)
+      .join("") +
+    ")";
+
+  text = text
+    .replace(/[⁰¹²³⁴⁵⁶⁷⁸⁹⁺⁻⁼⁽⁾ᵃᵇᶜᵈᵉᶠᵍʰⁱʲᵏˡᵐⁿᵒᵖʳˢᵗᵘᵛʷˣʸᶻ]+/g, (run) =>
+      scriptRunToAscii(run, "^", superscriptAscii),
+    )
+    .replace(/[₀₁₂₃₄₅₆₇₈₉₊₋₌₍₎ₐₑₕᵢⱼₖₗₘₙₒₚᵣₛₜᵤᵥₓ]+/g, (run) =>
+      scriptRunToAscii(run, "_", subscriptAscii),
+    )
+    .replace(/\^([+-]?\d+(?:\.\d+)?|[A-Za-z])/g, "^($1)")
+    .replace(/_([+-]?\d+(?:\.\d+)?|[A-Za-z])/g, "_($1)");
 
   text = text
     .replace(/\^\{([^{}]+)\}/g, "^($1)")
@@ -1668,6 +1804,162 @@ const answerLabel = (question) => {
   return escapePdfText(question.correctAnswer || "not available", 300);
 };
 
+const resultAnswerLabel = (question, answer) => {
+  if (!answer) return "not answered";
+
+  if (question.questionType === "multiple" || question.questionType === "truefalse") {
+    const answerIndex = Number(answer);
+    const option = question.options?.[answerIndex];
+    if (!Number.isInteger(answerIndex) || !option) return escapePdfText(answer, 300);
+    return `${String.fromCharCode(65 + answerIndex)}. ${escapePdfText(option, 300)}`;
+  }
+
+  return escapePdfText(answer, 300);
+};
+
+const formatDuration = (seconds = 0) => {
+  const total = Math.max(0, Number(seconds) || 0);
+  const minutes = Math.floor(total / 60);
+  const remainingSeconds = total % 60;
+
+  if (minutes <= 0) return `${remainingSeconds}s`;
+  return `${minutes}m ${remainingSeconds}s`;
+};
+
+const formatPercent = (value = 0) => {
+  const percent = Number(value);
+  if (!Number.isFinite(percent)) return "0%";
+  return `${Math.round(percent * 100) / 100}%`;
+};
+
+const testExportId = (testResult, user) =>
+  createHash("sha256")
+    .update(
+      [
+        testResult?._id || "test",
+        testResult?.user?._id || user?._id || "user",
+        testResult?.completedAt || testResult?.createdAt || "date",
+        testResult?.course?._id || "course",
+      ].join(":"),
+    )
+    .digest("hex")
+    .slice(0, 14)
+    .toUpperCase();
+
+const normalizeExplanationForPdf = (value = "") =>
+  String(value)
+    .replace(/\s*(Correct answer\s*:)/gi, "\n\n$1")
+    .replace(/\s*(Check\s*:)/gi, "\n\n$1")
+    .replace(/\s*(Formula\s*:)/gi, "\n\n$1")
+    .replace(/\s*(Derivation\s*:)/gi, "\n\n$1")
+    .replace(/([.!?])\s+(?=(Actually|But|Force|Kinetic|Spring|Centripetal|Relative|Convert|Use|Simple|This|It)\b)/g, "$1\n\n")
+    .replace(/\s+—\s+/g, " - ");
+
+const answerStatus = (attempt = {}) => {
+  if (!attempt.userAnswer) return { label: "not answered", color: COLORS.muted, fill: "#f8fafc" };
+  if (attempt.isCorrect) return { label: "correct", color: COLORS.green, fill: "#ecfdf5" };
+  return { label: "needs review", color: COLORS.red, fill: "#fef2f2" };
+};
+
+const questionIdValue = (value) => {
+  if (!value) return "";
+  if (typeof value === "string") return value;
+  if (value._id) return String(value._id);
+  return String(value);
+};
+
+const questionLookup = (course = {}) => {
+  const map = new Map();
+
+  (course.questions || []).forEach((question) => {
+    const id = questionIdValue(question._id);
+    if (id) map.set(id, question);
+  });
+
+  return map;
+};
+
+const drawSoftBadge = (doc, text, x, y, options = {}) => {
+  const {
+    color = COLORS.blue,
+    fill = "#eff6ff",
+    width = Math.max(66, doc.widthOfString(text) + 18),
+  } = options;
+
+  doc.roundedRect(x, y, width, 18, 9).fillAndStroke(fill, color);
+  doc.font("Helvetica-Bold").fontSize(8).fillColor(color);
+  doc.text(text, x, y + 5, {
+    width,
+    align: "center",
+    lineBreak: false,
+  });
+};
+
+const renderMetricGrid = (doc, metrics) => {
+  const x = doc.page.margins.left;
+  const width = contentWidth(doc);
+  const gap = 10;
+  const cardWidth = (width - gap * 2) / 3;
+  let y = doc.y;
+
+  metrics.forEach((metric, index) => {
+    if (index > 0 && index % 3 === 0) {
+      y += 70;
+      doc.y = y;
+    }
+
+    ensureSpace(doc, 72);
+    const cardX = x + (index % 3) * (cardWidth + gap);
+
+    doc
+      .roundedRect(cardX, y, cardWidth, 58, 9)
+      .fillAndStroke(metric.fill || COLORS.soft, metric.border || COLORS.border);
+    doc.font("Helvetica-Bold").fontSize(15).fillColor(metric.color || COLORS.ink);
+    doc.text(metric.value, cardX + 12, y + 10, {
+      width: cardWidth - 24,
+      lineBreak: false,
+    });
+    doc.font("Helvetica").fontSize(8.5).fillColor(COLORS.muted);
+    doc.text(metric.label, cardX + 12, y + 33, {
+      width: cardWidth - 24,
+      lineBreak: false,
+    });
+  });
+
+  doc.y = y + 76;
+};
+
+const renderAnswerBox = (doc, label, value, options = {}) => {
+  const x = options.x || doc.page.margins.left;
+  const width = options.width || contentWidth(doc);
+  const color = options.color || COLORS.ink;
+  const fill = options.fill || COLORS.soft;
+  const text = inlineMarkdownToReadableText(value || "not available");
+
+  doc.font("Helvetica").fontSize(10.5);
+  const height = Math.max(
+    34,
+    doc.heightOfString(text, { width: width - 24, lineGap: 4 }) + 28,
+  );
+
+  ensureSpace(doc, Math.min(height + 8, 170));
+  const y = doc.y;
+
+  doc.roundedRect(x, y, width, height, 8).fillAndStroke(fill, COLORS.border);
+  doc.font("Helvetica-Bold").fontSize(8.5).fillColor(color);
+  doc.text(label, x + 12, y + 9, { width: width - 24, lineBreak: false });
+  doc.y = y + 22;
+  renderInlineText(doc, value || "not available", {
+    x: x + 12,
+    width: width - 24,
+    fontSize: 10.5,
+    color: COLORS.ink,
+    paragraphGap: 0,
+    lineGap: 4,
+  });
+  doc.y = y + height + 8;
+};
+
 /**
  * keeps the first visible part of a question with its question header
  *
@@ -1813,6 +2105,165 @@ const renderQuestion = async (doc, question, index) => {
   doc.moveDown(0.9);
 };
 
+const renderTestQuestion = async (doc, question, attempt, index) => {
+  ensureQuestionStart(doc);
+
+  const x = doc.page.margins.left;
+  const width = contentWidth(doc);
+  const startY = doc.y;
+  const status = answerStatus(attempt);
+  const headerHeight = 40;
+
+  doc
+    .roundedRect(x, startY, width, headerHeight, 9)
+    .fillAndStroke("#f8fbff", "#dbeafe");
+
+  doc
+    .rect(x, startY, 5, headerHeight)
+    .fill(status.color);
+
+  doc
+    .font("Helvetica-Bold")
+    .fontSize(11.5)
+    .fillColor(COLORS.ink)
+    .text(`Question ${index + 1}`, x + 14, startY + 9, {
+      width: width - 150,
+      lineBreak: false,
+    });
+
+  doc
+    .font("Helvetica")
+    .fontSize(8.5)
+    .fillColor(COLORS.muted)
+    .text(
+      `${typeLabel(question.questionType)}   ${attempt.marksAwarded || 0} marks   ${formatDuration(attempt.timeSpent || 0)}`,
+      x + 14,
+      startY + 25,
+      { width: width - 150, lineBreak: false },
+    );
+
+  drawSoftBadge(doc, status.label, x + width - 106, startY + 11, {
+    color: status.color,
+    fill: status.fill,
+    width: 92,
+  });
+
+  doc.y = startY + headerHeight + 14;
+  await renderMarkdown(doc, question.question, {
+    x,
+    width,
+    fontSize: 12.2,
+    color: COLORS.ink,
+    paragraphGap: 8,
+    lineGap: 5,
+  });
+  doc.moveDown(0.45);
+
+  if (question.image?.url) {
+    const ok = await embedImage(doc, question.image.url, {
+      x,
+      width: 360,
+      height: 220,
+    });
+
+    if (!ok) {
+      renderInlineText(doc, "[image skipped because it is unavailable or not a supported secure image]", {
+        x,
+        width,
+        fontSize: 9,
+        color: COLORS.muted,
+      });
+    }
+  }
+
+  if (question.questionType === "multiple" || question.questionType === "truefalse") {
+    ensureSpace(doc, 92);
+    doc.moveDown(0.35);
+    doc.font("Helvetica-Bold").fontSize(10.5).fillColor(COLORS.muted);
+    doc.text("Options", x, doc.y, { width, lineBreak: false });
+    doc.moveDown(0.65);
+
+    const options = question.options || [];
+    for (let optionIndex = 0; optionIndex < options.length; optionIndex += 1) {
+      const option = options[optionIndex];
+      const isCorrect = Number(question.correctAnswer) === optionIndex;
+      const isSelected = String(attempt.userAnswer || "") === String(optionIndex);
+      const optionY = doc.y;
+      const optionFill = isCorrect ? "#ecfdf5" : isSelected ? "#fff7ed" : "#ffffff";
+      const optionBorder = isCorrect ? "#bbf7d0" : isSelected ? "#fed7aa" : COLORS.border;
+      const labelColor = isCorrect ? COLORS.green : isSelected ? COLORS.amber : COLORS.muted;
+
+      ensureSpace(doc, 46);
+      doc
+        .roundedRect(x, optionY, width, 34, 7)
+        .fillAndStroke(optionFill, optionBorder);
+      doc
+        .font("Helvetica-Bold")
+        .fontSize(10)
+        .fillColor(labelColor)
+        .text(`${String.fromCharCode(65 + optionIndex)}.`, x + 10, optionY + 10, {
+          width: 24,
+          lineBreak: false,
+        });
+
+      doc.y = optionY + 8;
+      await renderMarkdown(doc, option, {
+        x: x + 40,
+        width: width - 52,
+        fontSize: 10.8,
+        color: isCorrect ? COLORS.green : COLORS.ink,
+        paragraphGap: 0,
+        lineGap: 4,
+      });
+      doc.y = Math.max(doc.y, optionY + 42);
+    }
+  }
+
+  doc.moveDown(0.35);
+  renderAnswerBox(doc, "your answer", resultAnswerLabel(question, attempt.userAnswer), {
+    x,
+    width,
+    color: status.color,
+    fill: status.fill,
+  });
+
+  renderAnswerBox(doc, "correct answer", answerLabel(question), {
+    x,
+    width,
+    color: COLORS.green,
+    fill: "#ecfdf5",
+  });
+
+  if (question.explanation) {
+    ensureSpace(doc, 86);
+    doc.moveDown(0.3);
+    doc
+      .roundedRect(x, doc.y, width, 1, 1)
+      .fill(COLORS.border);
+    doc.moveDown(0.85);
+    doc.font("Helvetica-Bold").fontSize(10.5).fillColor(COLORS.muted);
+    doc.text("Explanation", x, doc.y, { width, lineBreak: false });
+    doc.moveDown(0.65);
+    await renderMarkdown(doc, normalizeExplanationForPdf(question.explanation), {
+      x,
+      width,
+      fontSize: 11.2,
+      color: COLORS.ink,
+      paragraphGap: 8,
+      lineGap: 5,
+    });
+  }
+
+  ensureSpace(doc, 18);
+  doc
+    .moveTo(x, doc.y + 5)
+    .lineTo(x + width, doc.y + 5)
+    .strokeColor("#e2e8f0")
+    .lineWidth(0.6)
+    .stroke();
+  doc.moveDown(1);
+};
+
 const difficultyOrder = (name) => {
   const order = { Easy: 1, Medium: 2, Hard: 3 };
   return order[name] || 99;
@@ -1834,6 +2285,201 @@ const courseDifficulties = (course) => {
 
 const difficultyName = (difficulty = {}) =>
   compactText(difficulty.name || difficulty.level || difficulty.difficulty || "difficulty", 50);
+
+/**
+ * creates a test result pdf with secure student export metadata and readable rich text
+ *
+ * @param {object} testResult completed test result with question attempts
+ * @param {object} course course data containing the full question bank
+ * @param {object} user student data shown in the report
+ * @param {object} options export controls passed by the legacy pdf service wrapper
+ * @param {boolean} options.isAdmin whether the requester is an admin
+ * @returns {Promise<Buffer>} generated pdf bytes ready to send as application/pdf
+ */
+export const generateTestResultPDF = async (testResult, course, user, options = {}) =>
+  new Promise((resolve, reject) => {
+    (async () => {
+      try {
+        const isAdmin = options.isAdmin === true;
+        const exportContext = normalizeExportContext({
+          role: isAdmin ? "admin" : "student",
+          name: isAdmin ? "Vidhgrow admin" : user?.name || "student",
+          email: isAdmin ? "admin@vidhgrow.online" : user?.email,
+          includeEmail: isAdmin,
+        });
+        const title = `${courseTitle(course)} - Test Result`;
+        const exportId = testExportId(testResult, user);
+        const security = pdfProtectionOptions(!isAdmin, exportId);
+
+        const doc = new PDFDocument({
+          size: PAGE.size,
+          margins: PAGE.margins,
+          autoFirstPage: false,
+          bufferPages: true,
+          ...security,
+          info: {
+            Title: title,
+            Author: exportContext.visibleIdentity || "Vidhgrow",
+            Subject: "Student Test Result Report",
+            Keywords: "test, result, report, student, education",
+            Producer: "Vidhgrow PDF Service",
+            Creator: "Vidhgrow Platform",
+          },
+        });
+
+        const chunks = [];
+        doc.on("data", (chunk) => chunks.push(chunk));
+        doc.on("end", () => resolve(Buffer.concat(chunks)));
+        doc.on("error", reject);
+        doc.on("pageAdded", () => drawPageWatermark(doc));
+
+        addPage(doc);
+
+        doc
+          .font("Helvetica-Bold")
+          .fontSize(27)
+          .fillColor(COLORS.ink)
+          .text(courseTitle(course), {
+            width: contentWidth(doc),
+            align: "center",
+          });
+
+        doc.moveDown(0.25);
+        doc
+          .font("Helvetica")
+          .fontSize(12)
+          .fillColor(COLORS.muted)
+          .text("Test result report", {
+            width: contentWidth(doc),
+            align: "center",
+          });
+
+        doc.moveDown(1.1);
+        renderMetricGrid(doc, [
+          {
+            label: "score",
+            value: `${testResult.totalScore || 0}/${testResult.maxPossibleScore || 0}`,
+            color: COLORS.blue,
+            fill: "#eff6ff",
+            border: "#bfdbfe",
+          },
+          {
+            label: "percentage",
+            value: formatPercent(testResult.percentage),
+            color: COLORS.green,
+            fill: "#ecfdf5",
+            border: "#bbf7d0",
+          },
+          {
+            label: "time taken",
+            value: formatDuration(testResult.timeTaken),
+            color: COLORS.amber,
+            fill: "#fff7ed",
+            border: "#fed7aa",
+          },
+          {
+            label: "correct",
+            value: String(testResult.correctAnswers || 0),
+            color: COLORS.green,
+            fill: "#f0fdf4",
+            border: "#bbf7d0",
+          },
+          {
+            label: "wrong",
+            value: String(testResult.wrongAnswers || 0),
+            color: COLORS.red,
+            fill: "#fef2f2",
+            border: "#fecaca",
+          },
+          {
+            label: "unanswered",
+            value: String(testResult.unanswered || 0),
+            color: COLORS.muted,
+            fill: COLORS.soft,
+            border: COLORS.border,
+          },
+        ]);
+
+        sectionTitle(doc, "Report details", COLORS.blue);
+        keyValueRows(doc, [
+          ["Student", exportContext.displayName],
+          ["Course", courseTitle(course)],
+          ["Completed", safeDate(testResult.completedAt || testResult.createdAt)],
+          ["Difficulty", Array.isArray(testResult.difficulty) ? testResult.difficulty.join(", ") : testResult.difficulty || "not available"],
+          ["Exported by", `${exportContext.displayName} (${exportContext.role})`],
+          ["Export ID", exportId],
+          ["Edit protection", isAdmin ? "admin export" : "student export permissions applied"],
+        ]);
+
+        if (course.description) {
+          sectionTitle(doc, "Course context", COLORS.blue);
+          await renderMarkdown(doc, course.description, {
+            x: doc.page.margins.left,
+            width: contentWidth(doc),
+            fontSize: 10.6,
+            color: COLORS.muted,
+            paragraphGap: 7,
+            lineGap: 4,
+          });
+        }
+
+        const attempts = Array.isArray(testResult.questions) ? testResult.questions : [];
+        const lookup = questionLookup(course);
+        const grouped = attempts.reduce((acc, attempt) => {
+          const key = attempt.difficulty || "Unknown";
+          if (!acc[key]) acc[key] = [];
+          acc[key].push(attempt);
+          return acc;
+        }, {});
+        const difficulties = Object.keys(grouped).sort(
+          (a, b) => difficultyOrder(a) - difficultyOrder(b),
+        );
+
+        if (!attempts.length) {
+          sectionTitle(doc, "Questions", COLORS.blue);
+          renderInlineText(doc, "No question attempts were recorded for this test.", {
+            fontSize: 11,
+            color: COLORS.muted,
+          });
+        } else {
+          let questionNumber = 0;
+          for (const difficulty of difficulties) {
+            const color = DIFFICULTY_COLORS[difficulty] || COLORS.blue;
+            ensureSectionStart(doc);
+            sectionTitle(doc, `${difficulty} questions`, color);
+
+            for (const attempt of grouped[difficulty]) {
+              const fullQuestion = lookup.get(questionIdValue(attempt.question));
+              if (!fullQuestion) {
+                renderAnswerBox(doc, `Question ${questionNumber + 1}`, "Question details are no longer available for this course.", {
+                  color: COLORS.muted,
+                  fill: COLORS.soft,
+                });
+                questionNumber += 1;
+                continue;
+              }
+
+              await renderTestQuestion(doc, fullQuestion, attempt, questionNumber);
+              questionNumber += 1;
+            }
+          }
+        }
+
+        ensureSpace(doc, 66);
+        sectionTitle(doc, "Export note", COLORS.blue);
+        renderInlineText(
+          doc,
+          `Generated on ${new Date().toLocaleString("en-US")} for ${exportContext.visibleIdentity}. Student exports include PDF permission flags that disallow normal editing in compliant PDF readers and include an export ID for audit checks.`,
+          { fontSize: 10, color: COLORS.muted, lineGap: 4 },
+        );
+
+        finalizeFooters(doc, exportContext);
+        doc.end();
+      } catch (error) {
+        reject(error);
+      }
+    })();
+  });
 
 /**
  * creates a course export pdf that mirrors frontend markdown features where pdfkit can represent them

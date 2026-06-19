@@ -115,6 +115,36 @@ const useAnimeOnView = (targetRef, enabled, createAnimation) => {
   }, [targetRef, enabled, createAnimation]);
 };
 
+/**
+ * watches one viewport query so scroll animations can be tuned by screen size
+ *
+ * @param {string} query css media query to observe
+ * @returns {boolean} true when the viewport matches the query
+ */
+const useMediaQuery = (query) => {
+  const getMatches = () =>
+    typeof window !== "undefined" && window.matchMedia(query).matches;
+  const [matches, setMatches] = useState(getMatches);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return undefined;
+
+    const mediaQuery = window.matchMedia(query);
+    const updateMatches = () => setMatches(mediaQuery.matches);
+
+    updateMatches();
+    mediaQuery.addEventListener?.("change", updateMatches);
+    mediaQuery.addListener?.(updateMatches);
+
+    return () => {
+      mediaQuery.removeEventListener?.("change", updateMatches);
+      mediaQuery.removeListener?.(updateMatches);
+    };
+  }, [query]);
+
+  return matches;
+};
+
 const animeChars = (value) =>
   Array.from(String(value || "")).map((char, index) => (
     <span
@@ -266,17 +296,31 @@ const StoryImageSlot = ({ item }) => {
   );
 };
 
-const HomeParallaxStage = ({ scrollProgress, reducedMotion }) => {
+const HomeParallaxStage = ({
+  scrollProgress,
+  reducedMotion,
+  isSmallViewport,
+}) => {
   const farY = useTransform(scrollProgress, [0, 1], [-160, 260]);
   const midY = useTransform(scrollProgress, [0, 1], [120, -280]);
   const nearY = useTransform(scrollProgress, [0, 1], [240, -520]);
   const nearX = useTransform(scrollProgress, [0, 1], [-80, 90]);
   const reverseX = useTransform(scrollProgress, [0, 1], [86, -110]);
+  const mobileFarY = useTransform(scrollProgress, [0, 1], [-70, 140]);
+  const mobileMidY = useTransform(scrollProgress, [0, 1], [58, -150]);
+  const mobileNearY = useTransform(scrollProgress, [0, 1], [92, -220]);
+  const mobileNearX = useTransform(scrollProgress, [0, 1], [-14, 14]);
+  const mobileReverseX = useTransform(scrollProgress, [0, 1], [14, -14]);
   const lineDraw = useTransform(scrollProgress, [0.02, 0.82], [0, 1]);
   const lineOpacity = useTransform(scrollProgress, [0, 0.12, 0.9, 1], [0.25, 0.72, 0.58, 0.2]);
   const brushScale = useTransform(scrollProgress, [0, 0.28, 0.62, 1], [0.9, 1.08, 0.98, 1.06]);
 
   const activeStyle = (style) => (reducedMotion ? undefined : style);
+  const farLayerY = isSmallViewport ? mobileFarY : farY;
+  const midLayerY = isSmallViewport ? mobileMidY : midY;
+  const nearLayerY = isSmallViewport ? mobileNearY : nearY;
+  const nearLayerX = isSmallViewport ? mobileNearX : nearX;
+  const reverseLayerX = isSmallViewport ? mobileReverseX : reverseX;
 
   return (
     <div className="vg-home-parallax-stage" aria-hidden="true">
@@ -284,7 +328,7 @@ const HomeParallaxStage = ({ scrollProgress, reducedMotion }) => {
         className="vg-home-story-lines"
         viewBox="0 0 1200 3600"
         preserveAspectRatio="none"
-        style={activeStyle({ y: farY, opacity: lineOpacity })}
+        style={activeStyle({ y: farLayerY, opacity: lineOpacity })}
       >
         <motion.path
           className="vg-home-story-line vg-home-story-line-main"
@@ -302,35 +346,35 @@ const HomeParallaxStage = ({ scrollProgress, reducedMotion }) => {
 
       <motion.div
         className="vg-parallax-depth vg-parallax-depth-far vg-depth-grid vg-depth-grid-a"
-        style={activeStyle({ y: farY, x: reverseX })}
+        style={activeStyle({ y: farLayerY, x: reverseLayerX })}
       />
       <motion.div
         className="vg-parallax-depth vg-parallax-depth-mid vg-depth-sheet vg-depth-sheet-a"
-        style={activeStyle({ y: midY, x: nearX })}
+        style={activeStyle({ y: midLayerY, x: nearLayerX })}
       />
       <motion.div
         className="vg-parallax-depth vg-parallax-depth-near vg-depth-brush vg-depth-brush-a"
-        style={activeStyle({ y: nearY, scale: brushScale })}
+        style={activeStyle({ y: nearLayerY, scale: brushScale })}
       />
       <motion.div
         className="vg-parallax-depth vg-parallax-depth-mid vg-depth-ring vg-depth-ring-a"
-        style={activeStyle({ y: midY, x: reverseX })}
+        style={activeStyle({ y: midLayerY, x: reverseLayerX })}
       />
       <motion.div
         className="vg-parallax-depth vg-parallax-depth-near vg-depth-note vg-depth-note-a"
-        style={activeStyle({ y: nearY, x: nearX })}
+        style={activeStyle({ y: nearLayerY, x: nearLayerX })}
       >
         read
       </motion.div>
       <motion.div
         className="vg-parallax-depth vg-parallax-depth-far vg-depth-note vg-depth-note-b"
-        style={activeStyle({ y: farY, x: reverseX })}
+        style={activeStyle({ y: farLayerY, x: reverseLayerX })}
       >
         test
       </motion.div>
       <motion.div
         className="vg-parallax-depth vg-parallax-depth-mid vg-depth-note vg-depth-note-c"
-        style={activeStyle({ y: midY, x: nearX })}
+        style={activeStyle({ y: midLayerY, x: nearLayerX })}
       >
         review
       </motion.div>
@@ -338,7 +382,13 @@ const HomeParallaxStage = ({ scrollProgress, reducedMotion }) => {
   );
 };
 
-const StoryChapter = ({ item, index, animations, reducedMotion }) => {
+const StoryChapter = ({
+  item,
+  index,
+  animations,
+  reducedMotion,
+  isSmallViewport,
+}) => {
   const chapterRef = useRef(null);
   const { scrollYProgress } = useScroll({
     target: chapterRef,
@@ -354,8 +404,16 @@ const StoryChapter = ({ item, index, animations, reducedMotion }) => {
   const imageX = useTransform(smoothProgress, [0, 0.5, 1], [34, 0, -42]);
   const imageScale = useTransform(smoothProgress, [0, 0.5, 1], [0.9, 1.07, 0.94]);
   const imageRotate = useTransform(smoothProgress, [0, 0.5, 1], [-3, 0.8, 2.4]);
+  const mobileCopyY = useTransform(smoothProgress, [0, 0.5, 1], [34, 0, -26]);
+  const mobileImageY = useTransform(smoothProgress, [0, 0.5, 1], [48, -8, -50]);
+  const mobileImageScale = useTransform(smoothProgress, [0, 0.5, 1], [0.98, 1.015, 0.99]);
+  const mobileImageRotate = useTransform(smoothProgress, [0, 0.5, 1], [-0.8, 0.25, 0.7]);
   const chapterOpacity = useTransform(smoothProgress, [0, 0.14, 0.86, 1], [0.25, 1, 1, 0.28]);
   const ruleScale = useTransform(smoothProgress, [0.08, 0.72], [0, 1]);
+  const activeCopyY = isSmallViewport ? mobileCopyY : copyY;
+  const activeImageY = isSmallViewport ? mobileImageY : imageY;
+  const activeImageScale = isSmallViewport ? mobileImageScale : imageScale;
+  const activeImageRotate = isSmallViewport ? mobileImageRotate : imageRotate;
 
   useAnimeOnView(chapterRef, animations && !reducedMotion, (root) => {
     const ink = root.querySelector(".vg-anime-chapter-ink");
@@ -396,7 +454,7 @@ const StoryChapter = ({ item, index, animations, reducedMotion }) => {
         style={reducedMotion ? undefined : { scaleX: ruleScale }}
       />
       <motion.div
-        style={reducedMotion ? undefined : { y: copyY }}
+        style={reducedMotion ? undefined : { y: activeCopyY }}
         className="vg-story-chapter-copy"
       >
         <span className="vg-story-index">
@@ -411,7 +469,12 @@ const StoryChapter = ({ item, index, animations, reducedMotion }) => {
         style={
           reducedMotion
             ? undefined
-            : { y: imageY, x: imageX, scale: imageScale, rotate: imageRotate }
+            : {
+                y: activeImageY,
+                x: isSmallViewport ? 0 : imageX,
+                scale: activeImageScale,
+                rotate: activeImageRotate,
+              }
         }
         className="vg-story-image-frame"
       >
@@ -442,8 +505,11 @@ const LearningStorySection = ({
   const connectorY = useTransform(smoothProgress, [0, 1], [110, -180]);
   const connectorDraw = useTransform(smoothProgress, [0.06, 0.86], [0, 1]);
   const markerY = useTransform(smoothProgress, [0, 1], [70, -80]);
+  const isSmallViewport = useMediaQuery("(max-width: 820px)");
 
-  const motionStyle = reducedMotion ? undefined : { x: textX, opacity: fade };
+  const motionStyle = reducedMotion
+    ? undefined
+    : { x: isSmallViewport ? 0 : textX, opacity: fade };
 
   return (
     <section
@@ -478,7 +544,7 @@ const LearningStorySection = ({
           initial={animations && !reducedMotion ? { y: 24 } : {}}
           whileInView={animations && !reducedMotion ? { y: 0 } : {}}
           viewport={{ once: true, margin: "-80px" }}
-          className="mx-auto max-w-3xl space-y-5 text-center"
+          className="vg-story-heading mx-auto max-w-3xl space-y-5 text-center"
         >
           <SectionLabel>{story.eyebrow}</SectionLabel>
           <h2 className="text-3xl font-bold leading-tight text-foreground sm:text-4xl">
@@ -499,6 +565,7 @@ const LearningStorySection = ({
               index={index}
               animations={animations}
               reducedMotion={reducedMotion}
+              isSmallViewport={isSmallViewport}
             />
           ))}
         </div>
@@ -606,6 +673,7 @@ const Home = () => {
   const { contentSettings, faqs, fetchFAQs, loading } = useContent();
   const navigate = useNavigate();
   const pageRef = useRef(null);
+  const isSmallViewport = useMediaQuery("(max-width: 820px)");
   const { scrollYProgress: pageScrollProgress } = useScroll({
     target: pageRef,
     offset: ["start start", "end end"],
@@ -617,10 +685,15 @@ const Home = () => {
   });
   const pageDriftY = useTransform(smoothPageProgress, [0, 1], [-24, 42]);
   const pageDriftX = useTransform(smoothPageProgress, [0, 1], [18, -36]);
+  const mobilePageDriftX = useTransform(smoothPageProgress, [0, 1], [0, 0]);
   const heroY = useTransform(smoothPageProgress, [0, 0.2], [0, -80]);
+  const mobileHeroY = useTransform(smoothPageProgress, [0, 0.2], [0, -34]);
   const heroScale = useTransform(smoothPageProgress, [0, 0.2], [1, 0.96]);
+  const mobileHeroScale = useTransform(smoothPageProgress, [0, 0.2], [1, 0.985]);
   const heroGridY = useTransform(smoothPageProgress, [0, 0.24], [0, 92]);
-  const pageArtifactStyle = reducedMotion ? undefined : { y: pageDriftY, x: pageDriftX };
+  const pageArtifactStyle = reducedMotion
+    ? undefined
+    : { y: pageDriftY, x: isSmallViewport ? mobilePageDriftX : pageDriftX };
 
   useSEO({
     title:
@@ -818,6 +891,7 @@ const Home = () => {
       <HomeParallaxStage
         scrollProgress={smoothPageProgress}
         reducedMotion={reducedMotion}
+        isSmallViewport={isSmallViewport}
       />
       <motion.div
         aria-hidden="true"
@@ -837,7 +911,14 @@ const Home = () => {
 
         <div className="relative mx-auto w-full max-w-6xl">
           <motion.div
-            style={reducedMotion ? undefined : { y: heroY, scale: heroScale }}
+            style={
+              reducedMotion
+                ? undefined
+                : {
+                    y: isSmallViewport ? mobileHeroY : heroY,
+                    scale: isSmallViewport ? mobileHeroScale : heroScale,
+                  }
+            }
             initial={animations && !reducedMotion ? { opacity: 0 } : {}}
             animate={animations && !reducedMotion ? { opacity: 1 } : {}}
             transition={animations && !reducedMotion ? { duration: 0.7 } : {}}

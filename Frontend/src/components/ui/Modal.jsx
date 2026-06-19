@@ -345,6 +345,10 @@ const Modal = ({
           ref={modalRef}
           className="fixed inset-0 z-50 flex items-center justify-center p-4"
           style={style}
+          role="dialog"
+          aria-modal="true"
+          aria-label={title || "dialog"}
+          data-lenis-prevent
           {...rest}
         >
           {/* overlay */}
