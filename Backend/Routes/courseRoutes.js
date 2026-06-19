@@ -39,6 +39,7 @@ import { authenticateAdmin, authenticateUser } from "../Middleware/auth.js";
 import { uploadCourseImage, handleUploadError } from "../Middleware/Upload.js";
 import { cacheStats } from "../Middleware/statsCache.js";
 import { statsLimiter } from "../helpers/statsLimiter.js";
+import { pdfDownloadLimiter } from "../helpers/pdfRatelimiter.js";
 import {
   advancedCache,
   invalidateOnMutation,
@@ -114,7 +115,12 @@ router.get(
  * auth: admin only
  * access: private
  */
-router.get("/:courseId/download-pdf", authenticateAdmin, downloadCoursePDF);
+router.get(
+  "/:courseId/download-pdf",
+  authenticateAdmin,
+  pdfDownloadLimiter,
+  downloadCoursePDF
+);
 
 router.post(
   "/",

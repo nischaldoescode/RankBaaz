@@ -918,11 +918,9 @@ export const submitCourseFeedback = async (req, res) => {
  * @returns {buffer} pdf file
  *
  * security:
- * - users can only download pdf once
- * - admins can download unlimited times
- * - requires authentication
- * - validates test ownership
- * - one-time download token for users
+ * users need ownership, a valid signed request, and a one-time token
+ * admins need authentication, request signing, and route-level rate limits
+ * no-store headers keep generated files out of shared browser and edge caches
  */
 export const downloadTestPDF = async (req, res) => {
   setNoStoreHeaders(res);
