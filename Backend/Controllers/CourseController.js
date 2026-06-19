@@ -16,6 +16,10 @@ import mongoose from "mongoose";
 import videoProcessingService from "../services/videoProcessingService.js";
 import questionCacheService from "../services/questionCacheService.js";
 import { invalidateCache } from "../Config/redis.js";
+import {
+  setNoStoreHeaders,
+  setPdfDownloadHeaders,
+} from "../helpers/pdfResponseHeaders.js";
 
 export const parseFormDataArrays = (req, res, next) => {
   if (req.body.difficulties && typeof req.body.difficulties === "string") {
@@ -2722,6 +2726,8 @@ export const deleteCategory = async (req, res) => {
  * - includes all course questions and configuration
  */
 export const downloadCoursePDF = async (req, res) => {
+  setNoStoreHeaders(res);
+
   try {
     const { courseId } = req.params;
 
@@ -2770,14 +2776,10 @@ export const downloadCoursePDF = async (req, res) => {
       new Date().toISOString().split("T")[0]
     }.pdf`;
 
-    res.setHeader("Content-Type", "application/pdf");
-    res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
-    res.setHeader("Content-Length", pdfBuffer.length);
-    res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
-    res.setHeader("Pragma", "no-cache");
-    res.setHeader("Expires", "0");
-    res.setHeader("X-Content-Type-Options", "nosniff");
-    res.setHeader("Accept-Ranges", "none");
+    setPdfDownloadHeaders(res, {
+      filename,
+      length: pdfBuffer.length,
+    });
 
     // send pdf
     res.send(pdfBuffer);

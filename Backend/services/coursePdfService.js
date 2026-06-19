@@ -108,6 +108,60 @@ const stripHtmlTags = (value) =>
 const normalizeMarkdown = (value, limit) =>
   stripHtmlTags(stripMarkdownImageSyntax(escapePdfText(value, limit))).trim();
 
+/**
+ * repairs source text before it reaches markdown and math layout
+ *
+ * @param {string} value saved editor text that may contain latex wrappers or pasted encoding artifacts
+ * @returns {string} cleaned text that can be wrapped safely in the pdf renderer
+ */
+const repairPdfInputArtifacts = (value = "") =>
+  String(value || "")
+    .replace(/\r\n?/g, "\n")
+    .replace(/\\\(([\s\S]*?)\\\)/g, "$1")
+    .replace(/\\\[([\s\S]*?)\\\]/g, "\n$1\n")
+    .replace(/\\,/g, " ")
+    .replace(/[“”]/g, '"')
+    .replace(/[‘’]/g, "'")
+    .replace(/[–—−]/g, "-")
+    .replace(/½/g, "1/2")
+    .replace(/¼/g, "1/4")
+    .replace(/¾/g, "3/4")
+    .replace(/⅓/g, "1/3")
+    .replace(/⅔/g, "2/3")
+    .replace(/⅛/g, "1/8")
+    .replace(/⅜/g, "3/8")
+    .replace(/⅝/g, "5/8")
+    .replace(/⅞/g, "7/8")
+    .replace(/!Ò/g, "=>")
+    .replace(/⇒/g, "=>")
+    .replace(/⇐/g, "<=")
+    .replace(/→/g, "->")
+    .replace(/←/g, "<-")
+    .replace(/⇔/g, " iff ")
+    .replace(/[↔⟷]/g, " bidirectional ")
+    .replace(/[⇌⇄]/g, " reversible ")
+    .replace(/[\uFE0E\uFE0F]/g, "")
+    .replace(/≈/g, "~=")
+    .replace(/Â°|°/g, " degrees")
+    .replace(/([A-Za-z])\u20d7/g, "vec($1)")
+    .replace(/([A-Za-z])\u0302/g, "hat($1)")
+    .replace(/([A-Za-z])\u0304/g, "bar($1)")
+    .replace(/([A-Za-z])\u0305/g, "bar($1)")
+    .replace(/\(\s*'\s*\)/g, "")
+    .replace(/'\s*(?=Correct\s+(answer|for)|Correct answer)/gi, "")
+    .replace(/[<>"`]*[^\s]*[Òãâƒ•†‚Éöàò][^\s]*[Òãâƒ•†‚Éöàò][^\s]*/g, " ")
+    .replace(/[Òãâƒ•†‚Éöàò]/g, " ")
+    .replace(/\bsqrt\s*([0-9]+(?:\.[0-9]+)?)/gi, "sqrt($1)")
+    .replace(/\bSo\s+(?:["'\d\s+\-*/().]+)=\s*(sqrt\()/gi, "$1")
+    .replace(/\bCompute\s+[^.]*["'<>][^.]*\./gi, "")
+    .replace(/(^|\s)["']+(?=\s|$|[,.])/g, "$1")
+    .replace(/\s+[<>]\s+/g, " ")
+    .replace(/\s+([,.])/g, "$1")
+    .replace(/[ \t]{2,}/g, " ")
+    .replace(/\n[ \t]+/g, "\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+
 const decodeHtmlEntities = (value = "") => {
   const named = {
     amp: "&",
@@ -201,7 +255,7 @@ const htmlBodyToPlain = (value = "") =>
  * @returns {string} markdown-like text with safe pdf size markers preserved
  */
 const normalizeRichTextForPdf = (value = "") => {
-  let text = escapePdfText(value, MAX_RICH_TEXT_CHARS);
+  let text = repairPdfInputArtifacts(escapePdfText(value, MAX_RICH_TEXT_CHARS));
 
   text = text.replace(/<pre[^>]*>\s*<code([^>]*)>([\s\S]*?)<\/code>\s*<\/pre>/gi, (_match, attrs, body) => {
     const language = attrs.match(/language-([\w-]+)/i)?.[1] || attrs.match(/class\s*=\s*["']([\w-]+)["']/i)?.[1] || "";
@@ -549,7 +603,7 @@ const finalizeFooters = (doc, exportContext) => {
  * @returns {string} readable math text with roots, fractions, greek letters, powers, and symbols
  */
 const convertMathToPlainText = (value) => {
-  let text = escapePdfText(value);
+  let text = repairPdfInputArtifacts(escapePdfText(value));
 
   const superscriptMap = {
     0: "⁰",
@@ -746,8 +800,21 @@ const convertMathToPlainText = (value) => {
     output = replaceTwoArgCommand(output, "\\frac", (top, bottom) =>
       `(${replaceStructuredMath(top)}/${replaceStructuredMath(bottom)})`,
     );
+    output = replaceTwoArgCommand(output, "\\dfrac", (top, bottom) =>
+      `(${replaceStructuredMath(top)}/${replaceStructuredMath(bottom)})`,
+    );
+    output = replaceTwoArgCommand(output, "\\tfrac", (top, bottom) =>
+      `(${replaceStructuredMath(top)}/${replaceStructuredMath(bottom)})`,
+    );
     output = replaceSingleArgCommand(output, "\\sqrt", (radicand) =>
       formatRoot("2", radicand),
+    );
+    ["\\text", "\\mathrm", "\\mathbf", "\\mathit", "\\operatorname"].forEach(
+      (command) => {
+        output = replaceSingleArgCommand(output, command, (content) =>
+          replaceStructuredMath(content),
+        );
+      },
     );
     output = output.replace(/([√∛∜])\{([^{}]+)\}/g, (_, symbol, content) => {
       const body = replaceStructuredMath(content);
@@ -765,9 +832,29 @@ const convertMathToPlainText = (value) => {
     [/\\Rightarrow/g, "=>"],
     [/\\Leftarrow/g, "<="],
     [/\\Leftrightarrow/g, "<=>"],
+    [/\\Longrightarrow/g, "=>"],
+    [/\\Longleftarrow/g, "<="],
+    [/\\Longleftrightarrow/g, "<=>"],
     [/\\rightarrow/g, "->"],
     [/\\leftarrow/g, "<-"],
+    [/\\leftrightarrow/g, "<->"],
+    [/\\mapsto/g, "|->"],
+    [/\\left/g, ""],
+    [/\\right/g, ""],
+    [/\\quad/g, " "],
+    [/\\qquad/g, "  "],
+    [/\\,/g, " "],
+    [/\\;/g, " "],
+    [/\\:/g, " "],
+    [/\\!/g, ""],
+    [/\\dots/g, "..."],
+    [/\\ldots/g, "..."],
+    [/\\cdots/g, "..."],
     [/\\to/g, "->"],
+    [/\\vec\{([^{}]+)\}/g, "vec($1)"],
+    [/\\hat\{([^{}]+)\}/g, "hat($1)"],
+    [/\\bar\{([^{}]+)\}/g, "bar($1)"],
+    [/\\overline\{([^{}]+)\}/g, "bar($1)"],
     [/\\alpha/g, "alpha"],
     [/\\beta/g, "beta"],
     [/\\gamma/g, "gamma"],
@@ -798,14 +885,20 @@ const convertMathToPlainText = (value) => {
     [/\\Phi/g, "Phi"],
     [/\\Omega/g, "Omega"],
     [/\\times/g, "x"],
-    [/\\cdot/g, "*"],
+    [/\\cdot/g, " * "],
     [/\\div/g, "/"],
     [/\\pm/g, "+/-"],
     [/\\mp/g, "-/+"],
     [/\\leq/g, "<="],
+    [/\\le/g, "<="],
     [/\\geq/g, ">="],
+    [/\\ge/g, ">="],
     [/\\neq/g, "!="],
+    [/\\ne/g, "!="],
     [/\\approx/g, "~="],
+    [/\\sim/g, "~"],
+    [/\\simeq/g, "~="],
+    [/\\cong/g, "~="],
     [/\\equiv/g, "==="],
     [/\\propto/g, "proportional to"],
     [/\\infty/g, "infinity"],
@@ -815,18 +908,39 @@ const convertMathToPlainText = (value) => {
     [/\\partial/g, "partial"],
     [/\\nabla/g, "nabla"],
     [/\\angle/g, "angle"],
+    [/\\triangle/g, "triangle"],
     [/\\degree/g, "degrees"],
     [/\\circ/g, "degrees"],
     [/\\parallel/g, "parallel"],
     [/\\perp/g, "perpendicular"],
+    [/\\forall/g, "for all"],
+    [/\\exists/g, "exists"],
+    [/\\nexists/g, "does not exist"],
+    [/\\emptyset/g, "empty set"],
     [/\\notin/g, "not in"],
     [/\\in/g, "in"],
+    [/\\not\\subset/g, "not subset"],
+    [/\\subset/g, "subset"],
     [/\\subseteq/g, "subseteq"],
+    [/\\supset/g, "superset"],
     [/\\supseteq/g, "supseteq"],
     [/\\cup/g, "union"],
     [/\\cap/g, "intersection"],
+    [/\\land/g, " and "],
+    [/\\lor/g, " or "],
+    [/\\neg/g, " not "],
     [/\\therefore/g, "therefore"],
     [/\\because/g, "because"],
+    [/\\sin/g, "sin"],
+    [/\\cos/g, "cos"],
+    [/\\tan/g, "tan"],
+    [/\\cot/g, "cot"],
+    [/\\sec/g, "sec"],
+    [/\\csc/g, "csc"],
+    [/\\log/g, "log"],
+    [/\\ln/g, "ln"],
+    [/\\lim/g, "lim"],
+    [/\\ohm/g, "ohm"],
   ];
 
   commands.forEach(([pattern, replacement]) => {
@@ -837,24 +951,90 @@ const convertMathToPlainText = (value) => {
     [/√/g, "sqrt"],
     [/∛/g, "cuberoot"],
     [/∜/g, "fourthroot"],
+    [/∆/g, "Delta"],
+    [/Δ/g, "Delta"],
     [/θ/g, "theta"],
     [/π/g, "pi"],
     [/α/g, "alpha"],
     [/β/g, "beta"],
     [/γ/g, "gamma"],
     [/δ/g, "delta"],
-    [/≤/g, "<="],
-    [/≥/g, ">="],
-    [/≠/g, "!="],
-    [/≈/g, "~="],
+    [/ε/g, "epsilon"],
+    [/η/g, "eta"],
+    [/κ/g, "kappa"],
+    [/λ/g, "lambda"],
+    [/μ|µ/g, "mu"],
+    [/ν/g, "nu"],
+    [/ξ/g, "xi"],
+    [/ρ/g, "rho"],
+    [/σ/g, "sigma"],
+    [/τ/g, "tau"],
+    [/υ/g, "upsilon"],
+    [/φ|ϕ/g, "phi"],
+    [/χ/g, "chi"],
+    [/ψ/g, "psi"],
+    [/ω/g, "omega"],
+    [/Γ/g, "Gamma"],
+    [/Θ/g, "Theta"],
+    [/Λ/g, "Lambda"],
+    [/Π/g, "Pi"],
+    [/Σ/g, "Sigma"],
+    [/Φ/g, "Phi"],
+    [/Ψ/g, "Psi"],
+    [/Ω/g, "ohm"],
+    [/≤/g, " <= "],
+    [/≥/g, " >= "],
+    [/≠/g, " != "],
+    [/≈/g, " ~= "],
+    [/≃|≅|≌/g, "~="],
+    [/≡/g, "==="],
+    [/≪/g, "<<"],
+    [/≫/g, ">>"],
+    [/∝/g, " proportional to "],
     [/∑/g, "sum"],
+    [/∏/g, "product"],
     [/∫/g, "integral"],
+    [/∂/g, "partial"],
+    [/∇/g, "nabla"],
     [/∞/g, "infinity"],
-    [/→/g, "->"],
-    [/←/g, "<-"],
-    [/×/g, "x"],
-    [/÷/g, "/"],
-    [/±/g, "+/-"],
+    [/∠/g, "angle"],
+    [/∥/g, " parallel "],
+    [/⊥/g, " perpendicular "],
+    [/∈/g, " in "],
+    [/∉/g, " not in "],
+    [/⊂/g, " subset "],
+    [/⊆/g, " subseteq "],
+    [/⊃/g, " superset "],
+    [/⊇/g, " supseteq "],
+    [/∪/g, " union "],
+    [/∩/g, " intersection "],
+    [/∴/g, " therefore "],
+    [/∵/g, " because "],
+    [/∀/g, "for all "],
+    [/∃/g, " exists "],
+    [/∄/g, " does not exist "],
+    [/∅/g, " empty set "],
+    [/∧/g, " and "],
+    [/∨/g, " or "],
+    [/¬/g, " not "],
+    [/↔|⟷/g, " bidirectional "],
+    [/⇔/g, " iff "],
+    [/⇌|⇄/g, " reversible "],
+    [/→|⟶/g, " -> "],
+    [/⇒/g, " => "],
+    [/←|⟵/g, " <- "],
+    [/⇐/g, " <= "],
+    [/↦/g, " |-> "],
+    [/×/g, " x "],
+    [/÷|∕|⁄/g, " / "],
+    [/⋅|∙|·/g, " * "],
+    [/±/g, " +/- "],
+    [/∓/g, " -/+ "],
+    [/ℏ/g, "hbar "],
+    [/ℓ/g, "l"],
+    [/Å|Å/g, "angstrom"],
+    [/℃/g, "degrees C"],
+    [/℉/g, "degrees F"],
   ];
 
   unicodeFallbacks.forEach(([pattern, replacement]) => {
@@ -953,6 +1133,8 @@ const convertMathToPlainText = (value) => {
     .replace(/[₀₁₂₃₄₅₆₇₈₉₊₋₌₍₎ₐₑₕᵢⱼₖₗₘₙₒₚᵣₛₜᵤᵥₓ]+/g, (run) =>
       scriptRunToAscii(run, "_", subscriptAscii),
     )
+    .replace(/\^([A-Za-z]{2,})\b/g, "^($1)")
+    .replace(/_([A-Za-z]{2,})\b/g, "_($1)")
     .replace(/\^([+-]?\d+(?:\.\d+)?|[A-Za-z])/g, "^($1)")
     .replace(/_([+-]?\d+(?:\.\d+)?|[A-Za-z])/g, "_($1)");
 
@@ -960,7 +1142,13 @@ const convertMathToPlainText = (value) => {
     .replace(/\^\{([^{}]+)\}/g, "^($1)")
     .replace(/_\{([^{}]+)\}/g, "_($1)");
 
-  return text;
+  return text
+    .replace(/\btherefore\s+therefore\b/gi, "therefore")
+    .replace(/\bbecause\s+because\b/gi, "because")
+    .replace(/[ \t]{2,}/g, " ")
+    .replace(/\s+([,.;:)])/g, "$1")
+    .replace(/([(])\s+/g, "$1")
+    .trim();
 };
 
 const inlineMarkdownToReadableText = (value = "") =>
@@ -1366,7 +1554,7 @@ const renderHeading = (doc, block, options = {}) => {
   const x = options.x || doc.page.margins.left;
   const width = options.width || contentWidth(doc);
 
-  ensureSpace(doc, fontSize + 18);
+  ensureSpace(doc, Math.max(fontSize + 18, fontSize + 46));
   doc.moveDown(depth === 1 ? 0.3 : 0.1);
   doc.font("Helvetica-Bold").fontSize(fontSize).fillColor(COLORS.ink);
   doc.text(convertMathToPlainText(normalizeMarkdown(block.text)), x, doc.y, {
@@ -1861,14 +2049,38 @@ const testExportId = (testResult, user) =>
     .slice(0, 14)
     .toUpperCase();
 
-const normalizeExplanationForPdf = (value = "") =>
-  String(value)
-    .replace(/\s*(Correct answer\s*:)/gi, "\n\n$1")
-    .replace(/\s*(Check\s*:)/gi, "\n\n$1")
-    .replace(/\s*(Formula\s*:)/gi, "\n\n$1")
-    .replace(/\s*(Derivation\s*:)/gi, "\n\n$1")
-    .replace(/([.!?])\s+(?=(Actually|But|Force|Kinetic|Spring|Centripetal|Relative|Convert|Use|Simple|This|It)\b)/g, "$1\n\n")
-    .replace(/\s+—\s+/g, " - ");
+/**
+ * creates readable explanation sections for exported test reports
+ *
+ * @param {string} value raw explanation saved with a question
+ * @returns {string} markdown-like text with section breaks and repaired symbols
+ */
+const normalizeExplanationForPdf = (value = "") => {
+  let text = repairPdfInputArtifacts(value);
+
+  text = text
+    .replace(/\s*(Correct answer\s*:)/gi, "\n\n### Correct answer\n")
+    .replace(/\s*(Correct for\s+[^.]+?is\s+[^.]+?)(?=[.)]|$)/gi, "\n\n### Correct answer\n$1")
+    .replace(/\s*(So correct answer is\b)/gi, "\n\n### Correct answer\n")
+    .replace(/\s*(Check\s*:)/gi, "\n\n### Check\n")
+    .replace(/\s*(Wait\s*[-:])/gi, "\n\n### Check\n")
+    .replace(/\s*(Formula\s*:)/gi, "\n\n### Formula\n")
+    .replace(/\s*(Derivation\s*:)/gi, "\n\n### Derivation\n")
+    .replace(/^(Using\s+)/i, "### Formula\nUsing ")
+    .replace(
+      /([.!?])\s+(?=(Actually|But|Force|Kinetic|Spring|Centripetal|Relative|Convert|Use|Simple|This|It|Here|At maximum height|At top|At the top|When vectors)\b)/g,
+      "$1\n\n",
+    )
+    .replace(/\s+(h\s*=\s*)/g, "\n\n$1")
+    .replace(/\s+(v\s*=\s*)/g, "\n\n$1")
+    .replace(/\s+(v\^\(2\)\s*=)/gi, "\n\n$1")
+    .replace(/\s+(a\([a-z]\)\s*=)/gi, "\n\n$1")
+    .replace(/[ \t]+\n/g, "\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+
+  return text;
+};
 
 const answerStatus = (attempt = {}) => {
   if (!attempt.userAnswer) return { label: "not answered", color: COLORS.muted, fill: "#f8fafc" };
@@ -2203,14 +2415,24 @@ const renderTestQuestion = async (doc, question, attempt, index) => {
       const option = options[optionIndex];
       const isCorrect = Number(question.correctAnswer) === optionIndex;
       const isSelected = String(attempt.userAnswer || "") === String(optionIndex);
-      const optionY = doc.y;
       const optionFill = isCorrect ? "#ecfdf5" : isSelected ? "#fff7ed" : "#ffffff";
       const optionBorder = isCorrect ? "#bbf7d0" : isSelected ? "#fed7aa" : COLORS.border;
       const labelColor = isCorrect ? COLORS.green : isSelected ? COLORS.amber : COLORS.muted;
+      const optionText = inlineMarkdownToReadableText(option || " ");
+      const optionTextHeight = doc
+        .font("Helvetica")
+        .fontSize(10.8)
+        .heightOfString(optionText || " ", {
+          width: width - 52,
+          lineGap: 4,
+        });
+      const optionHeight = Math.max(34, optionTextHeight + 18);
 
-      ensureSpace(doc, 46);
+      ensureSpace(doc, Math.min(optionHeight + 8, bottomLimit(doc) - topLimit(doc) - 10));
+      const optionY = doc.y;
+      const pageCountBefore = doc.bufferedPageRange().count;
       doc
-        .roundedRect(x, optionY, width, 34, 7)
+        .roundedRect(x, optionY, width, optionHeight, 7)
         .fillAndStroke(optionFill, optionBorder);
       doc
         .font("Helvetica-Bold")
@@ -2230,7 +2452,11 @@ const renderTestQuestion = async (doc, question, attempt, index) => {
         paragraphGap: 0,
         lineGap: 4,
       });
-      doc.y = Math.max(doc.y, optionY + 42);
+      if (doc.bufferedPageRange().count === pageCountBefore) {
+        doc.y = Math.max(doc.y, optionY + optionHeight + 8);
+      } else {
+        doc.moveDown(0.4);
+      }
     }
   }
 
@@ -2262,10 +2488,10 @@ const renderTestQuestion = async (doc, question, attempt, index) => {
     await renderMarkdown(doc, normalizeExplanationForPdf(question.explanation), {
       x,
       width,
-      fontSize: 11.2,
+      fontSize: 11.6,
       color: COLORS.ink,
-      paragraphGap: 8,
-      lineGap: 5,
+      paragraphGap: 10,
+      lineGap: 6,
     });
   }
 
