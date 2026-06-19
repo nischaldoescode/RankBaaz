@@ -385,8 +385,10 @@ const ensureSpace = (doc, neededHeight, options = {}) => {
   addPage(doc);
 };
 
-const drawPageWatermark = (doc) => {
+const drawPageWatermark = (doc, exportContext = {}) => {
   const cursor = { x: doc.x, y: doc.y };
+  const isStudentExport = exportContext.role === "student";
+  const studentLabel = `exported by ${escapePdfText(exportContext.displayName || "student", 48)}`;
 
   doc.save();
   doc
@@ -401,6 +403,19 @@ const drawPageWatermark = (doc) => {
       width: doc.page.width,
       lineBreak: false,
     });
+
+  if (isStudentExport) {
+    doc
+      .fontSize(10)
+      .font("Helvetica-Bold")
+      .fillColor("#000000", 0.045)
+      .text(studentLabel, 0, doc.page.height / 2 + 52, {
+        align: "center",
+        width: doc.page.width,
+        lineBreak: false,
+      });
+  }
+
   doc.restore();
   doc.x = cursor.x;
   doc.y = cursor.y;
@@ -2331,7 +2346,7 @@ export const generateTestResultPDF = async (testResult, course, user, options = 
         doc.on("data", (chunk) => chunks.push(chunk));
         doc.on("end", () => resolve(Buffer.concat(chunks)));
         doc.on("error", reject);
-        doc.on("pageAdded", () => drawPageWatermark(doc));
+        doc.on("pageAdded", () => drawPageWatermark(doc, exportContext));
 
         addPage(doc);
 
@@ -2520,7 +2535,7 @@ export const generateCoursePDF = async (course, options = {}) =>
         doc.on("data", (chunk) => chunks.push(chunk));
         doc.on("end", () => resolve(Buffer.concat(chunks)));
         doc.on("error", reject);
-        doc.on("pageAdded", () => drawPageWatermark(doc));
+        doc.on("pageAdded", () => drawPageWatermark(doc, exportContext));
 
         addPage(doc);
 
