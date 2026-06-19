@@ -17,6 +17,10 @@ import redisClient from "../Config/redis.js";
 import Payment from "../Models/Payment.js";
 import questionCacheService from "../services/questionCacheService.js";
 import { invalidateCache } from "../Config/redis.js";
+import {
+  setNoStoreHeaders,
+  setPdfDownloadHeaders,
+} from "../helpers/pdfResponseHeaders.js";
 
 // test submission validation rules
 export const testSubmissionValidation = [
@@ -921,6 +925,8 @@ export const submitCourseFeedback = async (req, res) => {
  * - one-time download token for users
  */
 export const downloadTestPDF = async (req, res) => {
+  setNoStoreHeaders(res);
+
   try {
     const { testId } = req.params;
     const userId = req.user?.userId;
@@ -1060,14 +1066,10 @@ export const downloadTestPDF = async (req, res) => {
       new Date().toISOString().split("T")[0]
     }.pdf`;
 
-    res.setHeader("Content-Type", "application/pdf");
-    res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
-    res.setHeader("Content-Length", pdfBuffer.length);
-    res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
-    res.setHeader("Pragma", "no-cache");
-    res.setHeader("Expires", "0");
-    res.setHeader("X-Content-Type-Options", "nosniff");
-    res.setHeader("Accept-Ranges", "none");
+    setPdfDownloadHeaders(res, {
+      filename,
+      length: pdfBuffer.length,
+    });
 
     // send pdf
     res.send(pdfBuffer);
@@ -1089,6 +1091,8 @@ export const downloadTestPDF = async (req, res) => {
  * @returns {object} download token
  */
 export const generatePDFDownloadToken = async (req, res) => {
+  setNoStoreHeaders(res);
+
   try {
     const { testId } = req.params;
     const userId = req.user?.userId;
