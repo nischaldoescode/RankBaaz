@@ -92,8 +92,7 @@
       name="twitter:image:alt"
       content="Vidhgrow - Online Learning Platform"
     />
-    <meta name="twitter:site" content="@testmasterpro" />
-    <meta name="twitter:creator" content="@testmasterpro" />
+    <link rel="canonical" href="https://vidhgrow.online/" />
 
     <!-- Sitemap -->
     <link rel="sitemap" type="application/xml" href="/sitemap.xml" />
@@ -136,11 +135,7 @@
         "name": "Vidhgrow - Prepare with Precision",
         "description": "Prepare with precision using interactive courses, mock tests, and personalized assessments.",
         "provider": {
-          "@type": "Organization",
-          "name": "Vidhgrow",
-          "url": "https://vidhgrow.online",
-          "logo": "https://vidhgrow.online/logo.png",
-          "sameAs": ["https://www.instagram.com/vidhgrow.online"]
+          "@id": "https://vidhgrow.online/#organization"
         }
       }
     </script>
@@ -162,6 +157,7 @@
       {
         "@context": "https://schema.org",
         "@type": "WebSite",
+        "@id": "https://vidhgrow.online/#website",
         "name": "Vidhgrow",
         "url": "https://vidhgrow.online",
         "description": "Prepare With Precision",
@@ -169,7 +165,8 @@
           "@type": "SearchAction",
           "target": "https://vidhgrow.online/courses?search={search_term_string}",
           "query-input": "required name=search_term_string"
-        }
+        },
+        "publisher": { "@id": "https://vidhgrow.online/#organization" }
       }
     </script>
 
@@ -178,12 +175,13 @@
       {
         "@context": "https://schema.org",
         "@type": "EducationalOrganization",
+        "@id": "https://vidhgrow.online/#organization",
         "name": "Vidhgrow",
         "url": "https://vidhgrow.online",
         "logo": "https://vidhgrow.online/logo.png",
         "description": "Online learning platform offering interactive courses, mock tests, and personalized assessments.",
 
-        "sameAs": ["https://vidhgrow.online"],
+        "sameAs": ["https://www.instagram.com/vidhgrow.online"],
 
         "contactPoint": {
           "@type": "ContactPoint",
@@ -204,11 +202,7 @@
                   "@type": "Course",
                   "name": "Various Test Preparation Courses",
                   "description": "Comprehensive test prep courses with practice tests and progress tracking.",
-                  "provider": {
-                    "@type": "Organization",
-                    "name": "Vidhgrow",
-                    "sameAs": "https://vidhgrow.online"
-                  }
+                  "provider": { "@id": "https://vidhgrow.online/#organization" }
                 }
               ]
             }
@@ -220,25 +214,15 @@
     <script defer src="https://checkout.razorpay.com/v1/checkout.js"></script>
     <title>Vidhgrow - Prepare with Precision</title>
   </head>
-  <style>
-    /* Visually hide without harming SEO or accessibility */
-    .seo-h1 {
-      position: absolute !important;
-      left: -9999px !important;
-      top: -9999px !important;
-      height: 1px !important;
-      width: 1px !important;
-      overflow: hidden !important;
-      opacity: 0 !important;
-      pointer-events: none !important;
-      z-index: -1 !important;
-      visibility: hidden !important;
-    }
-  </style>
   <body>
-    <h1 class="seo-h1">
-      Vidhgrow – Online Learning, Mock Tests & Skill Development
-    </h1>
+    <noscript>
+      <main>
+        <h1>Vidhgrow online learning and test preparation</h1>
+        <p>Explore courses, assessments, progress tools, and the official teacher application process on Vidhgrow.</p>
+        <p><a href="/teacher">Become a teacher on Vidhgrow</a></p>
+        <p><a href="https://blogs.vidhgrow.online">Read the official Vidhgrow blog</a></p>
+      </main>
+    </noscript>
     <div id="root"></div>
 
     <script>

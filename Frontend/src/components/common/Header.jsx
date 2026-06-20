@@ -38,6 +38,11 @@ import CachedImage from "./CachedImage";
 const navLinks = [
   { path: "/", label: "Home", icon: Home, protected: false },
   { path: "/courses", label: "Courses", icon: BookOpen, protected: false },
+  {
+    href: "https://blogs.vidhgrow.online",
+    label: "Blog",
+    external: true,
+  },
   { path: "/privacy", label: "Privacy", icon: FileText, protected: false },
   { path: "/contact", label: "Contact", icon: Phone, protected: false },
 ];
@@ -108,25 +113,36 @@ const Header = () => {
     setTheme(isDarkMode ? "light" : "dark");
   };
 
-  const DesktopNavLink = ({ link }) => (
-    <Link
-      to={link.path}
-      className={`relative flex items-center gap-1.5 rounded-full px-3.5 py-2 text-sm font-semibold transition-all duration-200 ${
-        isActive(link.path)
-          ? "text-primary"
-          : "text-muted-foreground hover:text-foreground hover:bg-blue-50"
-      }`}
-    >
-      {isActive(link.path) && (
-        <motion.span
-          layoutId="desktop-nav-fill"
-          className="absolute inset-0 rounded-full bg-primary/10"
-          transition={{ type: "spring", stiffness: 420, damping: 34 }}
-        />
-      )}
-      <span className="relative z-10">{link.label}</span>
-    </Link>
-  );
+  const DesktopNavLink = ({ link }) => {
+    const active = !link.external && isActive(link.path);
+    const className = `relative flex items-center gap-1.5 rounded-full px-3.5 py-2 text-sm font-semibold transition-all duration-200 ${
+      active
+        ? "text-primary"
+        : "text-muted-foreground hover:text-foreground hover:bg-blue-50"
+    }`;
+    const label = <span className="relative z-10">{link.label}</span>;
+
+    if (link.external) {
+      return (
+        <a href={link.href} className={className}>
+          {label}
+        </a>
+      );
+    }
+
+    return (
+      <Link to={link.path} className={className}>
+        {active && (
+          <motion.span
+            layoutId="desktop-nav-fill"
+            className="absolute inset-0 rounded-full bg-primary/10"
+            transition={{ type: "spring", stiffness: 420, damping: 34 }}
+          />
+        )}
+        {label}
+      </Link>
+    );
+  };
   return (
     <>
       {/* desktop and tablet header */}

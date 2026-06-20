@@ -35,7 +35,7 @@ export const useSEO = ({
   const siteLogo = contentSettings?.logo?.url || null;
   const defaultImage = contentSettings?.ogImage || siteLogo;
 
-  const twitterHandle = contentSettings?.social?.twitter || "@testmasterpro";
+  const twitterHandle = contentSettings?.social?.twitterHandle || "";
   const themeColor = contentSettings?.themeColor || "#3b82f6";
 
   const fullTitle = title ? `${title} - ${siteName}` : siteName;
@@ -93,8 +93,12 @@ export const useSEO = ({
 
     // twitter card
     { name: "twitter:card", content: "summary_large_image" },
-    { name: "twitter:site", content: twitterHandle },
-    { name: "twitter:creator", content: twitterHandle },
+    ...(twitterHandle
+      ? [
+          { name: "twitter:site", content: twitterHandle },
+          { name: "twitter:creator", content: twitterHandle },
+        ]
+      : []),
     { name: "twitter:title", content: fullTitle },
     { name: "twitter:description", content: finalDescription },
     ...(finalImage
@@ -176,6 +180,7 @@ export const useSEO = ({
   const organizationSchema = removeNulls({
     "@context": "https://schema.org",
     "@type": "Organization",
+    "@id": `${siteUrl}/#organization`,
     name: siteName,
     url: siteUrl,
     logo: siteLogo,
@@ -193,8 +198,10 @@ export const useSEO = ({
   const websiteSchema = removeNulls({
     "@context": "https://schema.org",
     "@type": "WebSite",
+    "@id": `${siteUrl}/#website`,
     name: siteName,
     url: siteUrl,
+    publisher: { "@id": `${siteUrl}/#organization` },
     potentialAction: {
       "@type": "SearchAction",
       target: `${siteUrl}/courses?search={search_term_string}`,

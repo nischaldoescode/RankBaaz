@@ -54,13 +54,18 @@ const API_BASE = (process.env.BLOG_API_BASE_URL || "http://localhost:7000").repl
 const PUBLIC_API_BASE = (process.env.PUBLIC_API_BASE_URL || API_BASE).replace(/\/$/, "");
 const BLOG_ORIGIN = process.env.BLOGS_SITE_URL || "http://localhost:8080";
 const BLOG_PUBLIC_URL = (process.env.BLOGS_PUBLIC_URL || "https://blogs.vidhgrow.online").replace(/\/$/, "");
+const MAIN_SITE_URL = "https://vidhgrow.online";
+const TEACHER_APPLICATION_URL = `${MAIN_SITE_URL}/teacher`;
+const ORGANIZATION_ID = `${MAIN_SITE_URL}/#organization`;
+const WEBSITE_ID = `${BLOG_PUBLIC_URL}/#website`;
+const BLOG_ID = `${BLOG_PUBLIC_URL}/#blog`;
 const BLOG_INDEXNOW_KEY = String(
   process.env.BLOG_INDEXNOW_KEY || "e52015b801f54ed398dec9c093f1405b",
 ).trim();
 const DEFAULT_OG_IMAGE = `${BLOG_PUBLIC_URL}/android-chrome-512x512.png`;
-const HOME_SEO_TITLE = "Vidhgrow Blogs | Product Updates, Teaching & Course News";
+const HOME_SEO_TITLE = "Vidhgrow Blog | Product Updates, Teaching & Course News";
 const HOME_SEO_DESCRIPTION =
-  "The official Vidhgrow blog for product news, teaching workflows, course updates, student practice ideas, and clear platform notes from the team.";
+  "The official Vidhgrow blog for product news, teacher workflows, course updates, student practice, and the decisions behind a better learning platform.";
 const TOPIC_LINKS = [
   {
     slug: "product-updates",
@@ -155,6 +160,10 @@ const API_CACHE_TTL_MS = 5 * 60 * 1000;
 const PAGE_CACHE_TTL_MS = 5 * 60 * 1000;
 const LIST_API_CACHE_TTL_MS = 30 * 1000;
 const HOME_PAGE_CACHE_TTL_MS = 30 * 1000;
+const configuredApiTimeout = Number(process.env.BLOG_API_TIMEOUT_MS);
+const API_FETCH_TIMEOUT_MS = Number.isFinite(configuredApiTimeout)
+  ? Math.max(3000, configuredApiTimeout)
+  : 12000;
 
 const securityHeaders = () => ({
   "Strict-Transport-Security": "max-age=31536000; includeSubDomains",
@@ -368,6 +377,7 @@ const normalizeLooseOrderedList = (_match, _level, _attrs, content) => {
  */
 const cleanEditorArticleHtml = (html = "") =>
   String(html)
+    .replace(/https:\/\/vidhgrow\.online\/teachers(?=["'\s<]|$)/gi, TEACHER_APPLICATION_URL)
     .replace(/<h1\b([^>]*)>/gi, "<h2$1>")
     .replace(/<\/h1>/gi, "</h2>")
     .replace(/\sstyle=(["'])[^"']*\1/gi, "")
@@ -378,8 +388,48 @@ const cleanEditorArticleHtml = (html = "") =>
     .replace(/<h([2-6])\b([^>]*)>\s*(?:&gt;|>)\s*/gi, "<h$1$2>")
     .replace(/<li>\s*<h([2-6])\b[^>]*>([\s\S]*?)<\/h\1>\s*<\/li>/gi, "<li>$2</li>");
 
+/**
+ * restores article heading hierarchy when rich text was saved with paragraphs as headings
+ *
+ * @param {string} html cleaned editor html
+ * @param {string} pageTitle visible page h1 used to remove duplicate headings
+ * @returns {string} html with descriptive headings and paragraph content separated
+ */
+const normalizeArticleHeadings = (html = "", pageTitle = "") => {
+  const normalizedTitle = stripHtml(pageTitle).toLowerCase();
+
+  return String(html).replace(/<h([2-6])\b([^>]*)>([\s\S]*?)<\/h\1>/gi, (match, level, attributes, inner) => {
+    const text = stripHtml(inner).replace(/\s+/g, " ").trim();
+    if (!text || /^[^\p{L}\p{N}]+$/u.test(text)) return "";
+    if (text.toLowerCase() === normalizedTitle) return "";
+
+    const segments = inner
+      .split(/(?:<br\s*\/?>(?:\s|&nbsp;)*){2,}/gi)
+      .map((segment) => segment.replace(/^(?:\s|<br\s*\/?>|&nbsp;)+|(?:\s|<br\s*\/?>|&nbsp;)+$/gi, "").trim())
+      .filter((segment) => stripHtml(segment).trim());
+    const headingText = stripHtml(segments[0] || inner).replace(/\s+/g, " ").trim();
+    const hasBodySegment = segments.length > 1 && headingText.length <= 90;
+    const readsLikeParagraph =
+      text.length > 120 ||
+      /[.!]$/.test(text) ||
+      /^(we(?:'re| are)|this|to maintain|if you|once approved|ready to teach)/i.test(text);
+
+    if (hasBodySegment) {
+      return `<h2${attributes}>${escapeHtml(headingText)}</h2>${segments
+        .slice(1)
+        .map((segment) => `<p>${escapeHtml(stripHtml(segment))}</p>`)
+        .join("")}`;
+    }
+
+    if (readsLikeParagraph) return `<p>${inner}</p>`;
+    return `<h${Math.max(2, Number(level))}${attributes}>${inner}</h${Math.max(2, Number(level))}>`;
+  });
+};
+
 const prepareArticleContentHtml = (html = "", fallback = "Vidhgrow blog illustration") =>
-  ensureReadableArticleLinks(ensureContentImageAlts(cleanEditorArticleHtml(html), fallback));
+  ensureReadableArticleLinks(
+    ensureContentImageAlts(normalizeArticleHeadings(cleanEditorArticleHtml(html), fallback), fallback),
+  );
 
 const authorFallback = (name = "Vidhgrow") => {
   const letter = String(name).trim().charAt(0).toUpperCase() || "V";
@@ -441,19 +491,28 @@ const fetchJson = async (apiPath, options = {}) => {
   const cachedJson = readTimedCache(apiCache, apiPath);
   if (cachedJson) return cachedJson;
 
-  const response = await fetch(`${API_BASE}${apiPath}`, {
-    headers: {
-      Accept: "text/html,application/json;q=0.9,*/*;q=0.8",
-      "accept-language": "en-us,en;q=0.9",
-      "accept-encoding": "gzip, deflate, br",
-      origin: BLOG_ORIGIN,
-      referer: `${BLOG_ORIGIN}/`,
-      "sec-fetch-site": "same-site",
-      "sec-fetch-mode": "cors",
-      "sec-fetch-dest": "empty",
-      "user-agent": "vidhgrowblogsssr/1.0",
-    },
-  });
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), API_FETCH_TIMEOUT_MS);
+  let response;
+
+  try {
+    response = await fetch(`${API_BASE}${apiPath}`, {
+      headers: {
+        Accept: "text/html,application/json;q=0.9,*/*;q=0.8",
+        "accept-language": "en-us,en;q=0.9",
+        "accept-encoding": "gzip, deflate, br",
+        origin: BLOG_ORIGIN,
+        referer: `${BLOG_ORIGIN}/`,
+        "sec-fetch-site": "same-site",
+        "sec-fetch-mode": "cors",
+        "sec-fetch-dest": "empty",
+        "user-agent": "vidhgrowblogsssr/1.0",
+      },
+      signal: controller.signal,
+    });
+  } finally {
+    clearTimeout(timeout);
+  }
 
   if (!response.ok) {
     const apiError = new Error(`api ${response.status}`);
@@ -463,6 +522,53 @@ const fetchJson = async (apiPath, options = {}) => {
 
   const json = await response.json();
   return writeTimedCache(apiCache, apiPath, json, options.ttlMs ?? API_CACHE_TTL_MS);
+};
+
+/**
+ * builds the stable Vidhgrow organisation and site entities reused by every blog page
+ *
+ * @param {object|object[]|undefined} pageEntity page-specific schema entity or entities
+ * @returns {object} schema graph with shared ids so search systems can connect both domains
+ */
+const pageSchemaGraph = (pageEntity) => {
+  const pageEntities = (Array.isArray(pageEntity) ? pageEntity : [pageEntity])
+    .filter(Boolean)
+    .map((entity) => {
+      const copy = { ...entity };
+      delete copy["@context"];
+      return copy;
+    });
+
+  return {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "EducationalOrganization",
+        "@id": ORGANIZATION_ID,
+        name: "Vidhgrow",
+        url: MAIN_SITE_URL,
+        logo: `${MAIN_SITE_URL}/logo.png`,
+        sameAs: ["https://www.instagram.com/vidhgrow.online"],
+      },
+      {
+        "@type": "WebSite",
+        "@id": WEBSITE_ID,
+        name: "Vidhgrow Blog",
+        url: BLOG_PUBLIC_URL,
+        publisher: { "@id": ORGANIZATION_ID },
+      },
+      {
+        "@type": "Blog",
+        "@id": BLOG_ID,
+        name: "Vidhgrow Blog",
+        url: BLOG_PUBLIC_URL,
+        description: HOME_SEO_DESCRIPTION,
+        isPartOf: { "@id": WEBSITE_ID },
+        publisher: { "@id": ORGANIZATION_ID },
+      },
+      ...pageEntities,
+    ],
+  };
 };
 
 const pageshell = ({
@@ -493,7 +599,7 @@ const pageshell = ({
   <link rel="manifest" href="/site.webmanifest" />
   <meta property="og:locale" content="en_us" />
   <meta property="og:type" content="${escapeHtml(ogtype)}" />
-  <meta property="og:site_name" content="vidhgrow blogs" />
+  <meta property="og:site_name" content="Vidhgrow Blog" />
   <meta property="og:title" content="${escapeHtml(title)}" />
   <meta property="og:description" content="${escapeHtml(description)}" />
   <meta property="og:url" content="${escapeHtml(canonical)}" />
@@ -507,9 +613,9 @@ const pageshell = ({
   <meta name="twitter:description" content="${escapeHtml(description)}" />
   <meta name="twitter:image" content="${escapeHtml(shareimage)}" />
   <meta name="twitter:image:alt" content="${escapeHtml(title)}" />
-  <link rel="alternate" type="application/rss+xml" title="vidhgrow blogs" href="${BLOG_PUBLIC_URL}/feed.xml" />
+  <link rel="alternate" type="application/rss+xml" title="Vidhgrow Blog" href="${BLOG_PUBLIC_URL}/feed.xml" />
   <link rel="stylesheet" href="/assets/styles.css" />
-  ${jsonld ? `<script type="application/ld+json">${JSON.stringify(jsonld)}</script>` : ""}
+  <script type="application/ld+json">${JSON.stringify(pageSchemaGraph(jsonld))}</script>
 </head>
 <body>
   <a class="skip-link" href="#main">skip to content</a>
@@ -529,15 +635,16 @@ const pageshell = ({
 
 const header = () => `<header class="site-header">
   <a class="wordmark" href="/">
-    <img src="/logo.png" alt="vidhgrow blogs logo" width="40" height="40" />
-    <span>vidhgrow <em>blogs</em></span>
+    <img src="/logo.png" alt="Vidhgrow Blog logo" width="40" height="40" />
+    <span>Vidhgrow <em>Blog</em></span>
   </a>
   <nav aria-label="primary">
     <a href="/">latest</a>
     ${TOPIC_LINKS.slice(0, 3)
       .map((topic) => `<a href="/topic/${topic.slug}">${escapeHtml(topic.navLabel)}</a>`)
       .join("")}
-    <a href="https://vidhgrow.online">vidhgrow</a>
+    <a href="${TEACHER_APPLICATION_URL}">teach on Vidhgrow</a>
+    <a href="${MAIN_SITE_URL}">Vidhgrow</a>
   </nav>
 </header>`;
 
@@ -546,10 +653,12 @@ const footer = (settings = {}) => {
   const links = Object.entries(social).filter(([, url]) => url);
   return `<footer class="site-footer">
     <div class="footer-copy">
-      <strong>vidhgrow blogs</strong>
-      <p>product updates, teacher workflows, course builder notes, student practice improvements, and platform decisions from the vidhgrow team.</p>
+      <strong>Vidhgrow Blog</strong>
+      <p>product updates, teacher workflows, course builder notes, student practice improvements, and platform decisions from the Vidhgrow team.</p>
       <nav class="footer-nav" aria-label="blog topics">
         ${ROOT_LINKS.map(([label, href]) => `<a href="${href}">${escapeHtml(label)}</a>`).join("")}
+        <a href="${TEACHER_APPLICATION_URL}">Teacher application</a>
+        <a href="${MAIN_SITE_URL}">Vidhgrow learning platform</a>
       </nav>
     </div>
     ${
@@ -792,6 +901,7 @@ ${footer(settingsres.data)}`;
     description: topicpagedescription(topic),
     canonical: `${BLOG_PUBLIC_URL}/topic/${topic.slug}`,
     image: postCoverImage(posts[0]).url,
+    robots: posts.length >= 2 ? "index,follow,max-image-preview:large,max-snippet:-1" : "noindex,follow",
     body,
     jsonld: {
       "@context": "https://schema.org",
@@ -998,14 +1108,65 @@ const renderarticleending = (post) => `<section class="article-ending" aria-labe
   <span class="ending-rule"></span>
   <div>
     <p class="eyebrow">end of blog</p>
-    <h2>${escapeHtml(post.title)} continues through related notes and reader comments.</h2>
-    <p>keep going with connected vidhgrow stories below, or use the comments section to a short response from your account.</p>
+    <h2>Continue with related Vidhgrow notes or leave a short comment.</h2>
+    <p>Use the links below to keep reading or add a response from your Vidhgrow account.</p>
     <div>
       <a href="#related-title">related blogs</a>
       <a href="#comments-title">comments</a>
     </div>
   </div>
 </section>`;
+
+/**
+ * identifies the official teacher application announcement without changing unrelated posts
+ *
+ * @param {object} post published post returned by the blog api
+ * @returns {boolean} whether the post explains the Vidhgrow teacher application flow
+ */
+const isTeacherApplicationPost = (post = {}) =>
+  post.slug === "become-a-teacher-on-vidhgrow" ||
+  /become a teacher|teacher application/i.test(`${post.title || ""} ${post.excerpt || ""}`);
+
+/**
+ * replaces upload placeholder alt text with meaningful editorial image context
+ *
+ * @param {string} alt saved image alt text
+ * @returns {boolean} whether the value looks like an upload placeholder
+ */
+const isPlaceholderImageAlt = (alt = "") =>
+  /^(?:tmp|image|upload|file|untitled)(?:[-_\s]*\d+|[-_\s\w]+)*$/i.test(String(alt).trim());
+
+const teacherApplicationPanel = () => `<aside class="article-context article-application-link" aria-labelledby="teacher-application-title">
+  <p class="eyebrow">official Vidhgrow page</p>
+  <h2 id="teacher-application-title">Start the teacher application on Vidhgrow</h2>
+  <p>Submit your details through the official application page. After review and verification, approved teachers can use the teacher portal to create courses, lessons, quizzes, and tests.</p>
+  <a href="${TEACHER_APPLICATION_URL}">Apply to teach on Vidhgrow</a>
+</aside>`;
+
+const publicAuthorName = (author = {}) => {
+  const name = String(author.name || "").trim();
+  return !name || /(?:admin|editorial)/i.test(name) ? "Vidhgrow Editorial" : name;
+};
+
+const postAuthorSchema = (author = {}) => {
+  const name = publicAuthorName(author);
+  const authorUrl = author.slug ? `${BLOG_PUBLIC_URL}/author/${author.slug}` : BLOG_PUBLIC_URL;
+  if (name === "Vidhgrow Editorial") {
+    return {
+      "@type": "Organization",
+      "@id": `${BLOG_PUBLIC_URL}/#editorial`,
+      name: "Vidhgrow Editorial",
+      url: authorUrl,
+      parentOrganization: { "@id": ORGANIZATION_ID },
+    };
+  }
+
+  return {
+    "@type": "Person",
+    name,
+    url: authorUrl,
+  };
+};
 
 const renderpost = async (slug) => {
   const [postres, settingsres] = await Promise.all([
@@ -1016,20 +1177,32 @@ const renderpost = async (slug) => {
   const relatedposts = firstValue(postres.data, ["relatedPosts", "relatedposts"]) || [];
   const defaultcanonical = `${BLOG_PUBLIC_URL}/${post.slug}`;
   const canonical = absoluteUrl(seoField(post.seo, "canonicalUrl", "canonicalurl")) || defaultcanonical;
-  const title = metaTitle(seoField(post.seo, "metaTitle", "metatitle") || post.title, post.title);
-  const description = metaDescription(
-    seoField(post.seo, "metaDescription", "metadescription") || post.excerpt,
-    post.excerpt || firstValue(post, ["plainTextPreview", "plaintextpreview"]),
-  );
+  const teacherPost = isTeacherApplicationPost(post);
+  const displayTitle = teacherPost ? "How to Become a Teacher on Vidhgrow" : post.title;
+  const displayAuthorName = publicAuthorName(post.author);
+  const title = teacherPost
+    ? "Become a Teacher on Vidhgrow | Official Application Guide"
+    : metaTitle(seoField(post.seo, "metaTitle", "metatitle") || post.title, post.title);
+  const description = teacherPost
+    ? "Official Vidhgrow guide for qualified educators: check eligibility, apply, complete verification, and create courses, lessons, quizzes, and tests."
+    : metaDescription(
+        seoField(post.seo, "metaDescription", "metadescription") || post.excerpt,
+        post.excerpt || firstValue(post, ["plainTextPreview", "plaintextpreview"]),
+      );
   const social = shareSettings(settingsres.data);
   const shareurl = canonical;
-  const sharetitle = socialField(post.social, "shareTitle", "sharetitle") || post.title;
+  const sharetitle = teacherPost
+    ? "Become a Teacher on Vidhgrow"
+    : socialField(post.social, "shareTitle", "sharetitle") || post.title;
   const cover = postCoverImage(post);
   const coverurl = seoImage(cover.url);
-  const coveralt = imageAlt(cover, `${post.title} cover image`);
-  const contenthtml = prepareArticleContentHtml(postContentHtml(post), post.title);
+  const coveralt =
+    teacherPost && isPlaceholderImageAlt(cover.alt)
+      ? "Vidhgrow teacher application and course creation"
+      : imageAlt(cover, `${displayTitle} cover image`);
+  const contenthtml = prepareArticleContentHtml(postContentHtml(post), displayTitle);
   const readtime = readingTimeLabel(post, contenthtml);
-  const articlecontext = renderarticlecontext(post, contenthtml);
+  const articlecontext = teacherPost ? teacherApplicationPanel() : "";
 
   const body = `${header()}
 <main id="main" class="article-shell">
@@ -1038,16 +1211,16 @@ const renderpost = async (slug) => {
     <nav class="article-breadcrumb" aria-label="breadcrumb">
       <a href="/">blogs</a>
       <span aria-hidden="true">&gt;</span>
-      <span>${escapeHtml(post.title)}</span>
+      <span>${escapeHtml(displayTitle)}</span>
     </nav>
     <p class="eyebrow">${escapeHtml(post.category || "learning")}</p>
-    <h1>${escapeHtml(post.title)}</h1>
+    <h1>${escapeHtml(displayTitle)}</h1>
     ${rendertopicpills(post.topics)}
     <p class="article-excerpt">${escapeHtml(post.excerpt)}</p>
     <div class="article-byline">
-      ${renderAuthorAvatar(post.author)}
+      ${renderAuthorAvatar({ ...post.author, name: displayAuthorName })}
       <div>
-        <a href="/author/${escapeHtml(post.author?.slug || "")}">${escapeHtml(post.author?.name || "vidhgrow editorial")}</a>
+        <a href="/author/${escapeHtml(post.author?.slug || "")}">${escapeHtml(displayAuthorName)}</a>
         <span>${formatDate(postPublishedAt(post))} · ${escapeHtml(readtime)}</span>
       </div>
     </div>
@@ -1084,27 +1257,46 @@ ${footer(settingsres.data)}`;
     ogtype: "article",
     robots: robotsstring(post.seo),
     body,
-    jsonld: {
-      "@context": "https://schema.org",
-      "@type": "BlogPosting",
-      headline: post.title,
-      description,
-      image: coverurl,
-      datePublished: postPublishedAt(post),
-      dateModified: postUpdatedAt(post),
-      author: {
-        "@type": "Person",
-        name: post.author?.name || "vidhgrow editorial",
-        url: post.author?.slug ? `${BLOG_PUBLIC_URL}/author/${post.author.slug}` : BLOG_PUBLIC_URL,
+    jsonld: [
+      {
+        "@context": "https://schema.org",
+        "@type": "BlogPosting",
+        "@id": `${canonical}#article`,
+        headline: displayTitle,
+        description,
+        image: {
+          "@type": "ImageObject",
+          url: coverurl,
+          caption: coveralt,
+        },
+        datePublished: postPublishedAt(post),
+        dateModified: postUpdatedAt(post),
+        author: postAuthorSchema(post.author),
+        publisher: { "@id": ORGANIZATION_ID },
+        mainEntityOfPage: { "@type": "WebPage", "@id": canonical },
+        isPartOf: { "@id": BLOG_ID },
+        inLanguage: "en",
+        wordCount: wordCountFromHtml(contenthtml) || postWordCount(post),
       },
-      publisher: {
-        "@type": "Organization",
-        name: "vidhgrow",
-        url: "https://vidhgrow.online",
+      {
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        itemListElement: [
+          {
+            "@type": "ListItem",
+            position: 1,
+            name: "Vidhgrow Blog",
+            item: BLOG_PUBLIC_URL,
+          },
+          {
+            "@type": "ListItem",
+            position: 2,
+            name: displayTitle,
+            item: canonical,
+          },
+        ],
       },
-      mainEntityOfPage: canonical,
-      wordCount: wordCountFromHtml(contenthtml) || postWordCount(post),
-    },
+    ],
   });
 };
 
@@ -1164,6 +1356,7 @@ const renderauthor = async (slug) => {
     canonical: `${BLOG_PUBLIC_URL}/author/${author.slug}`,
     image: author.avatar?.url,
     ogtype: "profile",
+    robots: posts.length >= 2 ? "index,follow,max-image-preview:large,max-snippet:-1" : "noindex,follow",
     body,
   });
 };
@@ -1215,6 +1408,32 @@ ${TOPIC_LINKS.map((topic) => `- ${topic.title}: ${BLOG_PUBLIC_URL}/topic/${topic
 
 use the canonical urls on each page. public blog pages are server-rendered html with article content, topic links, author links, structured data, open graph metadata, and readable comments. admin-only blog apis, unpublished drafts, upload urls, encrypted records, and private vidhgrow application apis are not intended for model ingestion.
 `;
+
+/**
+ * keeps only unique indexable urls in the sitemap served by the blog frontend
+ *
+ * @param {string} xml upstream sitemap xml from the api
+ * @returns {string} sitemap without duplicate or thin archive urls
+ */
+const cleanSitemapXml = (xml = "") => {
+  const seen = new Set();
+  return String(xml).replace(/\s*<url>\s*[\s\S]*?<\/url>/gi, (entry) => {
+    const location = entry.match(/<loc>\s*([^<]+?)\s*<\/loc>/i)?.[1]?.trim();
+    if (!location) return entry;
+
+    let pathname = "";
+    try {
+      pathname = new URL(location).pathname.replace(/\/$/, "");
+    } catch {
+      return "";
+    }
+
+    if (pathname.startsWith("/topic/") || pathname.startsWith("/author/")) return "";
+    if (seen.has(location)) return "";
+    seen.add(location);
+    return entry;
+  });
+};
 
 const assetCache = new Map();
 
@@ -1354,19 +1573,9 @@ Sitemap: ${BLOG_PUBLIC_URL}/sitemap.xml
     if (pathname === "/sitemap.xml") {
       const sitemap = await cached(pageCache, "sitemap", PAGE_CACHE_TTL_MS, async () => {
         const upstream = await fetch(`${API_BASE}/api/blogs/sitemap.xml`, {
-        headers: { Origin: BLOG_ORIGIN, Referer: `${BLOG_ORIGIN}/` },
-      }).then((r) => r.text());
-        const topicUrls = TOPIC_LINKS.map(
-          (topic) => `  <url>
-    <loc>${BLOG_PUBLIC_URL}/topic/${topic.slug}</loc>
-    <lastmod>${new Date().toISOString()}</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.6</priority>
-  </url>`,
-        ).join("\n");
-        return upstream.includes("</urlset>")
-          ? upstream.replace("</urlset>", `${topicUrls}\n</urlset>`)
-          : upstream;
+          headers: { Origin: BLOG_ORIGIN, Referer: `${BLOG_ORIGIN}/` },
+        }).then((r) => r.text());
+        return cleanSitemapXml(upstream);
       });
       res.writeHead(200, { "Content-Type": "application/xml; charset=utf-8", ...securityHeaders() });
       return res.end(sitemap);
@@ -1423,6 +1632,10 @@ Sitemap: ${BLOG_PUBLIC_URL}/sitemap.xml
   }
 });
 
-server.listen(PORT, () => {
-  console.log(`vidhgrow blogs ssr running on http://localhost:${PORT}`);
-});
+if (process.env.BLOGS_RENDER_TEST !== "true") {
+  server.listen(PORT, () => {
+    console.log(`vidhgrow blogs ssr running on http://localhost:${PORT}`);
+  });
+}
+
+export { cleanSitemapXml, renderpost };
