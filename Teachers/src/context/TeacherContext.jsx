@@ -39,8 +39,22 @@ const normalizeProfilePayload = (payload) => {
 export const TeacherProvider = ({ children }) => {
   const [teacher, setTeacher] = useState(null);
   const [courses, setCourses] = useState([]);
+  const [notifications, setNotifications] = useState([]);
+  const [unreadNotifications, setUnreadNotifications] = useState(0);
   const [loading, setLoading] = useState(true);
   const [initializing, setInitializing] = useState(true);
+
+  const fetchNotifications = useCallback(async () => {
+    try {
+      const res = await teacherApi.notifications.list();
+      const data = res.data?.data || {};
+      setNotifications(Array.isArray(data.notifications) ? data.notifications : []);
+      setUnreadNotifications(data.unreadCount || 0);
+      return true;
+    } catch {
+      return false;
+    }
+  }, []);
 
   const fetchProfile = useCallback(async () => {
     try {
@@ -59,6 +73,7 @@ export const TeacherProvider = ({ children }) => {
       setTeacher(profileTeacher);
       setCourses(profileCourses);
       localStorage.setItem("teacher", JSON.stringify(profileTeacher));
+      fetchNotifications();
       return true;
     } catch (err) {
       // only clear session on 401
@@ -66,13 +81,15 @@ export const TeacherProvider = ({ children }) => {
         localStorage.removeItem("teacher");
         teacherRequestSigner.clearSigningSecret();
         setTeacher(null);
+        setNotifications([]);
+        setUnreadNotifications(0);
       }
       // protected routes handle redirection
       return false;
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [fetchNotifications]);
 
   useEffect(() => {
     // signup and expired invite pages do not represent an active session
@@ -110,6 +127,7 @@ export const TeacherProvider = ({ children }) => {
       );
     }
     setTeacher(data.teacher);
+    fetchNotifications();
     return res.data;
   };
 
@@ -119,9 +137,43 @@ export const TeacherProvider = ({ children }) => {
     teacherRequestSigner.clearSigningSecret();
     setTeacher(null);
     setCourses([]);
+    setNotifications([]);
+    setUnreadNotifications(0);
   };
 
   const updateTeacher = (updated) => setTeacher((p) => ({ ...p, ...updated }));
+
+  const markNotificationRead = async (notificationId) => {
+    if (!notificationId) return false;
+    try {
+      await teacherApi.notifications.markRead(notificationId);
+      setNotifications((prev) =>
+        prev.map((item) =>
+          item._id === notificationId
+            ? { ...item, readAt: item.readAt || new Date().toISOString() }
+            : item,
+        ),
+      );
+      setUnreadNotifications((prev) => Math.max(0, prev - 1));
+      return true;
+    } catch {
+      return false;
+    }
+  };
+
+  const markAllNotificationsRead = async () => {
+    try {
+      await teacherApi.notifications.markAllRead();
+      const readAt = new Date().toISOString();
+      setNotifications((prev) =>
+        prev.map((item) => ({ ...item, readAt: item.readAt || readAt })),
+      );
+      setUnreadNotifications(0);
+      return true;
+    } catch {
+      return false;
+    }
+  };
 
   return (
     <TeacherContext.Provider
@@ -129,9 +181,14 @@ export const TeacherProvider = ({ children }) => {
         teacher,
         courses,
         setCourses,
+        notifications,
+        unreadNotifications,
         loading,
         initializing,
         fetchProfile,
+        fetchNotifications,
+        markNotificationRead,
+        markAllNotificationsRead,
         login,
         logout,
         updateTeacher,

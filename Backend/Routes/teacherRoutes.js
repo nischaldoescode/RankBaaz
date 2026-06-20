@@ -43,9 +43,13 @@ import {
   getTeacherApplications,
   sendTeacherInvite,
   rejectTeacherApplication,
+  deleteRejectedTeacherApplication,
   getTeacherCourses,
   teacherUpdateQuestion,
   teacherDeleteQuestion,
+  getTeacherNotifications,
+  markTeacherNotificationRead,
+  markAllTeacherNotificationsRead,
 } from "../Controllers/teacherController.js";
 import {
   authenticateTeacher,
@@ -229,6 +233,17 @@ router.get("/public/:username", getPublicTeacherProfile);
 
 // teacher authenticated routes
 router.get("/me", authenticateTeacher, getTeacherProfile);
+router.get("/me/notifications", authenticateTeacher, getTeacherNotifications);
+router.patch(
+  "/me/notifications/read-all",
+  authenticateTeacher,
+  markAllTeacherNotificationsRead,
+);
+router.patch(
+  "/me/notifications/:notificationId/read",
+  authenticateTeacher,
+  markTeacherNotificationRead,
+);
 router.get(
   "/me/courses/all",
   authenticateTeacher,
@@ -311,10 +326,10 @@ router.post(
   authenticateAdmin,
   rejectTeacherApplication,
 );
-router.post(
-  "/admin/request-documents",
+router.delete(
+  "/applications/:applicationId",
   authenticateAdmin,
-  adminRequestDocuments,
+  deleteRejectedTeacherApplication,
 );
 router.post("/admin/unblock", authenticateAdmin, (req, res) => {
   import("../Controllers/adminController.js").then(({ adminUnblockTeacher }) =>

@@ -11,6 +11,7 @@ import jwt from "jsonwebtoken";
 import crypto from "crypto";
 import Teacher from "../Models/Teacher.js";
 import TeacherApplication from "../Models/TeacherApplication.js";
+import TeacherNotification from "../Models/TeacherNotification.js";
 import Course from "../Models/Course.js";
 import TestResult from "../Models/TestResult.js";
 import CourseReview from "../Models/CourseReview.js";
@@ -74,6 +75,162 @@ const cleanProfileText = (value = "", maxLength = 500) =>
     .replace(/\n{3,}/g, "\n\n")
     .trim()
     .slice(0, maxLength);
+
+/**
+ * normalizes admin review text before it is stored, emailed, or shown in the teacher portal
+ *
+ * @param {string} value raw admin input
+ * @param {number} maxLength maximum stored length
+ * @returns {string} cleaned review text
+ */
+const cleanReviewText = (value = "", maxLength = 1000) =>
+  String(value || "")
+    .replace(/\u0000/g, "")
+    .replace(/\r\n?/g, "\n")
+    .replace(/[\t ]+/g, " ")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim()
+    .slice(0, maxLength);
+
+/**
+ * checks that an invite token still points to a live invited application
+ *
+ * @param {object} payload decoded teacher invite token payload
+ * @returns {Promise<object>} matching teacher application
+ */
+const findValidInviteApplication = async (payload = {}) => {
+  const email = String(payload.email || "").toLowerCase();
+  const application = payload.applicationId
+    ? await TeacherApplication.findById(payload.applicationId)
+    : await TeacherApplication.findOne({ email });
+
+  if (!application || application.email !== email) {
+    const error = new Error("Invite application was not found");
+    error.statusCode = 404;
+    error.code = "INVITE_NOT_FOUND";
+    throw error;
+  }
+
+  if (application.status !== "invited") {
+    const error = new Error(
+      application.status === "rejected"
+        ? "This teacher application was rejected"
+        : "This invite is no longer active",
+    );
+    error.statusCode = 409;
+    error.code =
+      application.status === "rejected" ? "INVITE_REJECTED" : "INVITE_INACTIVE";
+    throw error;
+  }
+
+  return application;
+};
+
+/**
+ * stores a teacher portal notification without blocking the review decision
+ *
+ * @param {string|object} teacherId teacher account id
+ * @param {object} payload notification fields
+ * @returns {Promise<object|null>} created notification or null when storage fails
+ */
+const createTeacherNotification = async (teacherId, payload) => {
+  try {
+    return await TeacherNotification.create({
+      teacher: teacherId,
+      type: payload.type,
+      title: payload.title,
+      message: payload.message,
+      link: payload.link || "documents",
+      metadata: payload.metadata || {},
+    });
+  } catch (error) {
+    console.error("Teacher notification creation failed:", error);
+    return null;
+  }
+};
+
+/**
+ * sends a teacher review update email when email configuration is available
+ *
+ * @param {object} options email delivery options
+ * @param {string} options.to recipient email address
+ * @param {string} options.name recipient display name
+ * @param {string} options.subject email subject
+ * @param {string} options.title visible email heading
+ * @param {string} options.message email body message
+ * @param {string} options.reason optional admin reason
+ * @param {string} options.actionUrl optional portal link
+ * @returns {Promise<boolean>} whether the email was accepted by the provider
+ */
+const sendTeacherReviewEmail = async ({
+  to,
+  name,
+  subject,
+  title,
+  message,
+  reason,
+  actionUrl,
+}) => {
+  if (!process.env.RESEND_API_KEY || !process.env.EMAIL_USER || !to) {
+    return false;
+  }
+
+  const { Resend } = await import("resend");
+  const resend = new Resend(process.env.RESEND_API_KEY);
+  const safeName = escapeHtml(name || "Teacher");
+  const safeTitle = escapeHtml(title);
+  const safeMessage = escapeHtml(message);
+  const safeReason = reason ? escapeHtml(reason).replace(/\n/g, "<br />") : "";
+  const safeActionUrl = actionUrl ? escapeHtml(actionUrl) : "";
+  const textLines = [
+    "Hi " + (name || "Teacher") + ",",
+    "",
+    message,
+  ];
+
+  if (reason) {
+    textLines.push("", "Reason:", reason);
+  }
+  if (actionUrl) {
+    textLines.push("", "Open teacher portal: " + actionUrl);
+  }
+  textLines.push("", "Regards,", "The Vidhgrow Team");
+
+  const reasonBlock = safeReason
+    ? '<div style="margin:18px 0;padding:14px 16px;background:#f8fafc;border:1px solid #e5e7eb;border-radius:10px;"><p style="margin:0 0 6px;font-size:12px;font-weight:700;color:#111827;">Reason</p><p style="margin:0;font-size:14px;line-height:1.7;color:#374151;">' +
+      safeReason +
+      "</p></div>"
+    : "";
+  const actionBlock = safeActionUrl
+    ? '<p style="margin:18px 0 0;"><a href="' +
+      safeActionUrl +
+      '" style="display:inline-block;background:#2563eb;color:#fff;text-decoration:none;border-radius:10px;padding:11px 18px;font-size:14px;font-weight:700;">Open teacher portal</a></p>'
+    : "";
+
+  await resend.emails.send({
+    from: "Vidhgrow <" + process.env.EMAIL_USER + ">",
+    to,
+    subject,
+    text: textLines.join("\n"),
+    html:
+      '<!DOCTYPE html><html><body style="margin:0;padding:0;background:#f8fafc;font-family:Arial,sans-serif;color:#111827;">' +
+      '<table width="100%" cellpadding="0" cellspacing="0" style="padding:24px;background:#f8fafc;"><tr><td align="center">' +
+      '<table width="600" cellpadding="0" cellspacing="0" style="max-width:100%;background:#fff;border:1px solid #e5e7eb;border-radius:12px;overflow:hidden;">' +
+      '<tr><td style="padding:26px 30px;border-bottom:1px solid #e5e7eb;"><h1 style="margin:0;font-size:20px;color:#111827;">' +
+      safeTitle +
+      '</h1></td></tr><tr><td style="padding:26px 30px;">' +
+      '<p style="margin:0 0 14px;font-size:14px;line-height:1.7;">Hi <strong>' +
+      safeName +
+      '</strong>,</p><p style="margin:0 0 16px;font-size:14px;line-height:1.7;color:#374151;">' +
+      safeMessage +
+      "</p>" +
+      reasonBlock +
+      actionBlock +
+      "</td></tr></table></td></tr></table></body></html>",
+  });
+
+  return true;
+};
 
 const pruneTeacherLoginAttempts = () => {
   const now = Date.now();
@@ -325,6 +482,16 @@ export const verifyInviteToken = async (req, res) => {
         .json({ success: false, message: "Email already registered" });
     }
 
+    try {
+      await findValidInviteApplication(payload);
+    } catch (inviteError) {
+      return res.status(inviteError.statusCode || 400).json({
+        success: false,
+        code: inviteError.code || "INVITE_INVALID",
+        message: inviteError.message || "Invite is no longer active",
+      });
+    }
+
     return res.status(200).json({
       success: true,
       data: {
@@ -369,6 +536,16 @@ export const sendSignupOtp = async (req, res) => {
       return res
         .status(400)
         .json({ success: false, message: "Email does not match invite" });
+    }
+
+    try {
+      await findValidInviteApplication(payload);
+    } catch (inviteError) {
+      return res.status(inviteError.statusCode || 400).json({
+        success: false,
+        code: inviteError.code || "INVITE_INVALID",
+        message: inviteError.message || "Invite is no longer active",
+      });
     }
 
     // limit otp sends to three per ten minutes
@@ -700,6 +877,16 @@ export const teacherSignup = async (req, res) => {
       return res.status(400).json({
         success: false,
         message: "Username must include your invited name",
+      });
+    }
+
+    try {
+      await findValidInviteApplication(payload);
+    } catch (inviteError) {
+      return res.status(inviteError.statusCode || 400).json({
+        success: false,
+        code: inviteError.code || "INVITE_INVALID",
+        message: inviteError.message || "Invite is no longer active",
       });
     }
 
@@ -1194,11 +1381,10 @@ export const uploadDocuments = async (req, res) => {
         .json({ success: false, message: "Maximum 2 documents" });
     }
 
-    // delete old docs from cloudinary
     if (teacher.documents?.length > 0) {
       await Promise.allSettled(
         teacher.documents.map((doc) =>
-          cloudinary.uploader.destroy(doc.public_id, { resource_type: "raw" }),
+          destroyCloudinaryAsset(doc.public_id, ["raw", "image"]),
         ),
       );
     }
@@ -1224,6 +1410,70 @@ export const uploadDocuments = async (req, res) => {
   } catch (error) {
     console.error("Document upload error:", error);
     res.status(500).json({ success: false, message: "Upload failed" });
+  }
+};
+
+export const getTeacherNotifications = async (req, res) => {
+  try {
+    const teacherId = req.teacher.teacherId;
+    const limit = Math.min(parseInt(req.query.limit || "50", 10) || 50, 100);
+
+    const [notifications, unreadCount] = await Promise.all([
+      TeacherNotification.find({ teacher: teacherId })
+        .sort({ createdAt: -1 })
+        .limit(limit)
+        .lean(),
+      TeacherNotification.countDocuments({ teacher: teacherId, readAt: null }),
+    ]);
+
+    return res.status(200).json({
+      success: true,
+      data: { notifications, unreadCount },
+    });
+  } catch (error) {
+    console.error("Teacher notifications fetch failed:", error);
+    res.status(500).json({ success: false, message: "Failed to fetch" });
+  }
+};
+
+export const markTeacherNotificationRead = async (req, res) => {
+  try {
+    const teacherId = req.teacher.teacherId;
+    const { notificationId } = req.params;
+
+    const notification = await TeacherNotification.findOneAndUpdate(
+      { _id: notificationId, teacher: teacherId },
+      { readAt: new Date() },
+      { new: true },
+    ).lean();
+
+    if (!notification) {
+      return res.status(404).json({ success: false, message: "Not found" });
+    }
+
+    return res.status(200).json({
+      success: true,
+      data: { notification },
+    });
+  } catch (error) {
+    console.error("Teacher notification read update failed:", error);
+    res.status(500).json({ success: false, message: "Failed to update" });
+  }
+};
+
+export const markAllTeacherNotificationsRead = async (req, res) => {
+  try {
+    const teacherId = req.teacher.teacherId;
+
+    await TeacherNotification.updateMany(
+      { teacher: teacherId, readAt: null },
+      { readAt: new Date() },
+    );
+
+    return res.status(200).json({ success: true });
+  } catch (error) {
+    console.error("Teacher notifications read-all failed:", error);
+    res.status(500).json({ success: false, message: "Failed to update" });
   }
 };
 
@@ -1821,6 +2071,24 @@ export const sendTeacherInvite = async (req, res) => {
         .json({ success: false, message: "Application not found" });
     }
 
+    const existingTeacher = await Teacher.exists({
+      email: application.email.toLowerCase(),
+    });
+
+    if (existingTeacher || application.status === "registered") {
+      return res.status(409).json({
+        success: false,
+        message: "This applicant is already registered as a teacher",
+      });
+    }
+
+    if (application.status === "rejected") {
+      return res.status(409).json({
+        success: false,
+        message: "Rejected applications must be restored before inviting",
+      });
+    }
+
     if (application.status === "invited") {
       return res
         .status(400)
@@ -2038,29 +2306,100 @@ const buildInviteEmail = (name, content, signupLink, subject, options = {}) => {
 export const rejectTeacherApplication = async (req, res) => {
   try {
     const { applicationId, reason } = req.body;
+    const cleanReason = cleanReviewText(reason);
 
-    const application = await TeacherApplication.findByIdAndUpdate(
-      applicationId,
-      {
-        status: "rejected",
-        rejectedAt: new Date(),
-        rejectionReason: reason || null,
-        processedBy: req.admin.userId,
-      },
-      { new: true },
-    );
+    if (!applicationId) {
+      return res.status(400).json({
+        success: false,
+        message: "Application id is required",
+      });
+    }
+
+    if (cleanReason.length < 10 || cleanReason.length > 1000) {
+      return res.status(400).json({
+        success: false,
+        message: "Rejection reason must be 10 to 1000 characters",
+      });
+    }
+
+    const application = await TeacherApplication.findById(applicationId);
 
     if (!application) {
       return res.status(404).json({ success: false, message: "Not found" });
     }
 
+    const existingTeacher = await Teacher.exists({
+      email: application.email.toLowerCase(),
+    });
+
+    if (existingTeacher || application.status === "registered") {
+      return res.status(409).json({
+        success: false,
+        message: "Registered teachers must be handled from the teachers tab",
+      });
+    }
+
+    application.status = "rejected";
+    application.rejectedAt = new Date();
+    application.rejectionReason = cleanReason;
+    application.processedBy = req.admin.userId;
+    await application.save();
+
     await redisClient.del("teacher:waitlist:count");
 
-    return res
-      .status(200)
-      .json({ success: true, message: "Application rejected" });
+    let emailDelivered = false;
+    try {
+      emailDelivered = await sendTeacherReviewEmail({
+        to: application.email,
+        name: application.name,
+        subject: "Your Vidhgrow teacher application update",
+        title: "Teacher application update",
+        message:
+          "We reviewed your teacher application and cannot approve it at this time.",
+        reason: cleanReason,
+        actionUrl: process.env.TEACHER_PORTAL_URL || null,
+      });
+    } catch (emailError) {
+      console.error("Teacher application rejection email failed:", emailError);
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Application rejected",
+      data: { application, emailDelivered },
+    });
   } catch (error) {
+    console.error("Teacher application rejection failed:", error);
     res.status(500).json({ success: false, message: "Rejection failed" });
+  }
+};
+
+export const deleteRejectedTeacherApplication = async (req, res) => {
+  try {
+    const { applicationId } = req.params;
+
+    const application = await TeacherApplication.findById(applicationId);
+    if (!application) {
+      return res.status(404).json({ success: false, message: "Not found" });
+    }
+
+    if (application.status !== "rejected") {
+      return res.status(409).json({
+        success: false,
+        message: "Only rejected applications can be deleted from this view",
+      });
+    }
+
+    await TeacherApplication.deleteOne({ _id: application._id });
+    await redisClient.del("teacher:waitlist:count");
+
+    return res.status(200).json({
+      success: true,
+      message: "Rejected application deleted",
+    });
+  } catch (error) {
+    console.error("Rejected teacher application deletion failed:", error);
+    res.status(500).json({ success: false, message: "Delete failed" });
   }
 };
 
@@ -2185,31 +2524,111 @@ export const getTeacherById = async (req, res) => {
 export const adminVerifyDocuments = async (req, res) => {
   try {
     const { teacherId, approved, rejectionReason } = req.body;
+    const isApproved = approved === true;
+    const cleanReason = cleanReviewText(rejectionReason);
+
+    if (typeof approved !== "boolean") {
+      return res.status(400).json({
+        success: false,
+        message: "Approval decision is required",
+      });
+    }
+
+    if (!isApproved && cleanReason.length < 10) {
+      return res.status(400).json({
+        success: false,
+        message: "Rejection reason must be at least 10 characters",
+      });
+    }
 
     const teacher = await Teacher.findById(teacherId);
     if (!teacher) {
       return res.status(404).json({ success: false, message: "Not found" });
     }
 
-    teacher.documentStatus = approved ? "verified" : "rejected";
-    teacher.documentVerifiedAt = approved ? new Date() : null;
-    teacher.documentVerifiedBy = req.admin.userId;
-    teacher.documentRejectionReason = approved ? null : rejectionReason;
+    if (!Array.isArray(teacher.documents) || teacher.documents.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: "At least one uploaded document is required before review",
+      });
+    }
 
-    // unblock access if verified
-    if (approved && teacher.documentRequested) {
+    teacher.documentStatus = isApproved ? "verified" : "rejected";
+    teacher.documentVerifiedAt = isApproved ? new Date() : null;
+    teacher.documentVerifiedBy = req.admin.userId;
+    teacher.documentRejectionReason = isApproved ? null : cleanReason;
+
+    if (isApproved) {
       teacher.accessBlocked = false;
       teacher.accessBlockReason = null;
+      teacher.documentRequested = false;
+      teacher.documentRequestNote = null;
+    } else {
+      teacher.accessBlocked = true;
+      teacher.accessBlockReason = cleanReason;
+      teacher.documentRequested = true;
+      teacher.documentRequestedAt = new Date();
+      teacher.documentRequestNote = cleanReason;
     }
 
     await teacher.save();
     await invalidateTeacherPublicCaches(teacher);
 
+    const notificationPayload = isApproved
+      ? {
+          type: "documents_verified",
+          title: "Documents verified",
+          message:
+            "Your teacher verification documents were approved. Course tools are now available.",
+          metadata: { documentStatus: "verified" },
+        }
+      : {
+          type: "documents_rejected",
+          title: "Documents need another review",
+          message:
+            "Your teacher verification documents were rejected. Please review the reason and upload corrected documents.",
+          metadata: { documentStatus: "rejected", reason: cleanReason },
+        };
+
+    await createTeacherNotification(teacher._id, notificationPayload);
+
+    let emailDelivered = false;
+    try {
+      emailDelivered = await sendTeacherReviewEmail({
+        to: teacher.email,
+        name: teacher.name,
+        subject: isApproved
+          ? "Your Vidhgrow teacher access is active"
+          : "Your Vidhgrow teacher documents need attention",
+        title: isApproved ? "Teacher access approved" : "Document review update",
+        message: isApproved
+          ? "Your verification documents were approved. You can now use the teacher portal tools."
+          : "Your verification documents need changes before full teacher access can be enabled.",
+        reason: isApproved ? null : cleanReason,
+        actionUrl: process.env.TEACHER_PORTAL_URL || null,
+      });
+    } catch (emailError) {
+      console.error("Teacher document review email failed:", emailError);
+    }
+
     return res.status(200).json({
       success: true,
-      message: `Documents ${approved ? "verified" : "rejected"}`,
+      message: `Documents ${isApproved ? "verified" : "rejected"}`,
+      data: {
+        teacher: {
+          _id: teacher._id,
+          documentStatus: teacher.documentStatus,
+          documentRejectionReason: teacher.documentRejectionReason,
+          documentRequested: teacher.documentRequested,
+          documentRequestNote: teacher.documentRequestNote,
+          accessBlocked: teacher.accessBlocked,
+          accessBlockReason: teacher.accessBlockReason,
+        },
+        emailDelivered,
+      },
     });
   } catch (error) {
+    console.error("Teacher document verification failed:", error);
     res.status(500).json({ success: false, message: "Verification failed" });
   }
 };
@@ -2217,15 +2636,17 @@ export const adminVerifyDocuments = async (req, res) => {
 export const adminRequestDocuments = async (req, res) => {
   try {
     const { teacherId, note } = req.body;
+    const cleanNote =
+      cleanReviewText(note, 1000) || "Document verification required by admin";
 
     const teacher = await Teacher.findByIdAndUpdate(
       teacherId,
       {
         documentRequested: true,
         documentRequestedAt: new Date(),
-        documentRequestNote: note || null,
+        documentRequestNote: cleanNote,
         accessBlocked: true,
-        accessBlockReason: note || "Document verification required by admin",
+        accessBlockReason: cleanNote,
         documentStatus: "not_uploaded",
       },
       { new: true },
@@ -2237,11 +2658,47 @@ export const adminRequestDocuments = async (req, res) => {
 
     await invalidateTeacherPublicCaches(teacher);
 
+    await createTeacherNotification(teacher._id, {
+      type: "documents_requested",
+      title: "Documents requested",
+      message:
+        "Admin requested verification documents before your teacher tools can be unlocked.",
+      metadata: { documentStatus: "not_uploaded", note: cleanNote },
+    });
+
+    let emailDelivered = false;
+    try {
+      emailDelivered = await sendTeacherReviewEmail({
+        to: teacher.email,
+        name: teacher.name,
+        subject: "Vidhgrow teacher documents requested",
+        title: "Documents requested",
+        message:
+          "Please upload your teacher verification documents from the teacher portal.",
+        reason: cleanNote,
+        actionUrl: process.env.TEACHER_PORTAL_URL || null,
+      });
+    } catch (emailError) {
+      console.error("Teacher document request email failed:", emailError);
+    }
+
     return res.status(200).json({
       success: true,
       message: "Document request sent. Teacher account blocked until verified.",
+      data: {
+        teacher: {
+          _id: teacher._id,
+          documentStatus: teacher.documentStatus,
+          documentRequested: teacher.documentRequested,
+          documentRequestNote: teacher.documentRequestNote,
+          accessBlocked: teacher.accessBlocked,
+          accessBlockReason: teacher.accessBlockReason,
+        },
+        emailDelivered,
+      },
     });
   } catch (error) {
+    console.error("Teacher document request failed:", error);
     res.status(500).json({ success: false, message: "Failed to request" });
   }
 };
@@ -2349,6 +2806,7 @@ export const adminDeleteTeacher = async (req, res) => {
       CourseReview.deleteMany({
         $or: [{ teacher: teacherId }, { course: { $in: courseIds } }],
       }),
+      TeacherNotification.deleteMany({ teacher: teacherId }),
     ]);
 
     await Teacher.findByIdAndDelete(teacherId);
