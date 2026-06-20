@@ -173,6 +173,12 @@ export const teacherApi = {
         headers: { "Content-Type": "multipart/form-data" },
       }),
   },
+  notifications: {
+    list: () => api.get("/teachers/me/notifications"),
+    markRead: (notificationId) =>
+      api.patch("/teachers/me/notifications/" + notificationId + "/read"),
+    markAllRead: () => api.patch("/teachers/me/notifications/read-all"),
+  },
   courses: {
     updateQuestion: (courseId, questionId, data) =>
       api.put(`/teachers/me/courses/${courseId}/questions/${questionId}`, data),

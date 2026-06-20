@@ -7,6 +7,7 @@
  */
 
 import React, { useState, useEffect, useCallback, useRef } from "react";
+import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAdmin } from "../contexts/AdminContext.jsx";
 import toast from "react-hot-toast";
@@ -83,6 +84,328 @@ const Badge = ({ label, color, bg, border }) => (
     {label}
   </span>
 );
+
+const ModalPortal = ({ children }) => createPortal(children, document.body);
+
+const DocumentPreviewModal = ({ document, index, onClose }) => {
+  const name = document?.originalName || "Document " + (index + 1);
+  const url = document?.url || "";
+  const isPdf = /\.pdf($|\?)/i.test(name) || /\.pdf($|\?)/i.test(url);
+  const isImage =
+    /\.(png|jpe?g|webp|gif)($|\?)/i.test(name) ||
+    /\.(png|jpe?g|webp|gif)($|\?)/i.test(url);
+
+  return (
+    <ModalPortal>
+      <div
+        role="dialog"
+        aria-modal="true"
+        className="teacher-document-preview-backdrop"
+        style={{
+          position: "fixed",
+          inset: 0,
+          zIndex: 2147483600,
+          background: "rgba(15,23,42,0.58)",
+          backdropFilter: "blur(8px)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          padding: 16,
+        }}
+        onClick={(event) => event.target === event.currentTarget && onClose()}
+      >
+        <motion.div
+          initial={{ opacity: 0, scale: 0.96, y: 12 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          exit={{ opacity: 0, scale: 0.96, y: 12 }}
+          transition={{ duration: 0.16 }}
+          style={{
+            width: "min(980px, 100%)",
+            height: "min(760px, 92vh)",
+            background: "#fff",
+            borderRadius: 18,
+            overflow: "hidden",
+            boxShadow: "0 24px 70px rgba(15,23,42,0.28)",
+            display: "flex",
+            flexDirection: "column",
+          }}
+        >
+          <div
+            style={{
+              padding: "14px 18px",
+              borderBottom: "1px solid #e5e7eb",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: 12,
+            }}
+          >
+            <div style={{ minWidth: 0 }}>
+              <p style={{ fontSize: 13, color: "#64748b", marginBottom: 2 }}>
+                Review document {index + 1}
+              </p>
+              <h3
+                style={{
+                  fontSize: 16,
+                  fontWeight: 800,
+                  color: "#0f172a",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {name}
+              </h3>
+            </div>
+            <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
+              <a
+                href={url}
+                target="_blank"
+                rel="noreferrer"
+                style={{
+                  padding: "9px 12px",
+                  borderRadius: 10,
+                  border: "1px solid #dbeafe",
+                  background: "#eff6ff",
+                  color: "#2563eb",
+                  fontSize: 13,
+                  fontWeight: 700,
+                  textDecoration: "none",
+                }}
+              >
+                Open original
+              </a>
+              <button
+                onClick={onClose}
+                style={{
+                  width: 38,
+                  height: 38,
+                  border: "1px solid #e5e7eb",
+                  borderRadius: 10,
+                  background: "#fff",
+                  color: "#334155",
+                  cursor: "pointer",
+                  fontSize: 20,
+                  lineHeight: 1,
+                }}
+                aria-label="Close document preview"
+              >
+                ×
+              </button>
+            </div>
+          </div>
+          <div
+            style={{
+              flex: 1,
+              minHeight: 0,
+              background: "#f8fafc",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              padding: 12,
+            }}
+          >
+            {isImage ? (
+              <img
+                src={url}
+                alt={name}
+                style={{
+                  maxWidth: "100%",
+                  maxHeight: "100%",
+                  objectFit: "contain",
+                  borderRadius: 12,
+                  boxShadow: "0 10px 32px rgba(15,23,42,0.12)",
+                  background: "#fff",
+                }}
+              />
+            ) : isPdf ? (
+              <iframe
+                title={name}
+                src={url}
+                sandbox="allow-scripts allow-same-origin allow-downloads"
+                style={{
+                  width: "100%",
+                  height: "100%",
+                  border: "1px solid #e5e7eb",
+                  borderRadius: 12,
+                  background: "#fff",
+                }}
+              />
+            ) : (
+              <div
+                style={{
+                  textAlign: "center",
+                  maxWidth: 420,
+                  padding: 24,
+                  color: "#64748b",
+                }}
+              >
+                <p style={{ fontSize: 15, fontWeight: 700, color: "#0f172a" }}>
+                  Preview is not available for this file type
+                </p>
+                <p style={{ fontSize: 13, lineHeight: 1.6, marginTop: 6 }}>
+                  Open the original document in a new tab before making the
+                  review decision.
+                </p>
+              </div>
+            )}
+          </div>
+        </motion.div>
+      </div>
+    </ModalPortal>
+  );
+};
+
+const ApplicationDecisionModal = ({
+  action,
+  reason,
+  loading,
+  onReasonChange,
+  onClose,
+  onSubmit,
+}) => {
+  const isDelete = action?.mode === "delete";
+  const application = action?.application;
+  const canSubmit = isDelete || reason.trim().length >= 10;
+
+  if (!application) return null;
+
+  return (
+    <ModalPortal>
+      <div
+        role="dialog"
+        aria-modal="true"
+        style={{
+          position: "fixed",
+          inset: 0,
+          zIndex: 2147483400,
+          background: "rgba(15,23,42,0.54)",
+          backdropFilter: "blur(8px)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          padding: 16,
+        }}
+        onClick={(event) => event.target === event.currentTarget && onClose()}
+      >
+        <motion.div
+          initial={{ opacity: 0, scale: 0.97, y: 10 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          exit={{ opacity: 0, scale: 0.97, y: 10 }}
+          transition={{ duration: 0.16 }}
+          style={{
+            width: "min(520px, 100%)",
+            background: "#fff",
+            borderRadius: 18,
+            boxShadow: "0 22px 60px rgba(15,23,42,0.24)",
+            overflow: "hidden",
+          }}
+        >
+          <div style={{ padding: "20px 22px", borderBottom: "1px solid #e5e7eb" }}>
+            <p style={{ fontSize: 12, color: "#64748b", marginBottom: 4 }}>
+              {isDelete ? "Clear rejected application" : "Reject teacher application"}
+            </p>
+            <h3 style={{ fontSize: 18, color: "#0f172a", fontWeight: 800 }}>
+              {application.name}
+            </h3>
+            <p style={{ fontSize: 13, color: "#64748b", marginTop: 4 }}>
+              {application.email}
+            </p>
+          </div>
+
+          <div style={{ padding: 22 }}>
+            {isDelete ? (
+              <p style={{ fontSize: 14, lineHeight: 1.7, color: "#475569" }}>
+                This removes the rejected application from the admin queue. It
+                does not delete a registered teacher account, courses, or files.
+              </p>
+            ) : (
+              <>
+                <p style={{ fontSize: 13, lineHeight: 1.7, color: "#64748b", marginBottom: 10 }}>
+                  Add a clear reason. The applicant will be notified by email,
+                  and the old invite link will no longer be usable.
+                </p>
+                <textarea
+                  value={reason}
+                  onChange={(event) => onReasonChange(event.target.value)}
+                  rows={4}
+                  placeholder="Reason for rejecting this application..."
+                  style={{
+                    width: "100%",
+                    border: "1.5px solid #fecaca",
+                    borderRadius: 12,
+                    padding: "12px 13px",
+                    fontSize: 14,
+                    lineHeight: 1.6,
+                    color: "#111827",
+                    resize: "vertical",
+                    outline: "none",
+                    boxSizing: "border-box",
+                    fontFamily: "inherit",
+                    background: "#fff",
+                  }}
+                />
+                <p style={{ fontSize: 11, color: "#94a3b8", marginTop: 6 }}>
+                  Minimum 10 characters.
+                </p>
+              </>
+            )}
+          </div>
+
+          <div
+            style={{
+              padding: "14px 22px 20px",
+              display: "flex",
+              justifyContent: "flex-end",
+              gap: 10,
+              flexWrap: "wrap",
+            }}
+          >
+            <button
+              onClick={onClose}
+              disabled={loading}
+              style={{
+                padding: "10px 16px",
+                borderRadius: 10,
+                border: "1px solid #e5e7eb",
+                background: "#fff",
+                color: "#334155",
+                fontSize: 13,
+                fontWeight: 700,
+                cursor: loading ? "not-allowed" : "pointer",
+              }}
+            >
+              Cancel
+            </button>
+            <button
+              onClick={onSubmit}
+              disabled={loading || !canSubmit}
+              style={{
+                padding: "10px 16px",
+                borderRadius: 10,
+                border: "none",
+                background:
+                  loading || !canSubmit
+                    ? "#fecaca"
+                    : "linear-gradient(135deg,#dc2626,#b91c1c)",
+                color: "#fff",
+                fontSize: 13,
+                fontWeight: 700,
+                cursor: loading || !canSubmit ? "not-allowed" : "pointer",
+              }}
+            >
+              {loading
+                ? "Working..."
+                : isDelete
+                  ? "Delete rejected application"
+                  : "Reject application"}
+            </button>
+          </div>
+        </motion.div>
+      </div>
+    </ModalPortal>
+  );
+};
 
 // email template presets
 const EMAIL_TEMPLATES = [
@@ -821,21 +1144,32 @@ const TeacherDetailModal = ({ teacher, onClose, onRefresh }) => {
   const [rejectionReason, setRejectionReason] = useState("");
   const [requestNote, setRequestNote] = useState("");
   const [deleteReason, setDeleteReason] = useState("");
+  const [previewDoc, setPreviewDoc] = useState(null);
   const [loading, setLoading] = useState(false);
 
   const handleVerifyDocs = async (approved) => {
+    if (!approved && rejectionReason.trim().length < 10) {
+      toast.error("Rejection reason must be at least 10 characters");
+      return;
+    }
+
     setLoading(true);
     try {
-      await adminRequest("POST", "/teachers/admin/verify-documents", {
+      const res = await adminRequest("POST", "/teachers/admin/verify-documents", {
         teacherId: teacher._id,
         approved,
         rejectionReason: approved ? null : rejectionReason,
       });
-      toast.success(`Documents ${approved ? "verified" : "rejected"}`);
+      const emailDelivered = res.data?.data?.emailDelivered;
+      toast.success(
+        approved
+          ? "Access allowed" + (emailDelivered ? " and teacher emailed" : "")
+          : "Documents rejected" + (emailDelivered ? " and teacher emailed" : ""),
+      );
       onRefresh();
       onClose();
-    } catch {
-      toast.error("Failed");
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed");
     } finally {
       setLoading(false);
     }
@@ -844,15 +1178,18 @@ const TeacherDetailModal = ({ teacher, onClose, onRefresh }) => {
   const handleRequestDocs = async () => {
     setLoading(true);
     try {
-      await adminRequest("POST", "/teachers/admin/request-documents", {
+      const res = await adminRequest("POST", "/teachers/admin/request-documents", {
         teacherId: teacher._id,
         note: requestNote,
       });
-      toast.success("Document request sent. Account blocked.");
+      const emailDelivered = res.data?.data?.emailDelivered;
+      toast.success(
+        "Document request sent" + (emailDelivered ? " and teacher emailed" : ""),
+      );
       onRefresh();
       onClose();
-    } catch {
-      toast.error("Failed");
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed");
     } finally {
       setLoading(false);
     }
@@ -886,6 +1223,7 @@ const TeacherDetailModal = ({ teacher, onClose, onRefresh }) => {
   const TABS = ["overview", "documents", "courses", "actions"];
 
   return (
+    <ModalPortal>
     <div
       className="teacher-admin-modal-backdrop"
       style={{
@@ -1166,23 +1504,23 @@ const TeacherDetailModal = ({ teacher, onClose, onRefresh }) => {
                   style={{ display: "flex", flexDirection: "column", gap: 10 }}
                 >
                   {teacher.documents.map((doc, i) => (
-                    <a
+                    <button
+                      type="button"
                       key={i}
-                      href={doc.url}
-                      target="_blank"
-                      rel="noreferrer"
+                      onClick={() => setPreviewDoc({ document: doc, index: i })}
                       style={{
                         display: "flex",
                         alignItems: "center",
                         gap: 12,
+                        width: "100%",
                         padding: "12px 14px",
                         border: "1px solid #e5e7eb",
                         borderRadius: 10,
-                        textDecoration: "none",
                         color: "#374151",
                         background: "#f9fafb",
                         cursor: "pointer",
                         transition: "border-color 0.15s",
+                        textAlign: "left",
                       }}
                       onMouseEnter={(e) =>
                         (e.currentTarget.style.borderColor = "#2563eb")
@@ -1237,7 +1575,7 @@ const TeacherDetailModal = ({ teacher, onClose, onRefresh }) => {
                         <polyline points="15 3 21 3 21 9" />
                         <line x1="10" y1="14" x2="21" y2="3" />
                       </svg>
-                    </a>
+                    </button>
                   ))}
                 </div>
               ) : (
@@ -1273,7 +1611,7 @@ const TeacherDetailModal = ({ teacher, onClose, onRefresh }) => {
                       cursor: loading ? "not-allowed" : "pointer",
                     }}
                   >
-                    Approve Documents
+                    Allow Access
                   </button>
                   <button
                     onClick={() => setDocAction("reject")}
@@ -1579,6 +1917,14 @@ const TeacherDetailModal = ({ teacher, onClose, onRefresh }) => {
         </div>
       </motion.div>
     </div>
+    {previewDoc && (
+      <DocumentPreviewModal
+        document={previewDoc.document}
+        index={previewDoc.index}
+        onClose={() => setPreviewDoc(null)}
+      />
+    )}
+    </ModalPortal>
   );
 };
 
@@ -1599,6 +1945,9 @@ const TeacherManagement = () => {
   const [emailEditorApp, setEmailEditorApp] = useState(null);
   const [selectedTeacher, setSelectedTeacher] = useState(null);
   const [appStatusFilter, setAppStatusFilter] = useState("pending");
+  const [applicationAction, setApplicationAction] = useState(null);
+  const [applicationReason, setApplicationReason] = useState("");
+  const [applicationActionLoading, setApplicationActionLoading] = useState(false);
 
   const loadApplications = useCallback(async () => {
     setLoading(true);
@@ -1638,16 +1987,51 @@ const TeacherManagement = () => {
     else if (mainTab === "teachers") loadTeachers();
   }, [mainTab, loadApplications, loadTeachers]);
 
-  const handleReject = async (appId) => {
-    if (!window.confirm("Reject this application?")) return;
+  const openApplicationAction = (mode, application) => {
+    setApplicationReason(application.rejectionReason || "");
+    setApplicationAction({ mode, application });
+  };
+
+  const closeApplicationAction = () => {
+    if (applicationActionLoading) return;
+    setApplicationAction(null);
+    setApplicationReason("");
+  };
+
+  const submitApplicationAction = async () => {
+    if (!applicationAction?.application) return;
+
+    const app = applicationAction.application;
+    const mode = applicationAction.mode;
+
+    if (mode === "reject" && applicationReason.trim().length < 10) {
+      toast.error("Rejection reason must be at least 10 characters");
+      return;
+    }
+
+    setApplicationActionLoading(true);
     try {
-      await adminRequest("POST", "/teachers/applications/reject", {
-        applicationId: appId,
-      });
-      toast.success("Application rejected");
-      loadApplications();
-    } catch {
-      toast.error("Failed");
+      if (mode === "delete") {
+        await adminRequest("DELETE", "/teachers/applications/" + app._id);
+        setApplications((prev) => prev.filter((item) => item._id !== app._id));
+        toast.success("Rejected application deleted");
+      } else {
+        const res = await adminRequest("POST", "/teachers/applications/reject", {
+          applicationId: app._id,
+          reason: applicationReason,
+        });
+        const emailDelivered = res.data?.data?.emailDelivered;
+        toast.success(
+          "Application rejected" + (emailDelivered ? " and applicant emailed" : ""),
+        );
+        loadApplications();
+      }
+      setApplicationAction(null);
+      setApplicationReason("");
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed");
+    } finally {
+      setApplicationActionLoading(false);
     }
   };
 
@@ -1862,6 +2246,21 @@ const TeacherManagement = () => {
                         ? `${app.reason.slice(0, 120)}...`
                         : app.reason}
                     </p>
+                    {app.status === "rejected" && app.rejectionReason && (
+                      <p
+                        style={{
+                          fontSize: 12,
+                          color: "#b91c1c",
+                          marginTop: 6,
+                          lineHeight: 1.5,
+                        }}
+                      >
+                        <strong>Rejection:</strong>{" "}
+                        {app.rejectionReason.length > 140
+                          ? app.rejectionReason.slice(0, 140) + "..."
+                          : app.rejectionReason}
+                      </p>
+                    )}
                     {app.inviteSentAt &&
                       (() => {
                         const sentAt = new Date(app.inviteSentAt);
@@ -1937,7 +2336,7 @@ const TeacherManagement = () => {
                         Send Invite
                       </button>
                       <button
-                        onClick={() => handleReject(app._id)}
+                        onClick={() => openApplicationAction("reject", app)}
                         style={{
                           padding: "8px 16px",
                           background: "#fff",
@@ -2014,7 +2413,7 @@ const TeacherManagement = () => {
                             Resend Invite
                           </button>
                           <button
-                            onClick={() => handleReject(app._id)}
+                            onClick={() => openApplicationAction("reject", app)}
                             style={{
                               padding: "8px 14px",
                               background: "#fff",
@@ -2066,7 +2465,7 @@ const TeacherManagement = () => {
                             Invite Sent
                           </span>
                           <button
-                            onClick={() => handleReject(app._id)}
+                            onClick={() => openApplicationAction("reject", app)}
                             style={{
                               padding: "7px 12px",
                               background: "#fff",
@@ -2084,6 +2483,34 @@ const TeacherManagement = () => {
                         </div>
                       );
                     })()}
+                  {app.status === "rejected" && (
+                    <div
+                      className="teacher-application-actions"
+                      style={{
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: 8,
+                        flexShrink: 0,
+                      }}
+                    >
+                      <button
+                        onClick={() => openApplicationAction("delete", app)}
+                        style={{
+                          padding: "8px 14px",
+                          background: "#fff",
+                          color: "#dc2626",
+                          border: "1px solid #fecaca",
+                          borderRadius: 8,
+                          fontSize: 12,
+                          fontWeight: 700,
+                          cursor: "pointer",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  )}
                 </motion.div>
               ))}
             </div>
@@ -2307,6 +2734,16 @@ const TeacherManagement = () => {
             teacher={selectedTeacher}
             onClose={() => setSelectedTeacher(null)}
             onRefresh={loadTeachers}
+          />
+        )}
+        {applicationAction && (
+          <ApplicationDecisionModal
+            action={applicationAction}
+            reason={applicationReason}
+            loading={applicationActionLoading}
+            onReasonChange={setApplicationReason}
+            onClose={closeApplicationAction}
+            onSubmit={submitApplicationAction}
           />
         )}
       </AnimatePresence>

@@ -258,10 +258,212 @@ const BlockedOverlay = ({ teacher, onGoToDocuments }) => (
   </div>
 );
 
+const NotificationBell = ({
+  notifications,
+  unreadCount,
+  open,
+  onToggle,
+  onOpenTab,
+  onMarkRead,
+  onMarkAllRead,
+}) => {
+  const recent = Array.isArray(notifications) ? notifications.slice(0, 6) : [];
+
+  return (
+    <div style={{ position: "relative" }}>
+      <button
+        type="button"
+        onClick={onToggle}
+        aria-label="Open notifications"
+        style={{
+          width: 38,
+          height: 38,
+          borderRadius: 12,
+          border: "1px solid #e2e8f0",
+          background: "#fff",
+          color: "#334155",
+          cursor: "pointer",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          position: "relative",
+        }}
+      >
+        <svg
+          width="19"
+          height="19"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <path d="M18 8a6 6 0 00-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9" />
+          <path d="M13.73 21a2 2 0 01-3.46 0" />
+        </svg>
+        {unreadCount > 0 && (
+          <span
+            style={{
+              position: "absolute",
+              top: -4,
+              right: -4,
+              minWidth: 18,
+              height: 18,
+              padding: "0 5px",
+              borderRadius: 999,
+              background: "#dc2626",
+              color: "#fff",
+              fontSize: 10,
+              fontWeight: 800,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              border: "2px solid #fff",
+            }}
+          >
+            {unreadCount > 9 ? "9+" : unreadCount}
+          </span>
+        )}
+      </button>
+
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            initial={{ opacity: 0, y: 8, scale: 0.98 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 8, scale: 0.98 }}
+            transition={{ duration: 0.14 }}
+            style={{
+              position: "absolute",
+              top: 46,
+              right: 0,
+              width: "min(360px, calc(100vw - 28px))",
+              background: "#fff",
+              border: "1px solid #e2e8f0",
+              borderRadius: 16,
+              boxShadow: "0 20px 55px rgba(15,23,42,0.18)",
+              overflow: "hidden",
+              zIndex: 60,
+            }}
+          >
+            <div
+              style={{
+                padding: "14px 16px",
+                borderBottom: "1px solid #f1f5f9",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: 10,
+              }}
+            >
+              <div>
+                <p style={{ fontSize: 14, fontWeight: 800, color: "#0f172a" }}>
+                  Notifications
+                </p>
+                <p style={{ fontSize: 11, color: "#94a3b8", marginTop: 2 }}>
+                  Review updates from Vidhgrow
+                </p>
+              </div>
+              {unreadCount > 0 && (
+                <button
+                  type="button"
+                  onClick={onMarkAllRead}
+                  style={{
+                    border: "none",
+                    background: "#eff6ff",
+                    color: "#2563eb",
+                    borderRadius: 999,
+                    padding: "6px 9px",
+                    fontSize: 11,
+                    fontWeight: 800,
+                    cursor: "pointer",
+                  }}
+                >
+                  Mark read
+                </button>
+              )}
+            </div>
+
+            {recent.length === 0 ? (
+              <div style={{ padding: 18, color: "#64748b", fontSize: 13 }}>
+                No notifications yet.
+              </div>
+            ) : (
+              <div style={{ maxHeight: 360, overflowY: "auto" }}>
+                {recent.map((item) => (
+                  <button
+                    type="button"
+                    key={item._id}
+                    onClick={() => {
+                      if (!item.readAt) onMarkRead(item._id);
+                      if (item.link) onOpenTab(item.link);
+                    }}
+                    style={{
+                      width: "100%",
+                      border: "none",
+                      borderBottom: "1px solid #f1f5f9",
+                      background: item.readAt ? "#fff" : "#f8fbff",
+                      padding: "13px 16px",
+                      textAlign: "left",
+                      cursor: "pointer",
+                    }}
+                  >
+                    <div
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        gap: 10,
+                        marginBottom: 4,
+                      }}
+                    >
+                      <p style={{ fontSize: 13, fontWeight: 800, color: "#0f172a" }}>
+                        {item.title}
+                      </p>
+                      {!item.readAt && (
+                        <span
+                          style={{
+                            width: 8,
+                            height: 8,
+                            borderRadius: "50%",
+                            background: "#2563eb",
+                            marginTop: 5,
+                            flexShrink: 0,
+                          }}
+                        />
+                      )}
+                    </div>
+                    <p style={{ fontSize: 12, color: "#64748b", lineHeight: 1.55 }}>
+                      {item.message}
+                    </p>
+                    <p style={{ fontSize: 10, color: "#94a3b8", marginTop: 6 }}>
+                      {new Date(item.createdAt).toLocaleString()}
+                    </p>
+                  </button>
+                ))}
+              </div>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+};
+
 const TeacherDashboard = () => {
-  const { teacher, courses, loading, logout } = useTeacher();
+  const {
+    teacher,
+    courses,
+    loading,
+    logout,
+    notifications,
+    unreadNotifications,
+    markNotificationRead,
+    markAllNotificationsRead,
+  } = useTeacher();
   const [tab, setTab] = useState("analytics");
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
   const [contentSettings, setContentSettings] = useState(null);
   const [logoBroken, setLogoBroken] = useState(false);
@@ -733,6 +935,20 @@ const TeacherDashboard = () => {
             </h1>
           </div>
 
+          <NotificationBell
+            notifications={notifications}
+            unreadCount={unreadNotifications}
+            open={notificationsOpen}
+            onToggle={() => setNotificationsOpen((open) => !open)}
+            onOpenTab={(nextTab) => {
+              if (RESTRICTED_ALLOWED_TABS.has(nextTab) || !isRestricted) {
+                setTab(nextTab);
+              }
+              setNotificationsOpen(false);
+            }}
+            onMarkRead={markNotificationRead}
+            onMarkAllRead={markAllNotificationsRead}
+          />
           <Avatar teacher={teacher} size={34} />
         </header>
 

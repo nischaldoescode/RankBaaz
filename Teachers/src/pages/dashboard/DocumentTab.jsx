@@ -40,7 +40,7 @@ const statusConfig = {
 };
 
 const DocumentsTab = () => {
-  const { teacher, updateTeacher } = useTeacher();
+  const { teacher, updateTeacher, notifications, markNotificationRead } = useTeacher();
   const [files, setFiles] = useState([null, null]);
   const [previews, setPreviews] = useState([null, null]);
   const [loading, setLoading] = useState(false);
@@ -49,6 +49,11 @@ const DocumentsTab = () => {
   const docStatus = teacher?.documentStatus || "not_uploaded";
   const statusDisplay = statusConfig[docStatus];
   const isBlocked = teacher?.accessBlocked;
+  const documentNotifications = Array.isArray(notifications)
+    ? notifications
+        .filter((item) => String(item.type || "").startsWith("documents_"))
+        .slice(0, 3)
+    : [];
 
   const handleFileChange = (idx, file) => {
     if (!file) return;
@@ -118,6 +123,82 @@ const DocumentsTab = () => {
         Upload proof of your teaching credentials. Max 1MB per file. PDF, JPEG,
         or PNG.
       </p>
+
+      {documentNotifications.length > 0 && (
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            gap: 10,
+            marginBottom: 24,
+          }}
+        >
+          {documentNotifications.map((item) => (
+            <button
+              type="button"
+              key={item._id}
+              onClick={() => {
+                if (!item.readAt) markNotificationRead?.(item._id);
+              }}
+              style={{
+                width: "100%",
+                textAlign: "left",
+                border: "1px solid " + (item.readAt ? "#e5e7eb" : "#bfdbfe"),
+                background: item.readAt ? "#fff" : "#f8fbff",
+                borderRadius: 12,
+                padding: "12px 14px",
+                cursor: item.readAt ? "default" : "pointer",
+              }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  gap: 10,
+                  marginBottom: 4,
+                }}
+              >
+                <p style={{ fontSize: 13, fontWeight: 800, color: "#0f172a" }}>
+                  {item.title}
+                </p>
+                {!item.readAt && (
+                  <span
+                    style={{
+                      fontSize: 10,
+                      fontWeight: 800,
+                      color: "#2563eb",
+                      background: "#eff6ff",
+                      borderRadius: 999,
+                      padding: "3px 8px",
+                    }}
+                  >
+                    New
+                  </span>
+                )}
+              </div>
+              <p style={{ fontSize: 12, lineHeight: 1.6, color: "#64748b" }}>
+                {item.message}
+              </p>
+              {item.metadata?.reason && (
+                <p
+                  style={{
+                    fontSize: 12,
+                    lineHeight: 1.6,
+                    color: "#b91c1c",
+                    marginTop: 6,
+                  }}
+                >
+                  Reason: {item.metadata.reason}
+                </p>
+              )}
+              <p style={{ fontSize: 10, color: "#94a3b8", marginTop: 6 }}>
+                {new Date(item.createdAt).toLocaleString()}
+              </p>
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* status banner */}
       <div
