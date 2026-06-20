@@ -48,9 +48,10 @@
     <changefreq>yearly</changefreq>
     <priority>0.3</priority>
   </url>
-    <url>
+  <url>
     <loc>https://vidhgrow.online/teacher</loc>
     <changefreq>yearly</changefreq>
     <priority>0.2</priority>
+    <lastmod>2026-06-20</lastmod>
   </url>
 </urlset>

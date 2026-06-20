@@ -9,6 +9,7 @@
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import axios from "axios";
+import { useSEO } from "../hooks/useSEO";
 
 const RAW_API = (import.meta.env.VITE_API_URL || "http://localhost:7000").replace(
   /\/$/,
@@ -422,6 +423,31 @@ const TeacherJoin = () => {
   const [appliedEmail, setAppliedEmail] = useState(null);
   const PORTAL_URL =
     import.meta.env.VITE_TEACHER_PORTAL_URL || "http://localhost:5175";
+
+  useSEO({
+    title: "Become a Teacher | Official Application Guide",
+    description:
+      "Official Vidhgrow guide for qualified educators: check eligibility, apply, complete verification, and create courses, lessons, quizzes, and tests.",
+    keywords:
+      "Vidhgrow teacher application, become a teacher on Vidhgrow, teacher verification, create courses, online teaching",
+    author: "Vidhgrow Editorial",
+    canonicalUrl: "https://vidhgrow.online/teacher",
+    structuredData: {
+      "@context": "https://schema.org",
+      "@type": "WebPage",
+      "@id": "https://vidhgrow.online/teacher#webpage",
+      name: "Become a Teacher on Vidhgrow",
+      description:
+        "Official Vidhgrow teacher application and verification guide for qualified educators.",
+      url: "https://vidhgrow.online/teacher",
+      isPartOf: { "@id": "https://vidhgrow.online/#website" },
+      about: { "@id": "https://vidhgrow.online/#organization" },
+      potentialAction: {
+        "@type": "ApplyAction",
+        target: "https://vidhgrow.online/teacher#apply",
+      },
+    },
+  });
 
   // keep hash navigation focused on the form
   useEffect(() => {

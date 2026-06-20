@@ -5,6 +5,23 @@ services:
     buildCommand: npm run build
     staticPublishPath: dist
 
+    routes:
+      - type: redirect
+        source: /teachers
+        destination: /teacher
+      - type: redirect
+        source: /teachers/
+        destination: /teacher
+      - type: redirect
+        source: /teacher/
+        destination: /teacher
+      - type: rewrite
+        source: /teacher
+        destination: /teacher/index.html
+      - type: rewrite
+        source: /*
+        destination: /index.html
+
     headers:
       # Cache images for 1 day
       - path: "*.png"

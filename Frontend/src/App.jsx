@@ -216,6 +216,16 @@ const ProfileRouteGuard = () => {
   return <PublicProfile />;
 };
 
+/**
+ * redirects the old plural teacher path while preserving search and hash state
+ *
+ * @returns {JSX.Element} redirect to the canonical teacher application route
+ */
+const LegacyTeacherRoute = () => {
+  const location = useLocation();
+  return <Navigate to={`/teacher${location.search}${location.hash}`} replace />;
+};
+
 function App() {
   const { loading: authLoading, isAuthenticated } = useAuth();
   const { animations, reducedMotion } = useTheme();
@@ -579,6 +589,7 @@ function App() {
                     />
 
                     {/* teacher routes */}
+                    <Route path="/teachers" element={<LegacyTeacherRoute />} />
                     <Route
                       path="/teacher"
                       element={

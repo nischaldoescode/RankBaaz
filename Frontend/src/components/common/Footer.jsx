@@ -51,6 +51,7 @@ const Footer = () => {
           { name: "Home", href: "/" },
           { name: "About", href: "/about" },
           { name: "Contact", href: "/contact" },
+          { name: "Vidhgrow Blog", href: "https://blogs.vidhgrow.online" },
         ];
 
   // resources
@@ -190,12 +191,21 @@ const Footer = () => {
               <ul className="space-y-3">
                 {displayQuickLinks.map((item) => (
                   <li key={item.name}>
-                    <Link
-                      to={item.href}
-                      className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-                    >
-                      {item.name}
-                    </Link>
+                    {String(item.href).startsWith("http") ? (
+                      <a
+                        href={item.href}
+                        className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+                      >
+                        {item.name}
+                      </a>
+                    ) : (
+                      <Link
+                        to={item.href}
+                        className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+                      >
+                        {item.name}
+                      </Link>
+                    )}
                   </li>
                 ))}
               </ul>
