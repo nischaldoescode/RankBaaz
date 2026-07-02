@@ -30,6 +30,18 @@ import { useSEO } from "../hooks/useSEO";
 
 const teacherProfilePath = (teacher) => `/teacher/@${teacher.username}`;
 
+const courseTestPath = (course) => {
+  const base = String(course?.name || "vidhgrow-practice-test")
+    .toLowerCase()
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 80);
+
+  return `/tests/${base || "vidhgrow-practice-test"}-${course?._id}`;
+};
+
 const TeacherAttribution = ({ teacher, compact = false }) => {
   if (!teacher?.username) return null;
 
@@ -112,6 +124,13 @@ const CourseCard = React.memo(
               <p className="text-gray-700 text-sm line-clamp-2 mb-4 leading-relaxed flex-1">
                 {course.description}
               </p>
+
+              <Link
+                to={courseTestPath(course)}
+                className="mb-4 inline-flex w-fit items-center text-sm font-semibold text-blue-600 transition hover:text-blue-700"
+              >
+                View test overview
+              </Link>
 
               <div className="mt-auto pt-4 border-t border-gray-200">
                 <CourseDetailsExpander
@@ -204,6 +223,13 @@ const CourseListItem = React.memo(
                   <TeacherAttribution teacher={course.teacher} compact />
                 </div>
               )}
+
+              <Link
+                to={courseTestPath(course)}
+                className="inline-flex text-sm font-semibold text-blue-600 transition hover:text-blue-700"
+              >
+                View test overview
+              </Link>
 
               <div className="mt-4">
                 <CourseDetailsExpander

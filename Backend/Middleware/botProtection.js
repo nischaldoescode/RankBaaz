@@ -64,12 +64,27 @@ const PUBLIC_BLOG_READ_PATHS = [
   "/api/blogs/sitemap.xml",
 ];
 
+const PUBLIC_COURSE_READ_PATHS = [
+  "/api/courses",
+  "/api/courses/categories",
+  "/api/courses/test-seo",
+];
+
 const isPublicBlogReadRequest = (req) => {
   if (req.method !== "GET") return false;
 
   return PUBLIC_BLOG_READ_PATHS.some(
     (path) => req.path === path || req.path.startsWith(`${path}/`),
   );
+};
+
+const isPublicCourseReadRequest = (req) => {
+  if (req.method !== "GET") return false;
+
+  return PUBLIC_COURSE_READ_PATHS.some((path) => {
+    if (path === "/api/courses") return req.path === path;
+    return req.path === path || req.path.startsWith(`${path}/`);
+  });
 };
 
 /**
@@ -444,6 +459,16 @@ export const botProtection = async (req, res, next) => {
       }
 
       if (req.path === "/api/blogs/sitemap.xml" && !origin && !referer) {
+        return next();
+      }
+    }
+
+    if (isPublicCourseReadRequest(req)) {
+      if (isLegitimateOrigin(origin, referer)) {
+        return next();
+      }
+
+      if (req.path === "/api/courses/test-seo/sitemap.xml" && !origin && !referer) {
         return next();
       }
     }

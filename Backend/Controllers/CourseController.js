@@ -21,6 +21,174 @@ import {
   setPdfDownloadHeaders,
 } from "../helpers/pdfResponseHeaders.js";
 
+const SITE_URL = (
+  process.env.SITE_URL ||
+  process.env.FRONTEND_URL ||
+  "https://vidhgrow.online"
+).replace(/\/$/, "");
+
+const PUBLIC_COURSE_SELECT =
+  "name description category image difficulties isPaid price currency maxQuestionsPerTest totalQuestions teacher approvalStatus geoRestriction createdAt updatedAt questions.difficulty questions.isActive";
+
+const publicCourseStatusQuery = {
+  isActive: true,
+  $or: [{ approvalStatus: "approved" }, { approvalStatus: { $exists: false } }],
+};
+
+/**
+ * creates a stable public test slug from a course name and id
+ *
+ * @param {object} course - course document or lean course object
+ * @returns {string} seo safe slug with the mongodb id as a stable suffix
+ */
+export const buildCourseTestSlug = (course = {}) => {
+  const id = String(course._id || "").trim();
+  const base = String(course.name || "vidhgrow-practice-test")
+    .toLowerCase()
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 80);
+
+  return `${base || "vidhgrow-practice-test"}-${id}`;
+};
+
+const stripRichText = (value = "") =>
+  String(value)
+    .replace(/<[^>]*>/g, " ")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&amp;/g, "&")
+    .replace(/\s+/g, " ")
+    .trim();
+
+const sentenceCase = (value = "") => {
+  const text = stripRichText(value);
+  if (!text) return "";
+  return text.charAt(0).toUpperCase() + text.slice(1);
+};
+
+const readableDuration = (seconds = 0) => {
+  const safeSeconds = Math.max(0, Number(seconds) || 0);
+  const minutes = Math.max(1, Math.ceil(safeSeconds / 60));
+
+  if (minutes < 60) return `${minutes} min`;
+
+  const hours = Math.floor(minutes / 60);
+  const remaining = minutes % 60;
+  return remaining ? `${hours} hr ${remaining} min` : `${hours} hr`;
+};
+
+const getTeacherPublicState = (teacher) => {
+  if (!teacher) return true;
+  return (
+    teacher.isActive === true &&
+    teacher.accessBlocked !== true &&
+    teacher.documentStatus === "verified"
+  );
+};
+
+const extractCourseIdFromSlug = (slug = "") => {
+  const match = String(slug).match(/([a-f0-9]{24})$/i);
+  return match?.[1] || null;
+};
+
+const shapePublicTestCourse = (course = {}) => {
+  const activeQuestions = Array.isArray(course.questions)
+    ? course.questions.filter((question) => question?.isActive !== false)
+    : [];
+  const questionTotal =
+    activeQuestions.length || Number(course.totalQuestions || 0);
+  const difficultyStats = (course.difficulties || []).map((difficulty) => {
+    const questionCount = activeQuestions.filter(
+      (question) => question?.difficulty === difficulty.name,
+    ).length;
+
+    return {
+      name: difficulty.name,
+      marksPerQuestion: difficulty.marksPerQuestion,
+      maxQuestions: difficulty.maxQuestions,
+      totalMarks: difficulty.totalMarks,
+      minTime: difficulty.timerSettings?.minTime || 0,
+      maxTime: difficulty.timerSettings?.maxTime || 0,
+      readableTime: readableDuration(difficulty.timerSettings?.maxTime || 0),
+      questionCount,
+    };
+  });
+  const maxTime = difficultyStats.reduce(
+    (total, difficulty) => total + (Number(difficulty.maxTime) || 0),
+    0,
+  );
+  const description =
+    sentenceCase(course.description) ||
+    `${course.name} is a Vidhgrow practice test with timed questions, difficulty levels, score feedback, and progress tracking.`;
+
+  return {
+    _id: course._id,
+    name: course.name,
+    slug: buildCourseTestSlug(course),
+    testUrl: `${SITE_URL}/tests/${buildCourseTestSlug(course)}`,
+    appTestUrl: `${SITE_URL}/app/test/${course._id}`,
+    description,
+    category: course.category
+      ? {
+          _id: course.category._id,
+          name: course.category.name,
+          description: sentenceCase(course.category.description),
+        }
+      : null,
+    teacher: course.teacher
+      ? {
+          _id: course.teacher._id,
+          name: course.teacher.name,
+          username: course.teacher.username,
+          profileImage: course.teacher.profileImage,
+          country: course.teacher.country,
+        }
+      : null,
+    image: course.image,
+    isPaid: course.isPaid,
+    price: course.price,
+    currency: course.currency,
+    totalQuestions: questionTotal,
+    maxQuestionsPerTest: course.maxQuestionsPerTest,
+    difficulties: difficultyStats,
+    readableDuration: readableDuration(maxTime || difficultyStats[0]?.maxTime),
+    createdAt: course.createdAt,
+    updatedAt: course.updatedAt,
+  };
+};
+
+const loadPublicTestCourses = async ({ limit = 1000, excludeId = null } = {}) => {
+  const safeLimit = Math.min(Math.max(Number(limit) || 1000, 1), 5000);
+  const query = { ...publicCourseStatusQuery };
+
+  if (excludeId && mongoose.Types.ObjectId.isValid(excludeId)) {
+    query._id = { $ne: excludeId };
+  }
+
+  const courses = await Course.find(query)
+    .select(PUBLIC_COURSE_SELECT)
+    .populate("category", "name description isActive")
+    .populate(
+      "teacher",
+      "name username profileImage country accessBlocked documentStatus isActive",
+    )
+    .sort({ updatedAt: -1, createdAt: -1 })
+    .limit(safeLimit)
+    .lean();
+
+  return courses
+    .filter((course) => {
+      const hasQuestions = Array.isArray(course.questions)
+        ? course.questions.some((question) => question?.isActive !== false)
+        : Number(course.totalQuestions || 0) > 0;
+
+      return hasQuestions && getTeacherPublicState(course.teacher);
+    })
+    .map(shapePublicTestCourse);
+};
+
 export const parseFormDataArrays = (req, res, next) => {
   if (req.body.difficulties && typeof req.body.difficulties === "string") {
     try {
@@ -1202,6 +1370,140 @@ export const deleteCourse = async (req, res) => {
       success: false,
       message: "Failed to delete course",
     });
+  }
+};
+
+/**
+ * lists public course based test pages for seo, sitemap generation, and internal linking
+ *
+ * @param {object} req - express request with optional limit query
+ * @param {object} res - express response containing public test page metadata
+ * @returns {Promise<void>} sends a json response without exposing questions or answers
+ */
+export const getPublicTestSeoPages = async (req, res) => {
+  try {
+    const courses = await loadPublicTestCourses({
+      limit: req.query.limit || 1000,
+    });
+
+    res.set("Cache-Control", "public, max-age=900, s-maxage=1800");
+    return res.status(200).json({
+      success: true,
+      data: {
+        tests: courses,
+        total: courses.length,
+      },
+    });
+  } catch (error) {
+    console.error("Get public test seo pages error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to retrieve public test pages",
+    });
+  }
+};
+
+/**
+ * returns one public course based test page by seo slug
+ *
+ * @param {object} req - express request containing params.slug
+ * @param {object} res - express response containing public test details
+ * @returns {Promise<void>} sends public metadata or a 404 for non indexable courses
+ */
+export const getPublicTestSeoPageBySlug = async (req, res) => {
+  try {
+    const courseId = extractCourseIdFromSlug(req.params.slug);
+
+    if (!courseId || !mongoose.Types.ObjectId.isValid(courseId)) {
+      return res.status(404).json({
+        success: false,
+        message: "Test page not found",
+      });
+    }
+
+    const course = await Course.findOne({
+      _id: courseId,
+      ...publicCourseStatusQuery,
+    })
+      .select(PUBLIC_COURSE_SELECT)
+      .populate("category", "name description isActive")
+      .populate(
+        "teacher",
+        "name username profileImage country accessBlocked documentStatus isActive",
+      )
+      .lean();
+
+    if (!course || !getTeacherPublicState(course.teacher)) {
+      return res.status(404).json({
+        success: false,
+        message: "Test page not found",
+      });
+    }
+
+    const shapedCourse = shapePublicTestCourse(course);
+    if (!shapedCourse.totalQuestions) {
+      return res.status(404).json({
+        success: false,
+        message: "Test page not found",
+      });
+    }
+
+    const related = (await loadPublicTestCourses({ limit: 24, excludeId: courseId }))
+      .filter((test) => {
+        if (!shapedCourse.category?._id || !test.category?._id) return true;
+        return String(test.category._id) === String(shapedCourse.category._id);
+      })
+      .slice(0, 4);
+
+    res.set("Cache-Control", "public, max-age=900, s-maxage=1800");
+    return res.status(200).json({
+      success: true,
+      data: {
+        test: shapedCourse,
+        canonicalSlug: shapedCourse.slug,
+        canonicalUrl: shapedCourse.testUrl,
+        related,
+      },
+    });
+  } catch (error) {
+    console.error("Get public test seo page error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to retrieve public test page",
+    });
+  }
+};
+
+/**
+ * renders an xml sitemap for public course based test pages
+ *
+ * @param {object} req - express request
+ * @param {object} res - express response sending xml
+ * @returns {Promise<void>} sends a sitemap with only active public test pages
+ */
+export const generatePublicTestSitemap = async (req, res) => {
+  try {
+    const tests = await loadPublicTestCourses({ limit: 5000 });
+    const xml = `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+${tests
+  .map(
+    (test) => `  <url>
+    <loc>${test.testUrl}</loc>
+    <lastmod>${new Date(test.updatedAt || test.createdAt || Date.now()).toISOString().split("T")[0]}</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>`,
+  )
+  .join("\n")}
+</urlset>`;
+
+    res.set("Content-Type", "application/xml; charset=utf-8");
+    res.set("Cache-Control", "public, max-age=3600, s-maxage=3600");
+    return res.status(200).send(xml);
+  } catch (error) {
+    console.error("Generate public test sitemap error:", error);
+    return res.status(500).send("Failed to generate public test sitemap");
   }
 };
 

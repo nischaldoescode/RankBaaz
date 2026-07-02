@@ -15,6 +15,12 @@ services:
       - type: redirect
         source: /teacher/
         destination: /teacher
+      - type: redirect
+        source: /sitemap-profiles.xml
+        destination: https://api.vidhgrow.online/sitemap-profiles.xml
+      - type: redirect
+        source: /sitemap-profiles.xml/
+        destination: https://api.vidhgrow.online/sitemap-profiles.xml
       - type: rewrite
         source: /teacher
         destination: /teacher/index.html

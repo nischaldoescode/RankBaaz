@@ -1,14 +1,14 @@
 Sitemap: https://vidhgrow.online/sitemap.xml
-Sitemap: https://rankbaaz.onrender.com/sitemap-profiles.xml
-Sitemap: https://vidhgrow.online/sitemap-static.xml
 
 # Allow all good bots
 User-agent: *
 Allow: /
+Allow: /llms.txt
 Allow: /@
 Allow: /about
 Allow: /contact
 Allow: /courses
+Allow: /tests
 Allow: /privacy
 Allow: /terms
 Allow: /login
