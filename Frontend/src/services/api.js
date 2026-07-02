@@ -476,6 +476,10 @@ export const apiMethods = {
     },
     getById: (id) => api.get(`/api/courses/${id}`),
     getCategories: () => api.get("/api/courses/categories"),
+    getTestSeoPages: (params = {}) =>
+      api.get("/api/courses/test-seo", { params }),
+    getTestSeoPageBySlug: (slug) =>
+      api.get(`/api/courses/test-seo/${encodeURIComponent(slug)}`),
     search: (query) =>
       api.get(`/courses/search?q=${encodeURIComponent(query)}`),
     getByCategory: (categoryId) => api.get(`/courses/categories/${categoryId}`),

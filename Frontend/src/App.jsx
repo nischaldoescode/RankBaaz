@@ -52,6 +52,7 @@ const Login = React.lazy(() => import("./pages/Login"));
 const Register = React.lazy(() => import("./pages/Register"));
 const Courses = React.lazy(() => import("./pages/Courses"));
 const Test = React.lazy(() => import("./pages/Test"));
+const TestSeoPage = React.lazy(() => import("./pages/TestSeoPage"));
 const Profile = React.lazy(() => import("./pages/Profile"));
 const NotFound = React.lazy(() => import("./pages/NotFound"));
 const TeacherJoin = React.lazy(() => import("./pages/TeacherJoin"));
@@ -523,6 +524,62 @@ function App() {
                             }
                           >
                             <Courses />
+                          </motion.div>
+                        </Suspense>
+                      }
+                    />
+
+                    <Route
+                      path="/tests"
+                      element={
+                        <Suspense
+                          fallback={
+                            <div className="min-h-screen pt-16">
+                              <Loading variant="page" />
+                            </div>
+                          }
+                        >
+                          <motion.div
+                            key="test-index"
+                            initial="initial"
+                            animate="in"
+                            exit="out"
+                            variants={
+                              animations && !reducedMotion ? pageVariants : {}
+                            }
+                            transition={
+                              animations && !reducedMotion ? pageTransition : {}
+                            }
+                          >
+                            <TestSeoPage />
+                          </motion.div>
+                        </Suspense>
+                      }
+                    />
+
+                    <Route
+                      path="/tests/:slug"
+                      element={
+                        <Suspense
+                          fallback={
+                            <div className="min-h-screen pt-16">
+                              <Loading variant="page" />
+                            </div>
+                          }
+                        >
+                          <motion.div
+                            key="test-seo"
+                            initial="initial"
+                            animate="in"
+                            exit="out"
+                            variants={
+                              animations && !reducedMotion ? pageVariants : {}
+                            }
+                            transition={
+                              animations && !reducedMotion ? pageTransition : {}
+                            }
+                          >
+                            <TestSeoPage />
                           </motion.div>
                         </Suspense>
                       }

@@ -1,11 +1,15 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<sitemapindex
-  xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
-  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-  xsi:schemaLocation="http://www.sitemaps.org/schemas/sitemap/0.9
-                      http://www.sitemaps.org/schemas/sitemap/0.9/siteindex.xsd">
+<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <sitemap>
-    <loc>https://rankbaaz.onrender.com/sitemap-profiles.xml</loc>
-    <lastmod>2025-01-21</lastmod>
+    <loc>https://vidhgrow.online/sitemap-pages.xml</loc>
+    <lastmod>2026-07-02</lastmod>
+  </sitemap>
+  <sitemap>
+    <loc>https://vidhgrow.online/sitemap-tests.xml</loc>
+    <lastmod>2026-07-02</lastmod>
+  </sitemap>
+  <sitemap>
+    <loc>https://vidhgrow.online/sitemap-profiles.xml</loc>
+    <lastmod>2026-07-02</lastmod>
   </sitemap>
 </sitemapindex>

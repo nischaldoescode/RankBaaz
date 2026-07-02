@@ -34,6 +34,9 @@ import {
   getDifficultyBreakdown,
   validateVideoLinks,
   downloadCoursePDF,
+  getPublicTestSeoPages,
+  getPublicTestSeoPageBySlug,
+  generatePublicTestSitemap,
 } from "../Controllers/CourseController.js";
 import { authenticateAdmin, authenticateUser } from "../Middleware/auth.js";
 import { uploadCourseImage, handleUploadError } from "../Middleware/Upload.js";
@@ -70,6 +73,24 @@ router.get("/categories", cacheStats("all-categories", 500), getAllCategories);
  * auth: none required
  */
 router.get("/categories/:categoryId", getCategoryById);
+
+/**
+ * get /test-seo - list crawlable test overview pages
+ * auth: none required
+ */
+router.get("/test-seo", getPublicTestSeoPages);
+
+/**
+ * get /test-seo/sitemap.xml - dynamic sitemap for crawlable test pages
+ * auth: none required
+ */
+router.get("/test-seo/sitemap.xml", generatePublicTestSitemap);
+
+/**
+ * get /test-seo/:slug - public seo details for one test overview page
+ * auth: none required
+ */
+router.get("/test-seo/:slug", getPublicTestSeoPageBySlug);
 
 /**
  * get /:courseid - get course details

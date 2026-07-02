@@ -644,6 +644,8 @@ const publicRoutes = [
   "/api/blogs/public",
   "/api/blogs/settings/share",
   "/api/blogs/sitemap.xml",
+  "/api/courses/test-seo",
+  "/api/courses/test-seo/sitemap.xml",
 ];
 
 
@@ -785,6 +787,7 @@ app.use((req, res, next) => {
     "/api/content/legal",
     "/api/content/faqs",
     "/api/courses/categories",
+    "/api/courses/test-seo",
     "/api/teachers/waitlist-count",
     "/api/teachers/profile",
     "/api/teachers/verify-invite",

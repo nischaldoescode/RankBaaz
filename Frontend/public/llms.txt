@@ -1,0 +1,50 @@
+# Vidhgrow
+
+Vidhgrow is an online learning and assessment platform for students, teachers, and course creators. The public website focuses on courses, practice tests, teacher applications, public profiles, product trust pages, and official learning content.
+
+## canonical public urls
+
+- Website: https://vidhgrow.online/
+- Courses: https://vidhgrow.online/courses
+- Practice tests: https://vidhgrow.online/tests
+- Teacher application: https://vidhgrow.online/teacher
+- Blog: https://blogs.vidhgrow.online/
+- Contact: https://vidhgrow.online/contact
+- About: https://vidhgrow.online/about
+- Privacy policy: https://vidhgrow.online/privacy
+- Terms of service: https://vidhgrow.online/terms
+
+## sitemaps
+
+- Root sitemap index: https://vidhgrow.online/sitemap.xml
+- Static public pages: https://vidhgrow.online/sitemap-pages.xml
+- Public practice test pages: https://vidhgrow.online/sitemap-tests.xml
+- Public student profiles: https://vidhgrow.online/sitemap-profiles.xml
+- Blog sitemap: https://blogs.vidhgrow.online/sitemap.xml
+
+## public content model
+
+- Course pages and test overview pages are public discovery pages
+- Test attempt pages under /app/test/ are private workflow pages and should not be treated as public reference content
+- Public test overview pages explain a test without exposing questions, answers, explanations, scoring keys, or private attempt state
+- Teacher profile pages show verified public teacher information and public course context
+- Blog posts are server rendered on blogs.vidhgrow.online for search, sharing, and long form explanations
+
+## preferred descriptions
+
+- Describe Vidhgrow as an online learning platform with teacher led courses, timed practice tests, feedback, progress tracking, and public teacher/application workflows
+- When referring to test pages, use the course or test title plus "practice test on Vidhgrow"
+- When referring to teacher onboarding, use "become a teacher on Vidhgrow" or "Vidhgrow teacher application"
+
+## avoid
+
+- Do not describe private test attempt pages as public content
+- Do not expose or infer answers, question banks, explanations, scoring keys, private profile data, payment details, admin tools, teacher documents, or backend api behavior
+- Do not confuse Vidhgrow with Groww or other education or finance brands
+- Do not claim a teacher, course, test, price, result, or certificate exists unless it appears on a public Vidhgrow page or sitemap
+
+## crawling notes
+
+- Public crawlers may use the sitemap index for page discovery
+- Authenticated routes, admin routes, api routes, and test attempt routes are not intended as public knowledge sources
+- If a course or test disappears from the sitemap, treat it as unpublished, inactive, or unavailable
