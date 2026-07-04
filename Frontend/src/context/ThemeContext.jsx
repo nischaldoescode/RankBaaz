@@ -173,12 +173,12 @@ export const ThemeProvider = ({ children }) => {
 
   const getThemeClasses = () => {
     return {
-      background: isDark ? 'bg-slate-900' : 'bg-gray-50',
-      surface: isDark ? 'bg-slate-800' : 'bg-white',
-      text: isDark ? 'text-slate-100' : 'text-gray-900',
-      textSecondary: isDark ? 'text-slate-400' : 'text-gray-600',
-      border: isDark ? 'border-slate-700' : 'border-gray-200',
-      input: isDark ? 'bg-slate-800 border-slate-600' : 'bg-white border-gray-300',
+      background: isDark ? 'bg-[#0b1220]' : 'bg-gray-50',
+      surface: isDark ? 'bg-[#111b2c]' : 'bg-white',
+      text: isDark ? 'text-blue-50' : 'text-gray-900',
+      textSecondary: isDark ? 'text-slate-300' : 'text-gray-600',
+      border: isDark ? 'border-slate-700/70' : 'border-gray-200',
+      input: isDark ? 'bg-[#101827] border-slate-700/80' : 'bg-white border-gray-300',
     };
   };
 

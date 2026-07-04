@@ -17,6 +17,10 @@ const PrivacyPolicy = () => {
   const { legalPages, fetchLegalPage, loading, contentSettings } = useContent();
   const { animations, reducedMotion } = useTheme();
   const [page, setPage] = useState(null);
+  const siteName = contentSettings?.siteName || "Vidhgrow";
+  const siteUrl = contentSettings?.siteUrl || window.location.origin;
+  const privacyDescription =
+    "Read how Vidhgrow handles student accounts, teacher profiles, course activity, documents, test progress, payments, cookies, security, and privacy choices.";
 
   useEffect(() => {
     const loadPage = async () => {
@@ -33,39 +37,33 @@ const PrivacyPolicy = () => {
 
   // seo setup - only runs when page is loaded
   useSEO({
-    title: page?.title || "Privacy Policy",
-    description: `Read ${
-      contentSettings?.siteName || "Vidhgrow"
-    }'s Privacy Policy to understand how we collect, use, and protect your personal information.`,
+    title: "Privacy Policy for Students, Teachers, and Courses",
+    description: privacyDescription,
     keywords:
-      "privacy policy, data protection, personal information, privacy rights, GDPR, user privacy",
+      "Vidhgrow privacy policy, student data privacy, teacher document privacy, course activity data, account security, privacy rights",
     type: "article",
-    author: contentSettings?.siteName || "Vidhgrow",
+    author: siteName,
     publishedTime: page?.metadata?.effectiveDate,
     modifiedTime: page?.lastUpdated,
-    canonicalUrl: `${
-      contentSettings?.siteUrl || window.location.origin
-    }/privacy`,
+    canonicalUrl: `${siteUrl}/privacy`,
 
     structuredData: {
       "@context": "https://schema.org",
       "@type": "WebPage",
-      name: page?.title || "Privacy Policy",
-      description: `Privacy Policy for ${
-        contentSettings?.siteName || "Vidhgrow"
-      }`,
+      name: `${siteName} Privacy Policy`,
+      description: privacyDescription,
       url: window.location.href,
       datePublished: page?.metadata?.effectiveDate,
       dateModified: page?.lastUpdated,
       inLanguage: "en-US",
       isPartOf: {
         "@type": "WebSite",
-        name: contentSettings?.siteName || "Vidhgrow",
-        url: contentSettings?.siteUrl || window.location.origin,
+        name: siteName,
+        url: siteUrl,
       },
       publisher: {
         "@type": "Organization",
-        name: contentSettings?.siteName || "Vidhgrow",
+        name: siteName,
         ...(contentSettings?.logo?.url && {
           logo: {
             "@type": "ImageObject",
@@ -121,6 +119,31 @@ const PrivacyPolicy = () => {
               </div>
             </div>
           </motion.div>
+
+          <motion.section
+            variants={itemVariants}
+            className="grid gap-3 rounded-2xl border border-border bg-card p-5 text-left shadow-sm sm:grid-cols-3"
+          >
+            {[
+              {
+                label: "account data",
+                text: "how profile details, verification state, and sign-in security are handled",
+              },
+              {
+                label: "learning activity",
+                text: "how course progress, test attempts, feedback, and completion signals are used",
+              },
+              {
+                label: "support choices",
+                text: "how to contact Vidhgrow for privacy questions, corrections, or account requests",
+              },
+            ].map((item) => (
+              <div key={item.label} className="rounded-lg border border-border/70 bg-background/55 p-4">
+                <p className="text-sm font-semibold text-foreground">{item.label}</p>
+                <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{item.text}</p>
+              </div>
+            ))}
+          </motion.section>
 
           {page.sections && page.sections.length > 0 && (
             <motion.div

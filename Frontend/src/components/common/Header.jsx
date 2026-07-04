@@ -76,6 +76,9 @@ const avatarColors = {
   Z: "#84cc16",
 };
 
+const navPillTransition = { type: "tween", duration: 0.14, ease: "easeOut" };
+const navEntranceTransition = { type: "tween", duration: 0.2, ease: "easeOut" };
+
 const Header = () => {
   const [scrolled, setScrolled] = useState(false);
 
@@ -115,10 +118,10 @@ const Header = () => {
 
   const DesktopNavLink = ({ link }) => {
     const active = !link.external && isActive(link.path);
-    const className = `relative flex items-center gap-1.5 rounded-full px-3.5 py-2 text-sm font-semibold transition-all duration-200 ${
+    const className = `relative flex items-center gap-1.5 rounded-full px-3.5 py-2 text-sm font-semibold transition-colors duration-150 ${
       active
         ? "text-primary"
-        : "text-muted-foreground hover:text-foreground hover:bg-blue-50"
+        : "text-muted-foreground hover:text-foreground hover:bg-blue-50 dark:hover:bg-white/[0.07]"
     }`;
     const label = <span className="relative z-10">{link.label}</span>;
 
@@ -136,7 +139,7 @@ const Header = () => {
           <motion.span
             layoutId="desktop-nav-fill"
             className="absolute inset-0 rounded-full bg-primary/10"
-            transition={{ type: "spring", stiffness: 420, damping: 34 }}
+            transition={navPillTransition}
           />
         )}
         {label}
@@ -147,14 +150,14 @@ const Header = () => {
     <>
       {/* desktop and tablet header */}
       <motion.header
-        className={`sticky top-0 z-50 w-full transition-all duration-300 border-b ${
+        className={`sticky top-0 z-50 w-full transition-all duration-150 border-b ${
           scrolled
             ? "bg-background/95 backdrop-blur-lg shadow-sm border-border"
             : "bg-background/80 backdrop-blur-sm border-transparent"
         }`}
         initial={animations && !reducedMotion ? { y: -80 } : {}}
         animate={animations && !reducedMotion ? { y: 0 } : {}}
-        transition={{ duration: 0.5, ease: "easeOut" }}
+        transition={navEntranceTransition}
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
@@ -187,7 +190,7 @@ const Header = () => {
             {/* desktop nav links */}
             <nav className="hidden lg:flex items-center gap-1">
               {filteredLinks.map((link) => (
-                <DesktopNavLink key={link.path} link={link} />
+                <DesktopNavLink key={link.path || link.href} link={link} />
               ))}
             </nav>
 
@@ -292,15 +295,10 @@ const Header = () => {
 
         <div className="vg-bottom-nav lg:hidden fixed bottom-2 left-3 right-3 z-50 flex justify-center pointer-events-none">
           <motion.nav
-            className="pointer-events-auto grid w-full max-w-[430px] grid-cols-5 items-center gap-1 rounded-[28px] border border-blue-100/80 bg-white/88 px-2 py-2 shadow-[0_10px_35px_rgba(15,23,42,0.14)] backdrop-blur-2xl"
+            className="pointer-events-auto grid w-full max-w-[430px] grid-cols-5 items-center gap-1 rounded-[28px] border border-blue-100/80 bg-white/88 px-2 py-2 shadow-[0_8px_24px_rgba(15,23,42,0.12)] backdrop-blur-xl"
             initial={animations && !reducedMotion ? { y: 80, opacity: 0 } : {}}
             animate={animations && !reducedMotion ? { y: 0, opacity: 1 } : {}}
-            transition={{
-              type: "spring",
-              stiffness: 300,
-              damping: 28,
-              delay: 0.2,
-            }}
+            transition={{ ...navEntranceTransition, delay: 0.08 }}
           >
             {[
               { path: "/", label: "Home", icon: Home },
@@ -313,27 +311,23 @@ const Header = () => {
                 <Link
                   key={link.path}
                   to={link.path}
-                  className="relative flex min-w-0 flex-col items-center justify-center rounded-2xl px-2.5 py-2 transition-all"
+                  className="relative flex min-w-0 flex-col items-center justify-center rounded-2xl px-2.5 py-2 transition-colors duration-150"
                 >
                   {active && (
                     <motion.div
                       layoutId="bottomNavActive"
                       className="absolute inset-x-1 top-1 h-8 rounded-full bg-primary/10"
-                      transition={{
-                        type: "spring",
-                        stiffness: 380,
-                        damping: 30,
-                      }}
+                      transition={navPillTransition}
                     />
                   )}
                   <div className="relative z-10 flex flex-col items-center gap-0.5">
                     <link.icon
-                      className={`w-[18px] h-[18px] transition-colors duration-200 ${
+                      className={`w-[18px] h-[18px] transition-colors duration-150 ${
                         active ? "text-primary" : "text-muted-foreground"
                       }`}
                     />
                     <span
-                      className={`max-w-full truncate text-[10px] font-semibold leading-none transition-colors duration-200 ${
+                      className={`max-w-full truncate text-[10px] font-semibold leading-none transition-colors duration-150 ${
                         active ? "text-primary" : "text-muted-foreground"
                       }`}
                     >
@@ -347,13 +341,13 @@ const Header = () => {
             {isAuthenticated ? (
               <Link
                 to="/profile"
-                className="relative flex min-w-0 flex-col items-center justify-center rounded-2xl px-2.5 py-2 transition-all"
+                className="relative flex min-w-0 flex-col items-center justify-center rounded-2xl px-2.5 py-2 transition-colors duration-150"
               >
                 {isActive("/profile") && (
                   <motion.div
                     layoutId="bottomNavActive"
                     className="absolute inset-x-1 top-1 h-8 rounded-full bg-primary/10"
-                    transition={{ type: "spring", stiffness: 380, damping: 30 }}
+                    transition={navPillTransition}
                   />
                 )}
                 <div className="relative z-10 flex flex-col items-center gap-0.5">
@@ -365,7 +359,7 @@ const Header = () => {
                     {initial}
                   </motion.div>
                   <span
-                    className={`max-w-full truncate text-[10px] font-semibold leading-none transition-colors duration-200 ${
+                    className={`max-w-full truncate text-[10px] font-semibold leading-none transition-colors duration-150 ${
                       isActive("/profile")
                         ? "text-primary"
                         : "text-muted-foreground"
@@ -378,25 +372,25 @@ const Header = () => {
             ) : (
               <Link
                 to="/login"
-                className="relative flex min-w-0 flex-col items-center justify-center rounded-2xl px-2.5 py-2 transition-all"
+                className="relative flex min-w-0 flex-col items-center justify-center rounded-2xl px-2.5 py-2 transition-colors duration-150"
               >
                 {isActive("/login") && (
                   <motion.div
                     layoutId="bottomNavActive"
                     className="absolute inset-x-1 top-1 h-8 rounded-full bg-primary/10"
-                    transition={{ type: "spring", stiffness: 380, damping: 30 }}
+                    transition={navPillTransition}
                   />
                 )}
                 <div className="relative z-10 flex flex-col items-center gap-0.5">
                   <User
-                    className={`w-[18px] h-[18px] transition-colors duration-200 ${
+                    className={`w-[18px] h-[18px] transition-colors duration-150 ${
                       isActive("/login")
                         ? "text-primary"
                         : "text-muted-foreground"
                     }`}
                   />
                   <span
-                    className={`max-w-full truncate text-[10px] font-semibold leading-none transition-colors duration-200 ${
+                    className={`max-w-full truncate text-[10px] font-semibold leading-none transition-colors duration-150 ${
                       isActive("/login")
                         ? "text-primary"
                         : "text-muted-foreground"

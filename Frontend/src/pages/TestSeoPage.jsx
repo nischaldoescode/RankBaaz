@@ -344,7 +344,7 @@ const TestSeoPage = () => {
                   className="aspect-[4/3] w-full object-cover"
                 />
               ) : (
-                <div className="flex aspect-[4/3] items-center justify-center bg-[linear-gradient(135deg,#eff6ff,#ffffff)] dark:bg-[linear-gradient(135deg,#0f172a,#020617)]">
+                <div className="flex aspect-[4/3] items-center justify-center bg-[linear-gradient(135deg,#eff6ff,#ffffff)] dark:bg-[linear-gradient(135deg,#111b2c,#0b1220)]">
                   <BookOpen className="h-20 w-20 text-blue-500" aria-hidden="true" />
                 </div>
               )}
