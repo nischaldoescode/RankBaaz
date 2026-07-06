@@ -15,12 +15,6 @@ services:
       - type: redirect
         source: /teacher/
         destination: /teacher
-      - type: redirect
-        source: /sitemap-profiles.xml
-        destination: https://api.vidhgrow.online/sitemap-profiles.xml
-      - type: redirect
-        source: /sitemap-profiles.xml/
-        destination: https://api.vidhgrow.online/sitemap-profiles.xml
       - type: rewrite
         source: /teacher
         destination: /teacher/index.html
@@ -58,3 +52,7 @@ services:
       - path: "/assets/*"
         name: Cache-Control
         value: public, max-age=86400
+
+      - path: "/sitemap*.xml"
+        name: Cache-Control
+        value: public, max-age=3600

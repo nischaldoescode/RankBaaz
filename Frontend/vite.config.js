@@ -10,7 +10,7 @@ export default defineConfig({
     port: 3000,
     proxy: {
       '/sitemap-profiles.xml': {
-        target: 'https://rankbaaz.onrender.com',
+        target: 'https://api.vidhgrow.online',
         changeOrigin: true,
         secure: false,
       },
