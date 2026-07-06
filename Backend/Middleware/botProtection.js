@@ -427,8 +427,13 @@ export const botProtection = async (req, res, next) => {
     const origin = req.get("Origin") || "";
     const referer = req.get("Referer") || "";
 
-    // layer 1: allow health and harmless browser/host probes
-    if (req.path === "/health" || req.path === "/" || req.path === "/favicon.ico") {
+    // layer 1: allow health, sitemap, and harmless browser/host probes
+    if (
+      req.path === "/health" ||
+      req.path === "/" ||
+      req.path === "/favicon.ico" ||
+      (req.method === "GET" && req.path === "/sitemap-profiles.xml")
+    ) {
       return next();
     }
 
