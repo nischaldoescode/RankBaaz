@@ -20,10 +20,10 @@ const API = import.meta.env.VITE_API_URL || "http://localhost:7000/api";
  * 1. strip leading @ from the param
  * 2. check if it's a teacher
  * 3. render teacherprofile inline when the username belongs to a teacher
- * 4. render publicprofile inline for regular user profiles
+ * 4. redirect regular users to the canonical public profile route
  *
- * we render inline instead of redirecting to avoid the double-@ bug
- * and to avoid extra navigation history entries
+ * replace redirects keep legacy username urls out of the crawlable surface
+ * and avoid extra navigation history entries
  */
 const TeacherOrUserProfile = () => {
   const { username: rawParam } = useParams();
@@ -49,7 +49,7 @@ const TeacherOrUserProfile = () => {
       .catch((err) => {
         if (err.response?.status === 404) {
           // otherwise show the student profile
-          navigate(`/profile/@${username}`, { replace: true });
+          navigate(`/profile/${username}`, { replace: true });
         } else {
           navigate("/404", { replace: true });
         }

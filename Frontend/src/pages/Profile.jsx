@@ -547,7 +547,7 @@ const Profile = () => {
             {user?.email}
           </p>
           <Link
-            to={`/@${user?.username?.replace(/^@/, "")}`}
+            to={`/profile/${user?.username?.replace(/^@/, "")}`}
             className="inline-flex items-center gap-2 text-sm text-primary hover:underline break-all px-4 max-w-full"
           >
             <User className="w-4 h-4 flex-shrink-0" />

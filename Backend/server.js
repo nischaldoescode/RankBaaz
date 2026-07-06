@@ -465,7 +465,7 @@ app.get("/health", (req, res) => {
  */
 app.get("/sitemap-profiles.xml", async (req, res) => {
   try {
-    const cacheKey = "sitemap:profiles";
+    const cacheKey = "sitemap:profiles:v2";
 
     try {
       const cached = await redisClient.get(cacheKey);
@@ -508,7 +508,7 @@ app.get("/sitemap-profiles.xml", async (req, res) => {
 
         return `
   <url>
-    <loc>${escapeXml(`${siteUrl}/@${username}`)}</loc>
+    <loc>${escapeXml(`${siteUrl}/profile/${username}`)}</loc>
     <lastmod>${lastmod}</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>

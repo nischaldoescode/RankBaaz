@@ -44,6 +44,11 @@ const PublicProfile = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const { contentSettings } = useContent();
+  const siteUrl = (contentSettings?.siteUrl || window.location.origin).replace(
+    /\/$/,
+    "",
+  );
+  const profileUrl = `${siteUrl}/profile/${encodeURIComponent(username)}`;
   useSEO({
     title: profileData
       ? `${profileData.name || `@${profileData.username}`}`
@@ -58,9 +63,8 @@ const PublicProfile = () => {
     }`,
     type: "profile",
     image: profileData?.avatar || contentSettings?.logo?.url,
-    canonicalUrl: `${
-      contentSettings?.siteUrl || window.location.origin
-    }/@${username}`,
+    noindex: false,
+    canonicalUrl: profileUrl,
     structuredData: profileData
       ? {
           "@context": "https://schema.org",
@@ -69,9 +73,7 @@ const PublicProfile = () => {
           description: `${
             profileData.name || `@${profileData.username}`
           }'s profile`,
-          url: `${
-            contentSettings?.siteUrl || window.location.origin
-          }/@${username}`,
+          url: profileUrl,
           mainEntity: {
             "@type": "Person",
             name:
@@ -104,9 +106,14 @@ const PublicProfile = () => {
       : null,
   });
   useEffect(() => {
+    if (rawUsername?.startsWith("@") && username) {
+      navigate(`/profile/${username}`, { replace: true });
+      return;
+    }
+
     window.scrollTo({ top: 0, behavior: "smooth" });
     fetchProfile();
-  }, [username]);
+  }, [rawUsername, username, navigate]);
 
   const fetchProfile = async () => {
     try {
