@@ -813,6 +813,16 @@ app.use((req, res, next) => {
     "/api/blogs/settings/share",
     "/api/blogs/sitemap.xml",
   ];
+  const isPublicProfileGet = (() => {
+    if (req.method !== "GET") return false;
+    if (req.path === "/api/profile/search") return true;
+    if (req.path === "/api/profile/leaderboard/global") return true;
+
+    const match = req.path.match(/^\/api\/profile\/([^/]+)$/);
+    if (!match?.[1]) return false;
+
+    return !["settings", "leaderboard"].includes(match[1].toLowerCase());
+  })();
 
   // check if path is exactly a public endpoint or a subpath of one
   const isPublicGet =
@@ -821,6 +831,10 @@ app.use((req, res, next) => {
       // admin routes should not be treated as public
       if (req.path.includes("/admin")) {
         return false;
+      }
+
+      if (isPublicProfileGet) {
+        return true;
       }
 
       // check if path matches public endpoints

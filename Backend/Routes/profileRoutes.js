@@ -23,13 +23,13 @@ import {
 const router = express.Router();
 
 // public routes
-router.get("/:username", advancedCache({ ttl: 180 }), getPublicProfile);
 router.get(
   "/leaderboard/global",
   advancedCache({ ttl: 60, key: "leaderboard:global" }),
   getGlobalLeaderboard
 );
 router.get("/search", advancedCache({ ttl: 120 }), searchUsernames);
+router.get("/:username", advancedCache({ ttl: 180 }), getPublicProfile);
 
 // protected routes
 router.get(
