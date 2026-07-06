@@ -33,15 +33,28 @@ const hasValidProfileSitemapShape = (xml = "") => {
 const keepSameHostUrlsOnly = (xml = "") => {
   const allowedHosts = new Set(["vidhgrow.online", "www.vidhgrow.online"]);
   const urlBlocks = String(xml).match(/<url>[\s\S]*?<\/url>/gi) || [];
-  const safeBlocks = urlBlocks.filter((block) => {
+  const safeBlocks = urlBlocks.flatMap((block) => {
     const loc = block.match(/<loc>([\s\S]*?)<\/loc>/i)?.[1]?.trim();
-    if (!loc) return false;
+    if (!loc) return [];
 
     try {
       const parsed = new URL(loc.replace(/&amp;/g, "&"));
-      return parsed.protocol === "https:" && allowedHosts.has(parsed.host);
+      if (parsed.protocol !== "https:" || !allowedHosts.has(parsed.host)) {
+        return [];
+      }
+
+      const profileMatch =
+        parsed.pathname.match(/^\/@([^/]+)$/) ||
+        parsed.pathname.match(/^\/profile\/@([^/]+)$/) ||
+        parsed.pathname.match(/^\/profile\/([^/]+)$/);
+
+      if (!profileMatch?.[1]) return [];
+
+      const username = encodeURIComponent(decodeURIComponent(profileMatch[1]).replace(/^@/, ""));
+      const normalizedLoc = `${siteUrl}/profile/${username}`;
+      return [block.replace(/<loc>[\s\S]*?<\/loc>/i, `<loc>${normalizedLoc}</loc>`)];
     } catch {
-      return false;
+      return [];
     }
   });
 
