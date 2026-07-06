@@ -470,7 +470,7 @@ app.get("/sitemap-profiles.xml", async (req, res) => {
     try {
       const cached = await redisClient.get(cacheKey);
       if (cached) {
-        res.header("Content-Type", "application/xml");
+        res.type("application/xml; charset=utf-8");
         res.header("Cache-Control", "public, max-age=3600");
         return res.send(cached);
       }
@@ -486,21 +486,38 @@ app.get("/sitemap-profiles.xml", async (req, res) => {
       .lean()
       .limit(50000);
 
-    const siteUrl = process.env.SITE_URL || "https://vidhgrow.online";
+    const siteUrl = (process.env.SITE_URL || "https://vidhgrow.online").replace(
+      /\/$/,
+      "",
+    );
+    const escapeXml = (value = "") =>
+      String(value)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&apos;");
+    const profileUrls = users
+      .filter((user) => String(user.username || "").trim())
+      .map((user) => {
+        const username = encodeURIComponent(String(user.username).trim());
+        const lastmodDate = user.updatedAt ? new Date(user.updatedAt) : new Date();
+        const lastmod = Number.isNaN(lastmodDate.getTime())
+          ? new Date().toISOString().split("T")[0]
+          : lastmodDate.toISOString().split("T")[0];
+
+        return `
+  <url>
+    <loc>${escapeXml(`${siteUrl}/@${username}`)}</loc>
+    <lastmod>${lastmod}</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+  </url>`;
+      });
 
     const sitemap = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  ${users
-    .map(
-      (user) => `
-  <url>
-    <loc>${siteUrl}/@${user.username}</loc>
-    <lastmod>${new Date(user.updatedAt).toISOString().split("T")[0]}</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.6</priority>
-  </url>`,
-    )
-    .join("")}
+${profileUrls.join("")}
 </urlset>`;
 
     try {
@@ -509,7 +526,7 @@ app.get("/sitemap-profiles.xml", async (req, res) => {
       console.warn("Cache write failed:", summarizeRedisError(cacheError));
     }
 
-    res.header("Content-Type", "application/xml");
+    res.type("application/xml; charset=utf-8");
     res.header("Cache-Control", "public, max-age=3600");
     res.send(sitemap);
   } catch (error) {
