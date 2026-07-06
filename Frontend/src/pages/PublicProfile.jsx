@@ -43,6 +43,7 @@ const PublicProfile = () => {
   const [profileData, setProfileData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [errorStatus, setErrorStatus] = useState(null);
   const { contentSettings } = useContent();
   const siteUrl = (contentSettings?.siteUrl || window.location.origin).replace(
     /\/$/,
@@ -118,10 +119,13 @@ const PublicProfile = () => {
   const fetchProfile = async () => {
     try {
       setLoading(true);
+      setError(null);
+      setErrorStatus(null);
       const response = await apiMethods.profile.getPublicProfile(username);
       setProfileData(response.data.data);
     } catch (err) {
       setError(err.response?.data?.message || "Failed to load profile");
+      setErrorStatus(err.response?.status || 0);
       toast.error("Profile not found");
     } finally {
       setLoading(false);
@@ -183,13 +187,37 @@ const PublicProfile = () => {
     );
   }
 
-  if (error || !profileData) {
+  if ((errorStatus === 404 || errorStatus === 410) && !profileData) {
     // import and render the actual 404 page for consistency
     const NotFound = React.lazy(() => import("./NotFound"));
     return (
       <React.Suspense fallback={null}>
         <NotFound />
       </React.Suspense>
+    );
+  }
+
+  if (error || !profileData) {
+    return (
+      <div className="min-h-screen pt-16 pb-8 bg-background">
+        <div className="mx-auto max-w-2xl px-4 py-12 text-center">
+          <h1 className="text-3xl font-bold text-foreground">
+            Public profile is temporarily unavailable
+          </h1>
+          <p className="mt-3 text-muted-foreground">
+            This profile could not be loaded right now. Please refresh the page
+            or try again shortly.
+          </p>
+          <Button
+            className="mt-6"
+            onClick={() => {
+              fetchProfile();
+            }}
+          >
+            Try again
+          </Button>
+        </div>
+      </div>
     );
   }
 

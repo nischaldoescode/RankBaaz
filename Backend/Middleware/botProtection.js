@@ -70,6 +70,8 @@ const PUBLIC_COURSE_READ_PATHS = [
   "/api/courses/test-seo",
 ];
 
+const PROTECTED_PROFILE_SEGMENTS = new Set(["settings", "leaderboard"]);
+
 const isPublicBlogReadRequest = (req) => {
   if (req.method !== "GET") return false;
 
@@ -85,6 +87,17 @@ const isPublicCourseReadRequest = (req) => {
     if (path === "/api/courses") return req.path === path;
     return req.path === path || req.path.startsWith(`${path}/`);
   });
+};
+
+const isPublicProfileReadRequest = (req) => {
+  if (req.method !== "GET") return false;
+  if (req.path === "/api/profile/search") return true;
+  if (req.path === "/api/profile/leaderboard/global") return true;
+
+  const match = req.path.match(/^\/api\/profile\/([^/]+)$/);
+  if (!match?.[1]) return false;
+
+  return !PROTECTED_PROFILE_SEGMENTS.has(match[1].toLowerCase());
 };
 
 /**
@@ -476,6 +489,10 @@ export const botProtection = async (req, res, next) => {
       if (req.path === "/api/courses/test-seo/sitemap.xml" && !origin && !referer) {
         return next();
       }
+    }
+
+    if (isPublicProfileReadRequest(req) && isLegitimateOrigin(origin, referer)) {
+      return next();
     }
 
     // layer 2: bypass protection for authenticated requests with valid signatures
