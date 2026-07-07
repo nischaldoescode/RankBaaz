@@ -50,12 +50,25 @@ const PublicProfile = () => {
     "",
   );
   const profileUrl = `${siteUrl}/profile/${encodeURIComponent(username)}`;
+  const publicHandle = profileData?.username
+    ? `@${profileData.username}`
+    : `@${username}`;
+  const profileDisplayName = profileData?.name || publicHandle;
+  const memberSinceDate = profileData?.stats?.memberSince
+    ? new Date(profileData.stats.memberSince)
+    : null;
+  const memberSinceIso =
+    memberSinceDate && !Number.isNaN(memberSinceDate.getTime())
+      ? memberSinceDate.toISOString()
+      : undefined;
+  const memberSinceLabel =
+    memberSinceDate && !Number.isNaN(memberSinceDate.getTime())
+      ? memberSinceDate.toLocaleDateString()
+      : null;
   useSEO({
-    title: profileData
-      ? `${profileData.name || `@${profileData.username}`}`
-      : "User Profile",
+    title: profileData ? profileDisplayName : "User Profile",
     description: profileData
-      ? `View ${profileData.name || `@${profileData.username}`}'s profile on ${
+      ? `View ${profileDisplayName}'s profile on ${
           contentSettings?.siteName || "Vidhgrow"
         }. See their test scores, badges, and recent activity.`
       : `View user profile on ${contentSettings?.siteName || "Vidhgrow"}`,
@@ -70,33 +83,22 @@ const PublicProfile = () => {
       ? {
           "@context": "https://schema.org",
           "@type": "ProfilePage",
-          name: profileData.name || `@${profileData.username}`,
-          description: `${
-            profileData.name || `@${profileData.username}`
-          }'s profile`,
+          name: profileDisplayName,
+          description: `${profileDisplayName}'s profile`,
           url: profileUrl,
+          dateCreated: memberSinceIso,
           mainEntity: {
             "@type": "Person",
-            name:
-              profileData.nameVisibility === "public"
-                ? profileData.name
-                : undefined,
+            name: profileDisplayName,
+            alternateName: publicHandle,
             identifier: profileData.username,
-            description: profileData.stats?.memberSince
-              ? `Member since ${new Date(profileData.stats.memberSince).toLocaleDateString()}`
+            description: memberSinceLabel
+              ? `Member since ${memberSinceLabel}`
               : "Vidhgrow member",
+            ...(profileData.avatar && { image: profileData.avatar }),
             ...(profileData.rank && {
               award: `Global Rank #${profileData.rank}`,
             }),
-            interactionStatistic: [
-              {
-                "@type": "InteractionCounter",
-                interactionType: {
-                  "@type": "WatchAction",
-                },
-                userInteractionCount: profileData.stats?.testsCompleted || 0,
-              },
-            ],
           },
           isPartOf: {
             "@type": "WebSite",
