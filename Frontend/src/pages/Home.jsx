@@ -697,10 +697,10 @@ const Home = () => {
 
   useSEO({
     title:
-      contentSettings?.seoTitle || "Prepare with Precision",
+      contentSettings?.seoTitle || "Vidhgrow Courses, Practice Tests and Progress Reports",
     description:
       contentSettings?.seoDescription ||
-      "Master your skills with Vidhgrow's interactive courses, personalized assessments, and real-time progress tracking.",
+      "Vidhgrow is the official online learning platform for teacher-led courses, protected practice tests, score feedback, public profiles, and student progress reports.",
     keywords:
       "vidhgrow, online learning, test preparation, courses, exams, practice tests",
     type: "website",
