@@ -29,7 +29,7 @@ router.get(
   getGlobalLeaderboard
 );
 router.get("/search", advancedCache({ ttl: 120 }), searchUsernames);
-router.get("/:username", advancedCache({ ttl: 180 }), getPublicProfile);
+router.get("/:username", getPublicProfile);
 
 // protected routes
 router.get(

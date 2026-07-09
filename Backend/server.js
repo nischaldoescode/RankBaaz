@@ -465,7 +465,7 @@ app.get("/health", (req, res) => {
  */
 app.get("/sitemap-profiles.xml", async (req, res) => {
   try {
-    const cacheKey = "sitemap:profiles:v2";
+    const cacheKey = "sitemap:profiles:v3";
 
     try {
       const cached = await redisClient.get(cacheKey);
@@ -483,6 +483,7 @@ app.get("/sitemap-profiles.xml", async (req, res) => {
 
     const users = await User.find({ isVerified: true })
       .select("username updatedAt")
+      .sort({ updatedAt: -1 })
       .lean()
       .limit(50000);
 

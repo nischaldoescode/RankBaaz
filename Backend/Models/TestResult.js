@@ -187,6 +187,7 @@ const testResultSchema = new mongoose.Schema(
 
 // indexes for efficient and fast databse queries
 testResultSchema.index({ user: 1, createdAt: -1 });
+testResultSchema.index({ completedAt: -1, wasAbandoned: 1, user: 1 });
 testResultSchema.index({ course: 1, createdAt: -1 });
 testResultSchema.index({ user: 1, course: 1 });
 

@@ -39,7 +39,7 @@ const router = express.Router();
 // content settings (public read)
 router.get(
   "/settings",
-  advancedCache({ ttl: 600, key: "content:settings" }),
+  advancedCache({ ttl: 600, key: "content:settings:v2" }),
   getContentSettings
 );
 

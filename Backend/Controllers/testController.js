@@ -585,17 +585,21 @@ export const submitTest = async (req, res) => {
     const previousRank = await pointsService.getUserRank(userId);
 
     // update user stats
-    await User.findByIdAndUpdate(userId, {
-      $inc: {
-        "stats.testsCompleted": 1,
-        "stats.questionsAnswered": finalTestResult.totalQuestions,
+    const updatedUser = await User.findByIdAndUpdate(
+      userId,
+      {
+        $inc: {
+          "stats.testsCompleted": 1,
+          "stats.questionsAnswered": finalTestResult.totalQuestions,
+        },
+        $set: {
+          "stats.averagePercentile": finalTestResult.percentile,
+          "stats.lastKnownRank": previousRank,
+          "stats.rankLastUpdated": new Date(),
+        },
       },
-      $set: {
-        "stats.averagePercentile": finalTestResult.percentile,
-        "stats.lastKnownRank": previousRank,
-        "stats.rankLastUpdated": new Date(),
-      },
-    });
+      { new: true, select: "username" },
+    ).lean();
 
     // store previous rank in test result for frontend
     finalTestResult.previousRank = previousRank;
@@ -663,6 +667,11 @@ export const submitTest = async (req, res) => {
     // invalidate leaderboard and user caches test submission
     await invalidateCache.leaderboard(courseId);
     await invalidateCache.test(userId, finalTestResult._id);
+    await invalidateCache
+      .user(userId, updatedUser?.username)
+      .catch((error) =>
+        console.warn("Profile cache invalidation skipped:", error.message),
+      );
 
     res.status(201).json({
       success: true,
