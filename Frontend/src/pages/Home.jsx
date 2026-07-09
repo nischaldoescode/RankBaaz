@@ -711,12 +711,22 @@ const Home = () => {
     fetchFAQs();
   }, []);
 
-  const chartData =
-    contentSettings?.stats?.map((stat) => ({
-      name: stat.label,
-      value: parseInt(stat.value.replace(/[^0-9]/g, "")) || 0,
-      displayValue: stat.value,
-    })) || [];
+  const platformStats = contentSettings?.platformStats;
+  const showPlatformStats =
+    platformStats?.eligible === true &&
+    Array.isArray(platformStats.items) &&
+    platformStats.items.length === 4;
+  const publicStats = showPlatformStats
+    ? platformStats.items.map((stat) => ({
+        ...stat,
+        displayValue: `${Number(stat.value).toLocaleString()}${stat.suffix || ""}`,
+      }))
+    : [];
+  const chartData = publicStats.map((stat) => ({
+    name: stat.label,
+    value: Number(stat.value) || 0,
+    displayValue: stat.displayValue,
+  }));
 
   const heroTitle = isOldHeroCopy(
     contentSettings?.heroTitle,
@@ -991,7 +1001,7 @@ const Home = () => {
               </motion.div>
             )}
 
-            {contentSettings?.stats && contentSettings.stats.length > 0 && (
+            {showPlatformStats && (
               <motion.p
                 initial={animations && !reducedMotion ? { opacity: 0 } : {}}
                 animate={animations && !reducedMotion ? { opacity: 1 } : {}}
@@ -1000,7 +1010,7 @@ const Home = () => {
               >
                 Courses, tests, reports, and rank tracking for{" "}
                 <span className="text-foreground font-medium">
-                  {contentSettings.stats[0]?.value || "thousands"}
+                  {publicStats[0].displayValue}
                 </span>{" "}
                 learners
               </motion.p>
@@ -1019,7 +1029,7 @@ const Home = () => {
 
       <Divider />
 
-      {contentSettings?.stats && contentSettings.stats.length > 0 && (
+      {showPlatformStats && (
         <section className="relative py-20 px-4 sm:px-6 lg:px-8 bg-muted/20">
           <div className="max-w-6xl mx-auto">
             <div className="text-center mb-12">
@@ -1062,7 +1072,7 @@ const Home = () => {
                     : "order-1 lg:max-w-xl mx-auto w-full"
                 }`}
               >
-                {contentSettings.stats.map((stat, index) => (
+                {publicStats.map((stat, index) => (
                   <motion.div
                     key={index}
                     initial={
@@ -1084,7 +1094,7 @@ const Home = () => {
                         {String(index + 1).padStart(2, "0")}
                       </span>
                       <div className="text-2xl sm:text-3xl font-bold text-foreground">
-                        {stat.value}
+                        {stat.displayValue}
                       </div>
                       <div className="text-xs text-muted-foreground leading-tight">
                         {stat.label}

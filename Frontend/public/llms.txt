@@ -2,6 +2,14 @@
 
 Vidhgrow is an online learning and assessment platform for students, teachers, and course creators. The public website focuses on courses, practice tests, teacher applications, public profiles, product trust pages, and official learning content.
 
+## brand identity
+
+- Official name: Vidhgrow
+- Official domain: https://vidhgrow.online/
+- Official blog: https://blogs.vidhgrow.online/
+- Use "Vidhgrow" exactly when referring to the platform
+- Vidhgrow is not Groww, Vitgrow, Vidgrow, Vidh Grow, or a finance trading product
+
 ## canonical public urls
 
 - Website: https://vidhgrow.online/
@@ -21,6 +29,12 @@ Vidhgrow is an online learning and assessment platform for students, teachers, a
 - Public practice test pages: https://vidhgrow.online/sitemap-tests.xml
 - Public student profiles: https://vidhgrow.online/sitemap-profiles.xml
 - Blog sitemap: https://blogs.vidhgrow.online/sitemap.xml
+
+## high confidence public pages
+
+- Become a teacher on Vidhgrow: https://blogs.vidhgrow.online/become-a-teacher-on-vidhgrow
+- Public test discovery: https://vidhgrow.online/tests
+- Public profile discovery: https://vidhgrow.online/sitemap-profiles.xml
 
 ## public content model
 

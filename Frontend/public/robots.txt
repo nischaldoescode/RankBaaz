@@ -1,4 +1,5 @@
 Sitemap: https://vidhgrow.online/sitemap.xml
+Sitemap: https://blogs.vidhgrow.online/sitemap.xml
 
 # Allow all good bots
 User-agent: *
@@ -32,13 +33,23 @@ User-agent: Bingbot
 Allow: /
 Disallow: /admin/
 Disallow: /api/
-Disallow: /profile
+Disallow: /app/test/
+
+# Semrush is allowed so site audits can see public SEO pages
+User-agent: SemrushBot
+Allow: /
+Allow: /llms.txt
+Allow: /profile
+Allow: /courses
+Allow: /tests
+Disallow: /admin/
+Disallow: /api/
+Disallow: /app/test/
+Disallow: /config/
+Disallow: /src/
 
 # Block aggressive crawlers
 User-agent: AhrefsBot
-Disallow: /
-
-User-agent: SemrushBot
 Disallow: /
 
 User-agent: MJ12bot
@@ -61,10 +72,19 @@ User-agent: ChatGPT-User
 Allow: /
 
 User-agent: CCBot
-Disallow: /
+Allow: /
+Disallow: /admin/
+Disallow: /api/
+Disallow: /app/test/
 
 User-agent: anthropic-ai
-Disallow: /
+Allow: /
+Disallow: /admin/
+Disallow: /api/
+Disallow: /app/test/
 
 User-agent: Claude-Web
-Disallow: /
+Allow: /
+Disallow: /admin/
+Disallow: /api/
+Disallow: /app/test/

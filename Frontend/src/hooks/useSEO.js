@@ -6,7 +6,6 @@
  * @exports helpers imported by related app modules
  */
 
-import { useEffect } from "react";
 import { useHead } from "@unhead/react";
 import { useContent } from "../context/ContentContext";
 
@@ -29,7 +28,7 @@ export const useSEO = ({
   const siteName = contentSettings?.siteName || "Vidhgrow";
   const defaultDescription =
     contentSettings?.siteDescription ||
-    "Transform how students learn and prepare for exams through intelligent testing.";
+    "Vidhgrow is the official online learning platform for teacher-led courses, protected practice tests, score feedback, public profiles, and student progress reports.";
   const siteUrl = contentSettings?.siteUrl || window.location.origin;
 
   const siteLogo = contentSettings?.logo?.url || null;
@@ -130,12 +129,6 @@ export const useSEO = ({
   // prepare link tags array
   const linkTags = [
     ...(!noindex ? [{ rel: "canonical", href: finalUrl }] : []),
-    ...(siteLogo
-      ? [
-          { rel: "icon", type: "image/png", href: siteLogo },
-          { rel: "apple-touch-icon", href: siteLogo },
-        ]
-      : []),
   ];
 
   // prepare script tags for structured data
@@ -182,9 +175,25 @@ export const useSEO = ({
     "@type": "Organization",
     "@id": `${siteUrl}/#organization`,
     name: siteName,
+    alternateName: `${siteName} Learning`,
     url: siteUrl,
     logo: siteLogo,
     description: defaultDescription,
+    knowsAbout: [
+      "online learning",
+      "teacher-led courses",
+      "practice tests",
+      "student progress tracking",
+      "teacher applications",
+      "course creation",
+    ],
+    subjectOf: [
+      {
+        "@type": "Blog",
+        name: `${siteName} Blog`,
+        url: "https://blogs.vidhgrow.online/",
+      },
+    ],
     ...(contentSettings?.social && {
       sameAs: Object.values(contentSettings.social).filter(Boolean),
     }),
@@ -200,6 +209,7 @@ export const useSEO = ({
     "@type": "WebSite",
     "@id": `${siteUrl}/#website`,
     name: siteName,
+    alternateName: `${siteName} Learning`,
     url: siteUrl,
     publisher: { "@id": `${siteUrl}/#organization` },
     potentialAction: {

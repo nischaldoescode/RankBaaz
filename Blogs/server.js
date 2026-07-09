@@ -65,7 +65,7 @@ const BLOG_INDEXNOW_KEY = String(
 const DEFAULT_OG_IMAGE = `${BLOG_PUBLIC_URL}/android-chrome-512x512.png`;
 const HOME_SEO_TITLE = "Vidhgrow Blog | Product Updates, Teaching & Course News";
 const HOME_SEO_DESCRIPTION =
-  "The official Vidhgrow blog for product news, teacher workflows, course updates, student practice, and the decisions behind a better learning platform.";
+  "The official Vidhgrow blog for product news, teacher workflows, course updates, student practice, platform decisions, and learning improvements.";
 const TOPIC_LINKS = [
   {
     slug: "product-updates",
@@ -549,6 +549,15 @@ const pageSchemaGraph = (pageEntity) => {
         url: MAIN_SITE_URL,
         logo: `${MAIN_SITE_URL}/logo.png`,
         sameAs: ["https://www.instagram.com/vidhgrow.online"],
+        knowsAbout: [
+          "online learning",
+          "teacher-led courses",
+          "practice tests",
+          "teacher applications",
+          "course creation",
+          "student progress tracking",
+        ],
+        subjectOf: [{ "@id": BLOG_ID }],
       },
       {
         "@type": "WebSite",
@@ -817,7 +826,7 @@ ${footer(settingsres.data)}`;
   return pageshell({
     title: HOME_SEO_TITLE,
     description: HOME_SEO_DESCRIPTION,
-    canonical: BLOG_PUBLIC_URL,
+    canonical: `${BLOG_PUBLIC_URL}/`,
     image: postCoverImage(latest).url,
     body,
     jsonld: {
@@ -1399,12 +1408,20 @@ const renderllmstxt = () => `# vidhgrow blogs
 official blog for vidhgrow product updates, teaching workflows, course news, assessment notes, student progress, security updates, admin workflows, and feedback notes.
 
 primary site: ${BLOG_PUBLIC_URL}
+main vidhgrow site: ${MAIN_SITE_URL}
 sitemap: ${BLOG_PUBLIC_URL}/sitemap.xml
 rss feed: ${BLOG_PUBLIC_URL}/feed.xml
 robots: ${BLOG_PUBLIC_URL}/robots.txt
 
 important public sections:
 ${TOPIC_LINKS.map((topic) => `- ${topic.title}: ${BLOG_PUBLIC_URL}/topic/${topic.slug}`).join("\n")}
+
+important public articles:
+- Become a Teacher on Vidhgrow: ${BLOG_PUBLIC_URL}/become-a-teacher-on-vidhgrow
+
+brand notes:
+- use the spelling "Vidhgrow"
+- do not confuse Vidhgrow with Groww, Vitgrow, Vidgrow, Vidh Grow, or finance trading products
 
 use the canonical urls on each page. public blog pages are server-rendered html with article content, topic links, author links, structured data, open graph metadata, and readable comments. admin-only blog apis, unpublished drafts, upload urls, encrypted records, and private vidhgrow application apis are not intended for model ingestion.
 `;
@@ -1431,6 +1448,9 @@ const cleanSitemapXml = (xml = "") => {
     if (pathname.startsWith("/topic/") || pathname.startsWith("/author/")) return "";
     if (seen.has(location)) return "";
     seen.add(location);
+    if (pathname === "") {
+      return entry.replace(/<loc>\s*[^<]+?\s*<\/loc>/i, `<loc>${BLOG_PUBLIC_URL}/</loc>`);
+    }
     return entry;
   });
 };
@@ -1563,6 +1583,9 @@ const server = http.createServer(async (req, res) => {
       res.writeHead(200, { "Content-Type": "text/plain; charset=utf-8", ...securityHeaders() });
       return res.end(`User-agent: *
 Allow: /
+Allow: /llms.txt
+Allow: /feed.xml
+Allow: /sitemap.xml
 Sitemap: ${BLOG_PUBLIC_URL}/sitemap.xml
 `);
     }

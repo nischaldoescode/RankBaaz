@@ -98,7 +98,7 @@ class CacheManager {
   /**
    * get cached api response
    */
-  async getAPI(endpoint, params = {}) {
+  async getAPI(endpoint, params = {}, maxAge = CACHE_DURATION) {
     try {
       await this.initPromise;
       const key = this.generateKey(endpoint, params);
@@ -116,7 +116,7 @@ class CacheManager {
             return;
           }
 
-          if (!this.isValid(cached.timestamp)) {
+          if (!this.isValid(cached.timestamp, maxAge)) {
             this.deleteAPI(key); // clean up expired entry
             resolve(null);
             return;
@@ -491,7 +491,7 @@ export async function cachedAPICall(
 
   // check cache first
   if (!forceRefresh) {
-    const cached = await cacheManager.getAPI(endpoint, params);
+    const cached = await cacheManager.getAPI(endpoint, params, maxAge);
     if (cached) {
       return cached;
     }
@@ -507,7 +507,7 @@ export async function cachedAPICall(
     return data;
   } catch (error) {
     // if fetch fails, try to return stale cache as fallback
-    const stale = await cacheManager.getAPI(endpoint, params);
+    const stale = await cacheManager.getAPI(endpoint, params, maxAge);
     if (stale) {
       // console.log(`[cache] using stale cache for ${endpoint} due to fetch error`);
       return stale;

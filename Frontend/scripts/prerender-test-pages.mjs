@@ -211,6 +211,7 @@ const writeTestPage = async (sourceDocument, test) => {
   const pageDirectory = path.join(testsDirectory, test.slug);
   await mkdir(pageDirectory, { recursive: true });
   await writeFile(path.join(pageDirectory, "index.html"), document, "utf8");
+  await writeFile(path.join(testsDirectory, `${test.slug}.html`), document, "utf8");
 };
 
 const writeIndexPage = async (sourceDocument, tests) => {
@@ -242,6 +243,7 @@ const writeIndexPage = async (sourceDocument, tests) => {
 
   await mkdir(testsDirectory, { recursive: true });
   await writeFile(path.join(testsDirectory, "index.html"), document, "utf8");
+  await writeFile(path.join(distDirectory, "tests.html"), document, "utf8");
 };
 
 const writeSitemap = async (tests) => {
