@@ -125,6 +125,22 @@ const fetchProfileSitemap = async () => {
   return response.text();
 };
 
+const fetchLiveProfileSitemap = async () => {
+  const response = await fetch(`${siteUrl}/sitemap-profiles.xml?fallback=${Date.now()}`, {
+    headers: {
+      accept: "application/xml,text/xml;q=0.9,*/*;q=0.8",
+      "accept-language": "en-US,en;q=0.9",
+      "user-agent": "VidhgrowFrontendBuildSitemapFallback/1.0",
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error(`live profile sitemap returned ${response.status}`);
+  }
+
+  return response.text();
+};
+
 const replaceMeta = (document, attribute, key, content) => {
   const expression = new RegExp(
     `<meta\\s+${attribute}="${escapeRegExp(key)}"\\s+content="[^"]*"\\s*\\/?\\s*>`,
@@ -192,6 +208,21 @@ const fetchProfile = async (username) => {
 
   return body.data;
 };
+
+const fallbackProfile = (username, lastmod) => ({
+  username,
+  name: "",
+  points: 0,
+  rank: null,
+  stats: {
+    testsCompleted: 0,
+    questionsAnswered: 0,
+    averagePercentage: 0,
+    memberSince: lastmod || new Date().toISOString(),
+  },
+  badges: [],
+  recentActivity: [],
+});
 
 const renderProfileMarkup = (profile) => {
   const { handle, heading } = profileIdentity(profile);
@@ -335,8 +366,16 @@ const writeProfilePages = async (xml) => {
   for (let index = 0; index < entries.length; index += 8) {
     const batch = entries.slice(index, index + 8);
     const results = await Promise.allSettled(
-      batch.map(async ({ username }) => {
-        const profile = await fetchProfile(username);
+      batch.map(async ({ username, lastmod }) => {
+        let profile;
+
+        try {
+          profile = await fetchProfile(username);
+        } catch (error) {
+          console.warn(`Profile data fallback used for ${username}: ${error.message}`);
+          profile = fallbackProfile(username, lastmod);
+        }
+
         const pageDirectory = path.join(
           distDirectory,
           "profile",
@@ -374,8 +413,20 @@ try {
   await writeFile(targetPath, finalSitemap, "utf8");
   console.log("Profile sitemap written to dist");
 } catch (error) {
-  const existing = await readExistingSitemap();
-  finalSitemap = hasValidProfileSitemapShape(existing) ? existing : emptySitemap;
+  let fallbackXml = await readExistingSitemap();
+
+  if (!hasValidProfileSitemapShape(fallbackXml) || !getProfileEntries(fallbackXml).length) {
+    try {
+      fallbackXml = await fetchLiveProfileSitemap();
+    } catch (fallbackError) {
+      console.warn(`Live profile sitemap fallback failed: ${fallbackError.message}`);
+    }
+  }
+
+  finalSitemap =
+    hasValidProfileSitemapShape(fallbackXml) && getProfileEntries(fallbackXml).length
+      ? keepSameHostUrlsOnly(fallbackXml)
+      : emptySitemap;
   await writeFile(targetPath, finalSitemap, "utf8");
   console.warn(`Profile sitemap fallback kept: ${error.message}`);
 }

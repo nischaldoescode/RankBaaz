@@ -15,6 +15,48 @@ services:
       - type: redirect
         source: /teacher/
         destination: /teacher
+      - type: redirect
+        source: /about/
+        destination: /about
+      - type: rewrite
+        source: /about
+        destination: /about.html
+      - type: redirect
+        source: /contact/
+        destination: /contact
+      - type: rewrite
+        source: /contact
+        destination: /contact.html
+      - type: redirect
+        source: /courses/
+        destination: /courses
+      - type: rewrite
+        source: /courses
+        destination: /courses.html
+      - type: redirect
+        source: /login/
+        destination: /login
+      - type: rewrite
+        source: /login
+        destination: /login.html
+      - type: redirect
+        source: /register/
+        destination: /register
+      - type: rewrite
+        source: /register
+        destination: /register.html
+      - type: redirect
+        source: /privacy/
+        destination: /privacy
+      - type: rewrite
+        source: /privacy
+        destination: /privacy.html
+      - type: redirect
+        source: /terms/
+        destination: /terms
+      - type: rewrite
+        source: /terms
+        destination: /terms.html
       - type: rewrite
         source: /teacher
         destination: /teacher/index.html

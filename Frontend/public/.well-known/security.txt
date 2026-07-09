@@ -1,0 +1,4 @@
+Contact: mailto:support@vidhgrow.online
+Canonical: https://vidhgrow.online/.well-known/security.txt
+Preferred-Languages: en
+Policy: https://vidhgrow.online/privacy

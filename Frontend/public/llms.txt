@@ -21,6 +21,8 @@ Vidhgrow is an online learning and assessment platform for students, teachers, a
 - About: https://vidhgrow.online/about
 - Privacy policy: https://vidhgrow.online/privacy
 - Terms of service: https://vidhgrow.online/terms
+- Security contact: https://vidhgrow.online/.well-known/security.txt
+- Human-readable site note: https://vidhgrow.online/humans.txt
 
 ## sitemaps
 

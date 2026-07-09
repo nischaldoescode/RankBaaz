@@ -10,6 +10,7 @@ const distDirectory = path.resolve(process.env.VITE_OUT_DIR || "dist");
 const sourcePath = path.join(distDirectory, "index.html");
 const targetDirectory = path.join(distDirectory, "teacher");
 const targetPath = path.join(targetDirectory, "index.html");
+const aliasPath = path.join(distDirectory, "teacher.html");
 const canonicalUrl = "https://vidhgrow.online/teacher";
 const title = "Become a Teacher on Vidhgrow | Official Application Guide";
 const description =
@@ -40,9 +41,15 @@ const teacherSchema = {
       "@type": "EducationalOrganization",
       "@id": "https://vidhgrow.online/#organization",
       name: "Vidhgrow",
-      url: "https://vidhgrow.online",
+      url: "https://vidhgrow.online/",
       logo: "https://vidhgrow.online/logo.png",
       sameAs: ["https://www.instagram.com/vidhgrow.online"],
+      knowsAbout: [
+        "teacher applications",
+        "course creation",
+        "online teaching",
+        "practice tests",
+      ],
     },
     {
       "@type": "WebPage",
@@ -115,3 +122,4 @@ document = replaceMeta(document, "name", "twitter:url", canonicalUrl);
 
 await mkdir(targetDirectory, { recursive: true });
 await writeFile(targetPath, document, "utf8");
+await writeFile(aliasPath, document, "utf8");

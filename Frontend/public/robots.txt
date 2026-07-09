@@ -5,6 +5,9 @@ Sitemap: https://blogs.vidhgrow.online/sitemap.xml
 User-agent: *
 Allow: /
 Allow: /llms.txt
+Allow: /humans.txt
+Allow: /security.txt
+Allow: /.well-known/security.txt
 Allow: /@
 Allow: /about
 Allow: /contact

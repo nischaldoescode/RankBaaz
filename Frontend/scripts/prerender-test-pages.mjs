@@ -49,6 +49,76 @@ const compactDescription = (value = "", fallback = "") => {
 const difficultyNames = (test) =>
   (test.difficulties || []).map((difficulty) => difficulty.name).join(", ") || "all levels";
 
+const titleFromSlug = (slug = "") => {
+  const readable = String(slug)
+    .replace(/-[a-f0-9]{24}$/i, "")
+    .replace(/-/g, " ")
+    .replace(/\b\w/g, (letter) => letter.toUpperCase())
+    .trim();
+
+  return readable || "Vidhgrow Practice";
+};
+
+const getTestEntriesFromSitemap = (xml = "") => {
+  const urlBlocks = String(xml).match(/<url>[\s\S]*?<\/url>/gi) || [];
+  const seen = new Set();
+
+  return urlBlocks.flatMap((block) => {
+    const loc = block.match(/<loc>([\s\S]*?)<\/loc>/i)?.[1]?.trim();
+    if (!loc) return [];
+
+    try {
+      const parsed = new URL(loc.replace(/&amp;/g, "&"));
+      const match = parsed.pathname.match(/^\/tests\/([^/]+)$/);
+      const slug = match?.[1] ? decodeURIComponent(match[1]) : "";
+      if (!slug || seen.has(slug)) return [];
+      seen.add(slug);
+      return [
+        {
+          slug,
+          lastmod: block.match(/<lastmod>([\s\S]*?)<\/lastmod>/i)?.[1]?.trim(),
+        },
+      ];
+    } catch {
+      return [];
+    }
+  });
+};
+
+const fetchLiveTestSitemap = async () => {
+  const response = await fetch(`${siteUrl}/sitemap-tests.xml?fallback=${Date.now()}`, {
+    headers: {
+      accept: "application/xml,text/xml;q=0.9,*/*;q=0.8",
+      "accept-language": "en-US,en;q=0.9",
+      "user-agent": "VidhgrowFrontendTestBuildFallback/1.0",
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error(`live test sitemap returned ${response.status}`);
+  }
+
+  return response.text();
+};
+
+const fallbackTestFromEntry = ({ slug, lastmod }) => {
+  const id = slug.match(/[a-f0-9]{24}$/i)?.[0] || "";
+  const name = titleFromSlug(slug);
+
+  return {
+    _id: id,
+    slug,
+    name,
+    description: `${name} practice test on Vidhgrow with a public overview page, protected attempts, score feedback, and learning progress context.`,
+    category: { name: "practice test" },
+    difficulties: [],
+    totalQuestions: 0,
+    readableDuration: "timed",
+    updatedAt: lastmod,
+    createdAt: lastmod,
+  };
+};
+
 const fetchTests = async () => {
   const response = await fetch(`${apiBase}/api/courses/test-seo?limit=5000`, {
     headers: {
@@ -142,7 +212,7 @@ const renderTestMarkup = (test) => {
       <p>When a learner starts the test, Vidhgrow checks their session, selected difficulty, active question availability, course purchase state where required, and previous completion state. That keeps the overview indexable without weakening the real assessment flow.</p>
       <h2 style="font-size:28px;margin-top:32px;color:#10213c">Difficulty breakdown</h2>
       <ul style="display:grid;gap:12px;padding:0;list-style:none">${difficultyMarkup}</ul>
-      <p style="margin-top:32px"><a href="/app/test/${escapeAttribute(test._id)}" style="color:#2563eb;font-weight:700;text-underline-offset:3px">Start this test on Vidhgrow</a></p>
+      <p style="margin-top:32px"><a href="${escapeAttribute(test._id ? `/app/test/${test._id}` : `/tests/${test.slug}`)}" style="color:#2563eb;font-weight:700;text-underline-offset:3px">Start this test on Vidhgrow</a></p>
       <p><a href="/courses" style="color:#2563eb;text-underline-offset:3px">Browse all Vidhgrow courses</a></p>
     </article>
   </main>`;
@@ -290,9 +360,19 @@ try {
   console.warn(`Test seo prerender skipped: ${error.message}`);
   try {
     const sourceDocument = await readFile(sourcePath, "utf8");
+    let fallbackTests = [];
+
+    try {
+      const liveSitemap = await fetchLiveTestSitemap();
+      fallbackTests = getTestEntriesFromSitemap(liveSitemap).map(fallbackTestFromEntry);
+    } catch (fallbackError) {
+      console.warn(`Live test sitemap fallback failed: ${fallbackError.message}`);
+    }
+
     await mkdir(testsDirectory, { recursive: true });
-    await writeIndexPage(sourceDocument, []);
-    await writeSitemap([]);
+    await writeIndexPage(sourceDocument, fallbackTests);
+    await Promise.all(fallbackTests.map((test) => writeTestPage(sourceDocument, test)));
+    await writeSitemap(fallbackTests);
   } catch (writeError) {
     console.warn(`Could not write fallback test sitemap: ${writeError.message}`);
   }
