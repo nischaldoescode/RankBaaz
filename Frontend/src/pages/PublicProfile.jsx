@@ -65,13 +65,26 @@ const PublicProfile = () => {
     memberSinceDate && !Number.isNaN(memberSinceDate.getTime())
       ? memberSinceDate.toLocaleDateString()
       : null;
+  const profileDescription = profileData
+    ? `${profileDisplayName} on Vidhgrow: ${Math.max(
+        0,
+        profileData.points || 0,
+      ).toLocaleString()} points, ${Math.max(
+        0,
+        profileData.stats?.testsCompleted || 0,
+      ).toLocaleString()} completed tests, ${Math.max(
+        0,
+        Math.min(100, profileData.stats?.averagePercentage || 0),
+      )}% average score, and ${Math.max(
+        0,
+        profileData.stats?.questionsAnswered || 0,
+      ).toLocaleString()} answered questions.`
+    : `View user profile on ${contentSettings?.siteName || "Vidhgrow"}`;
   useSEO({
-    title: profileData ? profileDisplayName : "User Profile",
-    description: profileData
-      ? `View ${profileDisplayName}'s profile on ${
-          contentSettings?.siteName || "Vidhgrow"
-        }. See their test scores, badges, and recent activity.`
-      : `View user profile on ${contentSettings?.siteName || "Vidhgrow"}`,
+    title: profileData
+      ? `${profileDisplayName} Profile, Scores and Achievements`
+      : "User Profile",
+    description: profileDescription,
     keywords: `${username}, user profile, test scores, leaderboard, achievements, ${
       contentSettings?.siteName || "Vidhgrow"
     }`,
@@ -82,29 +95,57 @@ const PublicProfile = () => {
     structuredData: profileData
       ? {
           "@context": "https://schema.org",
-          "@type": "ProfilePage",
-          name: profileDisplayName,
-          description: `${profileDisplayName}'s profile`,
-          url: profileUrl,
-          dateCreated: memberSinceIso,
-          mainEntity: {
-            "@type": "Person",
-            name: profileDisplayName,
-            alternateName: publicHandle,
-            identifier: profileData.username,
-            description: memberSinceLabel
-              ? `Member since ${memberSinceLabel}`
-              : "Vidhgrow member",
-            ...(profileData.avatar && { image: profileData.avatar }),
-            ...(profileData.rank && {
-              award: `Global Rank #${profileData.rank}`,
-            }),
-          },
-          isPartOf: {
-            "@type": "WebSite",
-            name: contentSettings?.siteName || "Vidhgrow",
-            url: contentSettings?.siteUrl || window.location.origin,
-          },
+          "@graph": [
+            {
+              "@type": "ProfilePage",
+              name: `${profileDisplayName} on Vidhgrow`,
+              description: profileDescription,
+              url: profileUrl,
+              dateCreated: memberSinceIso,
+              mainEntity: {
+                "@type": "Person",
+                name: profileDisplayName,
+                alternateName: publicHandle,
+                identifier: profileData.username,
+                description: memberSinceLabel
+                  ? `${profileDescription} Member since ${memberSinceLabel}.`
+                  : profileDescription,
+                ...(profileData.avatar && { image: profileData.avatar }),
+                ...((profileData.badges?.length || profileData.rank) && {
+                  award: [
+                    ...(profileData.rank
+                      ? [`Global Rank #${profileData.rank}`]
+                      : []),
+                    ...(profileData.badges || [])
+                      .map((badge) => badge.name)
+                      .filter(Boolean),
+                  ],
+                }),
+              },
+              isPartOf: {
+                "@type": "WebSite",
+                name: contentSettings?.siteName || "Vidhgrow",
+                url: contentSettings?.siteUrl || window.location.origin,
+              },
+            },
+            {
+              "@type": "BreadcrumbList",
+              itemListElement: [
+                {
+                  "@type": "ListItem",
+                  position: 1,
+                  name: "Vidhgrow",
+                  item: `${siteUrl}/`,
+                },
+                {
+                  "@type": "ListItem",
+                  position: 2,
+                  name: publicHandle,
+                  item: profileUrl,
+                },
+              ],
+            },
+          ],
         }
       : null,
   });

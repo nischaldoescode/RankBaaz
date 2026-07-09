@@ -18,6 +18,21 @@ services:
       - type: rewrite
         source: /teacher
         destination: /teacher/index.html
+      - type: redirect
+        source: /profile/:username/
+        destination: /profile/:username
+      - type: rewrite
+        source: /profile/:username
+        destination: /profile/:username.html
+      - type: redirect
+        source: /tests/:slug/
+        destination: /tests/:slug
+      - type: rewrite
+        source: /tests/:slug
+        destination: /tests/:slug.html
+      - type: rewrite
+        source: /tests
+        destination: /tests.html
       - type: rewrite
         source: /*
         destination: /index.html

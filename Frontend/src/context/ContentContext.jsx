@@ -32,7 +32,7 @@ export const ContentProvider = ({ children }) => {
     try {
       const data = await cachedAPICall(
         "/api/content/settings",
-        {},
+        { schemaVersion: 2 },
         async () => {
           const response = await apiMethods.get("/api/content/settings");
           if (response.data.success) {
@@ -40,7 +40,7 @@ export const ContentProvider = ({ children }) => {
           }
           throw new Error("Invalid response");
         },
-        { forceRefresh }
+        { forceRefresh, maxAge: 5 * 60 * 1000 }
       );
 
       setContentSettings(data);
@@ -164,7 +164,7 @@ export const ContentProvider = ({ children }) => {
   // listen for updates from admin panel
   useEffect(() => {
     const handleSettingsUpdate = () => {
-      fetchContentSettings();
+      fetchContentSettings(true);
     };
 
     const handleContactUpdate = () => {
