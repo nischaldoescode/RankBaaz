@@ -175,6 +175,15 @@ const contentSettingsSchema = new mongoose.Schema({
     type: String,
     default: 'Learn from courses, attempt timed tests, review your score reports, and see what to study next.',
   },
+  seoTitle: {
+    type: String,
+    default: 'Vidhgrow Courses, Practice Tests and Progress Reports',
+  },
+  seoDescription: {
+    type: String,
+    default:
+      'Vidhgrow is the official online learning platform for teacher-led courses, protected practice tests, score feedback, public profiles, and student progress reports.',
+  },
 
   // logo & branding
   logo: {
