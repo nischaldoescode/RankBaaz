@@ -202,7 +202,7 @@ export const CacheKeys = {
   allCategories: () => `categories:all`,
 
   // Content management cache keys
-  contentSettings: () => `content:settings`,
+  contentSettings: () => `content:settings:v2`,
   faqs: () => `content:faqs`,
   contactInfo: () => `content:contact`,
   legalPage: (type) => `legal:${type}`,

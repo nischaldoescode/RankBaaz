@@ -12,32 +12,58 @@ import pointsService from "../services/pointsService.js";
 import badgeService from "../services/badgeService.js";
 import redisClient from "../Config/redis.js";
 
+const readCachedPublicProfile = async (cacheKey) => {
+  try {
+    const cached = await redisClient.get(cacheKey);
+    return cached ? JSON.parse(cached) : null;
+  } catch (error) {
+    console.warn("Public profile cache read skipped:", error.message);
+    return null;
+  }
+};
+
+const writeCachedPublicProfile = async (cacheKey, profile) => {
+  try {
+    await redisClient.setex(cacheKey, 300, JSON.stringify(profile));
+  } catch (error) {
+    console.warn("Public profile cache write skipped:", error.message);
+  }
+};
+
 export const getPublicProfile = async (req, res) => {
   try {
-    const { username } = req.params;
+    const username = String(req.params.username || "").trim().toLowerCase();
     const requestingUserId = req.user?.userId;
-
-    // check redis cache first
-    const cacheKey = `profile:${username}`;
-    const cached = await redisClient.get(cacheKey);
-
-    if (cached && (!requestingUserId || cached.userId !== requestingUserId)) {
-      return res.status(200).json({
-        success: true,
-        data: JSON.parse(cached),
+    if (!/^[a-z0-9_]{3,20}$/.test(username)) {
+      return res.status(404).json({
+        success: false,
+        message: "Profile not found",
       });
     }
 
-    // fetch from database
+    const cacheKey = `profile:${username}`;
+    const cached = await readCachedPublicProfile(cacheKey);
+    if (cached) {
+      return res.status(200).json({
+        success: true,
+        data: {
+          ...cached,
+          isOwnProfile:
+            Boolean(requestingUserId) &&
+            String(cached.userId) === String(requestingUserId),
+          userId: undefined,
+        },
+      });
+    }
+
     const user = await User.findOne({
-      username: username.toLowerCase(),
-      isVerified: true, // only verified users have public profiles
+      username,
+      isVerified: true,
     })
       .select("username name nameVisibility points badges stats createdAt")
       .lean();
 
     if (!user) {
-      // if we had cached this profile but user was deleted, bust the cache
       try {
         await redisClient.del(cacheKey);
       } catch {}
@@ -47,7 +73,6 @@ export const getPublicProfile = async (req, res) => {
       });
     }
 
-    // get test statistics
     const testStats = await TestResult.aggregate([
       { $match: { user: user._id } },
       {
@@ -70,19 +95,19 @@ export const getPublicProfile = async (req, res) => {
       totalQuestionsAnswered: 0,
     };
 
-    // get recent tests with course details
-    const recentTests = await TestResult.find({ user: user._id })
+    const recentTests = await TestResult.find({
+      user: user._id,
+      wasAbandoned: { $ne: true },
+    })
       .sort({ completedAt: -1 })
       .limit(10)
       .populate("course", "name")
       .select("course difficulty percentage completedAt pointsEarned")
       .lean();
 
-    // get global rank
     const rank = await pointsService.getUserRank(user._id);
 
-    // format badges with descriptions
-    const formattedBadges = user.badges.map((badge) => ({
+    const formattedBadges = (user.badges || []).map((badge) => ({
       ...badge,
       ...badgeService.getBadgeInfo(badge.type),
     }));
@@ -90,41 +115,51 @@ export const getPublicProfile = async (req, res) => {
     const isOwnProfile =
       requestingUserId && user._id.toString() === requestingUserId;
 
-    const profileData = {
+    const publicProfile = {
+      userId: String(user._id),
       username: user.username,
-      // only show name if it's public or if viewing own profile
-      name: user.nameVisibility === "public" || isOwnProfile ? user.name : null,
+      name: user.nameVisibility === "public" ? user.name : null,
       nameVisibility: user.nameVisibility,
-      points: user.points,
+      points: Math.max(0, user.points || 0),
       rank,
       badges: formattedBadges,
       stats: {
-        testsCompleted: user.stats.testsCompleted,
-        questionsAnswered: user.stats.questionsAnswered,
-        averagePercentile: user.stats.averagePercentile,
-        leaderboardDaysOnTop: user.stats.leaderboardDaysOnTop,
+        testsCompleted: Math.max(0, user.stats?.testsCompleted || 0),
+        questionsAnswered: Math.max(0, user.stats?.questionsAnswered || 0),
+        averagePercentile: Math.max(0, user.stats?.averagePercentile || 0),
+        leaderboardDaysOnTop: Math.max(
+          0,
+          user.stats?.leaderboardDaysOnTop || 0,
+        ),
         memberSince: user.createdAt,
-        totalPointsEarned: stats.totalPointsEarned,
-        averagePercentage: Math.round(stats.averagePercentage),
-        bestPercentage: stats.bestPercentage,
+        totalPointsEarned: Math.max(0, stats.totalPointsEarned || 0),
+        averagePercentage: Math.max(
+          0,
+          Math.min(100, Math.round(stats.averagePercentage || 0)),
+        ),
+        bestPercentage: Math.max(0, Math.min(100, stats.bestPercentage || 0)),
       },
-      recentActivity: recentTests.map((test) => ({
-        courseId: test.course._id,
-        courseName: test.course.name,
-        difficulty: test.difficulty,
-        percentage: test.percentage,
-        pointsEarned: test.pointsEarned,
-        completedAt: test.completedAt,
-      })),
-      isOwnProfile,
+      recentActivity: recentTests
+        .filter((test) => test.course?._id && test.course?.name)
+        .map((test) => ({
+          courseId: test.course._id,
+          courseName: test.course.name,
+          difficulty: test.difficulty,
+          percentage: Math.max(0, Math.min(100, test.percentage || 0)),
+          pointsEarned: test.pointsEarned || 0,
+          completedAt: test.completedAt,
+        })),
     };
 
-    // cache for 5 minutes (shorter cache for dynamic data)
-    await redisClient.setex(cacheKey, 300, JSON.stringify(profileData));
+    await writeCachedPublicProfile(cacheKey, publicProfile);
 
     res.status(200).json({
       success: true,
-      data: profileData,
+      data: {
+        ...publicProfile,
+        userId: undefined,
+        isOwnProfile,
+      },
     });
   } catch (error) {
     console.error("Get public profile error:", error);

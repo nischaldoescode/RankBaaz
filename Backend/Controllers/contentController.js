@@ -9,6 +9,9 @@ import ContentSettings from "../Models/ContentSettings.js";
 import FAQ from "../Models/FAQ.js";
 import ContactInfo from "../Models/ContactInfo.js";
 import LegalPage from "../Models/LegalPages.js";
+import Course from "../Models/Course.js";
+import TestResult from "../Models/TestResult.js";
+import User from "../Models/User.js";
 import { v2 as cloudinary } from "cloudinary";
 import { invalidateCache } from "../Config/redis.js";
 
@@ -68,13 +71,119 @@ const parseJsonField = (updateData, field) => {
   }
 };
 
+/**
+ * calculates non-identifying platform totals used by the public home page
+ *
+ * @returns {Promise<object>} verified aggregate values and display eligibility
+ */
+const getPublicPlatformStats = async () => {
+  const activeSince = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+  const completedAttemptFilter = {
+    wasAbandoned: { $ne: true },
+    percentage: { $gte: 0, $lte: 100 },
+  };
+
+  const [courseCount, attemptRows, activeStudentRows] = await Promise.all([
+    Course.countDocuments({
+      isActive: true,
+      approvalStatus: "approved",
+      totalQuestions: { $gt: 0 },
+    }),
+    TestResult.aggregate([
+      { $match: completedAttemptFilter },
+      {
+        $lookup: {
+          from: User.collection.name,
+          localField: "user",
+          foreignField: "_id",
+          as: "verifiedUser",
+        },
+      },
+      { $match: { "verifiedUser.0.isVerified": true } },
+      {
+        $group: {
+          _id: null,
+          testsCompleted: { $sum: 1 },
+          successfulTests: {
+            $sum: { $cond: [{ $gte: ["$percentage", 60] }, 1, 0] },
+          },
+        },
+      },
+    ]),
+    TestResult.aggregate([
+      {
+        $match: {
+          ...completedAttemptFilter,
+          completedAt: { $gte: activeSince },
+        },
+      },
+      { $group: { _id: "$user" } },
+      {
+        $lookup: {
+          from: User.collection.name,
+          localField: "_id",
+          foreignField: "_id",
+          as: "verifiedUser",
+        },
+      },
+      { $match: { "verifiedUser.0.isVerified": true } },
+      { $count: "count" },
+    ]),
+  ]);
+
+  const testsCompleted = Math.max(0, attemptRows[0]?.testsCompleted || 0);
+  const successfulTests = Math.max(0, attemptRows[0]?.successfulTests || 0);
+  const activeStudents = Math.max(0, activeStudentRows[0]?.count || 0);
+  const activeCourses = Math.max(0, courseCount || 0);
+  const successRate =
+    testsCompleted > 0
+      ? Math.min(100, Math.round((successfulTests / testsCompleted) * 100))
+      : 0;
+
+  return {
+    eligible:
+      testsCompleted > 5 &&
+      activeStudents > 5 &&
+      activeCourses >= 10 &&
+      successRate >= 60,
+    thresholds: {
+      testsCompleted: 6,
+      activeStudents: 6,
+      activeCourses: 10,
+      successRate: 60,
+    },
+    items: [
+      { key: "activeStudents", value: activeStudents, label: "Active Students" },
+      { key: "testsCompleted", value: testsCompleted, label: "Tests Completed" },
+      { key: "activeCourses", value: activeCourses, label: "Active Courses" },
+      { key: "successRate", value: successRate, suffix: "%", label: "Success Rate" },
+    ],
+    measuredAt: new Date().toISOString(),
+  };
+};
+
 export const getContentSettings = async (req, res) => {
   try {
     const settings = await ContentSettings.getSettings();
+    const platformStats = await getPublicPlatformStats().catch((error) => {
+      console.warn("Public platform stats unavailable:", error.message);
+      return {
+        eligible: false,
+        items: [],
+        measuredAt: new Date().toISOString(),
+      };
+    });
+    const publicSettings =
+      typeof settings.toObject === "function" ? settings.toObject() : settings;
 
     res.status(200).json({
       success: true,
-      data: { settings },
+      data: {
+        settings: {
+          ...publicSettings,
+          platformStats,
+        },
+      },
     });
   } catch (error) {
     console.error("Get content settings error:", error);
