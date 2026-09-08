@@ -75,11 +75,34 @@ class PointsService {
 
   async updateUserPoints(userId, pointsChange, reason) {
     try {
+      const numericChange = Number(pointsChange);
+      if (!Number.isFinite(numericChange)) {
+        throw new TypeError("points change must be a finite number");
+      }
+
+      // clamp the stored value so concurrent deductions cannot create negatives
       const user = await User.findByIdAndUpdate(
         userId,
-        { $inc: { points: pointsChange } },
-        { new: true }
+        [
+          {
+            $set: {
+              points: {
+                $max: [
+                  0,
+                  {
+                    $add: [{ $ifNull: ["$points", 0] }, numericChange],
+                  },
+                ],
+              },
+            },
+          },
+        ],
+        { new: true, select: "points" },
       );
+
+      if (!user) {
+        throw new Error("user not found while updating points");
+      }
 
       // update redis leaderboard cache
       await this.updateGlobalLeaderboard(userId, user.points);

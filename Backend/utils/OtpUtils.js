@@ -158,14 +158,21 @@ export const sendOtpEmail = async (
 
       // console.log(`resend - from: ${process.env.email_user}`);
 
-      const data = await resend.emails.send({
+      const result = await resend.emails.send({
         from: `${siteName} <${process.env.EMAIL_USER}>`,
         to: email,
         subject: `Your OTP Code for ${siteName}`,
         html: htmlContent,
       });
 
-      messageId = data.id;
+      if (result?.error) {
+        throw new Error(result.error.message || "Email provider rejected the message");
+      }
+
+      messageId = result?.data?.id;
+      if (!messageId) {
+        throw new Error("Email provider did not return a message id");
+      }
       // console.log(`resend success - id: ${messageid}`);
     }
 

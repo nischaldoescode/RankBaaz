@@ -666,6 +666,16 @@ const publicRoutes = [
   "/api/courses/test-seo/sitemap.xml",
 ];
 
+const publicCrawlerPaths = new Set([
+  "/robots.txt",
+  "/llms.txt",
+  "/sitemap.xml",
+  "/sitemap-static.xml",
+  "/sitemap-pages.xml",
+  "/sitemap-tests.xml",
+  "/sitemap-profiles.xml",
+]);
+
 
 /**
  * security layer 3: request signature validation middleware
@@ -792,7 +802,10 @@ app.use((req, res, next) => {
   }
 
   // exemption 3: sitemap for seo
-  if (req.path === "/sitemap-profiles.xml") {
+  if (
+    req.method === "GET" &&
+    publicCrawlerPaths.has(req.path)
+  ) {
     return next();
   }
   if (req.path.startsWith("/track/") && req.method === "GET") {

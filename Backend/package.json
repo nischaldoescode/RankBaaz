@@ -15,6 +15,8 @@
     "format": "prettier --write .",
     "migrate:indexes": "node migrations/createIndexes.js",
     "seed:local-course": "node scripts/seed-local-course.js",
+    "seed:legal-pages": "node scripts/seed-legal-pages.js",
+    "repair:negative-points": "node scripts/repair-negative-points.js",
     "build": "node server.js"
   },
   "keywords": [

@@ -674,6 +674,7 @@ const ContentManagement = () => {
   const [contactForm, setContactForm] = useState({});
   const [legalForm, setLegalForm] = useState({
     type: "privacy",
+    version: "1.0",
     content: "",
     metadata: {
       effectiveDate: null,
@@ -777,6 +778,23 @@ const ContentManagement = () => {
       setContactForm(contactInfo);
     }
   }, [contactInfo]);
+
+  useEffect(() => {
+    const selectedPage = legalPages?.[legalForm.type];
+    if (!selectedPage || legalForm.title) return;
+
+    setLegalForm({
+      type: legalForm.type,
+      title: selectedPage.title || "",
+      version: selectedPage.version || "1.0",
+      sections: selectedPage.sections || [],
+      content: selectedPage.content || "",
+      metadata: selectedPage.metadata || {
+        effectiveDate: null,
+        lastReviewedDate: null,
+      },
+    });
+  }, [legalPages, legalForm.type, legalForm.title]);
 
   // load template hints when legal page type s
   useEffect(() => {
@@ -3387,6 +3405,7 @@ const ContentManagement = () => {
                       setLegalForm({
                         type: selectedType,
                         title: selectedPage?.title || "",
+                        version: selectedPage?.version || "1.0",
                         sections: selectedPage?.sections || [],
                         metadata: selectedPage?.metadata || {
                           effectiveDate: null,
@@ -3509,6 +3528,28 @@ const ContentManagement = () => {
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                     placeholder="Privacy Policy"
                   />
+                </div>
+
+                <div className="bg-gray-50 p-6 rounded-lg border border-gray-200">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Page Version
+                  </label>
+                  <input
+                    type="text"
+                    value={legalForm.version || "1.0"}
+                    onChange={(e) =>
+                      setLegalForm((prev) => ({
+                        ...prev,
+                        version: e.target.value,
+                      }))
+                    }
+                    maxLength={20}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                    placeholder="1.0"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Shown on the public legal page and saved with the document.
+                  </p>
                 </div>
 
                 {/* metadata section */}
@@ -3660,6 +3701,7 @@ const ContentManagement = () => {
 
                               setLegalForm({
                                 type: legalForm.type,
+                                version: legalForm.version || "1.0",
                                 title:
                                   legalForm.type === "privacy"
                                     ? "Privacy Policy"

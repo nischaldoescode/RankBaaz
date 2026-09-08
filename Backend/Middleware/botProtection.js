@@ -70,6 +70,16 @@ const PUBLIC_COURSE_READ_PATHS = [
   "/api/courses/test-seo",
 ];
 
+const PUBLIC_CRAWLER_PATHS = new Set([
+  "/robots.txt",
+  "/llms.txt",
+  "/sitemap.xml",
+  "/sitemap-static.xml",
+  "/sitemap-pages.xml",
+  "/sitemap-tests.xml",
+  "/sitemap-profiles.xml",
+]);
+
 const PROTECTED_PROFILE_SEGMENTS = new Set(["settings", "leaderboard"]);
 
 const isPublicBlogReadRequest = (req) => {
@@ -99,6 +109,9 @@ const isPublicProfileReadRequest = (req) => {
 
   return !PROTECTED_PROFILE_SEGMENTS.has(match[1].toLowerCase());
 };
+
+const isPublicCrawlerRequest = (req) =>
+  req.method === "GET" && PUBLIC_CRAWLER_PATHS.has(req.path);
 
 /**
  * production security: simple 403 forbidden html page
@@ -439,6 +452,11 @@ export const botProtection = async (req, res, next) => {
     const ua = req.get("User-Agent") || "";
     const origin = req.get("Origin") || "";
     const referer = req.get("Referer") || "";
+
+    // public crawler files are intentionally originless and must remain readable by search bots
+    if (isPublicCrawlerRequest(req)) {
+      return next();
+    }
 
     // layer 1: allow health, sitemap, and harmless browser/host probes
     if (
