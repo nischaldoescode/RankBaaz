@@ -40,6 +40,7 @@ import { cn } from "@/lib/utils";
 //    assert "7 day streak" appears — two short test cases, no server or
 //    database needed since the component never talks to either.
 
+
 export default function StreakTracker({ currentStreak = 0 }) {
   return (
     <div className={cn("inline-flex items-center gap-2 rounded-lg border px-3 py-2")}>

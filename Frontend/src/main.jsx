@@ -19,7 +19,7 @@ import "lenis/dist/lenis.css";
 import "./styles/globals.css";
 
 /**
- * keeps smooth scrolling native friendly and disabled for reduced motion users
+ * keeps smooth scrolling native friendly and disables scroll hijacking on touch devices
  *
  * @returns {null} no markup because lenis only manages browser scrolling
  */
@@ -31,29 +31,24 @@ const SmoothScrollController = () => {
       return undefined;
     }
 
-    if (!animations || reducedMotion) {
-      document.documentElement.classList.remove("vg-lenis-ready");
-      return undefined;
-    }
-
     const isCoarsePointer =
       window.matchMedia?.("(pointer: coarse)")?.matches || false;
-    const isIOS =
-      /iPad|iPhone|iPod/.test(window.navigator.userAgent) ||
-      (window.navigator.platform === "MacIntel" &&
-        window.navigator.maxTouchPoints > 1);
+
+    // native touch scrolling stays more responsive than a javascript scroll loop
+    if (!animations || reducedMotion || isCoarsePointer) {
+      document.documentElement.classList.remove("vg-lenis-ready");
+      document.documentElement.classList.add("vg-native-scroll");
+      return undefined;
+    }
 
     const lenis = new Lenis({
       autoRaf: true,
       anchors: true,
       autoResize: true,
       gestureOrientation: "vertical",
-      lerp: isCoarsePointer ? 0.16 : 0.105,
+      lerp: 0.14,
       smoothWheel: true,
-      syncTouch: isCoarsePointer && !isIOS,
-      syncTouchLerp: 0.075,
-      touchMultiplier: 0.92,
-      wheelMultiplier: 0.82,
+      wheelMultiplier: 0.9,
       prevent: (node) =>
         Boolean(
           node?.closest?.(
@@ -64,6 +59,7 @@ const SmoothScrollController = () => {
 
     window.__vidhgrowLenis = lenis;
     document.documentElement.classList.add("vg-lenis-ready");
+    document.documentElement.classList.remove("vg-native-scroll");
 
     return () => {
       if (window.__vidhgrowLenis === lenis) {
@@ -71,6 +67,7 @@ const SmoothScrollController = () => {
       }
       lenis.destroy();
       document.documentElement.classList.remove("vg-lenis-ready");
+      document.documentElement.classList.remove("vg-native-scroll");
     };
   }, [animations, reducedMotion]);
 

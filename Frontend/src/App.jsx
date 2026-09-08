@@ -88,7 +88,7 @@ const pageTransition = {
 
 // background elements component
 const BackgroundElements = ({ animations, reducedMotion, disabled = false }) => {
-  const [scrollY, setScrollY] = useState(0);
+  const layersRef = React.useRef(null);
 
   useEffect(() => {
     if (disabled) return;
@@ -101,9 +101,13 @@ const BackgroundElements = ({ animations, reducedMotion, disabled = false }) => 
 
       rafId = requestAnimationFrame(() => {
         const currentScrollY = window.scrollY;
-        // only update if scroll d significantly (reduces re-renders)
-        if (Math.abs(currentScrollY - lastScrollY) > 5) {
-          setScrollY(currentScrollY);
+        if (Math.abs(currentScrollY - lastScrollY) > 3) {
+          const layers = layersRef.current;
+          if (layers) {
+            layers.style.setProperty("--vg-bg-a", `${currentScrollY * 0.08}px`);
+            layers.style.setProperty("--vg-bg-b", `${currentScrollY * 0.22}px`);
+            layers.style.setProperty("--vg-bg-c", `${currentScrollY * -0.14}px`);
+          }
           lastScrollY = currentScrollY;
         }
         rafId = null;
@@ -120,40 +124,22 @@ const BackgroundElements = ({ animations, reducedMotion, disabled = false }) => 
   if (disabled) return null;
 
   return (
-    <div className="vg-bg-artifacts fixed inset-0 z-0 pointer-events-none overflow-hidden">
-      <div
-        className="absolute inset-0"
-        style={{
-          transform: `translate3d(0, ${scrollY * 0.08}px, 0)`,
-          willChange: "transform",
-        }}
-      >
+    <div ref={layersRef} className="vg-bg-artifacts fixed inset-0 z-0 pointer-events-none overflow-hidden">
+      <div className="absolute inset-0 vg-bg-layer vg-bg-layer-a">
         <div className="vg-artifact-grid vg-artifact-a" />
         <div className="vg-artifact-grid vg-artifact-f" />
         <div className="vg-artifact-mark vg-artifact-c" />
         <div className="vg-artifact-mark vg-artifact-i" />
       </div>
 
-      <div
-        className="absolute inset-0"
-        style={{
-          transform: `translate3d(0, ${scrollY * 0.22}px, 0)`,
-          willChange: "transform",
-        }}
-      >
+      <div className="absolute inset-0 vg-bg-layer vg-bg-layer-b">
         <div className="vg-artifact-sheet vg-artifact-b" />
         <div className="vg-artifact-sheet vg-artifact-d" />
         <span className="vg-artifact-rule vg-artifact-h" />
         <span className="vg-artifact-rule vg-artifact-l" />
       </div>
 
-      <div
-        className="absolute inset-0"
-        style={{
-          transform: `translate3d(0, ${scrollY * -0.14}px, 0)`,
-          willChange: "transform",
-        }}
-      >
+      <div className="absolute inset-0 vg-bg-layer vg-bg-layer-c">
         {animations !== false && !reducedMotion && (
           <>
             <motion.div className="vg-artifact-icon vg-artifact-g">

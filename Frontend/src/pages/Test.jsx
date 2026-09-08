@@ -435,6 +435,9 @@ const Test = () => {
     const currentQuestions = currentTest?.questions || [];
     const answeredQuestionIds = Object.keys(answers).filter((questionId) =>
       currentQuestions.some((question) => question._id === questionId)
+      && answers[questionId] !== ""
+      && answers[questionId] !== null
+      && answers[questionId] !== undefined
     );
     const correctAnswersCount = Object.entries(answers).filter(
       ([questionId, userAnswer]) => {
@@ -468,7 +471,13 @@ const Test = () => {
       timeTaken: Math.floor(
         (Date.now() - new Date(testState.startTime)) / 1000
       ),
-      answerMapping: { ...answers },
+      // keep unanswered question ids so timed submissions can still be graded
+      answerMapping: Object.fromEntries(
+        currentQuestions.map((question) => [
+          question._id,
+          answers[question._id] ?? "",
+        ]),
+      ),
     };
   };
 

@@ -43,6 +43,7 @@ class LeaderboardService {
       const exists = await redisClient.exists(key);
 
       if (exists) {
+        // if the key exists then this will have properties which will help to get the necessary  entries
         const userIds = await redisClient.zrevrange(
           key,
           offset, // start from offset
