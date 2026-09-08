@@ -1178,7 +1178,7 @@ a,
 .vg-static-page [class*="bg-card"],
 .vg-static-page [class*="bg-muted"],
 .vg-profile-page [class*="bg-card"],
-.vg-profile-page [class*="bg-muted"] {
+.vg-profile-page [class*="bg-muted"]:not([data-avatar-fallback="true"]) {
   background-color: var(--vg-surface) !important;
   border-color: var(--vg-line) !important;
   box-shadow: var(--vg-shadow-1);

@@ -12,7 +12,13 @@ export const LeaderboardInfoModal = ({ isOpen, onClose, infoData }) => {
   if (!isOpen) return null;
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="How Points Work" size="md">
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title="How Points Work"
+      size="md"
+      blur={false}
+    >
       <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-2">
         {/* base points */}
         <div className="space-y-2">

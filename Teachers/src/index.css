@@ -186,6 +186,34 @@ a {
   transform: translateY(-1px);
 }
 
+.teacher-public-profile-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 36px;
+  padding: 8px 12px;
+  border: 1px solid rgba(37, 99, 235, 0.24);
+  border-radius: 999px;
+  color: #1d4ed8;
+  background: rgba(239, 246, 255, 0.78);
+  font-size: 12px;
+  font-weight: 700;
+  text-decoration: none;
+  transition: background 0.14s ease, border-color 0.14s ease, color 0.14s ease;
+}
+
+.teacher-public-profile-link:hover {
+  border-color: rgba(37, 99, 235, 0.42);
+  color: #1e40af;
+  background: #eff6ff;
+}
+
+.teacher-public-profile-link:focus-visible {
+  outline: 3px solid rgba(37, 99, 235, 0.2);
+  outline-offset: 2px;
+}
+
 @keyframes teacherFadeIn {
   from {
     opacity: 0;
