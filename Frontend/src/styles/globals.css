@@ -657,6 +657,7 @@ a,
 }
 
 .vg-story-chapter {
+  contain: layout;
   position: relative;
   display: grid;
   grid-template-columns: minmax(0, 0.86fr) minmax(280px, 1fr);
@@ -1363,6 +1364,8 @@ a,
     grid-template-columns: 1fr;
     min-height: clamp(36rem, 92vh, 44rem);
     padding: 3rem 0.35rem;
+    content-visibility: auto;
+    contain-intrinsic-size: 0 720px;
   }
 
   .vg-story-chapter-copy h3 {

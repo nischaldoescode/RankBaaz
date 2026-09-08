@@ -93,6 +93,10 @@ const BackgroundElements = ({ animations, reducedMotion, disabled = false }) => 
   useEffect(() => {
     if (disabled) return;
 
+    const isCoarsePointer =
+      window.matchMedia?.("(pointer: coarse)")?.matches || false;
+    if (isCoarsePointer || reducedMotion || animations === false) return;
+
     let rafId = null;
     let lastScrollY = window.scrollY;
 
@@ -119,7 +123,7 @@ const BackgroundElements = ({ animations, reducedMotion, disabled = false }) => 
       window.removeEventListener("scroll", handleScroll);
       if (rafId) cancelAnimationFrame(rafId);
     };
-  }, [disabled]);
+  }, [animations, disabled, reducedMotion]);
 
   if (disabled) return null;
 

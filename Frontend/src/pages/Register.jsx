@@ -6,7 +6,14 @@
  * @exports route component rendered by the client router
  */
 
-import React, { useState, useEffect, useCallback, useMemo, memo } from "react";
+import React, {
+  useState,
+  useEffect,
+  useCallback,
+  useMemo,
+  useRef,
+  memo,
+} from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
@@ -134,6 +141,7 @@ const Register = () => {
   const [otpValue, setOtpValue] = useState("");
   const [usernameAvailable, setUsernameAvailable] = useState(null);
   const [checkingUsername, setCheckingUsername] = useState(false);
+  const usernameCheckIdRef = useRef(0);
   const [debouncedPassword, setDebouncedPassword] = useState(formData.password);
   const fullName = `${formData.firstName} ${formData.lastName}`.trim();
   const usernameSuggestions = useMemo(
@@ -243,49 +251,48 @@ const Register = () => {
     });
   }, []); // empty dependency array - function never recreates
 
-  const checkUsernameAvailability = useCallback(
-    debounce(async (username, nameForUsername) => {
+  const checkUsernameAvailability = useMemo(
+    () =>
+      debounce(async (username, nameForUsername, requestId) => {
+        const isCurrentRequest = () =>
+          usernameCheckIdRef.current === requestId;
+        const rejectUsername = (message) => {
+          if (!isCurrentRequest()) return;
+          setUsernameAvailable(false);
+          setCheckingUsername(false);
+          setErrors((prev) => ({ ...prev, username: message }));
+        };
+
       if (!/^[a-z0-9_]+$/.test(username)) {
-        setUsernameAvailable(false);
-        setErrors((prev) => ({
-          ...prev,
-          username: "Only lowercase letters, numbers, and underscores allowed",
-        }));
+        rejectUsername(
+          "Only lowercase letters, numbers, and underscores allowed",
+        );
         return;
       }
 
       if (!/[a-z]/.test(username)) {
-        setUsernameAvailable(false);
-        setErrors((prev) => ({
-          ...prev,
-          username: "Username must contain at least one letter",
-        }));
+        rejectUsername("Username must contain at least one letter");
         return;
       }
 
       // check reserved usernames on the client first
       const reservedCheck = checkReservedUsername(username);
       if (reservedCheck.reserved) {
-        setUsernameAvailable(false);
-        setErrors((prev) => ({
-          ...prev,
-          username: reservedCheck.reason || "This username is not available",
-        }));
+        rejectUsername(
+          reservedCheck.reason || "This username is not available",
+        );
         return;
       }
 
       if (!usernameUsesName(username, nameForUsername)) {
-        setUsernameAvailable(false);
-        setErrors((prev) => ({
-          ...prev,
-          username: "Use your name in the username",
-        }));
+        rejectUsername("Use your name in the username");
         return;
       }
 
       setCheckingUsername(true);
       try {
         const response = await apiMethods.auth.quickCheckUsername(username);
+        if (!isCurrentRequest()) return;
         setUsernameAvailable(response.data.available);
 
         if (!response.data.available) {
@@ -308,14 +315,23 @@ const Register = () => {
             return rest;
           });
         }
-      } catch (error) {
-        console.error(error);
+      } catch {
+        if (!isCurrentRequest()) return;
+        setUsernameAvailable(null);
+        setErrors((prev) => ({
+          ...prev,
+          username: "Could not check this username. Try again.",
+        }));
       } finally {
-        setCheckingUsername(false);
+        if (isCurrentRequest()) setCheckingUsername(false);
       }
-    }, 500),
+      }, 260),
     [],
   );
+
+  useEffect(() => {
+    return () => checkUsernameAvailability.cancel();
+  }, [checkUsernameAvailability]);
 
   const handleDateChange = useCallback((e) => {
     let value = e.target.value.replace(/\D/g, ""); // remove non-digits
@@ -423,8 +439,11 @@ const Register = () => {
         setRegisterStep(3);
         const suggestedUsername = usernameSuggestions[0];
         if (suggestedUsername && !username) {
+          const requestId = ++usernameCheckIdRef.current;
           setUsername(suggestedUsername);
-          checkUsernameAvailability(suggestedUsername, fullName);
+          setUsernameAvailable(null);
+          setCheckingUsername(true);
+          checkUsernameAvailability(suggestedUsername, fullName, requestId);
         }
         toast.success("Email verified! Now choose your username");
       }
@@ -1405,15 +1424,20 @@ const Register = () => {
                                 const cleanedValue = normalizeUsernameInput(
                                   e.target.value,
                                 );
+                                const requestId = ++usernameCheckIdRef.current;
                                 setUsername(cleanedValue);
+                                setUsernameAvailable(null);
+                                setCheckingUsername(cleanedValue.length >= 3);
 
                                 // Only check if length is at least 3
                                 if (cleanedValue.length >= 3) {
                                   checkUsernameAvailability(
                                     cleanedValue,
                                     fullName,
+                                    requestId,
                                   );
                                 } else {
+                                  setCheckingUsername(false);
                                   setUsernameAvailable(null);
                                   setErrors((prev) => {
                                     const { username, ...rest } = prev;
@@ -1447,11 +1471,15 @@ const Register = () => {
                                   key={suggestion}
                                   type="button"
                                   onClick={() => {
+                                    const requestId =
+                                      ++usernameCheckIdRef.current;
                                     setUsername(suggestion);
                                     setUsernameAvailable(null);
+                                    setCheckingUsername(true);
                                     checkUsernameAvailability(
                                       suggestion,
                                       fullName,
+                                      requestId,
                                     );
                                   }}
                                   className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${

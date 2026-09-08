@@ -269,7 +269,7 @@ const isOldHeroCopy = (value, oldDefault, fallback) => {
   return value;
 };
 
-const StoryImageSlot = ({ item }) => {
+const StoryImageSlot = ({ item, priority = false }) => {
   const [hasImage, setHasImage] = useState(true);
   const imageSrc =
     item.image?.url || item.imageSrc || item.image?.fallbackSrc || "";
@@ -290,7 +290,9 @@ const StoryImageSlot = ({ item }) => {
       src={imageSrc}
       alt={imageAlt}
       className="vg-story-image"
-      loading="lazy"
+      loading={priority ? "eager" : "lazy"}
+      fetchPriority={priority ? "high" : "low"}
+      decoding="async"
       onError={() => setHasImage(false)}
     />
   );
@@ -315,7 +317,8 @@ const HomeParallaxStage = ({
   const lineOpacity = useTransform(scrollProgress, [0, 0.12, 0.9, 1], [0.25, 0.72, 0.58, 0.2]);
   const brushScale = useTransform(scrollProgress, [0, 0.28, 0.62, 1], [0.9, 1.08, 0.98, 1.06]);
 
-  const activeStyle = (style) => (reducedMotion ? undefined : style);
+  const activeStyle = (style) =>
+    reducedMotion || isSmallViewport ? undefined : style;
   const farLayerY = isSmallViewport ? mobileFarY : farY;
   const midLayerY = isSmallViewport ? mobileMidY : midY;
   const nearLayerY = isSmallViewport ? mobileNearY : nearY;
@@ -476,8 +479,65 @@ const StoryChapter = ({
         }
         className="vg-story-image-frame"
       >
-        <StoryImageSlot item={item} />
+        <StoryImageSlot item={item} priority={index === 0} />
       </motion.div>
+    </motion.article>
+  );
+};
+
+const MobileStoryChapter = ({
+  item,
+  index,
+  animations,
+  reducedMotion,
+}) => {
+  const chapterRef = useRef(null);
+
+  useAnimeOnView(chapterRef, animations && !reducedMotion, (root) => {
+    const ink = root.querySelector(".vg-anime-chapter-ink");
+    const copyParts = root.querySelectorAll(
+      ".vg-story-index, .vg-story-kicker, .vg-story-chapter-copy h3, .vg-story-chapter-copy p",
+    );
+
+    return [
+      animate(ink, {
+        opacity: [0, 1],
+        scaleX: [0, 1],
+        duration: 620,
+        ease: "out(3)",
+      }),
+      animate(copyParts, {
+        opacity: [0.72, 1],
+        translateY: [10, 0],
+        duration: 480,
+        delay: stagger(42),
+        ease: "out(3)",
+      }),
+    ];
+  });
+
+  return (
+    <motion.article
+      ref={chapterRef}
+      initial={animations && !reducedMotion ? { opacity: 0, y: 20 } : {}}
+      whileInView={animations && !reducedMotion ? { opacity: 1, y: 0 } : {}}
+      viewport={{ once: true, margin: "-12% 0px" }}
+      transition={{ duration: 0.42, ease: "easeOut" }}
+      className={`vg-story-chapter vg-story-chapter-${index + 1} vg-story-chapter-mobile`}
+    >
+      <span className="vg-anime-chapter-ink" aria-hidden="true" />
+      <span className="vg-story-section-rule" />
+      <div className="vg-story-chapter-copy">
+        <span className="vg-story-index">
+          {String(index + 1).padStart(2, "0")}
+        </span>
+        <p className="vg-story-kicker">{item.kicker}</p>
+        <h3>{item.title}</h3>
+        <p>{item.description}</p>
+      </div>
+      <div className="vg-story-image-frame">
+        <StoryImageSlot item={item} priority={index === 0} />
+      </div>
     </motion.article>
   );
 };
@@ -503,7 +563,7 @@ const LearningStorySection = ({
   const connectorDraw = useTransform(smoothProgress, [0.06, 0.86], [0, 1]);
   const markerY = useTransform(smoothProgress, [0, 1], [70, -80]);
 
-  const motionStyle = reducedMotion
+  const motionStyle = reducedMotion || isSmallViewport
     ? undefined
     : { x: isSmallViewport ? 0 : textX, opacity: fade };
 
@@ -517,7 +577,9 @@ const LearningStorySection = ({
         className="vg-story-connector"
         viewBox="0 0 1200 1800"
         preserveAspectRatio="none"
-        style={reducedMotion ? undefined : { y: connectorY }}
+        style={
+          reducedMotion || isSmallViewport ? undefined : { y: connectorY }
+        }
       >
         <motion.path
           className="vg-story-connector-path"
@@ -528,11 +590,13 @@ const LearningStorySection = ({
       </motion.svg>
       <motion.span
         className="vg-story-scroll-marker vg-story-scroll-marker-a"
-        style={reducedMotion ? undefined : { y: markerY }}
+          style={reducedMotion || isSmallViewport ? undefined : { y: markerY }}
       />
       <motion.span
         className="vg-story-scroll-marker vg-story-scroll-marker-b"
-        style={reducedMotion ? undefined : { y: connectorY }}
+          style={
+            reducedMotion || isSmallViewport ? undefined : { y: connectorY }
+          }
       />
       <div className="mx-auto max-w-6xl">
         <motion.div
@@ -554,16 +618,26 @@ const LearningStorySection = ({
         </motion.div>
 
         <div className="mt-12 space-y-10" aria-label="Vidhgrow learning flow">
-          {story.chapters.map((item, index) => (
-            <StoryChapter
-              key={item.title}
-              item={item}
-              index={index}
-              animations={animations}
-              reducedMotion={reducedMotion}
-              isSmallViewport={isSmallViewport}
-            />
-          ))}
+          {story.chapters.map((item, index) =>
+            isSmallViewport ? (
+              <MobileStoryChapter
+                key={item.title}
+                item={item}
+                index={index}
+                animations={animations}
+                reducedMotion={reducedMotion}
+              />
+            ) : (
+              <StoryChapter
+                key={item.title}
+                item={item}
+                index={index}
+                animations={animations}
+                reducedMotion={reducedMotion}
+                isSmallViewport={isSmallViewport}
+              />
+            ),
+          )}
         </div>
 
         <div className="mt-10 flex justify-center">
@@ -685,7 +759,7 @@ const Home = () => {
   const heroScale = useTransform(smoothPageProgress, [0, 0.2], [1, 0.96]);
   const mobileHeroScale = useTransform(smoothPageProgress, [0, 0.2], [1, 0.985]);
   const heroGridY = useTransform(smoothPageProgress, [0, 0.24], [0, 92]);
-  const pageArtifactStyle = reducedMotion
+  const pageArtifactStyle = reducedMotion || isSmallViewport
     ? undefined
     : { y: pageDriftY, x: isSmallViewport ? mobilePageDriftX : pageDriftX };
 
@@ -769,6 +843,39 @@ const Home = () => {
       "Learn from the course, test the idea, then use the result to choose the next revision. The page stays quiet, but the work keeps moving.",
     chapters: normalizeStoryChapters(contentSettings?.homeStoryChapters),
   };
+
+  const storyImageSources = storyMeta.chapters
+    .map((chapter) => chapter.image?.url || chapter.imageSrc || "")
+    .filter(Boolean);
+  const storyImageKey = storyImageSources.join("|");
+
+  useEffect(() => {
+    if (!storyImageSources.length || typeof window === "undefined") {
+      return undefined;
+    }
+
+    const connection = navigator.connection;
+    if (
+      connection?.saveData ||
+      /^(slow-2g|2g)$/.test(connection?.effectiveType || "")
+    ) {
+      return undefined;
+    }
+
+    const warmImages = storyImageSources.slice(0, 3).map((source) => {
+      const image = new Image();
+      image.decoding = "async";
+      image.src = source;
+      return image;
+    });
+
+    return () => {
+      warmImages.forEach((image) => {
+        image.onload = null;
+        image.onerror = null;
+      });
+    };
+  }, [storyImageKey]);
 
   const handleEmailSubmit = (e) => {
     e.preventDefault();
