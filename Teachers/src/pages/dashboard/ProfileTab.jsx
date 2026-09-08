@@ -8,6 +8,7 @@
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { motion } from "framer-motion";
+import { ExternalLink } from "lucide-react";
 import { useTeacher } from "../../context/TeacherContext.jsx";
 import { teacherApi } from "../../services/api.js";
 import toast from "react-hot-toast";
@@ -29,6 +30,21 @@ const inputStyle = {
 const dicebearUrl = (seed) =>
   `https://api.dicebear.com/9.x/croodles-neutral/svg?seed=${encodeURIComponent(seed)}`;
 
+const frontendUrl = (
+  import.meta.env.VITE_FRONTEND_URL || "https://vidhgrow.online"
+).replace(/\/+$/, "");
+
+const getPublicProfileUrl = (username) => {
+  const normalizedUsername = String(username || "")
+    .trim()
+    .replace(/^@+/, "")
+    .toLowerCase();
+
+  if (!/^[a-z0-9_]{3,30}$/.test(normalizedUsername)) return null;
+
+  return `${frontendUrl}/teacher/${encodeURIComponent(normalizedUsername)}`;
+};
+
 const ProfileTab = () => {
   const { teacher, updateTeacher } = useTeacher();
   const fallbackAvatar = useMemo(
@@ -36,6 +52,11 @@ const ProfileTab = () => {
     [teacher?.name, teacher?.username],
   );
   const savedAvatar = teacher?.profileImage?.url || fallbackAvatar;
+  const publicProfileUrl = getPublicProfileUrl(teacher?.username);
+  const publicProfileAvailable =
+    teacher?.documentStatus === "verified" &&
+    teacher?.isActive !== false &&
+    teacher?.accessBlocked !== true;
   const [form, setForm] = useState({
     bio: teacher?.bio || "",
     qualification: teacher?.qualification || "",
@@ -145,9 +166,43 @@ const ProfileTab = () => {
 
   return (
     <div className="teacher-narrow-tab teacher-profile-tab" style={{ maxWidth: 760 }}>
-      <h2 style={{ fontSize: 18, fontWeight: 700, color: "#0f172a", marginBottom: 4 }}>
-        Public Profile
-      </h2>
+      <header
+        style={{
+          display: "flex",
+          alignItems: "flex-start",
+          justifyContent: "space-between",
+          gap: 16,
+          flexWrap: "wrap",
+          marginBottom: 4,
+        }}
+      >
+        <h2 style={{ fontSize: 18, fontWeight: 700, color: "#0f172a", margin: 0 }}>
+          Public Profile
+        </h2>
+        {publicProfileUrl && publicProfileAvailable ? (
+          <a
+            href={publicProfileUrl}
+            className="teacher-public-profile-link"
+            aria-label={`View the public profile for ${teacher?.name || "this teacher"}`}
+            title="Open your public profile"
+          >
+            <ExternalLink size={15} aria-hidden="true" />
+            View public profile
+          </a>
+        ) : (
+          <span
+            style={{
+              color: "#94a3b8",
+              fontSize: 12,
+              lineHeight: 1.4,
+              maxWidth: 260,
+              textAlign: "right",
+            }}
+          >
+            Available after your teacher profile is verified
+          </span>
+        )}
+      </header>
       <p style={{ fontSize: 13, color: "#94a3b8", marginBottom: 28 }}>
         This is what students see on your teacher profile page.
       </p>
