@@ -46,9 +46,9 @@ const SmoothScrollController = () => {
       anchors: true,
       autoResize: true,
       gestureOrientation: "vertical",
-      lerp: 0.14,
+      lerp: 0.22,
       smoothWheel: true,
-      wheelMultiplier: 0.9,
+      wheelMultiplier: 1.05,
       prevent: (node) =>
         Boolean(
           node?.closest?.(

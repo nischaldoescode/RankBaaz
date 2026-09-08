@@ -12,6 +12,7 @@ import React, {
   useReducer,
   useEffect,
   useCallback,
+  useRef,
 } from "react";
 import { apiMethods, handleApiError } from "../services/api";
 import toast from "react-hot-toast";
@@ -289,6 +290,15 @@ const TestContext = createContext();
 
 export const TestProvider = ({ children }) => {
   const [state, dispatch] = useReducer(testReducer, initialState);
+  const validationTimerRef = useRef(null);
+
+  useEffect(() => {
+    return () => {
+      if (validationTimerRef.current) {
+        clearTimeout(validationTimerRef.current);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     let timer;
@@ -428,6 +438,11 @@ export const TestProvider = ({ children }) => {
   };
 
   const submitAnswer = async (questionId, answer) => {
+    if (validationTimerRef.current) {
+      clearTimeout(validationTimerRef.current);
+      validationTimerRef.current = null;
+    }
+
     dispatch({ type: TEST_ACTIONS.SET_VALIDATING, payload: true }); // lock
 
     try {
@@ -446,27 +461,26 @@ export const TestProvider = ({ children }) => {
         payload: { questionId, answer },
       });
 
-      // unlock brief delay
-      setTimeout(
-        () => {
-          dispatch({ type: TEST_ACTIONS.SET_VALIDATING, payload: false });
-        },
-        response.data.data.isCorrect ? 1500 : 2500
-      );
+      // keep feedback visible briefly before allowing the next action
+      validationTimerRef.current = setTimeout(() => {
+        validationTimerRef.current = null;
+        dispatch({ type: TEST_ACTIONS.SET_VALIDATING, payload: false });
+      }, response.data.data.isCorrect ? 1500 : 2500);
 
       return { success: true, feedback: response.data.data };
     } catch (err) {
-      dispatch({
-        type: TEST_ACTIONS.SUBMIT_ANSWER,
-        payload: { questionId, answer },
-      });
-
       dispatch({ type: TEST_ACTIONS.SET_VALIDATING, payload: false });
-      return { success: true, error: err.message };
+      return { success: false, error: handleApiError(err, "Answer validation failed") };
     }
   };
 
   const nextQuestion = () => {
+    if (validationTimerRef.current) {
+      clearTimeout(validationTimerRef.current);
+      validationTimerRef.current = null;
+    }
+    dispatch({ type: TEST_ACTIONS.SET_VALIDATING, payload: false });
+
     const nextIndex = state.testState.currentQuestionIndex + 1;
     if (nextIndex < state.currentTest.questions.length) {
       dispatch({ type: TEST_ACTIONS.NEXT_QUESTION });

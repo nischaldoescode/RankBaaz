@@ -6,7 +6,7 @@
  * @exports component used by pages and shared layouts
  */
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Card } from "@/components/ui/Card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { CheckCircle, XCircle } from "lucide-react";
@@ -20,6 +20,7 @@ const TestQuestion = ({
   selectedAnswer,
   onAnswerSelect,
   isAnswered,
+  isValidatingAnswer = false,
 }) => {
   const [localSelectedAnswer, setLocalSelectedAnswer] =
     useState(selectedAnswer);
@@ -28,13 +29,16 @@ const TestQuestion = ({
   const [feedbackShown, setFeedbackShown] = useState(false);
   const [isLocked, setIsLocked] = useState(false);
   const [isValidating, setIsValidating] = useState(false);
+  const [validationError, setValidationError] = useState("");
+  const validationTimerRef = useRef(null);
 
   const handleAnswerSelect = async (answer) => {
     // prevent multiple submissions
-    if (isLocked || isValidating) return;
+    if (isLocked || isValidating || isValidatingAnswer) return;
 
     setIsLocked(true);
     setIsValidating(true); // show loading state
+    setValidationError("");
     setLocalSelectedAnswer(answer);
 
     try {
@@ -47,34 +51,50 @@ const TestQuestion = ({
         // notify parent that validation is complete
         if (result.feedback.isCorrect) {
           // auto-advance 1.5 seconds for correct answers
-          setTimeout(() => {
+          validationTimerRef.current = setTimeout(() => {
+            validationTimerRef.current = null;
             setIsLocked(false);
             setIsValidating(false);
           }, 1500);
         } else {
           // keep locked longer for wrong answers (show explanation)
-          setTimeout(() => {
+          validationTimerRef.current = setTimeout(() => {
+            validationTimerRef.current = null;
             setIsLocked(false);
             setIsValidating(false);
           }, 2500);
         }
+      } else {
+        setIsLocked(false);
+        setIsValidating(false);
+        setValidationError(result?.error || "Answer validation failed");
       }
     } catch (error) {
       console.error("Answer validation failed:", error);
       // unlock on error to allow retry
       setIsLocked(false);
       setIsValidating(false);
+      setValidationError(error.message || "Answer validation failed");
     }
   };
 
-  // reset when question s
+  useEffect(() => {
+    return () => {
+      if (validationTimerRef.current) {
+        clearTimeout(validationTimerRef.current);
+      }
+    };
+  }, []);
+
+  // reset feedback only when the question changes
   useEffect(() => {
     setLocalSelectedAnswer(selectedAnswer);
     setFeedback(null);
     setFeedbackShown(false);
     setIsLocked(false);
     setIsValidating(false); // reset validation state
-  }, [question._id, selectedAnswer]);
+    setValidationError("");
+  }, [question._id]);
 
   if (!question) {
     return (
@@ -343,7 +363,8 @@ const TestQuestion = ({
                 <button
                   onClick={() => handleAnswerSelect(index)}
                   className={getOptionStyle(index)}
-                  disabled={!!feedback} // disable feedback
+                  disabled={!!feedback || isLocked || isValidatingAnswer}
+                  aria-busy={isValidating || isValidatingAnswer}
                 >
                   <div className="flex items-center justify-between">
                     <span className="flex-1 text-left">{option}</span>
@@ -387,12 +408,15 @@ const TestQuestion = ({
                       : "border-gray-300 dark:border-gray-600 focus:ring-blue-500" // don't highlight wrong answers
                     : "border-gray-300 dark:border-gray-600 focus:ring-blue-500"
                 )}
-                disabled={!!feedback}
+                disabled={!!feedback || isLocked || isValidatingAnswer}
               />
               <Button
                 onClick={() => handleAnswerSelect(localSelectedAnswer)}
                 disabled={
-                  !String(localSelectedAnswer || "").trim() || !!feedback
+                  !String(localSelectedAnswer || "").trim() ||
+                  !!feedback ||
+                  isLocked ||
+                  isValidatingAnswer
                 }
                 className="px-6 cursor-pointer w-full sm:w-auto"
               >
@@ -512,7 +536,16 @@ const TestQuestion = ({
 
           {/* answer status */}
           <div className="text-center">
-            {feedback ? (
+            {isValidating || isValidatingAnswer ? (
+              <span className="flex items-center justify-center gap-2 text-sm font-medium text-blue-600 dark:text-blue-400">
+                <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-blue-200 border-t-blue-600" />
+                Checking answer...
+              </span>
+            ) : validationError ? (
+              <span className="text-sm font-medium text-red-600 dark:text-red-400">
+                {validationError}. Please try again.
+              </span>
+            ) : feedback ? (
               <span
                 className={cn(
                   "flex items-center justify-center text-sm font-medium",

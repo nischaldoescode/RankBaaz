@@ -682,7 +682,7 @@ const Test = () => {
       try {
         const result = await submitAnswer(currentQuestion._id, answer);
 
-        if (result.success) {
+        if (result?.success) {
           setAnswers((prev) => ({
             ...prev,
             [currentQuestion._id]: answer,
@@ -691,8 +691,11 @@ const Test = () => {
           // pass feedback to testquestion component
           return { feedback: result.feedback };
         }
+
+        return { error: result?.error || "Answer validation failed" };
       } catch (error) {
         console.error("Failed to submit answer:", error);
+        return { error: error.message || "Answer validation failed" };
       }
     },
     [currentQuestion, submitAnswer]
@@ -1449,6 +1452,7 @@ const Test = () => {
                   selectedAnswer={selectedAnswer}
                   onAnswerSelect={handleAnswerSelect}
                   isAnswered={isCurrentQuestionAnswered}
+                  isValidatingAnswer={isValidatingAnswer}
                   showCorrectAnswer={false}
                   correctAnswerIndex={null}
                 />
