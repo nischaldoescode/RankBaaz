@@ -645,7 +645,7 @@ export const getAllLegalPages = async (req, res) => {
 export const updateLegalPage = async (req, res) => {
   try {
     const { type } = req.params;
-    const { title, sections, metadata } = req.body; // content, version
+    const { title, version, sections, metadata } = req.body;
 
     // ed: validation for type
     if (!["privacy", "terms"].includes(type)) {
@@ -662,6 +662,7 @@ export const updateLegalPage = async (req, res) => {
       page = new LegalPage({
         type,
         title,
+        version: typeof version === "string" && version.trim() ? version.trim() : "1.0",
         sections: sections || [],
         metadata: {
           effectiveDate: metadata?.effectiveDate || null,
@@ -671,6 +672,12 @@ export const updateLegalPage = async (req, res) => {
       });
     } else {
       page.title = title;
+      if (version !== undefined) {
+        page.version =
+          typeof version === "string" && version.trim()
+            ? version.trim()
+            : page.version || "1.0";
+      }
 
       if (sections) {
         page.sections = sections.map((section, sectionIndex) => ({

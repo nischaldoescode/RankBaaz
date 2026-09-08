@@ -19,6 +19,7 @@ import {
   getProfile,
   resendOTP,
   registerValidation,
+  initiateLoginValidation,
   verifyForgotPasswordOTP,
   loginValidation,
   forgotPassword,
@@ -44,7 +45,7 @@ router.get("/username-available/:username", quickCheckUsername);
 
 // public routes - no csrf (users are not authenticated yet)
 router.post("/register", registerValidation, register);
-router.post("/initiate-login", initiateLogin);
+router.post("/initiate-login", initiateLoginValidation, initiateLogin);
 router.post("/verify-login-otp", verifyLoginOTP);
 router.post("/login", loginValidation, login);
 router.post("/resend-otp", resendOTP);

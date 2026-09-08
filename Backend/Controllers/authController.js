@@ -121,6 +121,18 @@ export const loginValidation = [
   body("password").notEmpty().withMessage("Password is required"),
 ];
 
+/**
+ * validates the email used to begin the otp login flow
+ *
+ * @returns {array<object>} express validator rules for the initiate endpoint
+ */
+export const initiateLoginValidation = [
+  body("email")
+    .isEmail()
+    .normalizeEmail()
+    .withMessage("Please provide a valid email"),
+];
+
 export const forgotPasswordValidation = [
   body("email")
     .isEmail()
@@ -1084,7 +1096,16 @@ export const verifyOTP = async (req, res) => {
 
 export const initiateLogin = async (req, res) => {
   try {
-    const { email } = req.body;
+    const validationErrors = validationResult(req);
+    if (!validationErrors.isEmpty()) {
+      return res.status(400).json({
+        success: false,
+        message: "Please provide a valid email",
+        errors: validationErrors.array(),
+      });
+    }
+
+    const email = String(req.body?.email || "").trim().toLowerCase();
     if (!email) {
       return res.status(400).json({
         success: false,
@@ -1107,7 +1128,7 @@ export const initiateLogin = async (req, res) => {
       });
     }
 
-    const user = await User.findOne({ email });
+    const user = await User.findOne({ email }).select("_id email isVerified points");
 
     if (!user) {
       return res.status(404).json({
@@ -1132,18 +1153,38 @@ export const initiateLogin = async (req, res) => {
       });
     }
 
+    // repair legacy point values without validating unrelated user fields
+    if (Number(user.points) < 0) {
+      await User.updateOne(
+        { _id: user._id, points: { $lt: 0 } },
+        { $set: { points: 0 } },
+      );
+    }
+
     // generate and send otp
     const otp = generateOtp();
     const otpExpiresAt = new Date(
       Date.now() + (parseInt(process.env.OTP_EXPIRY_MINUTES) || 5) * 60 * 1000,
     );
 
-    user.otp = {
-      code: otp,
-      expiresAt: otpExpiresAt,
-      used: false,
-    };
-    await user.save();
+    const otpUpdate = await User.updateOne(
+      { _id: user._id, isVerified: true },
+      {
+        $set: {
+          "otp.code": otp,
+          "otp.expiresAt": otpExpiresAt,
+          "otp.used": false,
+        },
+      },
+    );
+
+    if (otpUpdate.matchedCount !== 1) {
+      return res.status(409).json({
+        success: false,
+        message: "Your account changed while starting login. Please try again.",
+        code: "LOGIN_STATE_CHANGED",
+      });
+    }
 
     // console.log("login has been initiated for:", email);
 
@@ -1158,14 +1199,37 @@ export const initiateLogin = async (req, res) => {
     const siteName = contentSettings?.siteName || "Test App";
     const logoUrl = contentSettings?.logo?.url || null;
 
-    await sendOtpEmail(email, otp, siteName, logoUrl);
+    try {
+      await sendOtpEmail(email, otp, siteName, logoUrl);
+    } catch (emailError) {
+      await User.updateOne(
+        { _id: user._id },
+        {
+          $set: {
+            "otp.code": null,
+            "otp.expiresAt": null,
+            "otp.used": false,
+          },
+        },
+      );
+      console.error("Login otp delivery failed:", {
+        email,
+        message: emailError.message,
+      });
+      return res.status(503).json({
+        success: false,
+        message: "We could not send the verification email right now. Please try again shortly.",
+        code: "OTP_DELIVERY_FAILED",
+      });
+    }
+
     const signingSecret = await generateSigningSecret(user._id.toString());
 
     res.status(200).json({
       success: true,
       message: "OTP sent to your email",
       data: {
-        email,
+        email: user.email,
         otpSent: true,
         requiresOtp: true,
         isRegistered: true,
@@ -1185,7 +1249,8 @@ export const initiateLogin = async (req, res) => {
 
 export const verifyLoginOTP = async (req, res) => {
   try {
-    const { email, otp } = req.body;
+    const email = String(req.body?.email || "").trim().toLowerCase();
+    const { otp } = req.body;
 
     if (!email || !otp) {
       return res.status(400).json({
@@ -1202,7 +1267,6 @@ export const verifyLoginOTP = async (req, res) => {
     }
 
     const user = await User.findOne({ email });
-    console.log(email);
 
     if (!user) {
       return res.status(404).json({

@@ -447,10 +447,7 @@ export const ContentProvider = ({ children }) => {
         return { success: false };
       }
 
-      // version from data
-      const { version, ...restData } = data;
-
-      const response = await api.put(`/content/legal/${type}`, restData);
+      const response = await api.put(`/content/legal/${type}`, data);
 
       if (response.data.success) {
         await fetchLegalPages();

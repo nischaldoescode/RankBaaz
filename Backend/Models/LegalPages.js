@@ -21,6 +21,12 @@ const legalPageSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
+    version: {
+      type: String,
+      default: "1.0",
+      trim: true,
+      maxlength: 20,
+    },
     // d: structure for headers with subheaders and points
     sections: [
       {
