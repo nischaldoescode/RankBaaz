@@ -394,11 +394,9 @@ const StoryChapter = ({
     target: chapterRef,
     offset: ["start end", "end start"],
   });
-  const smoothProgress = useSpring(scrollYProgress, {
-    stiffness: 72,
-    damping: 24,
-    mass: 0.42,
-  });
+  const smoothProgress = useSpring(scrollYProgress, isSmallViewport
+    ? { stiffness: 220, damping: 38, mass: 0.18 }
+    : { stiffness: 72, damping: 24, mass: 0.42 });
   const copyY = useTransform(smoothProgress, [0, 0.5, 1], [96, 0, -76]);
   const imageY = useTransform(smoothProgress, [0, 0.5, 1], [190, -24, -230]);
   const imageX = useTransform(smoothProgress, [0, 0.5, 1], [34, 0, -42]);
@@ -495,17 +493,15 @@ const LearningStorySection = ({
     target: sectionRef,
     offset: ["start end", "end start"],
   });
-  const smoothProgress = useSpring(scrollYProgress, {
-    stiffness: 68,
-    damping: 26,
-    mass: 0.48,
-  });
+  const isSmallViewport = useMediaQuery("(max-width: 820px)");
+  const smoothProgress = useSpring(scrollYProgress, isSmallViewport
+    ? { stiffness: 220, damping: 38, mass: 0.18 }
+    : { stiffness: 68, damping: 26, mass: 0.48 });
   const textX = useTransform(smoothProgress, [0, 0.5, 1], [-54, 0, 34]);
   const fade = useTransform(smoothProgress, [0, 0.18, 0.78, 1], [0.4, 1, 1, 0.24]);
   const connectorY = useTransform(smoothProgress, [0, 1], [110, -180]);
   const connectorDraw = useTransform(smoothProgress, [0.06, 0.86], [0, 1]);
   const markerY = useTransform(smoothProgress, [0, 1], [70, -80]);
-  const isSmallViewport = useMediaQuery("(max-width: 820px)");
 
   const motionStyle = reducedMotion
     ? undefined
@@ -678,11 +674,9 @@ const Home = () => {
     target: pageRef,
     offset: ["start start", "end end"],
   });
-  const smoothPageProgress = useSpring(pageScrollProgress, {
-    stiffness: 64,
-    damping: 28,
-    mass: 0.5,
-  });
+  const smoothPageProgress = useSpring(pageScrollProgress, isSmallViewport
+    ? { stiffness: 220, damping: 38, mass: 0.18 }
+    : { stiffness: 64, damping: 28, mass: 0.5 });
   const pageDriftY = useTransform(smoothPageProgress, [0, 1], [-24, 42]);
   const pageDriftX = useTransform(smoothPageProgress, [0, 1], [18, -36]);
   const mobilePageDriftX = useTransform(smoothPageProgress, [0, 1], [0, 0]);

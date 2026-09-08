@@ -118,6 +118,18 @@ const normalizeAuthUser = (user) => {
 const getUserDisplayName = (user) =>
   user?.name || user?.username || user?.email || "there";
 
+/**
+ * identifies temporary auth transport failures that should not erase cached identity
+ *
+ * @param {object} error axios or normalized api error
+ * @returns {boolean} true when retrying later is safer than logging out
+ */
+const isTransientAuthError = (error) => {
+  if (error?.isAuthError) return false;
+  if (error?.isNetworkError || !error?.response) return true;
+  return [500, 502, 503, 504].includes(error.response.status);
+};
+
 // provider component
 export const AuthProvider = ({ children }) => {
   const [state, dispatch] = useReducer(authReducer, initialState);
@@ -216,8 +228,16 @@ export const AuthProvider = ({ children }) => {
               },
             });
           } catch (refreshError) {
-            clearAuthData();
-            dispatch({ type: AUTH_ACTIONS.LOGOUT });
+            if (cachedUser && isTransientAuthError(refreshError)) {
+              // keep the cached identity during a temporary backend outage
+              dispatch({
+                type: AUTH_ACTIONS.LOGIN_SUCCESS,
+                payload: { user: cachedUser, token: null },
+              });
+            } else {
+              clearAuthData();
+              dispatch({ type: AUTH_ACTIONS.LOGOUT });
+            }
           }
         }
       } else {

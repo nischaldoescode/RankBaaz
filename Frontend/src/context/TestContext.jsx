@@ -15,6 +15,7 @@ import React, {
 } from "react";
 import { apiMethods, handleApiError } from "../services/api";
 import toast from "react-hot-toast";
+import { resolveTestTiming } from "../utils/testTiming.js";
 
 // initial state
 const initialState = {
@@ -41,37 +42,6 @@ const initialState = {
     endTime: null,
     difficultyLocked: false,
   },
-};
-
-const parseTimerSeconds = (...values) => {
-  for (const value of values) {
-    if (value === null || value === undefined || value === "") continue;
-
-    if (typeof value === "number" && Number.isFinite(value) && value > 0) {
-      return Math.floor(value);
-    }
-
-    if (typeof value === "string") {
-      const trimmed = value.trim();
-      const parts = trimmed.split(":").map((part) => Number(part));
-
-      if (
-        parts.length === 2 &&
-        parts.every((part) => Number.isFinite(part) && part >= 0)
-      ) {
-        const [minutes, seconds] = parts;
-        const totalSeconds = minutes * 60 + seconds;
-        if (totalSeconds > 0) return totalSeconds;
-      }
-
-      const numericValue = Number(trimmed);
-      if (Number.isFinite(numericValue) && numericValue > 0) {
-        return Math.floor(numericValue);
-      }
-    }
-  }
-
-  return 60;
 };
 
 // action types
@@ -112,16 +82,10 @@ const testReducer = (state, action) => {
 
       // extract difficulty settings from courseinfo
       const difficultySettings = testData.courseInfo?.difficulty;
-      const timeLimit = parseTimerSeconds(
-        difficultySettings?.timerSettings?.maxTime,
-        difficultySettings?.maxTime,
-        testData.courseInfo?.maxTime ||
-          testData.maxTime
-      );
-
       // questions are directly in testdata.questions
       const questions = testData.questions || [];
       const firstQuestion = questions.length > 0 ? questions[0] : null;
+      const { questionTimeLimit, totalTime } = resolveTestTiming(testData);
 
       // console.log("first question:", firstquestion);
 
@@ -152,10 +116,10 @@ const testReducer = (state, action) => {
         testState: {
           isActive: true,
           isPaused: false,
-          timeRemaining: timeLimit,
-          questionTimeRemaining: timeLimit,
-          questionTimeLimit: timeLimit,
-          totalTimeAllowed: timeLimit,
+          timeRemaining: totalTime,
+          questionTimeRemaining: questionTimeLimit,
+          questionTimeLimit,
+          totalTimeAllowed: totalTime,
           currentQuestionIndex: 0,
           totalQuestions: questions.length,
           maxPossibleMarks: difficultySettings?.totalMarks || 0,
@@ -468,7 +432,7 @@ export const TestProvider = ({ children }) => {
 
     try {
       const actualCourseId =
-        state.currentTest.courseInfo?._id || state.selectedCourseId || courseId;
+        state.currentTest.courseInfo?._id || state.selectedCourseId;
 
       const response = await apiMethods.tests.checkAnswer(
         actualCourseId,
@@ -578,7 +542,10 @@ export const TestProvider = ({ children }) => {
             ? "Multi"
             : accumulatedResults[0].difficulty,
         answers: allAnswers,
-        timeTaken: accumulatedResults.reduce((sum, r) => sum + r.timeTaken, 0),
+        timeTaken: accumulatedResults.reduce(
+          (sum, r) => sum + (Number(r.timeTaken) || 0),
+          0,
+        ),
         testSettings: {
           isMultiDifficulty: accumulatedResults.length > 1,
           difficulties: accumulatedResults.map((r) => r.difficulty),

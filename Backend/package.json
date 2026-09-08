@@ -14,6 +14,7 @@
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
     "migrate:indexes": "node migrations/createIndexes.js",
+    "seed:local-course": "node scripts/seed-local-course.js",
     "build": "node server.js"
   },
   "keywords": [

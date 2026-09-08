@@ -46,14 +46,14 @@ export const testSubmissionValidation = [
       if (req.body.testSettings?.isMultiDifficulty) {
         return Array.isArray(value);
       }
-      // for single difficulty tests, require at least 1 answer
-      return Array.isArray(value) && value.length >= 1;
+      // timed attempts may finish with every question unanswered
+      return Array.isArray(value);
     })
-    .withMessage("Answers array is required for single difficulty tests"),
+    .withMessage("Answers must be an array"),
 
   body("timeTaken")
-    .isInt({ min: 1 })
-    .withMessage("Time taken must be a positive integer"),
+    .isInt({ min: 0 })
+    .withMessage("Time taken must be a non-negative integer"),
 
   body("testSettings").isObject().withMessage("Test settings are required"),
 
@@ -63,7 +63,13 @@ export const testSubmissionValidation = [
     .withMessage("Difficulty results summary must be an array"),
 ];
 
-// start a test
+/**
+ * starts a test and returns only safe question data plus authoritative timing
+ *
+ * @param {object} req express request containing course and difficulty params
+ * @param {object} res express response used to return the test payload
+ * @returns {promise<void>} resolves after the test payload has been sent
+ */
 export const startTest = async (req, res) => {
   try {
     const { courseId, difficulty } = req.params;
@@ -149,6 +155,12 @@ export const startTest = async (req, res) => {
         image: q.image,
       }));
 
+    const questionTimeLimit = Math.max(
+      1,
+      Number(difficultyConfig.timerSettings.maxTime) || 1,
+    );
+    const totalTime = questionTimeLimit * questions.length;
+
     console.log(`Selected ${questions.length} questions for the test`);
 
     res.status(200).json({
@@ -159,8 +171,9 @@ export const startTest = async (req, res) => {
         courseInfo: {
           name: course.name,
           difficulty: difficultyConfig,
-          maxTime: difficultyConfig.timerSettings.maxTime,
-          questionTimeLimit: difficultyConfig.timerSettings.maxTime,
+          maxTime: questionTimeLimit,
+          questionTimeLimit,
+          totalTime,
           minTime: difficultyConfig.timerSettings.minTime,
           marksPerQuestion: difficultyConfig.marksPerQuestion,
         },
@@ -524,7 +537,10 @@ export const submitTest = async (req, res) => {
 
       const maxPossibleScore =
         questions.length * difficultyConfig.marksPerQuestion;
-      const percentage = Math.round((totalScore / maxPossibleScore) * 100);
+      const percentage =
+        maxPossibleScore > 0
+          ? Math.round((totalScore / maxPossibleScore) * 100)
+          : 0;
 
       finalTestResult = new TestResult({
         user: userId,
@@ -628,13 +644,14 @@ export const submitTest = async (req, res) => {
           finalTestResult.timeTaken
         );
 
-        // update points-based leaderboard
-        const leaderboardService2 = (
-          await import("../services/leaderboardService.js")
-        ).default;
         const key = `leaderboard:points:${courseId}:${diff}`;
-        await redisClient.zadd(key, pointsEarned, userId.toString());
-        await redisClient.expire(key, 7 * 24 * 60 * 60);
+        // keep the completed attempt successful when the optional redis index is down
+        try {
+          await redisClient.zadd(key, pointsEarned, userId.toString());
+          await redisClient.expire(key, 7 * 24 * 60 * 60);
+        } catch (redisError) {
+          console.warn("Points leaderboard update skipped:", redisError.message);
+        }
       }
 
       await leaderboardService.updateLeaderboard(
@@ -664,9 +681,17 @@ export const submitTest = async (req, res) => {
     // get rank points update
     const newRank = await pointsService.getUserRank(userId);
     const rankChange = previousRank && newRank ? previousRank - newRank : null;
-    // invalidate leaderboard and user caches test submission
-    await invalidateCache.leaderboard(courseId);
-    await invalidateCache.test(userId, finalTestResult._id);
+    // cache invalidation should never turn a saved result into a failed submission
+    await invalidateCache
+      .leaderboard(courseId)
+      .catch((error) =>
+        console.warn("Leaderboard cache invalidation skipped:", error.message),
+      );
+    await invalidateCache
+      .test(userId, finalTestResult._id)
+      .catch((error) =>
+        console.warn("Test cache invalidation skipped:", error.message),
+      );
     await invalidateCache
       .user(userId, updatedUser?.username)
       .catch((error) =>
@@ -723,8 +748,8 @@ export const getTestResult = async (req, res) => {
       });
     }
 
-    // now fetch course with only needed fields
-    const course = await course.findbyid(testresult.course)
+    // now fetch course details for the saved attempt
+    const course = await Course.findById(testResult.course)
       .select("name teacher questions._id questions.question questions.explanation")
       .populate("teacher", "name username profileimage")
       .lean();
