@@ -150,7 +150,7 @@ const MediaDashboard = () => {
         <header className="media-board-header">
           <div className="media-board-kicker">
             <Images size={16} aria-hidden="true" />
-            <span>Vidhgrow visual board</span>
+            <span>Vidhgrow Media View</span>
           </div>
           <h1>Find the next useful thing to open</h1>
           <p>
