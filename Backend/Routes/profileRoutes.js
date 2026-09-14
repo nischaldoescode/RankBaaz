@@ -13,6 +13,7 @@ import {
   getGlobalLeaderboard,
   getUserLeaderboardPosition,
   searchUsernames,
+  getStudyReadiness,
 } from "../Controllers/profileController.js";
 import { authenticateUser as authMiddleware } from "../Middleware/auth.js";
 import { advancedCache } from "../Middleware/advancedCache.js";
@@ -29,9 +30,9 @@ router.get(
   getGlobalLeaderboard
 );
 router.get("/search", advancedCache({ ttl: 120 }), searchUsernames);
-router.get("/:username", getPublicProfile);
 
 // protected routes
+router.get("/readiness", authMiddleware, verifyRequestSignature, getStudyReadiness);
 router.get(
   "/settings",
   authMiddleware,
@@ -44,5 +45,6 @@ router.get(
   verifyRequestSignature,
   getUserLeaderboardPosition
 );
+router.get("/:username", getPublicProfile);
 
 export default router;

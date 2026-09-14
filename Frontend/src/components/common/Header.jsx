@@ -18,6 +18,7 @@ import {
   BookOpen,
   FileText,
   Phone,
+  Images,
   Moon,
   Sun,
 } from "lucide-react";
@@ -38,6 +39,7 @@ import CachedImage from "./CachedImage";
 const navLinks = [
   { path: "/", label: "Home", icon: Home, protected: false },
   { path: "/courses", label: "Courses", icon: BookOpen, protected: false },
+  { path: "/media", label: "Visual board", icon: Images, protected: false },
   {
     href: "https://blogs.vidhgrow.online",
     label: "Blog",

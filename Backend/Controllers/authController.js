@@ -22,7 +22,7 @@ import {
   sendOtpEmail,
   validateOtpFormat,
   isOtpExpired,
-} from "../utils/OtpUtils.js";
+} from "../utils/otpMailer.js";
 
 // validation rules
 export const registerValidation = [
@@ -110,6 +110,11 @@ export const registerValidation = [
     .optional()
     .isBoolean()
     .withMessage("Subscribe newsletter must be a boolean"),
+
+  body("learningLevel")
+    .optional()
+    .isIn(["beginner", "intermediate", "advanced"])
+    .withMessage("Learning level must be beginner, intermediate, or advanced"),
 ];
 
 export const loginValidation = [
@@ -603,6 +608,7 @@ export const register = async (req, res) => {
       gender,
       dateOfBirth,
       subscribeNewsletter,
+      learningLevel,
     } = req.body;
 
     // strict input validation
@@ -613,6 +619,7 @@ export const register = async (req, res) => {
       password,
       dateOfBirth,
       gender,
+      learningLevel,
     };
 
     // check for array attacks
@@ -632,7 +639,8 @@ export const register = async (req, res) => {
       typeof email !== "string" ||
       typeof password !== "string" ||
       typeof dateOfBirth !== "string" ||
-      typeof gender !== "string"
+      typeof gender !== "string" ||
+      (learningLevel !== undefined && typeof learningLevel !== "string")
     ) {
       return res.status(400).json({
         success: false,
@@ -661,6 +669,11 @@ export const register = async (req, res) => {
 
     const name = `${firstName.trim()} ${lastName.trim()}`;
     const dob = new Date(dateOfBirth);
+    const selectedLearningLevel = ["beginner", "intermediate", "advanced"].includes(
+      learningLevel,
+    )
+      ? learningLevel
+      : "beginner";
 
     // generate otp early (non-blocking)
     const otp = generateOtp();
@@ -678,6 +691,7 @@ export const register = async (req, res) => {
       password: hashedPassword,
       age,
       gender,
+      learningLevel: selectedLearningLevel,
       dateOfBirth: dob.toISOString(),
       subscribeNewsletter: subscribeNewsletter === true,
       otp: {
@@ -702,6 +716,7 @@ export const register = async (req, res) => {
           password: hashedPassword,
           age,
           gender,
+          learningLevel: selectedLearningLevel,
           dateOfBirth: dob,
           subscribeNewsletter: subscribeNewsletter === true,
           otp: {
@@ -835,6 +850,7 @@ export const verifyOTP = async (req, res) => {
           password: pendingReg.password,
           age: pendingReg.age,
           gender: pendingReg.gender,
+          learningLevel: pendingReg.learningLevel || "beginner",
           dateOfBirth: pendingReg.dateOfBirth.toISOString(),
           subscribeNewsletter: pendingReg.subscribeNewsletter,
           otp: {
@@ -969,6 +985,7 @@ export const verifyOTP = async (req, res) => {
       password: registrationData.password,
       age: registrationData.age,
       gender: registrationData.gender,
+      learningLevel: registrationData.learningLevel || "beginner",
       dateOfBirth: new Date(registrationData.dateOfBirth),
       isVerified: true,
       subscribeNewsletter: registrationData.subscribeNewsletter,
@@ -1390,7 +1407,7 @@ export const login = async (req, res) => {
 
     // optimized: only fetch necessary fields
     const user = await User.findOne({ email: sanitizedEmail }).select(
-      "password isVerified username name email age gender otp _id",
+      "password isVerified username name email age gender learningLevel otp _id",
     );
 
     if (!user) {

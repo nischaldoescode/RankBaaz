@@ -29,6 +29,7 @@ const blogMediaSchema = new mongoose.Schema(
     sessionId: { type: String, trim: true, maxlength: 120, index: true, default: "" },
     originalFilename: { type: String, trim: true, maxlength: 180, default: "" },
     bytes: { type: Number, default: 0, min: 0 },
+    qualityScore: { type: Number, default: null, min: 0, max: 1 },
     status: {
       type: String,
       enum: ["pending", "attached", "deleted"],

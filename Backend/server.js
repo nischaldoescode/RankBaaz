@@ -43,6 +43,7 @@ import { checkIpBlock } from "./Middleware/ipBlockMiddleware.js";
 import teacherRoutes from "./Routes/teacherRoutes.js";
 import khaltiRoutes from "./Routes/khaltiRoutes.js";
 import blogRoutes from "./Routes/blogRoutes.js";
+import mediaDashboardRoutes from "./Routes/mediaDashboardRoutes.js";
 
 // load environment variables
 dotenv.config();
@@ -583,6 +584,7 @@ app.use("/track", trackingRoutes);
 app.use("/api/teachers", teacherRoutes);
 app.use("/api/payments/khalti", khaltiRoutes);
 app.use("/api/blogs", blogRoutes);
+app.use("/api/media-dashboard", mediaDashboardRoutes);
 /**
  * root endpoint - minimal response for security
  */

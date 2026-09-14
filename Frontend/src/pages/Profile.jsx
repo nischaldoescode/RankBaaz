@@ -29,6 +29,7 @@ import {
   EyeOff,
   AlertCircle,
   CheckCircle2,
+  Compass,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { useTests } from "../context/TestContext";
@@ -298,6 +299,8 @@ const Profile = () => {
 
   const [leaderboardData, setLeaderboardData] = useState(null);
   const [leaderboardLoading, setLeaderboardLoading] = useState(false);
+  const [readiness, setReadiness] = useState(null);
+  const [readinessLoading, setReadinessLoading] = useState(false);
 
   useSEO({
     title: "My Profile",
@@ -331,6 +334,26 @@ const Profile = () => {
       fetchInitialData();
     }
   }, [user?._id]); // only depend on user id, not entire user object
+
+  useEffect(() => {
+    let active = true;
+    const fetchReadiness = async () => {
+      if (!user?._id) return;
+      setReadinessLoading(true);
+      try {
+        const response = await apiMethods.profile.getStudyReadiness();
+        if (active) setReadiness(response.data?.data?.readiness || null);
+      } catch {
+        if (active) setReadiness(null);
+      } finally {
+        if (active) setReadinessLoading(false);
+      }
+    };
+    fetchReadiness();
+    return () => {
+      active = false;
+    };
+  }, [user?._id]);
   useEffect(() => {
     if (showLeaderboardInfo && !leaderboardInfoData) {
       fetchLeaderboardInfo();
@@ -621,6 +644,46 @@ const Profile = () => {
             </CardContent>
           </Card>
         </div>
+
+        <Card className="mb-8 overflow-hidden border-primary/20 bg-primary/[0.04]">
+          <CardContent className="p-5 sm:p-6">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+              <div className="flex min-w-0 gap-3">
+                <Compass className="mt-1 h-6 w-6 flex-shrink-0 text-primary" />
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold uppercase tracking-wide text-primary">
+                    Study readiness
+                  </p>
+                  <h2 className="mt-1 text-xl font-semibold text-foreground">
+                    {readinessLoading
+                      ? "Reading your practice history"
+                      : readiness?.label || "Your starting point"}
+                  </h2>
+                  <p className="mt-1 text-sm leading-6 text-muted-foreground">
+                    {readiness?.confidence === "steady"
+                      ? "Your signal is based on enough practice to guide the next step"
+                      : "This is an early signal and becomes more useful as you practice"}
+                  </p>
+                </div>
+              </div>
+              <div className="flex-shrink-0 text-left sm:text-right">
+                <p className="text-3xl font-bold text-primary">
+                  {readinessLoading ? "..." : readiness?.score ?? "0"}
+                </p>
+                <p className="text-xs text-muted-foreground">local readiness signal</p>
+              </div>
+            </div>
+            {readiness?.nextSteps?.length > 0 && (
+              <div className="mt-4 grid gap-2 border-t border-primary/10 pt-4 sm:grid-cols-3">
+                {readiness.nextSteps.map((step) => (
+                  <p key={step} className="text-sm leading-5 text-muted-foreground">
+                    {step}
+                  </p>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
         {/* tabs */}
         <div className="flex gap-2 sm:gap-4 mb-6 border-b border-border overflow-x-auto scrollbar-hide">

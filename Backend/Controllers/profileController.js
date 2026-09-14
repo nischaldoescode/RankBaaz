@@ -11,6 +11,7 @@ import TestResult from "../Models/TestResult.js";
 import pointsService from "../services/pointsService.js";
 import badgeService from "../services/badgeService.js";
 import redisClient from "../Config/redis.js";
+import buildStudyReadiness from "../services/studyReadinessService.js";
 
 const readCachedPublicProfile = async (cacheKey) => {
   try {
@@ -201,6 +202,41 @@ export const getUserSettings = async (req, res) => {
     res.status(500).json({
       success: false,
       message: "Failed to load settings",
+    });
+  }
+};
+
+/**
+ * returns a transparent readiness signal for the signed in learner
+ *
+ * @param {import("express").Request} req authenticated request
+ * @param {import("express").Response} res response with bounded readiness data
+ * @returns {Promise<void>} resolves after the response is sent
+ */
+export const getStudyReadiness = async (req, res) => {
+  try {
+    const user = await User.findById(req.user.userId)
+      .select("learningLevel stats")
+      .lean();
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+        code: "USER_NOT_FOUND",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      data: { readiness: buildStudyReadiness(user) },
+    });
+  } catch (error) {
+    console.error("Study readiness request failed", error);
+    return res.status(503).json({
+      success: false,
+      message: "Study readiness is temporarily unavailable",
+      code: "READINESS_UNAVAILABLE",
     });
   }
 };

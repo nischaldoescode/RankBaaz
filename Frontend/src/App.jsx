@@ -51,6 +51,7 @@ const Home = React.lazy(() => import("./pages/Home"));
 const Login = React.lazy(() => import("./pages/Login"));
 const Register = React.lazy(() => import("./pages/Register"));
 const Courses = React.lazy(() => import("./pages/Courses"));
+const MediaDashboard = React.lazy(() => import("./pages/MediaDashboard"));
 const Test = React.lazy(() => import("./pages/Test"));
 const TestSeoPage = React.lazy(() => import("./pages/TestSeoPage"));
 const Profile = React.lazy(() => import("./pages/Profile"));
@@ -514,6 +515,34 @@ function App() {
                             }
                           >
                             <Courses />
+                          </motion.div>
+                        </Suspense>
+                      }
+                    />
+
+                    <Route
+                      path="/media"
+                      element={
+                        <Suspense
+                          fallback={
+                            <div className="min-h-screen pt-16">
+                              <Loading variant="page" />
+                            </div>
+                          }
+                        >
+                          <motion.div
+                            key="media-dashboard"
+                            initial="initial"
+                            animate="in"
+                            exit="out"
+                            variants={
+                              animations && !reducedMotion ? pageVariants : {}
+                            }
+                            transition={
+                              animations && !reducedMotion ? pageTransition : {}
+                            }
+                          >
+                            <MediaDashboard />
                           </motion.div>
                         </Suspense>
                       }

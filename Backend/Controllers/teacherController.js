@@ -19,7 +19,7 @@ import Coupon from "../Models/Coupon.js";
 import TeacherPayout from "../Models/TeacherPayout.js";
 import { v2 as cloudinary } from "cloudinary";
 import { generateSigningSecret } from "../Middleware/requestSignature.js";
-import { generateOtp, sendOtpEmail } from "../utils/OtpUtils.js";
+import { generateOtp, sendOtpEmail } from "../utils/otpMailer.js";
 import redisClient, {
   invalidateCache,
   isRedisConnectionError,

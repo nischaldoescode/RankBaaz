@@ -20,7 +20,7 @@ import {
   decryptBlogPayload,
   encryptBlogPayload,
   hashBlogPayload,
-} from "../utils/blogCrypto.js";
+} from "../utils/encryptedBlogPayload.js";
 
 const BLOG_CACHE_TTL = 300;
 const BLOG_IMAGE_LIMIT = 5 * 1024 * 1024;
@@ -1229,6 +1229,7 @@ export const adminUploadBlogMedia = async (req, res) => {
       transformation: isVideo
         ? [{ quality: "auto" }]
         : [{ quality: "auto", fetch_format: "auto" }],
+      quality_analysis: !isVideo,
       context: {
         uploaded_by: String(req.admin?.userId || ""),
         purpose,
@@ -1255,6 +1256,9 @@ export const adminUploadBlogMedia = async (req, res) => {
       sessionId,
       originalFilename: result.original_filename || file.name,
       bytes: result.bytes || file.size || 0,
+      qualityScore: Number.isFinite(result.quality_analysis?.quality_score)
+        ? result.quality_analysis.quality_score
+        : null,
       status: "pending",
       createdBy: req.admin.userId,
     });
@@ -1274,6 +1278,9 @@ export const adminUploadBlogMedia = async (req, res) => {
           width: result.width || null,
           height: result.height || null,
           duration: result.duration || null,
+          qualityScore: Number.isFinite(result.quality_analysis?.quality_score)
+            ? result.quality_analysis.quality_score
+            : null,
           originalFilename: result.original_filename || file.name,
           status: "pending",
         },

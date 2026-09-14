@@ -90,6 +90,12 @@ const userSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    learningLevel: {
+      type: String,
+      enum: ["beginner", "intermediate", "advanced"],
+      default: "beginner",
+      index: true,
+    },
     nameVisibility: {
       type: String,
       enum: ["private", "public"],

@@ -28,6 +28,7 @@ import {
   Check,
   CheckCircle2,
   X,
+  Compass,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { useTheme } from "../context/ThemeContext";
@@ -125,6 +126,7 @@ const Register = () => {
     confirmPassword: "",
     dateOfBirth: "",
     gender: "",
+    learningLevel: "beginner",
     agreeToTerms: false,
     subscribeNewsletter: true,
   });
@@ -393,6 +395,7 @@ const Register = () => {
         password: formData.password,
         dateOfBirth: formData.dateOfBirth,
         gender: formData.gender,
+        learningLevel: formData.learningLevel,
         subscribeNewsletter: formData.subscribeNewsletter,
       });
 
@@ -931,6 +934,33 @@ const Register = () => {
                             {errors.gender}
                           </motion.p>
                         )}
+                      </div>
+
+                      {/* learning level */}
+                      <div className="space-y-2">
+                        <label
+                          htmlFor="learningLevel"
+                          className="flex items-center gap-2 text-sm font-medium text-foreground"
+                        >
+                          <Compass className="h-4 w-4 text-primary" />
+                          Where should your practice begin?
+                        </label>
+                        <select
+                          id="learningLevel"
+                          name="learningLevel"
+                          required
+                          className="w-full h-11 sm:h-12 px-3 rounded-md border-2 border-border bg-muted/60 text-foreground cursor-pointer focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary"
+                          value={formData.learningLevel}
+                          onChange={handleChange}
+                          disabled={isLoading}
+                        >
+                          <option value="beginner">Beginner, build the foundations</option>
+                          <option value="intermediate">Intermediate, strengthen what I know</option>
+                          <option value="advanced">Advanced, push into harder practice</option>
+                        </select>
+                        <p className="text-xs text-muted-foreground">
+                          This sets your starting view and helps the local study signal choose a useful next step
+                        </p>
                       </div>
 
                       {/* Password Field */}

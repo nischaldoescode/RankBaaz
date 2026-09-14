@@ -32,3 +32,11 @@ Thumbs.db
 *.njsproj
 *.sln
 *.sw?
+/report-work
+
+# local design and report artifacts
+.agents/
+.impeccable/
+deliverables/
+report_work/
+skills-lock.json

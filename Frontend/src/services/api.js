@@ -121,6 +121,7 @@ api.interceptors.request.use(
       "/api/content/faqs",
       "/api/courses/categories",
       "/api/courses",
+      "/api/media-dashboard",
     ];
 
     const isPublicGet =
@@ -466,6 +467,7 @@ export const apiMethods = {
     getUserPosition: () => api.get(`/api/profile/leaderboard/position`),
     searchUsernames: (query, limit = 10) =>
       api.get(`/api/profile/search?query=${query}&limit=${limit}`),
+    getStudyReadiness: () => api.get("/api/profile/readiness"),
   },
 
   courses: {

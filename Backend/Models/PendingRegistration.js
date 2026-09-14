@@ -21,6 +21,11 @@ const pendingRegistrationSchema = new mongoose.Schema({
   gender: String,
   dateOfBirth: Date,
   subscribeNewsletter: Boolean,
+  learningLevel: {
+    type: String,
+    enum: ["beginner", "intermediate", "advanced"],
+    default: "beginner",
+  },
   otp: {
     code: String,
     expiresAt: Date,
