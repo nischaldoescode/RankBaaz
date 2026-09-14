@@ -13,7 +13,7 @@ import { useTests } from "../context/TestContext";
 import { useAuth } from "../context/AuthContext";
 import { useTheme } from "../context/ThemeContext";
 import TestQuestion from "../components/test/TestQuestion";
-import TestResult from "../components/test/TestResult";
+const TestResult = React.lazy(() => import("../components/test/TestResult"));
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import Modal from "@/components/ui/Modal";
@@ -1320,14 +1320,16 @@ const Test = () => {
     // step 1: if paid course and test result loaded, show it immediately
     if (courseData?.isPaid && testResult && testPhase === "result") {
       return (
-        <TestResult
-          result={testResult}
-          onRetake={handleRetakeTest}
-          onViewHistory={handleViewResults}
-          onReturnToCourses={handleReturnToCourses}
-          courseData={courseData}
-          isPaid={courseData?.isPaid}
-        />
+        <React.Suspense fallback={<Loading message="Loading results..." />}>
+          <TestResult
+            result={testResult}
+            onRetake={handleRetakeTest}
+            onViewHistory={handleViewResults}
+            onReturnToCourses={handleReturnToCourses}
+            courseData={courseData}
+            isPaid={courseData?.isPaid}
+          />
+        </React.Suspense>
       );
     }
 
@@ -1583,14 +1585,16 @@ const Test = () => {
 
       case "result":
         return (
-          <TestResult
-            result={testResult}
-            onRetake={handleRetakeTest}
-            onViewHistory={handleViewResults}
-            onReturnToCourses={handleReturnToCourses}
-            courseData={courseData}
-            isPaid={courseData?.isPaid}
-          />
+          <React.Suspense fallback={<Loading message="Loading results..." />}>
+            <TestResult
+              result={testResult}
+              onRetake={handleRetakeTest}
+              onViewHistory={handleViewResults}
+              onReturnToCourses={handleReturnToCourses}
+              courseData={courseData}
+              isPaid={courseData?.isPaid}
+            />
+          </React.Suspense>
         );
 
       default:

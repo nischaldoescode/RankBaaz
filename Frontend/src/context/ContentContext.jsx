@@ -8,7 +8,7 @@
 
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { apiMethods } from "../services/api";
-import { cachedAPICall } from "../utils/cacheManager";
+import { cachedAPICall, cacheManager } from "../utils/cacheManager";
 const ContentContext = createContext();
 
 export const useContent = () => {
@@ -47,11 +47,8 @@ export const ContentProvider = ({ children }) => {
 
       // preload logo image if it exists
       if (data?.logo?.url) {
-        // dynamic import to avoid circular dependency
-        import("../utils/cacheManager").then(({ cacheManager }) => {
-          cacheManager.cacheImage(data.logo.url).catch((err) => {
-            console.error("[Content] Failed to preload logo:", err);
-          });
+        cacheManager.cacheImage(data.logo.url).catch((err) => {
+          console.error("[Content] Failed to preload logo:", err);
         });
       }
 

@@ -1,114 +1,93 @@
 # Vidhgrow
 
-Vidhgrow is a teacher led learning platform for courses, practice tests, feedback, and visible progress
+Vidhgrow is a teacher led learning platform for courses, practice tests, useful feedback, and visible progress
 
-## Cloudinary feature
+## What it does
 
-Vidhgrow includes a public Visual Study Board at `/media`
+The product brings together the parts of study that are usually spread across different tools
 
-The board turns approved course covers and published blog covers into one useful discovery surface for learners. It helps a student find the next course or platform note without opening several separate pages
+1. learners find teacher created courses and platform notes
+2. learners practice with timed tests and receive answer level feedback
+3. course and test history becomes a readable progress trail
+4. teachers create learning material and complete verification before publishing
+5. administrators review trust signals, content, users, and platform activity
 
-The board uses Cloudinary as an active delivery service
+The product is designed around the next useful action rather than a wall of metrics. A learner can read, practice, review, and return without losing the thread
 
-1. The backend selects only approved course media and published blog media
-2. The upload pipeline asks Cloudinary AI for image quality analysis, keeps the returned quality signal with pending media, and creates secure delivery URLs with automatic format, automatic quality, automatic subject gravity, and responsive cropping
-3. The browser receives only safe public records and transformed media URLs
-4. The interface uses lazy loading, descriptive alternative text, responsive cards, search, media filters, loading states, and empty states
+## How the media workflow works
 
-This fits the media savvy startup track because media is part of the learning workflow rather than decoration. Cloudinary keeps the same source asset useful across course cards, blog cards, and the public study board
+Media is part of the learning product, not a decorative layer
 
-## Track 1 workflow
+1. approved course covers and published blog covers enter the media catalogue
+2. the backend keeps the source record connected to its course or publication
+3. Cloudinary analyses eligible images and provides delivery transformations
+4. the backend exposes bounded public records instead of raw storage access
+5. the browser requests responsive media with automatic format, automatic quality, subject aware gravity, and content aware cropping
+6. the public Visual Study Board gathers those assets into one calm discovery surface
 
-Track 1 is the primary implementation
+The same source image can therefore serve a course card, a blog feature, and a phone sized study board without creating several unmanaged copies
 
-When media enters the platform, the backend keeps the original asset reference, applies a bounded Cloudinary delivery transformation, and sends a browser friendly result to the right surface. The public board uses automatic format, automatic quality, automatic subject gravity, and responsive crop so the same course or blog image remains useful on a wide screen and a phone
+## Track 1
 
-The account setup also asks a learner to choose a beginner, intermediate, or advanced starting path. A small local readiness evaluator combines that choice with completed tests, answered questions, and the existing practice percentile. It returns a transparent signal and next steps. It does not claim to be a diagnosis, it does not send learner data to an AI vendor, and it becomes more reliable only after real practice exists
+The primary hackathon direction is AI Media Pipelines
 
-This gives the product two connected benefits. Cloudinary makes the media pipeline faster and more consistent, while the local evaluator helps the learner decide what to open next. The score is bounded, explainable, and safe to show even when a new account has no history
+The pipeline combines upload handling, Cloudinary AI quality analysis, structured media records, responsive delivery, safe public listing, and cleanup when a draft or rejected record does not become part of the product
 
-## Product value
+The useful result is a media system that helps learners discover the right study material while giving the platform a consistent way to validate, transform, deliver, and retire media
 
-The feature helps learners scan the learning library quickly, reduces unnecessary page loads, adapts delivery to the visitor browser, and gives Vidhgrow one clear place to show the work created by teachers and the platform team
+## Learner readiness signal
 
-## Public links
+During account setup a learner can choose a beginner, intermediate, or advanced starting path. A small local evaluator combines that choice with completed tests, answered questions, and the existing practice percentile
 
-Dashboard: `https://vidhgrow.online/media`
+The evaluator is intentionally transparent. It returns a bounded readiness signal and a next step. It does not present itself as a diagnosis, it does not send learner history to an outside AI vendor, and it remains conservative when a new account has little evidence
 
-Live demo link: add the final deployed dashboard link here
+## Why this matters
 
-Demo video link: add the two to four minute walkthrough link here
+Students need more than a content library. They need a clear route from reading to practice and from practice to a better next attempt
 
-## Local setup
+Teachers need media that remains connected to the course they created
 
-Install dependencies in each application directory
+The platform team needs trust boundaries around uploads, authentication, published content, and public delivery
 
-```text
-cd Backend
-npm install
+Vidhgrow joins these needs in one workflow without making the learner understand the infrastructure underneath it
 
-cd Frontend
-npm install
+## Public surface
 
-cd Blogs
-npm install
-```
+Visual Study Board: \`https://vidhgrow.online/media\`
 
-Run the backend, public frontend, and blog service with the commands defined in their package files
+Blogs: \`https://blogs.vidhgrow.online\`
 
-The backend needs MongoDB, Redis, and Cloudinary configuration through the deployment environment. The frontend needs the public API base URL. The blog service needs its public site URL and API base URL
 
-## Deployment
+## Repository map
 
-The visual board is part of the public frontend and the data comes from the backend. It does not need a separate dashboard service
+\`Backend\` contains the application API, authentication, content rules, media handling, and data access
 
-1. Deploy the backend as a Node web service with `Backend` as its root directory, `npm install` as the build command, and `npm start` as the start command
-2. Add the backend database, Redis, Cloudinary, authentication, mail, and CORS secrets to the backend service only
-3. Keep `CLOUDINARY_NAME`, `CLOUDINARY_API_KEY`, and `CLOUDINARY_SECRET_KEY` on the backend. The browser must never receive the Cloudinary secret key
-4. Deploy the frontend as a static site with `Frontend` as its root directory, `npm install` followed by `npm run build` as the build command, and `dist` as the publish directory
-5. Set `VITE_API_URL` on the frontend to the public backend origin, such as `https://api.vidhgrow.online`
-6. Keep the existing frontend rewrite to `index.html` so a direct visit to `/media` reaches the React route
-7. Deploy the backend first, then the frontend, and open `https://vidhgrow.online/media` after both services are healthy
+\`Frontend\` contains the learner experience, public course pages, practice flow, progress views, and Visual Study Board
 
-The first board request can return an empty state when no approved course or published blog has a usable image. That is expected. Upload or publish one valid asset, wait for the backend cache window to pass, and refresh the board. A failed backend or missing Cloudinary configuration shows a retry state instead of exposing provider details
+\`Blogs\` contains the server rendered blog experience, topics, authors, comments, sitemap routes, and public media presentation
 
-## Cloudinary configuration
+\`Admin\` contains platform operations, content management, media review, and reporting surfaces
 
-Use deployment secrets only
+\`Teachers\` contains verification, document handling, course creation, and teacher workflow surfaces
 
-```text
-CLOUDINARY_NAME=replace_with_cloud_name
-CLOUDINARY_API_KEY=replace_with_api_key
-CLOUDINARY_SECRET_KEY=replace_with_api_secret
-```
+## Trust boundaries
 
-The secret key is used only by the backend. Never place it in frontend variables, browser code, screenshots, or a public issue
+Cloudinary credentials and provider secrets stay on the backend
 
-## Security
+Public responses contain only the fields needed by the current screen
 
-Public endpoints return bounded records and do not accept arbitrary Cloudinary public identifiers. Authentication, request signatures, rate limits, origin checks, and private media flows remain on the backend. User uploads and blog media should be validated before persistence and removed when a draft is discarded
+Media records are linked to their owning content before they become public
 
-The repository must contain no database URI, payment secret, mail secret, signing secret, private key, or Cloudinary secret. Set those values in the hosting provider secret manager
+Authentication, request signing, origin checks, rate limits, and private delivery decisions remain server side
 
-## Verification
+The local readiness evaluator is an assistive product signal and not a promise of academic performance
 
-Run the backend lint task and the frontend production build before deployment
+## Product walkthrough
 
-```text
-cd Backend
-npm run lint
+The clearest demonstration starts with a learner choosing a starting path, opening the Visual Study Board, entering a teacher created course, completing a timed test, and reading the resulting feedback
 
-cd Frontend
-npm run build
-```
+The second part shows a teacher or administrator reviewing the media and content lifecycle. The important story is that one approved asset moves through analysis, transformation, delivery, and a useful learner facing surface
 
-The frontend board should be checked at desktop and mobile widths, with an empty library, a failed API response, a slow image, reduced motion, a search with symbols, and a browser with a narrow viewport
+## Project boundary
 
-## Submission checklist
-
-1. Add the live dashboard link
-2. Add the public repository link
-3. Add the demo video link
-4. Show a real upload or existing media asset flowing through Cloudinary delivery transformations
-5. Complete the required Cloudinary feedback survey
-6. Confirm that no secret value appears in the repository history
+This repository contains the application code and public product surfaces. Deployment values, database records, provider credentials, and private operational configuration belong in the hosting environment and are intentionally not part of this document

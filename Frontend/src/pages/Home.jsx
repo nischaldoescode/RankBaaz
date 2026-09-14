@@ -23,21 +23,6 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-import {
-  PieChart,
-  Pie,
-  Cell,
-  ResponsiveContainer,
-  Tooltip,
-  Legend,
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  LineChart,
-  Line,
-  CartesianGrid,
-} from "recharts";
 
 import { useSEO } from "@/hooks/useSEO";
 import { useAuth } from "../context/AuthContext";
@@ -70,6 +55,82 @@ const SectionLabel = ({ children }) => (
     {children}
   </motion.p>
 );
+
+const LightweightChart = ({ data, type }) => {
+  const colors = ["#3B82F6", "#10B981", "#F59E0B", "#EF4444"];
+  const values = data.map((item) => Math.max(0, Number(item.value) || 0));
+  const max = Math.max(...values, 1);
+
+  if (type === "bar") {
+    return (
+      <div className="flex h-full items-end justify-around gap-3 px-4 pb-8 pt-4" aria-label="platform statistics bar chart">
+        {data.map((item, index) => (
+          <div key={item.name} className="flex h-full min-w-0 flex-1 flex-col items-center justify-end gap-2">
+            <span className="text-xs font-semibold text-foreground">{item.displayValue}</span>
+            <div className="flex h-[78%] w-full items-end rounded-t-md bg-primary/10">
+              <div
+                className="w-full rounded-t-md transition-[height] duration-700"
+                style={{ height: `${Math.max(8, (values[index] / max) * 100)}%`, backgroundColor: colors[index % colors.length] }}
+              />
+            </div>
+            <span className="max-w-full truncate text-[10px] text-muted-foreground">{item.name}</span>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  if (type === "line") {
+    const points = values.map((value, index) => {
+      const x = data.length === 1 ? 200 : (index / (data.length - 1)) * 360 + 20;
+      const y = 190 - (value / max) * 150;
+      return `${x},${y}`;
+    });
+
+    return (
+      <div className="h-full p-4" aria-label="platform statistics line chart">
+        <svg viewBox="0 0 400 220" className="h-full w-full" role="img">
+          <path d="M20 190H380M20 115H380M20 40H380" stroke="hsl(var(--border))" strokeDasharray="4 6" fill="none" />
+          <polyline points={points.join(" ")} fill="none" stroke="#3B82F6" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
+          {points.map((point, index) => {
+            const [cx, cy] = point.split(",");
+            return <circle key={data[index].name} cx={cx} cy={cy} r="5" fill={colors[index % colors.length]} />;
+          })}
+        </svg>
+      </div>
+    );
+  }
+
+  const total = values.reduce((sum, value) => sum + value, 0) || 1;
+  const stops = [];
+  let offset = 0;
+  values.forEach((value, index) => {
+    const next = offset + (value / total) * 100;
+    stops.push(`${colors[index % colors.length]} ${offset}% ${next}%`);
+    offset = next;
+  });
+
+  return (
+    <div className="flex h-full flex-col items-center justify-center gap-5 p-4" aria-label="platform statistics chart">
+      <div
+        className="relative h-44 w-44 rounded-full"
+        style={{ background: `conic-gradient(${stops.join(", ")})` }}
+        role="img"
+        aria-label={`${type === "doughnut" ? "doughnut" : "pie"} chart of platform statistics`}
+      >
+        {type === "doughnut" && <div className="absolute inset-9 rounded-full bg-background" />}
+      </div>
+      <div className="flex flex-wrap justify-center gap-x-4 gap-y-2 text-xs text-muted-foreground">
+        {data.map((item, index) => (
+          <span key={item.name} className="inline-flex items-center gap-1.5">
+            <span className="h-2 w-2 rounded-full" style={{ backgroundColor: colors[index % colors.length] }} />
+            {item.name}
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+};
 
 /**
  * runs an anime.js timeline once when an element becomes visible
@@ -899,98 +960,8 @@ const Home = () => {
   const renderChart = () => {
     const chartConfig = contentSettings?.chartConfig;
     if (!chartConfig?.enabled || chartData.length === 0) return null;
-    const colors = ["#3B82F6", "#10B981", "#F59E0B", "#EF4444"];
-
-    switch (chartConfig.type) {
-      case "pie":
-        return (
-          <ResponsiveContainer width="100%" height="100%">
-            <PieChart>
-              <Pie
-                data={chartData}
-                cx="50%"
-                cy="50%"
-                innerRadius={60}
-                outerRadius={120}
-                paddingAngle={5}
-                dataKey="value"
-              >
-                {chartData.map((_, index) => (
-                  <Cell
-                    key={`cell-${index}`}
-                    fill={colors[index % colors.length]}
-                  />
-                ))}
-              </Pie>
-              <Tooltip
-                contentStyle={{
-                  backgroundColor: "hsl(var(--background))",
-                  border: "1px solid hsl(var(--border))",
-                  borderRadius: "8px",
-                }}
-              />
-              <Legend />
-            </PieChart>
-          </ResponsiveContainer>
-        );
-      case "bar":
-        return (
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={chartData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="name" />
-              <YAxis />
-              <Tooltip />
-              <Bar dataKey="value" fill="#3B82F6" radius={[4, 4, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
-        );
-      case "line":
-        return (
-          <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={chartData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="name" />
-              <YAxis />
-              <Tooltip />
-              <Line
-                type="monotone"
-                dataKey="value"
-                stroke="#3B82F6"
-                strokeWidth={2}
-                dot={{ r: 4 }}
-              />
-            </LineChart>
-          </ResponsiveContainer>
-        );
-      case "doughnut":
-        return (
-          <ResponsiveContainer width="100%" height="100%">
-            <PieChart>
-              <Pie
-                data={chartData}
-                cx="50%"
-                cy="50%"
-                innerRadius={80}
-                outerRadius={120}
-                paddingAngle={5}
-                dataKey="value"
-              >
-                {chartData.map((_, index) => (
-                  <Cell
-                    key={`cell-${index}`}
-                    fill={colors[index % colors.length]}
-                  />
-                ))}
-              </Pie>
-              <Tooltip />
-              <Legend />
-            </PieChart>
-          </ResponsiveContainer>
-        );
-      default:
-        return null;
-    }
+    if (!["pie", "doughnut", "bar", "line"].includes(chartConfig.type)) return null;
+    return <LightweightChart data={chartData} type={chartConfig.type} />;
   };
 
   if (loading && !contentSettings) {

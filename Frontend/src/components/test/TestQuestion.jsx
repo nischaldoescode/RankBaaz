@@ -13,7 +13,7 @@ import { CheckCircle, XCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/Button";
-import RichTextRenderer from "../plugins/RichTextRenderer";
+const RichTextRenderer = React.lazy(() => import("../plugins/RichTextRenderer"));
 
 const TestQuestion = ({
   question,
@@ -496,10 +496,18 @@ const TestQuestion = ({
 
           {/* question title */}
           <div className="mb-6">
-            <RichTextRenderer
-              content={question.question || "Question text not available"}
-              className="text-lg sm:text-xl md:text-2xl font-semibold leading-relaxed"
-            />
+            <React.Suspense
+              fallback={
+                <p className="min-h-10 text-lg font-semibold text-gray-500">
+                  Loading question...
+                </p>
+              }
+            >
+              <RichTextRenderer
+                content={question.question || "Question text not available"}
+                className="text-lg sm:text-xl md:text-2xl font-semibold leading-relaxed"
+              />
+            </React.Suspense>
           </div>
 
           {/* question image - better validation */}

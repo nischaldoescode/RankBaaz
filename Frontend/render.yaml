@@ -57,6 +57,12 @@ services:
       - type: rewrite
         source: /terms
         destination: /terms.html
+      - type: redirect
+        source: /media/
+        destination: /media
+      - type: rewrite
+        source: /media
+        destination: /index.html
       - type: rewrite
         source: /teacher
         destination: /teacher/index.html
