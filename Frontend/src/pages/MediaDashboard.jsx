@@ -154,7 +154,7 @@ const MediaDashboard = () => {
           </div>
           <h1>Find the next useful thing to open</h1>
           <p>
-            A calm view of teacher made courses and the notes behind the platform
+            A view of teacher made courses and the notes behind the platform
           </p>
         </header>
 
