@@ -1149,21 +1149,7 @@ export const updateCourse = async (req, res) => {
 };
 
 const validateVideoLink = (url) => {
-  const allowedDomains = [
-    "youtube.com",
-    "youtu.be",
-    "vimeo.com",
-    "dailymotion.com",
-    "wistia.com",
-  ];
-
-  try {
-    const urlObj = new URL(url);
-    const domain = urlObj.hostname.replace("www.", "");
-    return allowedDomains.some((allowed) => domain.includes(allowed));
-  } catch {
-    return false;
-  }
+  return videoProcessingService.validateVideoUrl(url);
 };
 
 // endpoint to validate video links

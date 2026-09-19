@@ -89,47 +89,10 @@ const pageTransition = {
 
 // background elements component
 const BackgroundElements = ({ animations, reducedMotion, disabled = false }) => {
-  const layersRef = React.useRef(null);
-
-  useEffect(() => {
-    if (disabled) return;
-
-    const isCoarsePointer =
-      window.matchMedia?.("(pointer: coarse)")?.matches || false;
-    if (isCoarsePointer || reducedMotion || animations === false) return;
-
-    let rafId = null;
-    let lastScrollY = window.scrollY;
-
-    const handleScroll = () => {
-      if (rafId) return;
-
-      rafId = requestAnimationFrame(() => {
-        const currentScrollY = window.scrollY;
-        if (Math.abs(currentScrollY - lastScrollY) > 3) {
-          const layers = layersRef.current;
-          if (layers) {
-            layers.style.setProperty("--vg-bg-a", `${currentScrollY * 0.08}px`);
-            layers.style.setProperty("--vg-bg-b", `${currentScrollY * 0.22}px`);
-            layers.style.setProperty("--vg-bg-c", `${currentScrollY * -0.14}px`);
-          }
-          lastScrollY = currentScrollY;
-        }
-        rafId = null;
-      });
-    };
-
-    window.addEventListener("scroll", handleScroll, { passive: true });
-    return () => {
-      window.removeEventListener("scroll", handleScroll);
-      if (rafId) cancelAnimationFrame(rafId);
-    };
-  }, [animations, disabled, reducedMotion]);
-
   if (disabled) return null;
 
   return (
-    <div ref={layersRef} className="vg-bg-artifacts fixed inset-0 z-0 pointer-events-none overflow-hidden">
+    <div className="vg-bg-artifacts fixed inset-0 z-0 pointer-events-none overflow-hidden">
       <div className="absolute inset-0 vg-bg-layer vg-bg-layer-a">
         <div className="vg-artifact-grid vg-artifact-a" />
         <div className="vg-artifact-grid vg-artifact-f" />

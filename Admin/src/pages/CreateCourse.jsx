@@ -748,6 +748,8 @@ Generate complete .txt file which contains, content for all sections above.`;
         return "Dailymotion";
       } else if (domain.includes("wistia.com")) {
         return "Wistia";
+      } else if (domain === "res.cloudinary.com" || domain.endsWith(".cloudinary.com")) {
+        return "Cloudinary";
       }
       return "Other";
     } catch {

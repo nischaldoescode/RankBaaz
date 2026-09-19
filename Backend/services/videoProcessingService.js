@@ -14,15 +14,22 @@ class VideoProcessingService {
       "vimeo.com",
       "dailymotion.com",
       "wistia.com",
+      "res.cloudinary.com",
     ];
+  }
+
+  isAllowedHost(hostname) {
+    const host = String(hostname || "").toLowerCase().replace(/^www\./, "");
+    return this.allowedDomains.some(
+      (allowed) => host === allowed || host.endsWith(`.${allowed}`),
+    );
   }
 
   // validate video url
   validateVideoUrl(url) {
     try {
       const urlObj = new URL(url);
-      const domain = urlObj.hostname.replace("www.", "");
-      return this.allowedDomains.some((allowed) => domain.includes(allowed));
+      return urlObj.protocol === "https:" && this.isAllowedHost(urlObj.hostname);
     } catch {
       return false;
     }
@@ -32,7 +39,7 @@ class VideoProcessingService {
   extractPlatform(url) {
     try {
       const urlObj = new URL(url);
-      const domain = urlObj.hostname.replace("www.", "");
+      const domain = urlObj.hostname.toLowerCase().replace(/^www\./, "");
 
       if (domain.includes("youtube.com") || domain.includes("youtu.be")) {
         return "youtube";
@@ -42,6 +49,8 @@ class VideoProcessingService {
         return "dailymotion";
       } else if (domain.includes("wistia.com")) {
         return "wistia";
+      } else if (domain === "res.cloudinary.com" || domain.endsWith(".cloudinary.com")) {
+        return "cloudinary";
       }
       return "other";
     } catch {

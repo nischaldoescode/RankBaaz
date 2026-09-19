@@ -179,18 +179,25 @@ const About = () => {
           </motion.div>
         </section>
 
-        <motion.section {...motionProps} className="vg-about-values">
+        <motion.section
+          {...motionProps}
+          className="vg-about-values"
+          aria-labelledby="about-values-title"
+        >
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.22em] text-primary/70">
               {aboutValuesEyebrow}
             </p>
-            <h2>{aboutValuesTitle}</h2>
+            <h2 id="about-values-title">{aboutValuesTitle}</h2>
           </div>
 
           <div className="vg-about-value-list">
-            {aboutStoryPoints.map((point) => (
+            {aboutStoryPoints.map((point, index) => (
               <article key={point.title}>
-                <span>{point.title}</span>
+                <span>
+                  <small>{String(index + 1).padStart(2, "0")}</small>
+                  {point.title}
+                </span>
                 <p>{point.text}</p>
               </article>
             ))}

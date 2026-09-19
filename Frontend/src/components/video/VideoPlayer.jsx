@@ -59,6 +59,19 @@ const VideoPlayer = ({ videoData, className = "" }) => {
     return videoData.url;
   }, [videoData]);
 
+  const isCloudinaryVideo = useMemo(() => {
+    if (!videoData?.url) return false;
+    try {
+      const url = new URL(videoData.url);
+      return (
+        videoData.platform?.toLowerCase() === "cloudinary" ||
+        (url.protocol === "https:" && url.hostname === "res.cloudinary.com")
+      );
+    } catch {
+      return false;
+    }
+  }, [videoData]);
+
   // validation
   if (!videoData || !videoData.url) {
     return (
@@ -96,7 +109,19 @@ const VideoPlayer = ({ videoData, className = "" }) => {
         )}
       </div>
 
-      {/* responsive iframe wrapper */}
+      {/* cloudinary videos use native delivery, while hosted players use an iframe */}
+      {isCloudinaryVideo ? (
+        <video
+          className="w-full rounded-lg border border-gray-200 shadow-lg dark:border-gray-700"
+          src={embedUrl}
+          controls
+          controlsList="nodownload noremoteplayback"
+          disablePictureInPicture
+          playsInline
+          preload="metadata"
+          poster={videoData.poster || undefined}
+        />
+      ) : (
       <div className="relative w-full" style={{ paddingBottom: "56.25%" }}>
         {/* paddingbottom: "56.25%" = 16:9 aspect ratio */}
         <iframe
@@ -108,6 +133,7 @@ const VideoPlayer = ({ videoData, className = "" }) => {
           allowFullScreen
         />
       </div>
+      )}
 
       {/* video description if available */}
       {videoData.description && (

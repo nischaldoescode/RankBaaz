@@ -736,6 +736,7 @@ const VideoLinksManager = ({ course, onSaved }) => {
       if (h.includes("youtube") || h.includes("youtu.be")) return "YouTube";
       if (h.includes("vimeo")) return "Vimeo";
       if (h.includes("dailymotion")) return "Dailymotion";
+      if (h === "res.cloudinary.com" || h.endsWith(".cloudinary.com")) return "Cloudinary";
       return "Other";
     } catch {
       return null;

@@ -83,8 +83,12 @@
 }
 
 html {
-  scroll-behavior: smooth;
+  scroll-behavior: auto;
   scroll-padding-top: 5rem;
+}
+
+html.vg-lenis-ready {
+  scroll-behavior: auto;
 }
 
 html.vg-native-scroll {
@@ -105,13 +109,6 @@ html.vg-native-scroll {
 
 .vg-bg-layer-c {
   transform: translate3d(0, var(--vg-bg-c, 0px), 0);
-}
-
-@media (pointer: coarse) {
-  .vg-bg-layer {
-    transform: none;
-    will-change: auto;
-  }
 }
 
 body {
@@ -155,6 +152,7 @@ a,
   isolation: isolate;
   min-height: 100vh;
   backface-visibility: hidden;
+  contain: paint;
 }
 
 .vg-home-shell > section,
@@ -672,6 +670,7 @@ a,
     radial-gradient(circle at 86% 14%, rgba(var(--vg-primary-rgb), 0.09), transparent 32%);
   box-shadow: none;
   overflow: visible;
+  transform: translateZ(0);
 }
 
 .vg-anime-chapter-ink {
@@ -808,6 +807,7 @@ a,
   overflow: hidden;
   transform-origin: center;
   will-change: transform;
+  contain: paint;
 }
 
 .vg-story-image-frame::after {
@@ -1034,6 +1034,8 @@ a,
 }
 
 .vg-about-value-list span {
+  display: grid;
+  gap: 0.35rem;
   color: var(--vg-primary);
   font-size: 0.78rem;
   font-weight: 800;
@@ -1099,6 +1101,13 @@ a,
 
 .vg-bottom-nav {
   padding-bottom: max(8px, env(safe-area-inset-bottom));
+}
+
+.vg-about-value-list span small {
+  color: var(--vg-muted);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
 }
 
 .vg-bottom-nav > nav {
@@ -1241,6 +1250,10 @@ a,
     transform: translateZ(0);
   }
 
+  .vg-bg-layer {
+    will-change: transform;
+  }
+
   .vg-home-shell section,
   .vg-story-horizontal {
     scroll-margin-top: 5rem;
@@ -1366,6 +1379,10 @@ a,
     padding: 3rem 0.35rem;
     content-visibility: auto;
     contain-intrinsic-size: 0 720px;
+  }
+
+  .vg-story-chapter-mobile .vg-story-image-frame {
+    transform: translateZ(0);
   }
 
   .vg-story-chapter-copy h3 {

@@ -534,6 +534,18 @@ const CourseCoupons = ({ courseId }) => {
 const VideoPlayerModal = ({ video, onClose }) => {
   if (!video) return null;
 
+  const isCloudinaryVideo = (() => {
+    try {
+      const parsed = new URL(video.url);
+      return (
+        video.platform?.toLowerCase() === "cloudinary" ||
+        (parsed.protocol === "https:" && parsed.hostname === "res.cloudinary.com")
+      );
+    } catch {
+      return false;
+    }
+  })();
+
   const getEmbedUrl = (url, platform) => {
     try {
       const urlObj = new URL(url);
@@ -598,15 +610,27 @@ const VideoPlayerModal = ({ video, onClose }) => {
             className="relative w-full h-0"
             style={{ paddingBottom: "56.25%" }}
           >
-            <iframe
-              src={getEmbedUrl(video.url, video.platform)}
-              className="absolute top-0 left-0 w-full h-full rounded-none sm:rounded-b-xl"
-              frameBorder="0"
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
-              allowFullScreen
-              playsInline
-              title={video.title || "Video"}
-            />
+            {isCloudinaryVideo ? (
+              <video
+                src={video.url}
+                className="absolute top-0 left-0 w-full h-full rounded-none sm:rounded-b-xl"
+                controls
+                controlsList="nodownload noremoteplayback"
+                disablePictureInPicture
+                playsInline
+                preload="metadata"
+              />
+            ) : (
+              <iframe
+                src={getEmbedUrl(video.url, video.platform)}
+                className="absolute top-0 left-0 w-full h-full rounded-none sm:rounded-b-xl"
+                frameBorder="0"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
+                allowFullScreen
+                playsInline
+                title={video.title || "Video"}
+              />
+            )}
           </div>
         </div>
 

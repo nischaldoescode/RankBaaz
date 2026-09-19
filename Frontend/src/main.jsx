@@ -19,7 +19,7 @@ import "lenis/dist/lenis.css";
 import "./styles/globals.css";
 
 /**
- * keeps smooth scrolling native friendly and disables scroll hijacking on touch devices
+ * keeps one smooth scroll loop for wheel and touch input without fighting the browser
  *
  * @returns {null} no markup because lenis only manages browser scrolling
  */
@@ -31,11 +31,7 @@ const SmoothScrollController = () => {
       return undefined;
     }
 
-    const isCoarsePointer =
-      window.matchMedia?.("(pointer: coarse)")?.matches || false;
-
-    // native touch scrolling stays more responsive than a javascript scroll loop
-    if (!animations || reducedMotion || isCoarsePointer) {
+    if (!animations || reducedMotion) {
       document.documentElement.classList.remove("vg-lenis-ready");
       document.documentElement.classList.add("vg-native-scroll");
       return undefined;
@@ -46,9 +42,11 @@ const SmoothScrollController = () => {
       anchors: true,
       autoResize: true,
       gestureOrientation: "vertical",
-      lerp: 0.22,
+      lerp: 0.14,
       smoothWheel: true,
-      wheelMultiplier: 1.05,
+      syncTouch: true,
+      touchMultiplier: 0.92,
+      wheelMultiplier: 0.98,
       prevent: (node) =>
         Boolean(
           node?.closest?.(
@@ -61,7 +59,18 @@ const SmoothScrollController = () => {
     document.documentElement.classList.add("vg-lenis-ready");
     document.documentElement.classList.remove("vg-native-scroll");
 
+    const updateScrollVariables = ({ scroll }) => {
+      const value = Number.isFinite(scroll) ? scroll : window.scrollY;
+      document.documentElement.style.setProperty("--vg-bg-a", `${value * 0.08}px`);
+      document.documentElement.style.setProperty("--vg-bg-b", `${value * 0.22}px`);
+      document.documentElement.style.setProperty("--vg-bg-c", `${value * -0.14}px`);
+    };
+
+    lenis.on("scroll", updateScrollVariables);
+    updateScrollVariables({ scroll: window.scrollY });
+
     return () => {
+      lenis.off("scroll", updateScrollVariables);
       if (window.__vidhgrowLenis === lenis) {
         delete window.__vidhgrowLenis;
       }

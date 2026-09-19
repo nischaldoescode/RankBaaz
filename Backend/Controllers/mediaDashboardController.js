@@ -12,6 +12,13 @@ import BlogPost from "../Models/BlogPost.js";
 
 const MAX_ITEMS = 24;
 const MAX_QUERY_LENGTH = 80;
+const DEFAULT_COURSE_SUMMARY = "A teacher led course with structured practice";
+const DEFAULT_BLOG_SUMMARY = "Notes on learning, teaching, and platform work";
+const CLOUDINARY_DELIVERY_STEPS = [
+  "automatic format negotiation",
+  "automatic quality selection",
+  "subject-aware gravity crop",
+];
 
 const escapeRegExp = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
@@ -45,30 +52,54 @@ const transformedImageUrl = (image) => {
   return /^https:\/\//i.test(fallback) ? fallback : "";
 };
 
-const toCourseItem = (course) => ({
-  id: String(course._id),
-  type: "course",
-  title: course.name,
-  summary: course.description || "A teacher led course with structured practice",
-  href: "/courses",
-  image: transformedImageUrl(course.image),
-  alt: `${course.name} course cover`,
-  topic: course.category?.name || "course practice",
-  updatedAt: course.updatedAt || course.createdAt || null,
-});
+const getDeliveryProfile = (image) => {
+  const managedByCloudinary = Boolean(String(image?.public_id || "").trim());
 
-const toBlogItem = (post) => ({
-  id: String(post._id),
-  type: "blog",
-  title: post.title,
-  summary:
-    post.excerpt || post.plainTextPreview || "Notes on learning, teaching, and platform work",
-  href: `https://blogs.vidhgrow.online/${encodeURIComponent(post.slug)}`,
-  image: transformedImageUrl(post.coverImage),
-  alt: post.coverImage?.alt || `${post.title} cover`,
-  topic: post.topics?.[0] || post.category || "platform notes",
-  updatedAt: post.publishedAt || post.updatedAt || null,
-});
+  return {
+    provider: managedByCloudinary ? "Cloudinary" : "source record",
+    managedByCloudinary,
+    sourceLinked: true,
+    responsive: managedByCloudinary,
+    transformations: managedByCloudinary
+      ? CLOUDINARY_DELIVERY_STEPS
+      : ["secure source delivery"],
+    destination: image?.resource_type === "video" ? "media player" : "responsive image",
+  };
+};
+
+const toCourseItem = (course) => {
+  const image = course.image || {};
+
+  return {
+    id: String(course._id),
+    type: "course",
+    title: course.name,
+    summary: course.description || DEFAULT_COURSE_SUMMARY,
+    href: "/courses",
+    image: transformedImageUrl(image),
+    alt: image.alt || `${course.name} course cover`,
+    topic: course.category?.name || "course practice",
+    updatedAt: course.updatedAt || course.createdAt || null,
+    delivery: getDeliveryProfile(image),
+  };
+};
+
+const toBlogItem = (post) => {
+  const image = post.coverImage || {};
+
+  return {
+    id: String(post._id),
+    type: "blog",
+    title: post.title,
+    summary: post.excerpt || post.plainTextPreview || DEFAULT_BLOG_SUMMARY,
+    href: `https://blogs.vidhgrow.online/${encodeURIComponent(post.slug)}`,
+    image: transformedImageUrl(image),
+    alt: image.alt || `${post.title} cover`,
+    topic: post.topics?.[0] || post.category || "platform notes",
+    updatedAt: post.publishedAt || post.updatedAt || null,
+    delivery: getDeliveryProfile(image),
+  };
+};
 
 /**
  * returns bounded public media records for the visual study board
@@ -92,20 +123,36 @@ export const getMediaDashboard = async (req, res) => {
   const courseFilter = {
     isActive: true,
     $or: [{ approvalStatus: "approved" }, { approvalStatus: { $exists: false } }],
-    "image.url": { $exists: true, $ne: "" },
+    $and: [
+      {
+        $or: [
+          { "image.public_id": { $exists: true, $ne: "" } },
+          { "image.url": { $exists: true, $ne: "" } },
+        ],
+      },
+    ],
   };
   const blogFilter = {
     status: "published",
-    "coverImage.url": { $exists: true, $ne: "" },
+    $and: [
+      {
+        $or: [
+          { "coverImage.public_id": { $exists: true, $ne: "" } },
+          { "coverImage.url": { $exists: true, $ne: "" } },
+        ],
+      },
+    ],
   };
 
   if (search) {
     courseFilter.$and = [
+      ...courseFilter.$and,
       {
         $or: [{ name: search }, { description: search }],
       },
     ];
     blogFilter.$and = [
+      ...blogFilter.$and,
       {
         $or: [{ title: search }, { excerpt: search }, { plainTextPreview: search }],
       },
@@ -145,6 +192,16 @@ export const getMediaDashboard = async (req, res) => {
           courses: items.filter((item) => item.type === "course").length,
           blogs: items.filter((item) => item.type === "blog").length,
           total: items.length,
+          cloudinaryManaged: items.filter(
+            (item) => item.delivery?.managedByCloudinary,
+          ).length,
+        },
+        pipeline: {
+          source: "approved course covers and published blog covers",
+          delivery: [
+            "source record stays linked to its content",
+            ...CLOUDINARY_DELIVERY_STEPS.map((step) => `Cloudinary ${step}`),
+          ],
         },
         query,
         type: requestedType,

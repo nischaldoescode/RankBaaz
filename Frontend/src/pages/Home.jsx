@@ -378,8 +378,7 @@ const HomeParallaxStage = ({
   const lineOpacity = useTransform(scrollProgress, [0, 0.12, 0.9, 1], [0.25, 0.72, 0.58, 0.2]);
   const brushScale = useTransform(scrollProgress, [0, 0.28, 0.62, 1], [0.9, 1.08, 0.98, 1.06]);
 
-  const activeStyle = (style) =>
-    reducedMotion || isSmallViewport ? undefined : style;
+  const activeStyle = (style) => (reducedMotion ? undefined : style);
   const farLayerY = isSmallViewport ? mobileFarY : farY;
   const midLayerY = isSmallViewport ? mobileMidY : midY;
   const nearLayerY = isSmallViewport ? mobileNearY : nearY;
@@ -553,6 +552,24 @@ const MobileStoryChapter = ({
   reducedMotion,
 }) => {
   const chapterRef = useRef(null);
+  const { scrollYProgress } = useScroll({
+    target: chapterRef,
+    offset: ["start end", "end start"],
+  });
+  const smoothProgress = useSpring(scrollYProgress, {
+    stiffness: 120,
+    damping: 30,
+    mass: 0.24,
+  });
+  const copyY = useTransform(smoothProgress, [0, 0.5, 1], [20, 0, -14]);
+  const imageY = useTransform(smoothProgress, [0, 0.5, 1], [34, -8, -34]);
+  const imageScale = useTransform(smoothProgress, [0, 0.5, 1], [0.98, 1.035, 0.99]);
+  const imageRotate = useTransform(smoothProgress, [0, 0.5, 1], [-0.8, 0.2, 0.8]);
+  const chapterOpacity = useTransform(
+    smoothProgress,
+    [0, 0.16, 0.84, 1],
+    [0.55, 1, 1, 0.58],
+  );
 
   useAnimeOnView(chapterRef, animations && !reducedMotion, (root) => {
     const ink = root.querySelector(".vg-anime-chapter-ink");
@@ -580,25 +597,36 @@ const MobileStoryChapter = ({
   return (
     <motion.article
       ref={chapterRef}
-      initial={animations && !reducedMotion ? { opacity: 0, y: 20 } : {}}
-      whileInView={animations && !reducedMotion ? { opacity: 1, y: 0 } : {}}
+      style={reducedMotion ? undefined : { opacity: chapterOpacity }}
+      initial={animations && !reducedMotion ? { y: 20 } : {}}
+      whileInView={animations && !reducedMotion ? { y: 0 } : {}}
       viewport={{ once: true, margin: "-12% 0px" }}
       transition={{ duration: 0.42, ease: "easeOut" }}
       className={`vg-story-chapter vg-story-chapter-${index + 1} vg-story-chapter-mobile`}
     >
       <span className="vg-anime-chapter-ink" aria-hidden="true" />
       <span className="vg-story-section-rule" />
-      <div className="vg-story-chapter-copy">
+      <motion.div
+        className="vg-story-chapter-copy"
+        style={reducedMotion ? undefined : { y: copyY }}
+      >
         <span className="vg-story-index">
           {String(index + 1).padStart(2, "0")}
         </span>
         <p className="vg-story-kicker">{item.kicker}</p>
         <h3>{item.title}</h3>
         <p>{item.description}</p>
-      </div>
-      <div className="vg-story-image-frame">
+      </motion.div>
+      <motion.div
+        className="vg-story-image-frame"
+        style={
+          reducedMotion
+            ? undefined
+            : { y: imageY, scale: imageScale, rotate: imageRotate }
+        }
+      >
         <StoryImageSlot item={item} priority={index === 0} />
-      </div>
+      </motion.div>
     </motion.article>
   );
 };
@@ -619,14 +647,17 @@ const LearningStorySection = ({
     ? { stiffness: 220, damping: 38, mass: 0.18 }
     : { stiffness: 68, damping: 26, mass: 0.48 });
   const textX = useTransform(smoothProgress, [0, 0.5, 1], [-54, 0, 34]);
+  const mobileTextX = useTransform(smoothProgress, [0, 0.5, 1], [-14, 0, 10]);
   const fade = useTransform(smoothProgress, [0, 0.18, 0.78, 1], [0.4, 1, 1, 0.24]);
   const connectorY = useTransform(smoothProgress, [0, 1], [110, -180]);
+  const mobileConnectorY = useTransform(smoothProgress, [0, 1], [34, -60]);
   const connectorDraw = useTransform(smoothProgress, [0.06, 0.86], [0, 1]);
   const markerY = useTransform(smoothProgress, [0, 1], [70, -80]);
+  const mobileMarkerY = useTransform(smoothProgress, [0, 1], [22, -28]);
 
-  const motionStyle = reducedMotion || isSmallViewport
+  const motionStyle = reducedMotion
     ? undefined
-    : { x: isSmallViewport ? 0 : textX, opacity: fade };
+    : { x: isSmallViewport ? mobileTextX : textX, opacity: fade };
 
   return (
     <section
@@ -638,9 +669,7 @@ const LearningStorySection = ({
         className="vg-story-connector"
         viewBox="0 0 1200 1800"
         preserveAspectRatio="none"
-        style={
-          reducedMotion || isSmallViewport ? undefined : { y: connectorY }
-        }
+        style={reducedMotion ? undefined : { y: isSmallViewport ? mobileConnectorY : connectorY }}
       >
         <motion.path
           className="vg-story-connector-path"
@@ -651,12 +680,12 @@ const LearningStorySection = ({
       </motion.svg>
       <motion.span
         className="vg-story-scroll-marker vg-story-scroll-marker-a"
-          style={reducedMotion || isSmallViewport ? undefined : { y: markerY }}
+          style={reducedMotion ? undefined : { y: isSmallViewport ? mobileMarkerY : markerY }}
       />
       <motion.span
         className="vg-story-scroll-marker vg-story-scroll-marker-b"
           style={
-            reducedMotion || isSmallViewport ? undefined : { y: connectorY }
+            reducedMotion ? undefined : { y: isSmallViewport ? mobileConnectorY : connectorY }
           }
       />
       <div className="mx-auto max-w-6xl">

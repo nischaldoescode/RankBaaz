@@ -126,7 +126,7 @@ const courseSchema = new mongoose.Schema(
               },
               platform: {
                 type: String,
-                enum: ["youtube", "vimeo", "dailymotion", "wistia", "other"],
+                enum: ["youtube", "vimeo", "dailymotion", "wistia", "cloudinary", "other"],
                 required: true,
               },
               title: {
@@ -162,7 +162,7 @@ const courseSchema = new mongoose.Schema(
                 },
                 platform: {
                   type: String,
-                  enum: ["youtube", "vimeo", "dailymotion", "wistia", "other"],
+                  enum: ["youtube", "vimeo", "dailymotion", "wistia", "cloudinary", "other"],
                   required: true,
                 },
                 title: {
