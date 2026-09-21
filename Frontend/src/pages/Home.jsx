@@ -548,86 +548,32 @@ const StoryChapter = ({
 const MobileStoryChapter = ({
   item,
   index,
-  animations,
   reducedMotion,
+  animations,
 }) => {
   const chapterRef = useRef(null);
-  const { scrollYProgress } = useScroll({
-    target: chapterRef,
-    offset: ["start end", "end start"],
-  });
-  const smoothProgress = useSpring(scrollYProgress, {
-    stiffness: 120,
-    damping: 30,
-    mass: 0.24,
-  });
-  const copyY = useTransform(smoothProgress, [0, 0.5, 1], [20, 0, -14]);
-  const imageY = useTransform(smoothProgress, [0, 0.5, 1], [34, -8, -34]);
-  const imageScale = useTransform(smoothProgress, [0, 0.5, 1], [0.98, 1.035, 0.99]);
-  const imageRotate = useTransform(smoothProgress, [0, 0.5, 1], [-0.8, 0.2, 0.8]);
-  const chapterOpacity = useTransform(
-    smoothProgress,
-    [0, 0.16, 0.84, 1],
-    [0.55, 1, 1, 0.58],
-  );
-
-  useAnimeOnView(chapterRef, animations && !reducedMotion, (root) => {
-    const ink = root.querySelector(".vg-anime-chapter-ink");
-    const copyParts = root.querySelectorAll(
-      ".vg-story-index, .vg-story-kicker, .vg-story-chapter-copy h3, .vg-story-chapter-copy p",
-    );
-
-    return [
-      animate(ink, {
-        opacity: [0, 1],
-        scaleX: [0, 1],
-        duration: 620,
-        ease: "out(3)",
-      }),
-      animate(copyParts, {
-        opacity: [0.72, 1],
-        translateY: [10, 0],
-        duration: 480,
-        delay: stagger(42),
-        ease: "out(3)",
-      }),
-    ];
-  });
 
   return (
-    <motion.article
+    <article
       ref={chapterRef}
-      style={reducedMotion ? undefined : { opacity: chapterOpacity }}
-      initial={animations && !reducedMotion ? { y: 20 } : {}}
-      whileInView={animations && !reducedMotion ? { y: 0 } : {}}
-      viewport={{ once: true, margin: "-12% 0px" }}
-      transition={{ duration: 0.42, ease: "easeOut" }}
-      className={`vg-story-chapter vg-story-chapter-${index + 1} vg-story-chapter-mobile`}
+      className={`vg-story-chapter vg-story-chapter-${index + 1} vg-story-chapter-mobile ${
+        !animations || reducedMotion ? "vg-story-static-motion" : ""
+      }`}
     >
       <span className="vg-anime-chapter-ink" aria-hidden="true" />
       <span className="vg-story-section-rule" />
-      <motion.div
-        className="vg-story-chapter-copy"
-        style={reducedMotion ? undefined : { y: copyY }}
-      >
+      <div className="vg-story-chapter-copy vg-mobile-story-copy">
         <span className="vg-story-index">
           {String(index + 1).padStart(2, "0")}
         </span>
         <p className="vg-story-kicker">{item.kicker}</p>
         <h3>{item.title}</h3>
         <p>{item.description}</p>
-      </motion.div>
-      <motion.div
-        className="vg-story-image-frame"
-        style={
-          reducedMotion
-            ? undefined
-            : { y: imageY, scale: imageScale, rotate: imageRotate }
-        }
-      >
+      </div>
+      <div className="vg-story-image-frame vg-mobile-story-image">
         <StoryImageSlot item={item} priority={index === 0} />
-      </motion.div>
-    </motion.article>
+      </div>
+    </article>
   );
 };
 
@@ -646,14 +592,15 @@ const LearningStorySection = ({
   const smoothProgress = useSpring(scrollYProgress, isSmallViewport
     ? { stiffness: 220, damping: 38, mass: 0.18 }
     : { stiffness: 68, damping: 26, mass: 0.48 });
-  const textX = useTransform(smoothProgress, [0, 0.5, 1], [-54, 0, 34]);
-  const mobileTextX = useTransform(smoothProgress, [0, 0.5, 1], [-14, 0, 10]);
-  const fade = useTransform(smoothProgress, [0, 0.18, 0.78, 1], [0.4, 1, 1, 0.24]);
-  const connectorY = useTransform(smoothProgress, [0, 1], [110, -180]);
-  const mobileConnectorY = useTransform(smoothProgress, [0, 1], [34, -60]);
-  const connectorDraw = useTransform(smoothProgress, [0.06, 0.86], [0, 1]);
-  const markerY = useTransform(smoothProgress, [0, 1], [70, -80]);
-  const mobileMarkerY = useTransform(smoothProgress, [0, 1], [22, -28]);
+  const storyProgress = isSmallViewport ? scrollYProgress : smoothProgress;
+  const textX = useTransform(storyProgress, [0, 0.5, 1], [-54, 0, 34]);
+  const mobileTextX = useTransform(storyProgress, [0, 0.5, 1], [-14, 0, 10]);
+  const fade = useTransform(storyProgress, [0, 0.18, 0.78, 1], [0.4, 1, 1, 0.24]);
+  const connectorY = useTransform(storyProgress, [0, 1], [110, -180]);
+  const mobileConnectorY = useTransform(storyProgress, [0, 1], [34, -60]);
+  const connectorDraw = useTransform(storyProgress, [0.06, 0.86], [0, 1]);
+  const markerY = useTransform(storyProgress, [0, 1], [70, -80]);
+  const mobileMarkerY = useTransform(storyProgress, [0, 1], [22, -28]);
 
   const motionStyle = reducedMotion
     ? undefined
@@ -839,19 +786,24 @@ const Home = () => {
     offset: ["start start", "end end"],
   });
   const smoothPageProgress = useSpring(pageScrollProgress, isSmallViewport
-    ? { stiffness: 220, damping: 38, mass: 0.18 }
+    ? { stiffness: 175, damping: 31, mass: 0.14 }
     : { stiffness: 64, damping: 28, mass: 0.5 });
-  const pageDriftY = useTransform(smoothPageProgress, [0, 1], [-24, 42]);
-  const pageDriftX = useTransform(smoothPageProgress, [0, 1], [18, -36]);
-  const mobilePageDriftX = useTransform(smoothPageProgress, [0, 1], [0, 0]);
-  const heroY = useTransform(smoothPageProgress, [0, 0.2], [0, -80]);
-  const mobileHeroY = useTransform(smoothPageProgress, [0, 0.2], [0, -34]);
-  const heroScale = useTransform(smoothPageProgress, [0, 0.2], [1, 0.96]);
-  const mobileHeroScale = useTransform(smoothPageProgress, [0, 0.2], [1, 0.985]);
-  const heroGridY = useTransform(smoothPageProgress, [0, 0.24], [0, 92]);
-  const pageArtifactStyle = reducedMotion || isSmallViewport
+  const pageProgress = reducedMotion ? pageScrollProgress : smoothPageProgress;
+  const pageDriftY = useTransform(pageProgress, [0, 1], [-24, 42]);
+  const mobilePageDriftY = useTransform(pageProgress, [0, 1], [-12, 26]);
+  const pageDriftX = useTransform(pageProgress, [0, 1], [18, -36]);
+  const mobilePageDriftX = useTransform(pageProgress, [0, 1], [0, 0]);
+  const heroY = useTransform(pageProgress, [0, 0.2], [0, -80]);
+  const mobileHeroY = useTransform(pageProgress, [0, 0.2], [0, -34]);
+  const heroScale = useTransform(pageProgress, [0, 0.2], [1, 0.96]);
+  const mobileHeroScale = useTransform(pageProgress, [0, 0.2], [1, 0.985]);
+  const heroGridY = useTransform(pageProgress, [0, 0.24], [0, 92]);
+  const pageArtifactStyle = reducedMotion
     ? undefined
-    : { y: pageDriftY, x: isSmallViewport ? mobilePageDriftX : pageDriftX };
+    : {
+        y: isSmallViewport ? mobilePageDriftY : pageDriftY,
+        x: isSmallViewport ? mobilePageDriftX : pageDriftX,
+      };
 
   useSEO({
     title:
@@ -959,7 +911,24 @@ const Home = () => {
       return image;
     });
 
+    let cancelled = false;
+    void Promise.all(
+      warmImages.map(async (image) => {
+        try {
+          await image.decode?.();
+        } catch {
+          // the visible image still owns the normal browser error path
+        }
+      }),
+    ).then(() => {
+      if (!cancelled) {
+        document.documentElement.classList.add("vg-story-images-ready");
+      }
+    });
+
     return () => {
+      cancelled = true;
+      document.documentElement.classList.remove("vg-story-images-ready");
       warmImages.forEach((image) => {
         image.onload = null;
         image.onerror = null;
@@ -1000,7 +969,7 @@ const Home = () => {
   return (
     <div ref={pageRef} className="vg-home-shell relative overflow-x-hidden">
       <HomeParallaxStage
-        scrollProgress={smoothPageProgress}
+        scrollProgress={pageProgress}
         reducedMotion={reducedMotion}
         isSmallViewport={isSmallViewport}
       />
@@ -1012,7 +981,11 @@ const Home = () => {
       <motion.div
         aria-hidden="true"
         className="vg-home-page-parallax vg-home-page-parallax-b"
-        style={reducedMotion ? undefined : { y: pageDriftY }}
+        style={
+          reducedMotion
+            ? undefined
+            : { y: isSmallViewport ? mobilePageDriftY : pageDriftY }
+        }
       />
       <section className="relative flex min-h-[calc(100vh-4rem)] items-center px-4 pb-16 pt-24 sm:px-6 sm:pb-20 lg:px-8">
         <motion.div

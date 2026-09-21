@@ -21,7 +21,6 @@ import {
   Newspaper,
   ScanSearch,
   SlidersHorizontal,
-  Sparkles,
 } from "lucide-react";
 import { apiMethods } from "../services/api";
 import { useTheme } from "../context/ThemeContext";
@@ -36,22 +35,22 @@ const filters = [
 
 const pipelineStages = [
   {
-    number: "01",
     icon: Cloud,
-    title: "Keep the source connected",
-    text: "A course cover or blog image stays linked to the record that gives it meaning",
+    label: "source",
+    title: "Keep it with the lesson",
+    text: "Covers and notes stay attached to their course or post",
   },
   {
-    number: "02",
     icon: SlidersHorizontal,
-    title: "Shape it at delivery",
-    text: "Cloudinary applies automatic format, quality, and subject aware cropping for the surface",
+    label: "delivery",
+    title: "Tune it for the screen",
+    text: "Format, quality, and crop adjust when the asset is delivered",
   },
   {
-    number: "03",
     icon: ScanSearch,
-    title: "Make it useful",
-    text: "The result reaches a learner as a searchable course, note, or next step rather than loose media",
+    label: "lesson",
+    title: "Put it to work",
+    text: "The learner gets the right image beside the next useful action",
   },
 ];
 
@@ -167,35 +166,32 @@ const MediaPipeline = ({ reducedMotion }) => {
       transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
     >
       <div className="media-board-pipeline-heading">
-      <div className="media-board-kicker">
-        <Sparkles size={16} aria-hidden="true" />
-        <span>the pipeline</span>
-      </div>
-      <h2 id="media-pipeline-title">One asset, a better route to the lesson</h2>
-      <p>
-        Vidhgrow uses Cloudinary as part of the product workflow. The image is
-        connected to its source, shaped for the screen, and delivered beside
-        something worth opening
-      </p>
+        <div className="media-board-kicker">
+          <span>the pipeline</span>
+        </div>
+        <h2 id="media-pipeline-title">From source to study</h2>
+        <p>
+          Cloudinary keeps each asset tied to the course or note it serves,
+          then prepares it for the learner's screen
+        </p>
       </div>
       <div className="media-board-pipeline-rail" aria-label="Cloudinary media pipeline">
-        {pipelineStages.map(({ number, icon: Icon, title, text }, index) => (
+        {pipelineStages.map(({ icon: Icon, label, title, text }, index) => (
           <motion.article
             className="media-board-pipeline-stage"
-            key={number}
+            key={label}
             initial={reducedMotion ? false : { opacity: 0, x: 18 }}
             animate={reducedMotion || isInView ? { opacity: 1, x: 0 } : undefined}
             transition={{ delay: reducedMotion ? 0 : index * 0.12, duration: 0.55 }}
           >
-          <div className="media-board-pipeline-marker">
-            <span>{number}</span>
-            <Icon size={19} aria-hidden="true" />
-          </div>
-          <div>
-            <p className="media-board-pipeline-label">stage {index + 1}</p>
-            <h3>{title}</h3>
-            <p>{text}</p>
-          </div>
+            <div className="media-board-pipeline-marker">
+              <Icon size={18} aria-hidden="true" />
+            </div>
+            <div>
+              <p className="media-board-pipeline-label">{label}</p>
+              <h3>{title}</h3>
+              <p>{text}</p>
+            </div>
           </motion.article>
         ))}
       </div>
@@ -207,30 +203,27 @@ const DeliveryNotes = ({ reducedMotion }) => {
   const notes = [
     {
       code: "f_auto",
-      title: "the format follows the screen",
-      text: "Cloudinary negotiates a browser-friendly image format so the same approved source can travel across devices",
+      title: "format",
+      text: "A browser-friendly format for the screen",
     },
     {
       code: "q_auto",
-      title: "quality stays intentional",
-      text: "Automatic quality keeps the visual result useful without sending a needlessly heavy file to the learner",
+      title: "quality",
+      text: "A lighter file without losing the useful detail",
     },
     {
       code: "g_auto",
-      title: "the subject stays in frame",
-      text: "Automatic gravity helps a course or story cover keep its important subject when the layout changes shape",
+      title: "crop",
+      text: "The important part stays in frame as layouts change",
     },
   ];
 
   return (
     <section className="media-board-delivery-notes" aria-labelledby="media-delivery-title">
       <div className="media-board-delivery-notes-intro">
-        <p className="media-board-kicker">what changes at delivery</p>
-        <h2 id="media-delivery-title">One source, three quiet decisions</h2>
-        <p>
-          The public page does not need to know where the asset lives. It only
-          needs the right image for the next action
-        </p>
+        <p className="media-board-kicker">at delivery</p>
+        <h2 id="media-delivery-title">The same source, tuned three ways</h2>
+        <p>One approved asset, ready for the surface it is serving</p>
       </div>
       <div className="media-board-delivery-note-grid">
         {notes.map((note, index) => (

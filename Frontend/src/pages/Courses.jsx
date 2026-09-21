@@ -648,7 +648,7 @@ const Courses = () => {
             className="text-center py-12"
           >
             <div className="text-red-400 mb-4">{error}</div>
-            <button onClick={loadCourses} className="btn-primary">
+            <button onClick={loadCourses} className="btn-primary btn-primary-solid">
               Try Again
             </button>
           </motion.div>

@@ -6,7 +6,7 @@
  * @exports vite entry module for browser startup
  */
 
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import ReactDOM from "react-dom/client";
 import { BrowserRouter, useLocation } from "react-router-dom";
 import Lenis from "lenis";
@@ -18,6 +18,11 @@ import { ThemeProvider, useTheme } from "./context/ThemeContext.jsx";
 import "lenis/dist/lenis.css";
 import "./styles/globals.css";
 
+const getTouchViewport = () =>
+  typeof window !== "undefined" &&
+  (window.matchMedia?.("(pointer: coarse)").matches ||
+    window.matchMedia?.("(max-width: 767px)").matches);
+
 /**
  * keeps one smooth scroll loop for wheel and touch input without fighting the browser
  *
@@ -25,16 +30,63 @@ import "./styles/globals.css";
  */
 const SmoothScrollController = () => {
   const { animations = true, reducedMotion = false } = useTheme() || {};
+  const [isTouchViewport, setIsTouchViewport] = useState(getTouchViewport);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return undefined;
+
+    const coarseQuery = window.matchMedia("(pointer: coarse)");
+    const narrowQuery = window.matchMedia("(max-width: 767px)");
+    const updateViewport = () => {
+      setIsTouchViewport(coarseQuery.matches || narrowQuery.matches);
+    };
+
+    updateViewport();
+    coarseQuery.addEventListener?.("change", updateViewport);
+    narrowQuery.addEventListener?.("change", updateViewport);
+    coarseQuery.addListener?.(updateViewport);
+    narrowQuery.addListener?.(updateViewport);
+
+    return () => {
+      coarseQuery.removeEventListener?.("change", updateViewport);
+      narrowQuery.removeEventListener?.("change", updateViewport);
+      coarseQuery.removeListener?.(updateViewport);
+      narrowQuery.removeListener?.(updateViewport);
+    };
+  }, []);
 
   useEffect(() => {
     if (typeof window === "undefined" || typeof document === "undefined") {
       return undefined;
     }
 
-    if (!animations || reducedMotion) {
+    const updateScrollVariables = (scroll) => {
+      const value = Number.isFinite(scroll) ? scroll : window.scrollY;
+      document.documentElement.style.setProperty("--vg-bg-a", `${value * 0.08}px`);
+      document.documentElement.style.setProperty("--vg-bg-b", `${value * 0.22}px`);
+      document.documentElement.style.setProperty("--vg-bg-c", `${value * -0.14}px`);
+    };
+
+    if (!animations || reducedMotion || isTouchViewport) {
       document.documentElement.classList.remove("vg-lenis-ready");
       document.documentElement.classList.add("vg-native-scroll");
-      return undefined;
+      let frame = 0;
+      const syncNativeScroll = () => {
+        if (frame) return;
+        frame = window.requestAnimationFrame(() => {
+          frame = 0;
+          updateScrollVariables(window.scrollY);
+        });
+      };
+
+      updateScrollVariables(window.scrollY);
+      window.addEventListener("scroll", syncNativeScroll, { passive: true });
+
+      return () => {
+        window.removeEventListener("scroll", syncNativeScroll);
+        if (frame) window.cancelAnimationFrame(frame);
+        document.documentElement.classList.remove("vg-native-scroll");
+      };
     }
 
     const lenis = new Lenis({
@@ -59,18 +111,13 @@ const SmoothScrollController = () => {
     document.documentElement.classList.add("vg-lenis-ready");
     document.documentElement.classList.remove("vg-native-scroll");
 
-    const updateScrollVariables = ({ scroll }) => {
-      const value = Number.isFinite(scroll) ? scroll : window.scrollY;
-      document.documentElement.style.setProperty("--vg-bg-a", `${value * 0.08}px`);
-      document.documentElement.style.setProperty("--vg-bg-b", `${value * 0.22}px`);
-      document.documentElement.style.setProperty("--vg-bg-c", `${value * -0.14}px`);
-    };
+    const updateLenisVariables = ({ scroll }) => updateScrollVariables(scroll);
 
-    lenis.on("scroll", updateScrollVariables);
-    updateScrollVariables({ scroll: window.scrollY });
+    lenis.on("scroll", updateLenisVariables);
+    updateScrollVariables(window.scrollY);
 
     return () => {
-      lenis.off("scroll", updateScrollVariables);
+      lenis.off("scroll", updateLenisVariables);
       if (window.__vidhgrowLenis === lenis) {
         delete window.__vidhgrowLenis;
       }
@@ -78,7 +125,7 @@ const SmoothScrollController = () => {
       document.documentElement.classList.remove("vg-lenis-ready");
       document.documentElement.classList.remove("vg-native-scroll");
     };
-  }, [animations, reducedMotion]);
+  }, [animations, reducedMotion, isTouchViewport]);
 
   return null;
 };
