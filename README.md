@@ -51,9 +51,9 @@ Vidhgrow joins these needs in one workflow without making the learner understand
 
 ## Public surface
 
-Visual Study Board: \`https://vidhgrow.online/media\`
+Visual Study Board: https://vidhgrow.online/media
 
-Blogs: \`https://blogs.vidhgrow.online\`
+Blogs: https://blogs.vidhgrow.online/
 
 ## Cloudinary media lab
 
@@ -65,7 +65,7 @@ This implementation uses Cloudinary delivery transformations that are available 
 
 ## seeded technology catalog
 
-The backend includes a safe, repeatable catalog seed for five practical technology courses and five search-ready platform notes. The courses cover API reliability, cloud security, data engineering, applied machine learning, and frontend performance. Each seeded course gets a Cloudinary-managed cover and a Cloudinary video delivery record. The blog seed includes encrypted content, canonical URLs, useful excerpts, topics, tags, readable titles, and large social images
+The backend includes a safe, repeatable catalog seed for five practical technology courses and five search-ready platform notes. The courses cover API reliability, cloud security, data engineering, applied machine learning, and frontend performance. Each seeded course is free, includes a Cloudinary-managed cover, and has no video dependency. The blog seed includes encrypted content, canonical URLs, useful excerpts, topics, tags, readable titles, and large social images
 
 Run a preview first
 
@@ -81,7 +81,7 @@ cd Backend
 npm run seed:tech-catalog -- --apply
 ```
 
-The seed is idempotent for its own course names and blog slugs. It does not replace unrelated course content. The default video source is a Cloudinary demo asset copied into the configured account; set `SEED_VIDEO_SOURCE_URL` to a licensed instructional video before a public launch
+The seed is idempotent for its own course names and blog slugs. It keeps one record for each catalog course name, removes exact-name duplicates created by the catalog seed, and does not replace unrelated course content. Existing catalog records are normalised to free courses with empty video content
 
 To audit existing course covers, question images, and blog covers for third-party URLs, run the dry audit
 
